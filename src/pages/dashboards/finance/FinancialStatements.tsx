@@ -184,22 +184,22 @@ const buildBSExportRows = (data: any) => {
     const grandTotalLiabilitiesAndEquity = totalLiabilities + totalCapital;
 
     rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Current Assets", "Type": "Header", "Amount": "" });
-    cashAccounts.forEach(a => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Cash", "Amount": a.amount }));
-    bankAccounts.forEach(a => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Bank", "Amount": a.amount }));
+    cashAccounts.forEach((a: any) => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Cash", "Amount": a.amount }));
+    bankAccounts.forEach((a: any) => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Bank", "Amount": a.amount }));
     rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total for Cash and Cash Equivalents", "Type": "Subtotal", "Amount": cashAndEquivalentsTotal });
 
-    arAccounts.forEach(a => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Accounts Receivable", "Amount": a.amount }));
+    arAccounts.forEach((a: any) => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Accounts Receivable", "Amount": a.amount }));
     rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total for Accounts Receivable", "Type": "Subtotal", "Amount": arTotal });
 
-    otherCurrentAssets.forEach(a => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Other Current Asset", "Amount": a.amount }));
+    otherCurrentAssets.forEach((a: any) => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Other Current Asset", "Amount": a.amount }));
     rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total for Other Current Assets", "Type": "Subtotal", "Amount": otherCurrentAssetsTotal });
     rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total for Current Assets", "Type": "Section Total", "Amount": currentAssetsTotal });
 
     rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Non Current Assets", "Type": "Header", "Amount": "" });
-    fixedAssets.forEach(a => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Fixed Asset", "Amount": a.amount }));
+    fixedAssets.forEach((a: any) => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Fixed Asset", "Amount": a.amount }));
     rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total for Fixed Assets", "Type": "Subtotal", "Amount": fixedAssetsTotal });
 
-    otherAssets.forEach(a => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Other Asset", "Amount": a.amount }));
+    otherAssets.forEach((a: any) => rows.push({ "Category": "ASSETS", "Account Code": a.code || "", "Account Name": a.name, "Type": "Other Asset", "Amount": a.amount }));
     if (otherAssets.length > 0) {
         rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total for Other Assets", "Type": "Subtotal", "Amount": otherAssetsTotal });
     }
@@ -207,19 +207,19 @@ const buildBSExportRows = (data: any) => {
     rows.push({ "Category": "ASSETS", "Account Code": "", "Account Name": "Total Assets", "Type": "Grand Total", "Amount": totalAssets });
 
     rows.push({ "Category": "LIABILITIES", "Account Code": "", "Account Name": "Current Liabilities", "Type": "Header", "Amount": "" });
-    currentLiabilities.forEach(l => rows.push({ "Category": "LIABILITIES", "Account Code": l.code || "", "Account Name": l.name, "Type": "Current Liability", "Amount": l.amount }));
+    currentLiabilities.forEach((l: any) => rows.push({ "Category": "LIABILITIES", "Account Code": l.code || "", "Account Name": l.name, "Type": "Current Liability", "Amount": l.amount }));
     rows.push({ "Category": "LIABILITIES", "Account Code": "", "Account Name": "Total for Current Liabilities", "Type": "Section Total", "Amount": currentLiabilitiesTotal });
 
     if (longTermLiabilities.length > 0) {
         rows.push({ "Category": "LIABILITIES", "Account Code": "", "Account Name": "Long-Term Liabilities", "Type": "Header", "Amount": "" });
-        longTermLiabilities.forEach(l => rows.push({ "Category": "LIABILITIES", "Account Code": l.code || "", "Account Name": l.name, "Type": "Long-Term Liability", "Amount": l.amount }));
+        longTermLiabilities.forEach((l: any) => rows.push({ "Category": "LIABILITIES", "Account Code": l.code || "", "Account Name": l.name, "Type": "Long-Term Liability", "Amount": l.amount }));
         rows.push({ "Category": "LIABILITIES", "Account Code": "", "Account Name": "Total for Long-Term Liabilities", "Type": "Section Total", "Amount": longTermLiabilitiesTotal });
     }
 
     rows.push({ "Category": "LIABILITIES", "Account Code": "", "Account Name": "Total Liabilities", "Type": "Grand Total", "Amount": totalLiabilities });
 
     rows.push({ "Category": "EQUITY", "Account Code": "", "Account Name": "Equity Capital", "Type": "Header", "Amount": "" });
-    databaseEquity.forEach(e => rows.push({ "Category": "EQUITY", "Account Code": e.code || "", "Account Name": e.name, "Type": "Equity", "Amount": e.amount }));
+    databaseEquity.forEach((e: any) => rows.push({ "Category": "EQUITY", "Account Code": e.code || "", "Account Name": e.name, "Type": "Equity", "Amount": e.amount }));
     rows.push({ "Category": "EQUITY", "Account Code": "", "Account Name": "Retained Earnings / Utilidades Retenidas", "Type": "Equity Static", "Amount": staticRetainedEarnings });
     rows.push({ "Category": "EQUITY", "Account Code": "", "Account Name": "Results of the exercise / Resultado del ejercicio", "Type": "Equity Current Result", "Amount": resultsOfTheExercise });
     rows.push({ "Category": "EQUITY", "Account Code": "", "Account Name": "Total for Capital", "Type": "Section Total", "Amount": totalCapital });
@@ -308,8 +308,9 @@ const FinancialStatements = () => {
             if (filters.endDate) query.endDate = filters.endDate;
 
             const token = localStorage.getItem('token');
+            const apiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/['\"]/g, '').replace(/\/$/, '');
             const response = await fetch(
-                `http://localhost:3000/api/reporting/export/pdf?${new URLSearchParams(query).toString()}`,
+                `${apiBase}/api/reporting/export/pdf?${new URLSearchParams(query).toString()}`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             if (!response.ok) throw new Error(`Server error: ${response.status}`);
@@ -727,6 +728,10 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
         const isExpanded = expandedAccounts[node.id] !== false;
         const ToggleIcon = isExpanded ? ChevronDown : ChevronRight;
 
+        const displayAmount = (node.children.length > 0 && isExpanded) 
+            ? node.amount 
+            : node.rolledUpAmount;
+
         return (
             <div key={node.id} className="space-y-2">
                 <div className="flex justify-between items-center group cursor-default">
@@ -763,12 +768,27 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                     </span>
                     <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
                     <span className={`text-sm font-mono text-[var(--text-main)] ${node.children.length > 0 ? "font-bold" : ""}`}>
-                        ${(node.rolledUpAmount).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        ${displayAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}
                     </span>
                 </div>
                 {node.children.length > 0 && isExpanded && (
                     <div className="space-y-2">
                         {node.children.map(child => renderNode(child, depth + 1))}
+                        
+                        {/* Parent Total Subtotal row */}
+                        <div 
+                            className="flex justify-between items-center pt-1.5 pb-0.5 border-t border-dashed border-[var(--border-main)]/40 group cursor-default"
+                            style={{ paddingLeft: `${(depth + 1) * 20}px` }}
+                        >
+                            <span className="text-xs font-bold text-[var(--text-main)] italic flex items-center">
+                                <span className="opacity-45 text-[11px] font-mono select-none mr-1.5" style={{ color: 'var(--text-dim)' }}>↳</span>
+                                Total {node.name}
+                            </span>
+                            <div className="flex-1 border-b border-dashed border-[var(--border-main)]/30 mx-4" />
+                            <span className="text-xs font-mono font-bold text-[var(--text-main)]">
+                                ${(node.rolledUpAmount).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                            </span>
+                        </div>
                     </div>
                 )}
             </div>

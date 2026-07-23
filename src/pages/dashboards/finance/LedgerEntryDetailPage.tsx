@@ -133,7 +133,7 @@ const LedgerEntryDetailPage = () => {
         if (allAccounts.length === 0) {
             const toastId = toast.loading("Loading charts of accounts...");
             try {
-                const res = await getAllAccountingCodes();
+                const res = (await getAllAccountingCodes()) as any;
                 const codes = Array.isArray(res) ? res : (res.data || []);
                 setAllAccounts(codes);
                 toast.dismiss(toastId);

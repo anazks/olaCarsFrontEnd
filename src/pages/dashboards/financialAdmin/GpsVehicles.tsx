@@ -8,7 +8,7 @@ import {
     Calendar, Shield, Activity, Info, RefreshCw, SlidersHorizontal,
     Copy, Check, FileSpreadsheet, User, Phone, MapPin, Gauge,
     Battery, Zap, Navigation, Link, ExternalLink, Satellite,
-    Map, Eye, Columns, ArrowLeft, X, Printer
+    Map, Eye, Columns, ArrowLeft, X, Printer, Clock
 } from 'lucide-react';
 import {
     getGpsVehiclesList, getGpsLocationsList, getDeviceLiveStreamingUrl, getDeviceMediaEventUrl,
@@ -82,6 +82,19 @@ const GpsVehicles = () => {
                     maxSpeed: Number(trip.maxSpeed || trip.topSpeed || 0)
                 };
             });
+    }, [tripsData]);
+
+    // Computed totals for trips
+    const totalDistanceKm = useMemo(() => {
+        if (!tripsData || tripsData.length === 0) return 0;
+        const totalMeters = tripsData.reduce((sum, trip) => sum + (Number(trip.distance) || 0), 0);
+        return totalMeters / 1000;
+    }, [tripsData]);
+
+    // Computed total duration for trips in seconds
+    const totalDurationSeconds = useMemo(() => {
+        if (!tripsData || tripsData.length === 0) return 0;
+        return tripsData.reduce((sum, trip) => sum + (Number(trip.runTimeSecond) || 0), 0);
     }, [tripsData]);
 
     // View state: 'list' (fleet table), 'map' (fleet map), 'track' (single vehicle tracking detail page), 'alerts' (push notifications log)
@@ -693,6 +706,19 @@ const GpsVehicles = () => {
             trip.maxSpeed || trip.topSpeed || 'N/A'
         ]);
 
+        rows.push([
+            "Total Sum",
+            "",
+            "",
+            "",
+            "",
+            "",
+            totalDurationSeconds.toString(),
+            totalDistanceKm.toFixed(2),
+            "",
+            ""
+        ]);
+
         const csvContent = "data:text/csv;charset=utf-8,"
             + [headers.join(","), ...rows.map(e => e.map(val => `"${val}"`).join(","))].join("\n");
 
@@ -711,11 +737,12 @@ const GpsVehicles = () => {
         const dateStr = new Date().toISOString().split('T')[0];
         const periodStr = `${tripsStartStr.replace('T', ' ')} to ${tripsEndStr.replace('T', ' ')}`;
         
-        const aoaData = [
+        const aoaData: any[][] = [
             ["OlaCars Fleet Telemetry - Trips History Report"],
             ["Device Name:", selectedTrackVehicle.deviceName],
             ["IMEI Number:", selectedTrackVehicle.imei],
             ["Plate Number:", selectedTrackVehicle.vehicleNumber || 'N/A'],
+            ["Total Distance Sum:", `${totalDistanceKm.toFixed(2)} km`],
             ["Query Period:", periodStr],
             ["Export Date:", new Date().toLocaleString()],
             [], // Blank row spacing
@@ -747,6 +774,20 @@ const GpsVehicles = () => {
                 trip.maxSpeed || trip.topSpeed || 0
             ]);
         });
+
+        aoaData.push([]);
+        aoaData.push([
+            "Total Sum",
+            "",
+            "",
+            "",
+            "",
+            "",
+            formatDuration(totalDurationSeconds),
+            Number(totalDistanceKm.toFixed(2)),
+            "",
+            ""
+        ]);
 
         const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
         const workbook = XLSX.utils.book_new();
@@ -1895,6 +1936,39 @@ const GpsVehicles = () => {
                                 {tripsLoading ? 'Querying...' : 'Filter History'}
                             </button>
                         </div>
+
+                        {/* Summary Stats Row */}
+                        {!tripsLoading && !tripsError && tripsData.length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in fade-in duration-300">
+                                <div className="p-4 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-input)]/10 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase text-[var(--text-dim)] tracking-wider">Total Distance Sum</p>
+                                        <p className="text-xl font-black text-[var(--brand-dynamic)] mt-1">{totalDistanceKm.toFixed(2)} km</p>
+                                    </div>
+                                    <div className="p-3 bg-[var(--brand-dynamic)]/10 text-[var(--brand-dynamic)] rounded-xl">
+                                        <Gauge size={20} />
+                                    </div>
+                                </div>
+                                <div className="p-4 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-input)]/10 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase text-[var(--text-dim)] tracking-wider">Total Duration</p>
+                                        <p className="text-xl font-black text-[var(--text-main)] mt-1">{formatDuration(totalDurationSeconds)}</p>
+                                    </div>
+                                    <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl">
+                                        <Clock size={20} />
+                                    </div>
+                                </div>
+                                <div className="p-4 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-input)]/10 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase text-[var(--text-dim)] tracking-wider">Total Trips Count</p>
+                                        <p className="text-xl font-black text-[var(--text-main)] mt-1">{tripsData.length} segments</p>
+                                    </div>
+                                    <div className="p-3 bg-cyan-500/10 text-cyan-400 rounded-xl">
+                                        <MapPin size={20} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Speed Line Chart */}
                         {!tripsLoading && !tripsError && sortedChartData.length > 0 && (

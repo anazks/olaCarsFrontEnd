@@ -81,3 +81,22 @@ export const getBankTransactionById = async (transactionId: string): Promise<any
     return response.data.data || response.data;
 };
 
+export const bulkDeleteBankAccountTransactions = async (id: string, transactionIds: string[]) => {
+    const response = await api.post(`/api/bank-accounts/${id}/transactions/bulk-delete`, { transactionIds });
+    return response.data;
+};
+
+export const bulkEditBankAccountTransactions = async (id: string, updates: any[]) => {
+    const response = await api.post(`/api/bank-accounts/${id}/transactions/bulk-edit`, { updates });
+    return response.data;
+};
+
+export const downloadBankAccountLedgerPdf = async (id: string, params?: any) => {
+    const response = await api.get(`/api/bank-accounts/${id}/ledger/pdf`, {
+        params,
+        responseType: 'blob'
+    });
+    return response.data;
+};
+
+

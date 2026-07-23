@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { getAllBankAccounts, bulkUploadBankAccountTransactions, type BankAccount } from '../../../services/bankAccountService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
+import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
 
 interface BulkLedgerUploadProps {
     isOpen: boolean;
@@ -23,42 +24,26 @@ interface ParsedTransaction {
     Amount: number;
     transactionId?: string;
     _rowErrors: string[];
+    _rawRow?: any;
 }
 
 const TEMPLATE_HEADERS = [
-    'Date', 'Description', 'Transaction Details', 'Debit', 'Credit', 'Running Balance', 'Transaction Type', 'Transaction ID'
+    'DATE', 'PREFIX', 'NUMBER', 'BANK NAME', 'SUB ACCOUNT', 'PARENT ACCOUNT', 'RECEIPT', 'PAYMENT', 'DESCRIPTION', 'REMARKS', 'BRANCH'
 ];
 
 const SAMPLE_ROWS = [
     {
-        Date: '2026-06-01',
-        Description: 'Opening Balance',
-        "Transaction Details": 'System migration opening balance',
-        Debit: 50000.00,
-        Credit: 0.00,
-        "Running Balance": 50000.00,
-        "Transaction Type": 'DEBIT',
-        "Transaction ID": 'TXN00001'
-    },
-    {
-        Date: '2026-06-02',
-        Description: 'Invoice Payment Received',
-        "Transaction Details": 'INV-002305 from Client Alpha',
-        Debit: 1500.00,
-        Credit: 0.00,
-        "Running Balance": 51500.00,
-        "Transaction Type": 'DEBIT',
-        "Transaction ID": 'TXN00002'
-    },
-    {
-        Date: '2026-06-03',
-        Description: 'Office Utilities Paid',
-        "Transaction Details": 'Electricity bill payment - SB-88772',
-        Debit: 0.00,
-        Credit: 320.00,
-        "Running Balance": 51180.00,
-        "Transaction Type": 'CREDIT',
-        "Transaction ID": 'TXN00003'
+        DATE: '2026-06-01',
+        PREFIX: '2026',
+        NUMBER: '0000001',
+        'BANK NAME': 'Banco General AH 1601',
+        'SUB ACCOUNT': 'JESSICA SOTO EU8783',
+        'PARENT ACCOUNT': 'Accounts Receivable',
+        RECEIPT: 100.00,
+        PAYMENT: 0.00,
+        DESCRIPTION: 'ACH - JESSICA VALERIA SOTO CASTRO',
+        REMARKS: 'JESSICA SOTO EU8783',
+        BRANCH: 'HEAD OFFICE'
     }
 ];
 
@@ -76,7 +61,7 @@ const parseSheetToJSON = (ws: XLSX.WorkSheet): any[] => {
             const matchCount = row.filter(cell => {
                 if (cell === undefined || cell === null) return false;
                 const cleanCell = String(cell).trim().toLowerCase();
-                return ['date', 'description', 'debit', 'credit', 'amount', 'transaction_type', 'transaction_details', 'transaction_id'].some(k => cleanCell.includes(k) || k.includes(cleanCell));
+                return ['date', 'prefix', 'number', 'bank name', 'sub account', 'accounts name', 'parent account', 'receipt', 'payment', 'description', 'remarks', 'branch'].some(k => cleanCell.includes(k) || k.includes(cleanCell));
             }).length;
             if (matchCount >= 2) {
                 headerIdx = i;
@@ -126,8 +111,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
     const [accounts, setAccounts] = useState<BankAccount[]>([]);
     const [selectedAccountId, setSelectedAccountId] = useState('');
     const [branches, setBranches] = useState<Branch[]>([]);
-    const [selectedBranchId, setSelectedBranchId] = useState('');
-    const [clearExisting, setClearExisting] = useState(true);
+    const [clearExisting] = useState(false);
 
     const [accountSearchQuery, setAccountSearchQuery] = useState('');
     const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
@@ -160,6 +144,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
     const [uploadProgress, setUploadProgress] = useState(0);
     const [result, setResult] = useState<any>(null);
     const [dragOver, setDragOver] = useState(false);
+    const [allAccountingCodes, setAllAccountingCodes] = useState<AccountingCode[]>([]);
 
     // Load bank accounts and branches on mount
     useEffect(() => {
@@ -167,16 +152,19 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
             const fetchData = async () => {
                 setLoadingData(true);
                 try {
-                    const [accountsRes, branchesRes] = await Promise.all([
+                    const [accountsRes, branchesRes, codesRes] = await Promise.all([
                         getAllBankAccounts({ limit: 100 }),
-                        getAllBranches({ limit: 100 })
+                        getAllBranches({ limit: 100 }),
+                        getAllAccountingCodes({ limit: 1000 })
                     ]);
 
                     const accountsList = accountsRes.data || accountsRes || [];
                     const branchesList = branchesRes.data || branchesRes || [];
+                    const codesList = Array.isArray(codesRes) ? codesRes : ((codesRes as any).data || []);
 
                     setAccounts(accountsList.filter((a: BankAccount) => a.status === 'ACTIVE'));
                     setBranches(branchesList.filter((b: Branch) => b.status === 'ACTIVE'));
+                    setAllAccountingCodes(codesList);
 
                     // Auto-select "Banco General AH 1601" or first account
                     const bg1601 = accountsList.find((a: BankAccount) =>
@@ -189,9 +177,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                         setSelectedAccountId(accountsList[0]._id);
                     }
 
-                    if (branchesList.length > 0) {
-                        setSelectedBranchId(branchesList[0]._id);
-                    }
+                    // Branches will be automatically auto-assigned per transaction row
                 } catch (err) {
                     console.error("Failed to fetch bulk upload pre-requisites", err);
                     toast.error("Failed to load active bank accounts or branches");
@@ -206,7 +192,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
     const parseDateFlexible = (val: any): Date | null => {
         if (val === undefined || val === null) return null;
         if (typeof val === 'number') {
-            const totalDays = Math.round(val - 25569);
+            const totalDays = Math.floor(val - 25569);
             const date = new Date(Date.UTC(1970, 0, 1 + totalDays));
             return isNaN(date.getTime()) ? null : date;
         }
@@ -214,7 +200,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
         if (!str) return null;
         if (/^\d{5}(\.\d+)?$/.test(str)) {
             const num = parseFloat(str);
-            const totalDays = Math.round(num - 25569);
+            const totalDays = Math.floor(num - 25569);
             const date = new Date(Date.UTC(1970, 0, 1 + totalDays));
             return isNaN(date.getTime()) ? null : date;
         }
@@ -231,12 +217,8 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 const part2 = parseInt(parts[1], 10);
                 const part3 = parseInt(parts[2], 10);
                 const year = part3 < 100 ? 2000 + part3 : part3;
-                let day = part1;
-                let month = part2;
-                if (month > 12 && day <= 12) {
-                    day = part2;
-                    month = part1;
-                }
+                const day = part1;
+                const month = part2;
                 const date = new Date(Date.UTC(year, month - 1, day));
                 if (!isNaN(date.getTime())) return date;
             }
@@ -255,23 +237,27 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
         return isNaN(parsed) ? 0 : parsed;
     };
 
-    const validateRow = useCallback((row: any): string[] => {
+    const formatDateDMY = (dateStr: string): string => {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const year = d.getUTCFullYear();
+        return `${day}-${month}-${year}`;
+    };
+
+    const validateRow = useCallback((row: any, targetAccount?: BankAccount): string[] => {
         const errors: string[] = [];
 
-        const dateVal = getRowVal(row, ['date', 'Date']);
-        const descVal = getRowVal(row, ['description', 'Description']) || '';
-        const detailsVal = getRowVal(row, ['transaction_details', 'transaction details', 'Transaction Details', 'details']) || '';
-        const rawDebit = getRowVal(row, ['debit', 'Debit']);
-        const rawCredit = getRowVal(row, ['credit', 'Credit']);
-        const rawAmount = getRowVal(row, ['amount', 'Amount']);
-        const rawType = getRowVal(row, ['transaction_type', 'transaction type', 'Transaction Type', 'type']) || '';
-
-        const debitVal = cleanNumber(rawDebit);
-        const creditVal = cleanNumber(rawCredit);
-        let amountVal = cleanNumber(rawAmount);
-        if (amountVal === 0) {
-            amountVal = debitVal > 0 ? debitVal : creditVal;
-        }
+        const dateVal = getRowVal(row, ['date', 'Date', 'DATE']);
+        const prefixVal = getRowVal(row, ['prefix', 'Prefix', 'PREFIX']);
+        const numberVal = getRowVal(row, ['number', 'Number', 'NUMBER']);
+        const bankNameVal = getRowVal(row, ['bank name', 'bank_name', 'Bank Name', 'BANK NAME']);
+        const rawReceipt = getRowVal(row, ['receipt', 'Receipt', 'RECEIPT']);
+        const rawPayment = getRowVal(row, ['payment', 'Payment', 'PAYMENT']);
+        const receiptVal = cleanNumber(rawReceipt);
+        const paymentVal = cleanNumber(rawPayment);
 
         if (!dateVal) {
             errors.push('Missing Date');
@@ -282,43 +268,156 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
             }
         }
 
-        const typeStr = String(rawType).trim().toUpperCase();
-        const finalDesc = String(descVal).trim() || String(detailsVal).trim() || (typeStr === 'OPENING BALANCE' ? 'Opening Balance' : '');
-        if (!finalDesc) {
-            errors.push('Missing Description');
+        if (prefixVal === undefined || prefixVal === null || String(prefixVal).trim() === '') {
+            errors.push('Missing Prefix');
         }
 
-        if (debitVal < 0) errors.push('Debit cannot be negative');
-        if (creditVal < 0) errors.push('Credit cannot be negative');
-        if (amountVal < 0) errors.push('Amount cannot be negative');
+        if (numberVal === undefined || numberVal === null || String(numberVal).trim() === '') {
+            errors.push('Missing Number');
+        }
 
-        const hasDebit = rawDebit !== undefined && rawDebit !== null && String(rawDebit).trim() !== '';
-        const hasCredit = rawCredit !== undefined && rawCredit !== null && String(rawCredit).trim() !== '';
-        const hasAmount = rawAmount !== undefined && rawAmount !== null && String(rawAmount).trim() !== '';
+        const subAccountVal = getRowVal(row, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
+        const parentAccountVal = getRowVal(row, ['parent account', 'parent_account', 'Parent Account', 'PARENT ACCOUNT']);
 
-        if (!hasDebit && !hasCredit && !hasAmount) {
-            errors.push('Transaction must have an amount (Debit, Credit, or Amount)');
+        const subAccountStr = String(subAccountVal || '').trim();
+        const parentAccountStr = String(parentAccountVal || '').trim();
+
+        if (subAccountStr && !parentAccountStr) {
+            errors.push('Parent Account is required when Sub Account is specified');
+        }
+
+        if (parentAccountStr) {
+            const parentExists = allAccountingCodes.some(c =>
+                c.code === parentAccountStr ||
+                c.name.toLowerCase().trim() === parentAccountStr.toLowerCase()
+            );
+            if (!parentExists) {
+                errors.push(`Parent Account "${parentAccountStr}" not found in Chart of Accounts`);
+            }
+        }
+
+        const activeAccount = targetAccount || selectedAccount;
+        if (!bankNameVal) {
+            errors.push('Missing Bank Name');
+        } else if (activeAccount) {
+            const excelBank = String(bankNameVal).trim().toLowerCase();
+            const selBank = String(activeAccount.bankName || '').trim().toLowerCase();
+            const selAccName = String(activeAccount.accountName || '').trim().toLowerCase();
+            
+            const isMatch = (
+                excelBank.includes(selBank) ||
+                selBank.includes(excelBank) ||
+                excelBank.includes(selAccName) ||
+                selAccName.includes(excelBank)
+            );
+            if (!isMatch) {
+                errors.push(`Bank name mismatch: Excel has "${bankNameVal}", but selected bank is "${activeAccount.accountName || activeAccount.bankName}"`);
+            }
+        }
+
+
+
+        if (receiptVal < 0) errors.push('Receipt cannot be negative');
+        if (paymentVal < 0) errors.push('Payment cannot be negative');
+        if (receiptVal === 0 && paymentVal === 0) {
+            errors.push('Transaction must have an amount (Receipt or Payment)');
+        }
+        if (receiptVal > 0 && paymentVal > 0) {
+            errors.push('Row cannot have both Receipt and Payment');
+        }
+
+        const branchVal = getRowVal(row, ['branch', 'Branch', 'BRANCH']);
+        if (!branchVal) {
+            errors.push('Missing Branch');
+        } else if (branches.length > 0) {
+            const excelBranch = String(branchVal).trim().toLowerCase();
+            // 1. Try exact name match
+            let match = branches.find(b => b.name.trim().toLowerCase() === excelBranch);
+            // 2. Try partial name match
+            if (!match) {
+                match = branches.find(b => {
+                    const dbName = b.name.trim().toLowerCase();
+                    return dbName.includes(excelBranch) || excelBranch.includes(dbName);
+                });
+            }
+            // 3. Try type fallback
+            if (!match) {
+                const isWorkshopType = excelBranch.includes("workshop") || excelBranch.includes("taller");
+                const targetType = isWorkshopType ? "WORKSHOP" : "BRANCH";
+                match = branches.find(b => b.type === targetType);
+            }
+
+            if (!match) {
+                errors.push(`Branch "${branchVal}" cannot be matched to any system branch`);
+            }
         }
 
         return errors;
-    }, []);
+    }, [selectedAccount, branches, allAccountingCodes]);
+
+    const revalidateAndRecalculateRows = useCallback((currentRows: ParsedTransaction[], targetAccount: BankAccount | undefined) => {
+        if (!currentRows || currentRows.length === 0) return [];
+
+        let balanceAccum = targetAccount ? (targetAccount.currentBalance || targetAccount.initialBalance || 0) : 0;
+        const isCreditCard = targetAccount?.accountType === 'Credit Card';
+
+        return currentRows.map(row => {
+            const raw = row._rawRow || row;
+            const errors = validateRow(raw, targetAccount);
+
+            const receiptVal = cleanNumber(getRowVal(raw, ['receipt', 'Receipt', 'RECEIPT']));
+            const paymentVal = cleanNumber(getRowVal(raw, ['payment', 'Payment', 'PAYMENT']));
+            let amountVal = receiptVal > 0 ? receiptVal : paymentVal;
+
+            let resolvedType: 'DEBIT' | 'CREDIT' = 'DEBIT';
+            if (receiptVal > 0 && paymentVal === 0) {
+                resolvedType = 'DEBIT';
+            } else if (paymentVal > 0 && receiptVal === 0) {
+                resolvedType = 'CREDIT';
+            }
+
+            if (resolvedType === 'DEBIT') {
+                balanceAccum = isCreditCard ? (balanceAccum - amountVal) : (balanceAccum + amountVal);
+            } else if (resolvedType === 'CREDIT') {
+                balanceAccum = isCreditCard ? (balanceAccum + amountVal) : (balanceAccum - amountVal);
+            }
+
+            return {
+                ...row,
+                "Running Balance": balanceAccum,
+                _rowErrors: errors
+            };
+        });
+    }, [validateRow]);
+
+    useEffect(() => {
+        if (rows.length > 0 && selectedAccountId) {
+            const targetAccount = accounts.find(acc => acc._id === selectedAccountId);
+            setRows(prev => revalidateAndRecalculateRows(prev, targetAccount));
+        }
+    }, [selectedAccountId, accounts, revalidateAndRecalculateRows]);
 
     const downloadFailedRowsCSV = (failed: ParsedTransaction[], nameOfFile: string) => {
         if (!failed || failed.length === 0) return;
 
-        const csvHeaders = ["Date", "Description", "Transaction Details", "Debit", "Credit", "Running Balance", "Transaction Type", "Amount", "Transaction ID", "Errors"];
-        const csvRows = failed.map(r => [
-            `"${(r.Date || "").replace(/"/g, '""')}"`,
-            `"${(r.Description || "").replace(/"/g, '""')}"`,
-            `"${(r["Transaction Details"] || "").replace(/"/g, '""')}"`,
-            String(r.Debit),
-            String(r.Credit),
-            String(r["Running Balance"]),
-            `"${(r["Transaction Type"] || "").replace(/"/g, '""')}"`,
-            String(r.Amount),
-            `"${(r.transactionId || "").replace(/"/g, '""')}"`,
-            `"${r._rowErrors.join("; ").replace(/"/g, '""')}"`
-        ]);
+        const csvHeaders = ["DATE", "PREFIX", "NUMBER", "BANK NAME", "SUB ACCOUNT", "PARENT ACCOUNT", "RECEIPT", "PAYMENT", "DESCRIPTION", "REMARKS", "BRANCH", "Errors"];
+        const csvRows = failed.map(r => {
+            const raw = r._rawRow || {};
+            return [
+                `"${String(getRowVal(raw, ['date', 'Date', 'DATE']) || '').replace(/"/g, '""')}"`,
+                `"${String(getRowVal(raw, ['prefix', 'Prefix', 'PREFIX']) || '').replace(/"/g, '""')}"`,
+                `"${String(getRowVal(raw, ['number', 'Number', 'NUMBER']) || '').replace(/"/g, '""')}"`,
+                `"${String(getRowVal(raw, ['bank name', 'bank_name', 'Bank Name', 'BANK NAME']) || '').replace(/"/g, '""')}"`,
+                `"${String(getRowVal(raw, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']) || '').replace(/"/g, '""')}"`,
+                `"${String(getRowVal(raw, ['parent account', 'parent_account', 'Parent Account', 'PARENT ACCOUNT']) || '').replace(/"/g, '""')}"`,
+                String(cleanNumber(getRowVal(raw, ['receipt', 'Receipt', 'RECEIPT']))),
+                String(cleanNumber(getRowVal(raw, ['payment', 'Payment', 'PAYMENT']))),
+                `"${String(getRowVal(raw, ['description', 'Description', 'DESCRIPTION']) || '').replace(/"/g, '""')}"`,
+                `"${String(getRowVal(raw, ['remarks', 'Remarks', 'REMARKS']) || '').replace(/"/g, '""')}"`,
+                `"${String(getRowVal(raw, ['branch', 'Branch', 'BRANCH']) || '').replace(/"/g, '""')}"`,
+                `"${r._rowErrors.join("; ").replace(/"/g, '""')}"`
+            ];
+        });
 
         const csvContent = [csvHeaders.join(","), ...csvRows.map(row => row.join(","))].join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -344,81 +443,66 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 return;
             }
 
+            let balanceAccum = selectedAccount ? (selectedAccount.currentBalance || selectedAccount.initialBalance || 0) : 0;
+            const isCreditCard = selectedAccount?.accountType === 'Credit Card';
+
             const parsed = jsonData.map(row => {
                 const rowErrors = validateRow(row);
 
-                const dateVal = getRowVal(row, ['date', 'Date']);
-                const descVal = getRowVal(row, ['description', 'Description']) || '';
-                const detailsVal = getRowVal(row, ['transaction_details', 'transaction details', 'Transaction Details', 'details']) || '';
-                const debitVal = cleanNumber(getRowVal(row, ['debit', 'Debit']));
-                const creditVal = cleanNumber(getRowVal(row, ['credit', 'Credit']));
-                const runningBalVal = cleanNumber(getRowVal(row, ['running_balance', 'running balance', 'Running Balance', 'runningBal']));
-                const rawType = String(getRowVal(row, ['transaction_type', 'transaction type', 'Transaction Type', 'type']) || '').trim();
-                const rawAmount = getRowVal(row, ['amount', 'Amount']);
-                let amountVal = cleanNumber(rawAmount);
-                if (amountVal === 0) {
-                    amountVal = debitVal > 0 ? debitVal : creditVal;
-                }
-                const txIdVal = getRowVal(row, ['transaction_id', 'transactionId', 'Transaction ID', 'reference_number', 'reference number', 'referenceNumber']);
+                const dateVal = getRowVal(row, ['date', 'Date', 'DATE']);
+                const prefixVal = getRowVal(row, ['prefix', 'Prefix', 'PREFIX']);
+                const numberVal = getRowVal(row, ['number', 'Number', 'NUMBER']);
+                const rawReceipt = getRowVal(row, ['receipt', 'Receipt', 'RECEIPT']);
+                const rawPayment = getRowVal(row, ['payment', 'Payment', 'PAYMENT']);
+                const descVal = getRowVal(row, ['description', 'Description', 'DESCRIPTION']) || '';
+                const remarksVal = getRowVal(row, ['remarks', 'Remarks', 'REMARKS']) || '';
 
-                const typeStr = rawType.toUpperCase();
+                const receiptVal = cleanNumber(rawReceipt);
+                const paymentVal = cleanNumber(rawPayment);
+                let amountVal = receiptVal > 0 ? receiptVal : paymentVal;
+
+                let resolvedType: 'DEBIT' | 'CREDIT' = 'DEBIT';
+                if (receiptVal > 0 && paymentVal === 0) {
+                    resolvedType = 'DEBIT';
+                } else if (paymentVal > 0 && receiptVal === 0) {
+                    resolvedType = 'CREDIT';
+                }
+
+                if (resolvedType === 'DEBIT') {
+                    balanceAccum = isCreditCard ? (balanceAccum - amountVal) : (balanceAccum + amountVal);
+                } else if (resolvedType === 'CREDIT') {
+                    balanceAccum = isCreditCard ? (balanceAccum + amountVal) : (balanceAccum - amountVal);
+                }
+
                 const parsedDate = parseDateFlexible(dateVal);
                 const isoDate = parsedDate
                     ? `${parsedDate.getUTCFullYear()}-${String(parsedDate.getUTCMonth() + 1).padStart(2, '0')}-${String(parsedDate.getUTCDate()).padStart(2, '0')}`
                     : '';
 
-                // Resolve type to DEBIT or CREDIT based on priority
-                let resolvedType = '';
-
-                // 1. Check Debit/Credit columns first
-                if (debitVal > 0 && creditVal === 0) {
-                    resolvedType = 'DEBIT';
-                } else if (creditVal > 0 && debitVal === 0) {
-                    resolvedType = 'CREDIT';
-                }
-
-                // 2. Check Amount suffix next
-                if (!resolvedType) {
-                    const amountStr = String(rawAmount || '').toUpperCase();
-                    if (amountStr.includes('DR')) {
-                        resolvedType = 'DEBIT';
-                    } else if (amountStr.includes('CR')) {
-                        resolvedType = 'CREDIT';
-                    }
-                }
-
-                // 3. Match from the user's specific transaction types
-                if (!resolvedType) {
-                    const creditTypes = [
-                        'CREDIT',
-                        'EXPENSE',
-                        'VENDOR PAYMENT',
-                        'TRANSFER FUND',
-                        'PAYMENT REFUND',
-                        'SALES RETURN',
-                        'WITHDRAWAL'
-                    ];
-                    if (creditTypes.includes(typeStr)) {
-                        resolvedType = 'CREDIT';
-                    } else {
-                        // All others default to DEBIT (Customer Payment, Deposit, Expense Refund, Interest Income, Journal, Opening Balance, Other Income, Vendor Payment Refund, etc.)
-                        resolvedType = 'DEBIT';
-                    }
-                }
-
-                const finalDesc = descVal.trim() || detailsVal.trim() || (typeStr === 'OPENING BALANCE' ? 'Opening Balance' : '');
+                const combinedTxId = (prefixVal !== undefined && numberVal !== undefined && prefixVal !== null && numberVal !== null)
+                    ? `${String(prefixVal).trim()}${String(numberVal).trim()}`
+                    : '';
 
                 return {
                     Date: isoDate || String(dateVal || ''),
-                    Description: finalDesc,
-                    "Transaction Details": detailsVal,
-                    Debit: debitVal,
-                    Credit: creditVal,
-                    "Running Balance": runningBalVal,
+                    Description: (() => {
+                        const rawDesc = descVal.trim() || remarksVal.trim();
+                        if (rawDesc) return rawDesc;
+                        const typeStr = resolvedType === 'DEBIT' ? 'Deposit' : 'Withdrawal';
+                        const subAccountVal = getRowVal(row, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
+                        const partyStr = subAccountVal ? ` for ${subAccountVal}` : '';
+                        const refStr = (prefixVal && numberVal) ? ` (Ref: ${prefixVal}-${numberVal})` : '';
+                        return `${typeStr} of ${amountVal}${partyStr}${refStr}`.trim();
+                    })(),
+                    "Transaction Details": remarksVal.trim(),
+                    Debit: receiptVal,
+                    Credit: paymentVal,
+                    "Running Balance": balanceAccum,
                     "Transaction Type": resolvedType,
                     Amount: amountVal,
-                    transactionId: txIdVal ? String(txIdVal) : undefined,
-                    _rowErrors: rowErrors
+                    transactionId: combinedTxId || undefined,
+                    _rowErrors: rowErrors,
+                    _rawRow: row
                 } as ParsedTransaction;
             });
 
@@ -474,9 +558,9 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 const start = i * batchSize;
                 const end = Math.min(start + batchSize, totalRows);
                 const batchTransactions = validRows.slice(start, end).map((row) => {
-                    const rest: any = {};
+                    const rest: any = { ...row._rawRow };
                     for (const key in row) {
-                        if (key !== '_rowErrors') {
+                        if (key !== '_rowErrors' && key !== '_rawRow') {
                             rest[key] = row[key];
                         }
                     }
@@ -487,7 +571,6 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                 const batchClearExisting = i === 0 ? clearExisting : false;
 
                 const payload = {
-                    branchId: selectedBranchId || undefined,
                     clearExisting: batchClearExisting,
                     transactions: batchTransactions
                 };
@@ -684,50 +767,9 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                 )}
                             </div>
 
-                            {/* Branch Selection */}
-                            <div className="space-y-1.5">
-                                <label className="block text-[10px] uppercase font-black tracking-widest" style={{ color: 'var(--text-dim)' }}>Assign to Branch</label>
-                                {loadingData ? (
-                                    <div className="flex items-center gap-2 py-2.5">
-                                        <Loader2 size={14} className="animate-spin" />
-                                        <span className="text-xs text-dim">Loading branches...</span>
-                                    </div>
-                                ) : (
-                                    <div className="relative">
-                                        <select
-                                            value={selectedBranchId}
-                                            onChange={(e) => setSelectedBranchId(e.target.value)}
-                                            className="w-full px-4 py-2.5 pr-10 rounded-xl outline-none text-sm font-bold transition-all focus:ring-2 focus:ring-lime appearance-none"
-                                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                        >
-                                            <option value="">— Select Branch —</option>
-                                            {branches.map(b => (
-                                                <option key={b._id} value={b._id}>{b.name}</option>
-                                            ))}
-                                        </select>
-                                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
-                                    </div>
-                                )}
-                            </div>
+                            {/* Branch auto-resolution is applied per transaction row */}
 
-                            {/* Reset / Clear Toggle */}
-                            <div className="md:col-span-2 flex items-center gap-3 p-3 rounded-xl border mt-2" style={{ borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.03)' }}>
-                                <input
-                                    id="clear-existing-checkbox"
-                                    type="checkbox"
-                                    checked={clearExisting}
-                                    onChange={(e) => setClearExisting(e.target.checked)}
-                                    className="w-4.5 h-4.5 rounded border-gray-300 text-red-600 focus:ring-red-500 accent-red-500 cursor-pointer"
-                                />
-                                <div className="cursor-pointer" onClick={() => setClearExisting(!clearExisting)}>
-                                    <label htmlFor="clear-existing-checkbox" className="block text-xs font-black uppercase tracking-wider text-rose-400 cursor-pointer">
-                                        Clear existing transaction history before uploading
-                                    </label>
-                                    <p className="text-[11px] text-white/50 mt-0.5">
-                                        Check this to purge all ledger entries associated with this bank account and reset the balance. Required for a clean bank re-entry.
-                                    </p>
-                                </div>
-                            </div>
+                            {/* Clear existing is removed to avoid accidental deletion */}
                         </div>
                     )}
 
@@ -827,7 +869,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps)
                                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                             {rows.map((row, idx) => (
                                                 <tr key={idx} style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
-                                                    <td className="py-3 px-4 font-mono">{row.Date || '-'}</td>
+                                                    <td className="py-3 px-4 font-mono">{formatDateDMY(row.Date) || '-'}</td>
                                                     <td className="py-3 px-4 font-semibold">{row.Description || '-'}</td>
                                                     <td className="py-3 px-4 max-w-[150px] truncate" title={row["Transaction Details"]}>{row["Transaction Details"] || '-'}</td>
                                                     <td className="py-3 px-4 font-mono text-emerald-500 font-semibold">{row.Debit > 0 ? `$${row.Debit.toFixed(2)}` : '-'}</td>

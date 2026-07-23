@@ -7,6 +7,10 @@ import { getAllBranches, type Branch } from '../../../services/branchService';
 import BulkDriverUpload from './BulkDriverUpload';
 import DataMigrationUpload from './DataMigrationUpload';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import toast from 'react-hot-toast';
 
 const DriverList = () => {
     const { t } = useTranslation();
@@ -100,6 +104,129 @@ const DriverList = () => {
         fetchBranchesData();
     }, []);
 
+    const handleExportExcel = () => {
+        if (drivers.length === 0) {
+            toast.error("No drivers available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = drivers.map((d, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Driver ID": d.driverId || 'N/A',
+                "First Name": d.firstName || 'N/A',
+                "Last Name": d.lastName || 'N/A',
+                "Email": d.email || 'N/A',
+                "Phone": d.phone || 'N/A',
+                "Branch": typeof d.branch === 'object' ? d.branch?.name : 'N/A',
+                "Status": d.status || 'N/A',
+                "Onboarding Date": d.createdAt ? new Date(d.createdAt).toLocaleDateString() : 'N/A'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Drivers");
+            
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `drivers_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (drivers.length === 0) {
+            toast.error("No drivers available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = drivers.map((d, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Driver ID": d.driverId || 'N/A',
+                "First Name": d.firstName || 'N/A',
+                "Last Name": d.lastName || 'N/A',
+                "Email": d.email || 'N/A',
+                "Phone": d.phone || 'N/A',
+                "Branch": typeof d.branch === 'object' ? d.branch?.name : 'N/A',
+                "Status": d.status || 'N/A',
+                "Onboarding Date": d.createdAt ? new Date(d.createdAt).toLocaleDateString() : 'N/A'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `drivers_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        if (drivers.length === 0) {
+            toast.error("No drivers available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Drivers Report";
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+
+            const head = [["Sl No.", "Driver ID", "Name", "Email", "Phone", "Branch", "Status"]];
+            const body = drivers.map((d, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                d.driverId || 'N/A',
+                `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'N/A',
+                d.email || 'N/A',
+                d.phone || 'N/A',
+                typeof d.branch === 'object' ? d.branch?.name : 'N/A',
+                d.status || 'N/A'
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`drivers_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
+    };
+
     const fetchDrivers = async () => {
         try {
             setLoading(true);
@@ -182,6 +309,30 @@ const DriverList = () => {
                     <p className="text-xs font-medium text-dim mt-0.5">{t('management.drivers.subtitle')}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-emerald-500" /> Excel
+                    </button>
+
+                    <button
+                        onClick={handleExportCsv}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-blue-400" /> CSV
+                    </button>
+
+                    <button
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-rose-500" /> PDF
+                    </button>
+
                     <button
                         onClick={fetchDrivers}
                         className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 disabled:opacity-50"

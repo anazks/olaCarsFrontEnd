@@ -15,14 +15,16 @@ import {
     Plus,
     ArrowUpDown,
     Search,
-    Trash2
+    ArrowDownRight,
+    ArrowUpRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions, deleteAllTransactions } from '../../../services/bankAccountService';
+import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions, downloadBankAccountLedgerPdf } from '../../../services/bankAccountService';
 import { type LedgerEntry } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
 import { getInvoicesByCustomer, type Invoice } from '../../../services/invoiceService';
+import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
@@ -37,6 +39,13 @@ const BankAccountLedger = () => {
     const [entries, setEntries] = useState<LedgerEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [totalDeposits, setTotalDeposits] = useState(0);
+    const [totalWithdrawals, setTotalWithdrawals] = useState(0);
+    const [openingBalance, setOpeningBalance] = useState(0);
+    const [downloading, setDownloading] = useState(false);
+    const [showDownloadModal, setShowDownloadModal] = useState(false);
+    const [dlFrom, setDlFrom] = useState('');
+    const [dlTo, setDlTo] = useState('');
 
     // Pagination
     const [page, setPage] = useState(1);
@@ -48,12 +57,68 @@ const BankAccountLedger = () => {
     const [search, setSearch] = useState('');
     const [balance, setBalance] = useState('');
 
+    // Selection and Bulk Edit States
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [isBulkEditing, setIsBulkEditing] = useState(false);
+    const [editEntries, setEditEntries] = useState<any[]>([]);
+    const [allBankAccountsList, setAllBankAccountsList] = useState<BankAccount[]>([]);
+    const [allAccountingCodes, setAllAccountingCodes] = useState<AccountingCode[]>([]);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        setSelectedIds([]);
+    }, [page, limit, sortDirection, startDate, endDate, search, balance]);
+
+    useEffect(() => {
+        if (isBulkEditing) {
+            const loadDataAndInitialize = async () => {
+                try {
+                    const [banksRes, codesRes] = await Promise.all([
+                        getAllBankAccounts({ limit: 100 }),
+                        getAllAccountingCodes()
+                    ]);
+
+                    const bankList = banksRes.data || [];
+                    const codesList = Array.isArray(codesRes) ? codesRes : ((codesRes as any).data || []);
+
+                    setAllBankAccountsList(bankList);
+                    setAllAccountingCodes(codesList);
+
+                    const selected = entries.filter(e => selectedIds.includes(e._id)).map(e => {
+                        const targetBankId = (e as any).bankAccountId || id;
+                        const bank = bankList.find((b: any) => b._id === targetBankId);
+                        return {
+                            id: e._id,
+                            entryDate: e.entryDate ? new Date(e.entryDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+                            description: e.description || '',
+                            type: e.type || 'DEBIT',
+                            amount: e.amount || 0,
+                            accountsName: (e as any).accountsName || '',
+                            parentAccount: (e as any).parentAccount || 'Accounts Receivable',
+                            bankAccountId: targetBankId,
+                            bankName: bank ? (bank.accountName || bank.bankName) : '',
+                            tempBankName: bank ? (bank.accountName || bank.bankName) : '',
+                            tempParentAccountName: (e as any).parentAccount || 'Accounts Receivable'
+                        };
+                    });
+                    setEditEntries(selected);
+                } catch (err) {
+                    console.error('Failed to load bulk edit dependencies', err);
+                }
+            };
+            loadDataAndInitialize();
+        } else {
+            setEditEntries([]);
+        }
+    }, [isBulkEditing, selectedIds, entries, id]);
+
     // Import Statement Modal States
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
     const [importFile, setImportFile] = useState<File | null>(null);
     const [importing, setImporting] = useState(false);
-    const [deletingAll, setDeletingAll] = useState(false);
 
     // Dynamic bank statement import preview & branch selection
     const [branches, setBranches] = useState<any[]>([]);
@@ -197,6 +262,9 @@ const BankAccountLedger = () => {
             };
             const txRes = await getBankAccountTransactions(id, filters);
             setEntries(Array.isArray(txRes.data) ? txRes.data : []);
+            setTotalDeposits(txRes.totalDeposits || 0);
+            setTotalWithdrawals(txRes.totalWithdrawals || 0);
+            setOpeningBalance(txRes.openingBalance || 0);
             if (txRes.pagination) {
                 setPagination({
                     total: txRes.pagination.total || 0,
@@ -215,29 +283,6 @@ const BankAccountLedger = () => {
         fetchData();
     }, [fetchData]);
 
-    const handleDeleteAllTransactions = async () => {
-        if (!id) return;
-        const confirmDelete = window.confirm(
-            `Are you sure you want to delete ALL statement transactions for this bank account (${account?.accountName || account?.bankName || 'this bank account'})?\n\nThis will permanently delete all records and cannot be undone.`
-        );
-        if (!confirmDelete) return;
-
-        setDeletingAll(true);
-        try {
-            const res = await deleteAllTransactions(id);
-            if (res.success) {
-                toast.success(res.message || 'Successfully cleared all transactions.');
-                setPage(1);
-                fetchData();
-            } else {
-                toast.error(res.message || 'Failed to clear transactions.');
-            }
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || err.message || 'Error clearing transactions');
-        } finally {
-            setDeletingAll(false);
-        }
-    };
 
     const normalizeHeader = (header: string): string => {
         return header.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -558,6 +603,88 @@ const BankAccountLedger = () => {
         return <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>;
     };
 
+    const handleBulkEditSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!id) return;
+
+        for (const entry of editEntries) {
+            if (!entry.description) {
+                toast.error('All descriptions must be filled');
+                return;
+            }
+            if (entry.amount <= 0) {
+                toast.error('All amounts must be greater than zero');
+                return;
+            }
+        }
+
+        try {
+            setSaving(true);
+            const { bulkEditBankAccountTransactions } = await import('../../../services/bankAccountService');
+            await bulkEditBankAccountTransactions(id, editEntries);
+            toast.success('Transactions updated and running balances recalculated successfully.');
+            setIsBulkEditing(false);
+            setSelectedIds([]);
+            await fetchData();
+        } catch (err: any) {
+            console.error('Failed to save bulk edits', err);
+            toast.error(err.response?.data?.message || err.message || 'Failed to update transactions');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDownloadPdf = async () => {
+        if (!id) return;
+        setShowDownloadModal(false);
+        setDownloading(true);
+        const toastId = toast.loading('Generating ledger PDF...');
+        try {
+            const params: any = {
+                startDate: dlFrom || undefined,
+                endDate: dlTo || undefined,
+                search: search || undefined,
+                sort: sortDirection
+            };
+            const data = await downloadBankAccountLedgerPdf(id, params);
+            const blob = new Blob([data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const dateStr = new Date().toISOString().split('T')[0];
+            const safeName = ((account?.accountName || account?.bankName || 'ledger') as string).replace(/\s+/g, '_');
+            link.setAttribute('download', `${safeName}_ledger_${dateStr}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            toast.success('Ledger PDF downloaded!', { id: toastId });
+        } catch (err: any) {
+            console.error('Failed to download ledger PDF:', err);
+            toast.error(err?.response?.data?.message || err.message || 'Failed to generate ledger PDF', { id: toastId });
+        } finally {
+            setDownloading(false);
+        }
+    };
+
+    const handleBulkDeleteSubmit = async () => {
+        if (!id) return;
+        setDeleting(true);
+        try {
+            const { bulkDeleteBankAccountTransactions } = await import('../../../services/bankAccountService');
+            await bulkDeleteBankAccountTransactions(id, selectedIds);
+            toast.success('Transactions deleted and running balances recalculated successfully.');
+            setShowDeleteConfirm(false);
+            setSelectedIds([]);
+            fetchData();
+        } catch (err: any) {
+            console.error('Failed to delete transactions', err);
+            toast.error(err.response?.data?.message || err.message || 'Failed to delete transactions');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     const sortedEntries = React.useMemo(() => {
         return [...entries].sort((a, b) => {
             const dateA = new Date(a.entryDate || a.date || 0).getTime();
@@ -624,6 +751,240 @@ const BankAccountLedger = () => {
         );
     }
 
+    if (isBulkEditing && account) {
+        return (
+            <div className="container-responsive space-y-6 pb-20 animate-fade-in" style={{ color: 'var(--text-main)' }}>
+                <Breadcrumbs
+                    items={[
+                        { label: 'Finance', path: '#' },
+                        { label: 'Bank Accounts', path: '../bank-accounts' },
+                        { label: `${account.accountName || account.bankName} Ledger`, path: `../bank-accounts/${id}/ledger` },
+                        { label: 'Bulk Edit Transactions', active: true }
+                    ]}
+                />
+
+                <div className="flex justify-between items-center border-b border-white/5 pb-6">
+                    <div>
+                        <h1 className="text-2xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+                            Bulk Edit Transactions
+                        </h1>
+                        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
+                            Editing {editEntries.length} selected transaction{editEntries.length > 1 ? 's' : ''}. Running balances will be recalculated sequentially upon saving.
+                        </p>
+                    </div>
+                </div>
+
+                <form onSubmit={handleBulkEditSubmit} className="space-y-6">
+                    <div className="rounded-2xl border bg-card overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Date & Time</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Description</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Bank Name</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Parent Account</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Sub Account</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-36">Type</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-36 text-right">Amount ($)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {editEntries.map((entry, idx) => (
+                                        <tr key={entry.id} className="border-b last:border-0 hover:bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
+                                            <td className="px-6 py-4">
+                                                <input
+                                                    type="datetime-local"
+                                                    value={entry.entryDate}
+                                                    onChange={e => {
+                                                        const updated = [...editEntries];
+                                                        updated[idx].entryDate = e.target.value;
+                                                        setEditEntries(updated);
+                                                    }}
+                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                    required
+                                                />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <input
+                                                    type="text"
+                                                    value={entry.description}
+                                                    onChange={e => {
+                                                        const updated = [...editEntries];
+                                                        updated[idx].description = e.target.value;
+                                                        setEditEntries(updated);
+                                                    }}
+                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                    required
+                                                />
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search Bank Name..."
+                                                    value={entry.tempBankName || ''}
+                                                    list={`bank-list-${idx}`}
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        const updated = [...editEntries];
+                                                        updated[idx].tempBankName = val;
+                                                        updated[idx].bankName = val;
+                                                        
+                                                        // Look up matching bank ID
+                                                        const match = allBankAccountsList.find(b =>
+                                                            (b.accountName || '').toLowerCase().trim() === val.toLowerCase().trim() ||
+                                                            (b.bankName || '').toLowerCase().trim() === val.toLowerCase().trim()
+                                                        );
+                                                        if (match) {
+                                                            updated[idx].bankAccountId = match._id;
+                                                        }
+                                                        setEditEntries(updated);
+                                                    }}
+                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                    required
+                                                />
+                                                <datalist id={`bank-list-${idx}`}>
+                                                    {allBankAccountsList.map(bankAcc => (
+                                                        <option key={bankAcc._id} value={bankAcc.accountName || bankAcc.bankName}>
+                                                            {bankAcc.accountNumber}
+                                                        </option>
+                                                    ))}
+                                                </datalist>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search Parent Account..."
+                                                    value={entry.tempParentAccountName || entry.parentAccount || ''}
+                                                    list={`parent-list-${idx}`}
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        const updated = [...editEntries];
+                                                        updated[idx].tempParentAccountName = val;
+                                                        updated[idx].parentAccount = val;
+                                                        setEditEntries(updated);
+                                                    }}
+                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                    required
+                                                />
+                                                <datalist id={`parent-list-${idx}`}>
+                                                    {(allAccountingCodes.filter(c => !c.parentAccount).length > 0
+                                                        ? allAccountingCodes.filter(c => !c.parentAccount)
+                                                        : allAccountingCodes
+                                                    ).map(p => (
+                                                        <option key={p._id} value={p.name}>
+                                                            {p.code}
+                                                        </option>
+                                                    ))}
+                                                </datalist>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <input
+                                                    type="text"
+                                                    placeholder="e.g. JESSICA SOTO"
+                                                    value={entry.accountsName}
+                                                    list={`accounts-list-${idx}`}
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        const updated = [...editEntries];
+                                                        updated[idx].accountsName = val;
+                                                        
+                                                        // Auto-fill parent account if it matches an existing accounting code
+                                                        const match = allAccountingCodes.find(c => c.name.toLowerCase().trim() === val.toLowerCase().trim());
+                                                        if (match) {
+                                                            const parentObj = typeof match.parentAccount === 'object' && match.parentAccount ? match.parentAccount : null;
+                                                            const parentName = parentObj
+                                                                ? parentObj.name
+                                                                : (allAccountingCodes.find(p => p._id === match.parentAccount)?.name || '');
+                                                            if (parentName) {
+                                                                updated[idx].parentAccount = parentName;
+                                                                updated[idx].tempParentAccountName = parentName;
+                                                            }
+                                                        }
+                                                        setEditEntries(updated);
+                                                    }}
+                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                                <datalist id={`accounts-list-${idx}`}>
+                                                    {allAccountingCodes.filter(c => c.parentAccount).map(c => (
+                                                        <option key={c._id} value={c.name}>
+                                                            {c.code} - {c.category}
+                                                        </option>
+                                                    ))}
+                                                </datalist>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <select
+                                                    value={entry.type}
+                                                    onChange={e => {
+                                                        const updated = [...editEntries];
+                                                        updated[idx].type = e.target.value;
+                                                        setEditEntries(updated);
+                                                    }}
+                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600] cursor-pointer"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                >
+                                                    <option value="DEBIT" className="bg-[var(--bg-card)]">DEBIT (Deposit)</option>
+                                                    <option value="CREDIT" className="bg-[var(--bg-card)]">CREDIT (Withdrawal)</option>
+                                                </select>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0.01"
+                                                    value={entry.amount}
+                                                    onChange={e => {
+                                                        const updated = [...editEntries];
+                                                        updated[idx].amount = parseFloat(e.target.value) || 0;
+                                                        setEditEntries(updated);
+                                                    }}
+                                                    className="w-full text-right bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                    required
+                                                />
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4 justify-end">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsBulkEditing(false);
+                            }}
+                            className="px-6 py-3 bg-black/5 dark:bg-white/5 text-xs font-black uppercase tracking-wider rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-all border cursor-pointer"
+                            style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={saving}
+                            className="px-8 py-3 bg-[#C8E600] text-black text-xs font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            style={{ backgroundColor: '#C8E600' }}
+                        >
+                            {saving ? (
+                                <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <>Save All Changes</>
+                            )}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        );
+    }
+
     return (
         <div className="container-responsive space-y-6 pb-20 animate-fade-in" style={{ color: 'var(--text-main)' }}>
             <Breadcrumbs
@@ -659,19 +1020,22 @@ const BankAccountLedger = () => {
                     <p className="text-sm font-mono" style={{ color: 'var(--text-dim)' }}>Code: {account.accountCode || 'N/A'} | Num: {account.accountNumber}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-4 mt-4 sm:mt-0">
-                    <button 
-                        onClick={handleDeleteAllTransactions}
-                        disabled={deletingAll}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <Trash2 size={14} strokeWidth={3} />
-                        {deletingAll ? 'Deleting...' : 'Delete Bank Entries'}
-                    </button>
                     <button
                         onClick={() => setIsRecordPaymentModalOpen(true)}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-black/5 hover:bg-black/10 text-brand-black border border-black/10 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-white/10 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
                     >
                         <Plus size={14} strokeWidth={3} /> Record Payment
+                    </button>
+                    <button
+                        onClick={() => {
+                            setDlFrom(startDate);
+                            setDlTo(endDate);
+                            setShowDownloadModal(true);
+                        }}
+                        disabled={downloading}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 border border-emerald-500/30 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <FileText size={14} strokeWidth={3} /> {downloading ? 'Downloading...' : 'Download PDF'}
                     </button>
                     <button
                         onClick={() => setIsBulkUploadOpen(true)}
@@ -689,12 +1053,91 @@ const BankAccountLedger = () => {
                 </div>
             </div>
 
+            {/* KPI Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Opening Balance Card */}
+                <div className="border rounded-[2rem] p-6 relative overflow-hidden group transition-all hover:border-amber-500/30" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="relative z-10 space-y-4">
+                        <div className="flex justify-between items-start">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                                <Coins className="text-amber-500" size={20} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">Start Balance</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-dim)' }}>Opening Balance</p>
+                            <h2 className="text-2xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
+                                <span className="text-amber-400 text-lg mr-1">$</span>
+                                {(openingBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Total Deposits Card */}
+                <div className="border rounded-[2rem] p-6 relative overflow-hidden group transition-all hover:border-green-500/30" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="relative z-10 space-y-4">
+                        <div className="flex justify-between items-start">
+                            <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                                <ArrowDownRight className="text-green-500" size={20} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-green-400 bg-green-500/10 px-2 py-0.5 rounded-md">Incoming</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-dim)' }}>Total Deposits</p>
+                            <h2 className="text-2xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
+                                <span className="text-green-400 text-lg mr-1">$</span>
+                                {totalDeposits.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Total Withdrawals Card */}
+                <div className="border rounded-[2rem] p-6 relative overflow-hidden group transition-all hover:border-rose-500/30" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="relative z-10 space-y-4">
+                        <div className="flex justify-between items-start">
+                            <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
+                                <ArrowUpRight className="text-rose-500" size={20} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md">Outgoing</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-dim)' }}>Total Withdrawals</p>
+                            <h2 className="text-2xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
+                                <span className="text-rose-400 text-lg mr-1">$</span>
+                                {totalWithdrawals.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Current Balance Card */}
+                <div className="border rounded-[2rem] p-6 relative overflow-hidden group transition-all hover:border-lime/30" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="relative z-10 space-y-4">
+                        <div className="flex justify-between items-start">
+                            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                                <Building2 className="text-blue-500" size={20} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">Live Balance</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-dim)' }}>Current Balance</p>
+                            <h2 className="text-2xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
+                                <span className="text-blue-400 text-lg mr-1">$</span>
+                                {(account.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Search, Date, and Sort Filters */}
             <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-main)] flex flex-col lg:flex-row gap-4 justify-between items-center transition-colors duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                 {/* Search Box */}
                 <div className="relative w-full lg:max-w-xs">
                     <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 opacity-40" style={{ color: 'var(--text-main)' }} />
-                    <input 
+                    <input
                         type="text"
                         placeholder="Search description or Tx ID..."
                         value={search}
@@ -715,7 +1158,7 @@ const BankAccountLedger = () => {
                 {/* Find by Running Balance Box */}
                 <div className="relative w-full lg:max-w-xs">
                     <Coins className="absolute left-3 top-2.5 h-3.5 w-3.5 opacity-40" style={{ color: 'var(--text-main)' }} />
-                    <input 
+                    <input
                         type="text"
                         placeholder="Find running balance..."
                         value={balance}
@@ -736,16 +1179,16 @@ const BankAccountLedger = () => {
                 {/* Date range pickers */}
                 <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
                     <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Filter By Date:</span>
-                    <input 
-                        type="date" 
+                    <input
+                        type="date"
                         value={startDate}
                         onChange={e => { setStartDate(e.target.value); setPage(1); }}
                         className="bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-brand-lime transition-all"
                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     />
                     <span className="opacity-45 text-xs" style={{ color: 'var(--text-dim)' }}>to</span>
-                    <input 
-                        type="date" 
+                    <input
+                        type="date"
                         value={endDate}
                         min={startDate}
                         onChange={e => { setEndDate(e.target.value); setPage(1); }}
@@ -798,6 +1241,20 @@ const BankAccountLedger = () => {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b transition-colors duration-300" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
+                                    <th className="px-6 py-4 w-12 text-center select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={sortedEntries.length > 0 && selectedIds.length === sortedEntries.length}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedIds(sortedEntries.map(entry => entry._id));
+                                                } else {
+                                                    setSelectedIds([]);
+                                                }
+                                            }}
+                                            className="rounded border-white/20 text-[#C8E600] focus:ring-[#C8E600] bg-transparent cursor-pointer"
+                                        />
+                                    </th>
                                     <th
                                         className="px-6 py-4 text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-brand-black dark:hover:text-white transition-colors"
                                         onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
@@ -835,16 +1292,32 @@ const BankAccountLedger = () => {
                                         ? (entry.type === 'CREDIT' ? entry.amount : 0)
                                         : (entry.credit || 0);
 
+                                    const isSelected = selectedIds.includes(entry._id);
+
                                     return (
                                         <tr
                                             key={entry._id}
-                                            className="border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer"
+                                            className={`border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer ${isSelected ? 'bg-[#C8E600]/10 hover:bg-[#C8E600]/15' : ''}`}
                                             style={{ borderColor: 'var(--border-main)' }}
                                             onClick={() => {
                                                 const basePath = location.pathname.split('/bank-accounts/')[0];
                                                 navigate(`${basePath}/bank-transactions/${entry._id}`);
                                             }}
                                         >
+                                            <td className="px-6 py-4 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedIds(prev => [...prev, entry._id]);
+                                                        } else {
+                                                            setSelectedIds(prev => prev.filter(id => id !== entry._id));
+                                                        }
+                                                    }}
+                                                    className="rounded border-white/20 text-[#C8E600] focus:ring-[#C8E600] bg-transparent cursor-pointer"
+                                                />
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
                                             </td>
@@ -1369,6 +1842,155 @@ const BankAccountLedger = () => {
                     fetchData();
                 }}
             />
+
+            {/* FLOATING ACTION BAR FOR SELECTED ITEMS */}
+            {selectedIds.length > 0 && !isBulkEditing && (
+                <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-between gap-6 px-6 py-4 rounded-2xl border shadow-2xl animate-in fade-in slide-in-from-bottom duration-300 backdrop-blur-md"
+                    style={{
+                        background: 'rgba(20, 20, 20, 0.85)',
+                        borderColor: 'var(--border-main)',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+                    }}>
+                    <span className="text-xs font-bold text-white">
+                        {selectedIds.length} transaction{selectedIds.length > 1 ? 's' : ''} selected
+                    </span>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => {
+                                setIsBulkEditing(true);
+                            }}
+                            className="px-4 py-2 text-xs font-black uppercase tracking-wider rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        >
+                            Edit Selected
+                        </button>
+                        <button
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="px-4 py-2 text-xs font-black uppercase tracking-wider rounded-xl bg-red-600 hover:bg-red-500 text-white transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        >
+                            Delete Selected
+                        </button>
+                        <button
+                            onClick={() => setSelectedIds([])}
+                            className="px-3 py-2 text-xs font-bold text-white/60 hover:text-white transition-all"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
+                    <div className="relative border rounded-[2rem] w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300 shadow-[0_0_80px_rgba(0,0,0,0.5)] z-10" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="p-8 space-y-6 text-center">
+                            <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center mx-auto">
+                                <AlertTriangle className="text-red-500" size={32} />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-lg font-black" style={{ color: 'var(--text-main)' }}>Delete Transactions?</h3>
+                                <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>
+                                    Are you sure you want to delete these {selectedIds.length} selected transaction{selectedIds.length > 1 ? 's' : ''}? This action cannot be undone, and the running balances will be recalculated sequentially.
+                                </p>
+                            </div>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    disabled={deleting}
+                                    className="flex-1 py-3.5 bg-black/5 dark:bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-all border cursor-pointer"
+                                    style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleBulkDeleteSubmit}
+                                    disabled={deleting}
+                                    className="flex-1 py-3.5 bg-red-600 text-white text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-red-500 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-30"
+                                >
+                                    {deleting ? (
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <>Delete Now</>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Download PDF Modal */}
+            {showDownloadModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDownloadModal(false)} />
+                    <div className="relative border rounded-[2rem] w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300 shadow-[0_0_80px_rgba(0,0,0,0.5)] z-10" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="p-8 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                            <div className="flex items-center gap-3">
+                                <FileText className="text-brand-lime" size={24} style={{ color: 'var(--brand-lime)' }} />
+                                <div>
+                                    <h2 className="text-md font-black" style={{ color: 'var(--text-main)' }}>Export PDF Statement</h2>
+                                    <p className="text-[10px] font-black uppercase tracking-widest mt-1 text-lime" style={{ color: 'var(--brand-lime)' }}>Define Report Criteria</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowDownloadModal(false)} className="text-dim hover:text-white transition-all text-lg font-bold cursor-pointer" style={{ color: 'var(--text-dim)' }}>&times;</button>
+                        </div>
+
+                        <div className="p-8 space-y-6">
+                            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>
+                                Choose a custom date range to filter the ledger report. Leave the dates blank to export the entire history.
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Start Date</label>
+                                    <input
+                                        type="date"
+                                        value={dlFrom}
+                                        onChange={e => setDlFrom(e.target.value)}
+                                        className="w-full bg-transparent border rounded-xl px-3 py-2 text-xs outline-none focus:border-brand-lime transition-all"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>End Date</label>
+                                    <input
+                                        type="date"
+                                        value={dlTo}
+                                        min={dlFrom}
+                                        onChange={e => setDlTo(e.target.value)}
+                                        className="w-full bg-transparent border rounded-xl px-3 py-2 text-xs outline-none focus:border-brand-lime transition-all"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDownloadModal(false)}
+                                    className="flex-1 py-3.5 bg-black/5 dark:bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-all border cursor-pointer"
+                                    style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleDownloadPdf}
+                                    disabled={downloading}
+                                    className="flex-1 py-3.5 bg-brand-lime text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-30"
+                                    style={{ backgroundColor: 'var(--brand-lime)' }}
+                                >
+                                    {downloading ? (
+                                        <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <>Download PDF</>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

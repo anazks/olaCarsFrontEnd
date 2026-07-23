@@ -11,6 +11,10 @@ import HasPermission from '../../../components/HasPermission';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import DateRangeReportModal from './DateRangeReportModal';
 import { downloadExcelReport } from '../../../services/reportingService';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import toast from 'react-hot-toast';
 
 const StatusBadge = ({ status }: { status: POStatus }) => {
     const { t } = useTranslation();
@@ -102,7 +106,130 @@ const PurchaseOrderList = () => {
             branch: branchFilter !== 'ALL' ? branchFilter : undefined
         });
     };
-    
+
+    const handleExportExcel = () => {
+        if (pos.length === 0) {
+            toast.error("No purchase orders available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = pos.map((po, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "PO Number": po.purchaseOrderNumber || 'N/A',
+                "Purpose": po.purpose || 'N/A',
+                "Status": po.status || 'N/A',
+                "Vendor": typeof po.supplier === 'object' ? po.supplier.name : (po.supplierDetails?.name || 'N/A'),
+                "Branch": typeof po.branch === 'object' ? po.branch.name : 'N/A',
+                "Date": po.createdAt ? new Date(po.createdAt).toLocaleDateString() : 'N/A',
+                "Total Amount ($)": po.totalAmount || 0,
+                "Is Billed": po.isBilled ? 'Yes' : 'No'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Purchase Orders");
+            
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `purchase_orders_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (pos.length === 0) {
+            toast.error("No purchase orders available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = pos.map((po, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "PO Number": po.purchaseOrderNumber || 'N/A',
+                "Purpose": po.purpose || 'N/A',
+                "Status": po.status || 'N/A',
+                "Vendor": typeof po.supplier === 'object' ? po.supplier.name : (po.supplierDetails?.name || 'N/A'),
+                "Branch": typeof po.branch === 'object' ? po.branch.name : 'N/A',
+                "Date": po.createdAt ? new Date(po.createdAt).toLocaleDateString() : 'N/A',
+                "Total Amount ($)": po.totalAmount || 0,
+                "Is Billed": po.isBilled ? 'Yes' : 'No'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `purchase_orders_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        if (pos.length === 0) {
+            toast.error("No purchase orders available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Purchase Orders Report";
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+
+            const head = [["Sl No.", "PO Number", "Purpose", "Status", "Vendor", "Branch", "Total Amount"]];
+            const body = pos.map((po, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                po.purchaseOrderNumber || 'N/A',
+                po.purpose || 'N/A',
+                po.status || 'N/A',
+                typeof po.supplier === 'object' ? po.supplier.name : (po.supplierDetails?.name || 'N/A'),
+                typeof po.branch === 'object' ? po.branch.name : 'N/A',
+                `$${(po.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`purchase_orders_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
+    };
+
     // Pagination State
     const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
@@ -274,6 +401,30 @@ const PurchaseOrderList = () => {
                     >
                         <Filter size={14} /> {t('management.common.filters')}
                     </button>
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-emerald-500" /> Excel
+                    </button>
+
+                    <button
+                        onClick={handleExportCsv}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-blue-400" /> CSV
+                    </button>
+
+                    <button
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-rose-500" /> PDF
+                    </button>
+
                     <button
                         onClick={() => setIsReportModalOpen(true)}
                         className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all border border-white/10 hover:bg-white/5 active:scale-95 cursor-pointer"

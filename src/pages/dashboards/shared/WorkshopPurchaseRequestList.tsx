@@ -4,6 +4,10 @@ import { RefreshCw, FileText, AlertTriangle, ChevronLeft, ChevronRight, Shopping
 import { getWorkshopProcurementRequests, type ProcurementRequest, type PaginationMetadata } from '../../../services/workshopProcurementService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import toast from 'react-hot-toast';
 
 const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
     const styles: Record<ProcurementRequest['status'], { bg: string; text: string; border: string }> = {
@@ -93,6 +97,147 @@ const WorkshopPurchaseRequestList = () => {
     const [pagination, setPagination] = useState<PaginationMetadata | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [limit] = useState(10); // Page size limit
+
+    const handleExportExcel = () => {
+        if (requests.length === 0) {
+            toast.error("No purchase requests available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = requests.map((req, idx) => {
+                const isAudited = req.merchandiserPrice !== undefined && req.merchandiserPrice !== null;
+                const unitCost = isAudited ? (req.merchandiserPrice ?? 0) : (req.part?.unitCost || 0);
+                const auditedCostSum = isAudited ? (req.merchandiserTotalAmount ?? 0) : ((req.quantity || 0) * (req.part?.unitCost || 0));
+                return {
+                    "Sl No.": String(idx + 1).padStart(2, '0'),
+                    "Request Number": req.requestNumber || 'N/A',
+                    "Part Name": req.part?.partName || 'N/A',
+                    "Part Number": req.part?.partNumber || 'N/A',
+                    "Quantity": req.quantity || 0,
+                    "Unit Cost ($)": unitCost,
+                    "Total Cost ($)": auditedCostSum,
+                    "Branch": req.branch?.name || 'N/A',
+                    "Status": req.status || 'N/A',
+                    "Requested By": req.requestedBy?.fullName || 'N/A',
+                    "Date": req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'N/A'
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Purchase Requests");
+            
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `purchase_requests_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (requests.length === 0) {
+            toast.error("No purchase requests available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = requests.map((req, idx) => {
+                const isAudited = req.merchandiserPrice !== undefined && req.merchandiserPrice !== null;
+                const unitCost = isAudited ? (req.merchandiserPrice ?? 0) : (req.part?.unitCost || 0);
+                const auditedCostSum = isAudited ? (req.merchandiserTotalAmount ?? 0) : ((req.quantity || 0) * (req.part?.unitCost || 0));
+                return {
+                    "Sl No.": String(idx + 1).padStart(2, '0'),
+                    "Request Number": req.requestNumber || 'N/A',
+                    "Part Name": req.part?.partName || 'N/A',
+                    "Part Number": req.part?.partNumber || 'N/A',
+                    "Quantity": req.quantity || 0,
+                    "Unit Cost ($)": unitCost,
+                    "Total Cost ($)": auditedCostSum,
+                    "Branch": req.branch?.name || 'N/A',
+                    "Status": req.status || 'N/A',
+                    "Requested By": req.requestedBy?.fullName || 'N/A',
+                    "Date": req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'N/A'
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `purchase_requests_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        if (requests.length === 0) {
+            toast.error("No purchase requests available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Purchase Requests Report";
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+
+            const head = [["Sl No.", "Req Number", "Part Name", "Quantity", "Branch", "Status", "Total Amount"]];
+            const body = requests.map((req, idx) => {
+                const isAudited = req.merchandiserPrice !== undefined && req.merchandiserPrice !== null;
+                const auditedCostSum = isAudited ? (req.merchandiserTotalAmount ?? 0) : ((req.quantity || 0) * (req.part?.unitCost || 0));
+                return [
+                    String(idx + 1).padStart(2, '0'),
+                    req.requestNumber || 'N/A',
+                    req.part?.partName || 'N/A',
+                    String(req.quantity || 0),
+                    req.branch?.name || 'N/A',
+                    req.status || 'N/A',
+                    `$${auditedCostSum.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                ];
+            });
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`purchase_requests_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
+    };
 
     // Fetch branches for dropdown filter
     useEffect(() => {
@@ -204,6 +349,30 @@ const WorkshopPurchaseRequestList = () => {
                     >
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-emerald-500" /> Excel
+                    </button>
+
+                    <button
+                        onClick={handleExportCsv}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-blue-400" /> CSV
+                    </button>
+
+                    <button
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-rose-500" /> PDF
+                    </button>
+
                     <button
                         onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                         className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none cursor-pointer ${showAdvancedFilters ? 'border-lime text-lime bg-lime/10' : ''}`}

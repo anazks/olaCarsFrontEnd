@@ -9,6 +9,8 @@ import { getInvoicesRegistry, deleteAllInvoices, getInvoicesTotalCount, getInvoi
 import type { Invoice } from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import InvoiceSettingsModal from './InvoiceSettingsModal';
 import BulkInvoiceUpload from '../shared/BulkInvoiceUpload';
@@ -327,6 +329,53 @@ const InvoiceList = () => {
             console.error(err);
             toast.error("Failed to export CSV file.", { id: toastId });
         }
+     };
+
+    const handleExportPdf = () => {
+        if (invoices.length === 0) {
+            toast.error("No invoices available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Invoices Registry Report";
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            if (startDate || endDate) {
+                doc.text(`Period: ${startDate || 'N/A'} to ${endDate || 'N/A'}`, 14, 35);
+            }
+
+            const head = [["Sl No.", "Invoice Number", "Type", "Customer Name", "Status", "Gross Billed", "Net Settled", "Balance"]];
+            const body = invoices.map((inv, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                inv.invoiceNumber || 'N/A',
+                inv.invoiceType || "RENTAL",
+                (inv.customer as any)?.name || inv.driver?.personalInfo?.fullName || 'System Pool',
+                inv.status || 'N/A',
+                `$${(inv.totalAmountDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                `$${(inv.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                `$${(inv.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: (startDate || endDate) ? 40 : 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`invoices_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
     };
 
 
@@ -456,6 +505,15 @@ const InvoiceList = () => {
                         >
                             <FileText size={14} strokeWidth={3} className="text-blue-400" />
                             Export CSV
+                        </button>
+
+                        <button
+                            onClick={handleExportPdf}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 animate-pulse-subtle"
+                            style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}
+                        >
+                            <FileText size={14} strokeWidth={3} className="text-rose-500" />
+                            Export PDF
                         </button>
 
                         <button

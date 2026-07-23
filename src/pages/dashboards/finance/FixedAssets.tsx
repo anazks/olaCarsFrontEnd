@@ -8,6 +8,10 @@ import Modal from '../../../components/Modal';
 import toast from 'react-hot-toast';
 import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { FileText } from 'lucide-react';
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }> = {
     'Draft': { bg: 'rgba(100, 116, 139, 0.1)', text: '#64748b', border: 'rgba(100, 116, 139, 0.3)' }, // Gray
@@ -88,6 +92,133 @@ const FixedAssets = () => {
         const role = userRole.toLowerCase();
         if (role === 'admin') return 'admin';
         return 'financial-admin';
+    };
+
+    const handleExportExcel = () => {
+        if (assets.length === 0) {
+            toast.error("No fixed assets available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = assets.map((a, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Asset Code": a.assetCode || 'N/A',
+                "Asset Name": a.assetName || 'N/A',
+                "Asset Type": typeof a.assetType === 'object' ? a.assetType?.name : 'N/A',
+                "Serial Number": a.serialNumber || '—',
+                "Purchase Date": a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString() : 'N/A',
+                "Purchase Cost ($)": a.purchaseCost || 0,
+                "Current Value ($)": a.currentValue || 0,
+                "Depreciation Rate (%)": a.depreciationRate || 0,
+                "Status": a.status || 'N/A',
+                "Location": a.location || '—'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Fixed Assets");
+            
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `fixed_assets_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (assets.length === 0) {
+            toast.error("No fixed assets available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = assets.map((a, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Asset Code": a.assetCode || 'N/A',
+                "Asset Name": a.assetName || 'N/A',
+                "Asset Type": typeof a.assetType === 'object' ? a.assetType?.name : 'N/A',
+                "Serial Number": a.serialNumber || '—',
+                "Purchase Date": a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString() : 'N/A',
+                "Purchase Cost ($)": a.purchaseCost || 0,
+                "Current Value ($)": a.currentValue || 0,
+                "Depreciation Rate (%)": a.depreciationRate || 0,
+                "Status": a.status || 'N/A',
+                "Location": a.location || '—'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `fixed_assets_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        if (assets.length === 0) {
+            toast.error("No fixed assets available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Fixed Assets Report";
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+
+            const head = [["Sl No.", "Asset Code", "Asset Name", "Asset Type", "Purchase Date", "Cost ($)", "Status"]];
+            const body = assets.map((a, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                a.assetCode || 'N/A',
+                a.assetName || 'N/A',
+                typeof a.assetType === 'object' ? a.assetType?.name : 'N/A',
+                a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString() : 'N/A',
+                `$${(a.purchaseCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                a.status || 'N/A'
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`fixed_assets_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
     };
 
     const fetchAssets = useCallback(async () => {
@@ -245,6 +376,30 @@ const FixedAssets = () => {
                     <p className="text-xs font-medium text-dim mt-0.5">Track capitalization, residual value, and run depreciation schedules</p>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-emerald-500" /> Excel
+                    </button>
+
+                    <button
+                        onClick={handleExportCsv}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-blue-400" /> CSV
+                    </button>
+
+                    <button
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-rose-500" /> PDF
+                    </button>
+
                     <button
                         onClick={fetchAssets}
                         className="flex items-center justify-center p-2.5 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"

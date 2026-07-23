@@ -28,6 +28,10 @@ import {
 import type { BankAccount } from '../../../services/bankAccountService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { FileText } from 'lucide-react';
 
 const ManageBankAccounts = () => {
     const navigate = useNavigate();
@@ -72,6 +76,131 @@ const ManageBankAccounts = () => {
         const basePath = window.location.pathname.split('/bank-accounts')[0];
         navigate(`${basePath}/bank-accounts/${account._id}/ledger`);
     };
+    const handleExportExcel = () => {
+        if (accounts.length === 0) {
+            toast.error("No bank accounts available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = accounts.map((a, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Bank Name": a.bankName || 'N/A',
+                "Account Holder": a.accountHolderName || 'N/A',
+                "Account Number": a.accountNumber || 'N/A',
+                "Branch Name": a.branchName || '—',
+                "Swift Code": a.swiftCode || '—',
+                "IFSC Code": a.ifscCode || '—',
+                "Currency": a.currency || 'USD',
+                "Current Balance": a.currentBalance || 0,
+                "Status": a.status || 'Active'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Bank Accounts");
+            
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `bank_accounts_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (accounts.length === 0) {
+            toast.error("No bank accounts available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = accounts.map((a, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Bank Name": a.bankName || 'N/A',
+                "Account Holder": a.accountHolderName || 'N/A',
+                "Account Number": a.accountNumber || 'N/A',
+                "Branch Name": a.branchName || '—',
+                "Swift Code": a.swiftCode || '—',
+                "IFSC Code": a.ifscCode || '—',
+                "Currency": a.currency || 'USD',
+                "Current Balance": a.currentBalance || 0,
+                "Status": a.status || 'Active'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `bank_accounts_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        if (accounts.length === 0) {
+            toast.error("No bank accounts available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Bank Accounts Report";
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+
+            const head = [["Sl No.", "Bank Name", "Account Holder", "Account Number", "Currency", "Current Balance", "Status"]];
+            const body = accounts.map((a, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                a.bankName || 'N/A',
+                a.accountHolderName || 'N/A',
+                a.accountNumber || 'N/A',
+                a.currency || 'USD',
+                `$${(a.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                a.status || 'Active'
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`bank_accounts_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
+    };
+
     const fetchAccounts = useCallback(async () => {
         setLoading(true);
         try {
@@ -245,6 +374,30 @@ const ManageBankAccounts = () => {
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-emerald-500" /> Excel
+                    </button>
+
+                    <button
+                        onClick={handleExportCsv}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-blue-400" /> CSV
+                    </button>
+
+                    <button
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-rose-500" /> PDF
+                    </button>
+
                     <button 
                         onClick={fetchAccounts}
                         className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"

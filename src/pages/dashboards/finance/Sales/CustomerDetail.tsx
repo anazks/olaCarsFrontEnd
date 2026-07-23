@@ -501,7 +501,7 @@ const CustomerDetail = () => {
                 {activeTab === 'invoices' && <InvoicesTab invoices={invoices} />}
                 {activeTab === 'payments' && <PaymentsTab payments={payments} />}
                 {activeTab === 'credit_notes' && <CreditNotesTab creditNotes={creditNotes} />}
-                {activeTab === 'statements' && <StatementsTab invoices={invoices} payments={payments} customerId={id || ''} />}
+                {activeTab === 'statements' && <StatementsTab invoices={invoices} payments={payments} creditNotes={creditNotes} customerId={id || ''} />}
             </div>
 
             {isExportModalOpen && (
@@ -1057,7 +1057,7 @@ const PaymentsTab = ({ payments }: { payments: any[] }) => {
     );
 };
 
-function StatementsTab({ invoices, payments, customerId }: { invoices: Invoice[]; payments: any[]; customerId: string }) {
+function StatementsTab({ invoices, payments, creditNotes, customerId }: { invoices: Invoice[]; payments: any[]; creditNotes: any[]; customerId: string }) {
     const [filterFrom, setFilterFrom] = useState('');
     const [filterTo, setFilterTo] = useState('');
     const [downloading, setDownloading] = useState(false);
@@ -1085,13 +1085,18 @@ function StatementsTab({ invoices, payments, customerId }: { invoices: Invoice[]
         const d = new Date(pmt.paymentDate || pmt.createdAt || 0);
         return d < filterStart;
     }) : [];
+    const creditNotesBefore = viewStart ? creditNotes.filter(cn => {
+        const d = new Date(cn.creditNoteDate || cn.createdAt || 0);
+        return d < filterStart;
+    }) : [];
     const totalInvoicedBefore = invoicesBefore.reduce((sum, inv) => sum + (inv.totalAmountDue || 0), 0);
     const totalPaidBefore = paymentsBefore.reduce((sum, pmt) => sum + (pmt.amountReceived || 0), 0);
-    const openingBalance = totalInvoicedBefore - totalPaidBefore;
+    const totalCreditNotesBefore = creditNotesBefore.reduce((sum, cn) => sum + (cn.amount || 0), 0);
+    const openingBalance = totalInvoicedBefore - totalPaidBefore - totalCreditNotesBefore;
 
     interface StatementRow {
         date: Date;
-        type: 'opening' | 'invoice' | 'payment';
+        type: 'opening' | 'invoice' | 'payment' | 'credit_note';
         transactionLabel: string;
         detailLine1: string;
         detailLine2: string;
@@ -1124,36 +1129,55 @@ function StatementsTab({ invoices, payments, customerId }: { invoices: Invoice[]
     validPayments.forEach(pmt => {
         const d = new Date(pmt.paymentDate || pmt.createdAt || 0);
         if (!isInRange(d)) return;
+        
         if (pmt.invoices && pmt.invoices.length > 0) {
-            pmt.invoices.forEach((invApp: any) => {
-                rows.push({
-                    date: d, type: 'payment', transactionLabel: 'Payment Received',
-                    detailLine1: pmt.paymentNumber || pmt.referenceNumber || '—',
-                    detailLine2: `$${(invApp.amountApplied || 0).toFixed(2)} for payment of ${invApp.invoiceNumber || 'INV'}`,
-                    amount: 0, payment: invApp.amountApplied || 0, balance: 0,
-                    sortKey: d.getTime() + 1
-                });
-            });
-            const totalApplied = pmt.invoices.reduce((s: number, i: any) => s + (i.amountApplied || 0), 0);
+            const detailsArray = pmt.invoices.map((invApp: any) => 
+                `$${(invApp.amountApplied || 0).toFixed(2)} to ${invApp.invoiceNumber || 'INV'}`
+            );
+            
+            const totalApplied = pmt.invoices.reduce((sum: number, inv: any) => sum + (inv.amountApplied || 0), 0);
             const excess = (pmt.amountReceived || 0) - totalApplied;
+            
             if (excess > 0.01) {
-                rows.push({
-                    date: d, type: 'payment', transactionLabel: 'Payment Received',
-                    detailLine1: pmt.paymentNumber || pmt.referenceNumber || '—',
-                    detailLine2: `$${excess.toFixed(2)} prepayment credit (unapplied)`,
-                    amount: 0, payment: excess, balance: 0,
-                    sortKey: d.getTime() + 2
-                });
+                detailsArray.push(`$${excess.toFixed(2)} prepayment credit`);
             }
+            
+            rows.push({
+                date: d,
+                type: 'payment',
+                transactionLabel: 'Payment Received',
+                detailLine1: pmt.paymentNumber || pmt.referenceNumber || '—',
+                detailLine2: `Applied: ${detailsArray.join(", ")}`,
+                amount: 0,
+                payment: pmt.amountReceived || 0,
+                balance: 0,
+                sortKey: d.getTime() + 1
+            });
         } else {
             rows.push({
-                date: d, type: 'payment', transactionLabel: 'Payment Received',
+                date: d,
+                type: 'payment',
+                transactionLabel: 'Payment Received',
                 detailLine1: pmt.paymentNumber || pmt.referenceNumber || '—',
                 detailLine2: `$${(pmt.amountReceived || 0).toFixed(2)} received via ${pmt.paymentMethod || 'Other'}`,
-                amount: 0, payment: pmt.amountReceived || 0, balance: 0,
+                amount: 0,
+                payment: pmt.amountReceived || 0,
+                balance: 0,
                 sortKey: d.getTime() + 1
             });
         }
+    });
+
+    creditNotes.forEach(cn => {
+        const d = new Date(cn.creditNoteDate || cn.createdAt || 0);
+        if (!isInRange(d)) return;
+        rows.push({
+            date: d, type: 'credit_note', transactionLabel: 'Credit Note',
+            detailLine1: cn.creditNoteNumber || '—',
+            detailLine2: cn.reason ? `Reason: ${cn.reason}` : 'Credit Note Issued',
+            amount: 0, payment: cn.amount || 0, balance: 0,
+            sortKey: d.getTime() + 1
+        });
     });
 
     rows.sort((a, b) => a.sortKey - b.sortKey);

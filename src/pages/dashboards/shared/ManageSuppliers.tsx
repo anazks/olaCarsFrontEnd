@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag, Eye, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag, Eye, Upload, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BulkSupplierUpload from './BulkSupplierUpload';
 import {
@@ -16,6 +16,10 @@ import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import { validatePhoneDetails } from '../../../utils/phoneValidation';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import toast from 'react-hot-toast';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -77,6 +81,127 @@ const ManageSuppliers = () => {
 
     // Bulk upload modal state
     const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+
+    const handleExportExcel = () => {
+        if (suppliers.length === 0) {
+            toast.error("No suppliers available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = suppliers.map((s, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Supplier Name": s.name || 'N/A',
+                "Contact Person": s.contactPerson || 'N/A',
+                "Email": s.email || 'N/A',
+                "Phone": s.phone || 'N/A',
+                "Category": s.category || 'N/A',
+                "Address": s.address || 'N/A',
+                "Status": s.isActive ? 'Active' : 'Inactive'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Suppliers");
+            
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `suppliers_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (suppliers.length === 0) {
+            toast.error("No suppliers available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = suppliers.map((s, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Supplier Name": s.name || 'N/A',
+                "Contact Person": s.contactPerson || 'N/A',
+                "Email": s.email || 'N/A',
+                "Phone": s.phone || 'N/A',
+                "Category": s.category || 'N/A',
+                "Address": s.address || 'N/A',
+                "Status": s.isActive ? 'Active' : 'Inactive'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `suppliers_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        if (suppliers.length === 0) {
+            toast.error("No suppliers available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Suppliers / Vendors Registry";
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+
+            const head = [["Sl No.", "Supplier Name", "Contact Person", "Email", "Phone", "Category", "Status"]];
+            const body = suppliers.map((s, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                s.name || 'N/A',
+                s.contactPerson || 'N/A',
+                s.email || 'N/A',
+                s.phone || 'N/A',
+                s.category || 'N/A',
+                s.isActive ? 'Active' : 'Inactive'
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`suppliers_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
+    };
 
     const fetchSuppliers = useCallback(async () => {
         setLoading(true);
@@ -300,13 +425,34 @@ const ManageSuppliers = () => {
                     >
                         <Upload size={14} /> Bulk Upload
                     </button>
-                    <button
-                        onClick={openCreateModal}
-                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
-                        style={{ backgroundColor: 'var(--brand-lime)' }}
-                    >
-                        <Plus size={14} strokeWidth={3} /> {t('management.suppliers.add')}
-                    </button>
+                        <button
+                            onClick={handleExportExcel}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold bg-white/5 border border-white/10 text-white transition-all hover:bg-white/10 hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        >
+                            <FileText size={14} className="text-emerald-500" /> Excel
+                        </button>
+
+                        <button
+                            onClick={handleExportCsv}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold bg-white/5 border border-white/10 text-white transition-all hover:bg-white/10 hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        >
+                            <FileText size={14} className="text-blue-400" /> CSV
+                        </button>
+
+                        <button
+                            onClick={handleExportPdf}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold bg-white/5 border border-white/10 text-white transition-all hover:bg-white/10 hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        >
+                            <FileText size={14} className="text-rose-500" /> PDF
+                        </button>
+
+                        <button
+                            onClick={openCreateModal}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                            style={{ backgroundColor: 'var(--brand-lime)' }}
+                        >
+                            <Plus size={14} strokeWidth={3} /> {t('management.suppliers.add')}
+                        </button>
                 </div>
             </div>
 

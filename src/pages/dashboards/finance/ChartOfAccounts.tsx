@@ -7,6 +7,11 @@ import type { AccountingCode, CreateAccountingCodePayload, AccountingCategory } 
 import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import BulkAccountingCodeUpload from './BulkAccountingCodeUpload';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import toast from 'react-hot-toast';
+import { FileText } from 'lucide-react';
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
     'INCOME': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' }, // Green
@@ -99,6 +104,126 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
 
     const userRole = getUserRole() || '';
     const canManageCodes = ['admin', 'financeadmin'].includes(userRole);
+
+    const handleExportExcel = () => {
+        if (codes.length === 0) {
+            toast.error("No accounting codes available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = codes.map((c, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Account Code": c.code || 'N/A',
+                "Account Name": c.name || 'N/A',
+                "Category": c.category || 'N/A',
+                "Account Type": c.accountType || 'N/A',
+                "Description": c.description || '—',
+                "Parent Account": typeof c.parentAccount === 'object' ? (c.parentAccount as any)?.name : c.parentAccount || '—',
+                "Status": c.accountStatus || 'Active'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Chart of Accounts");
+            
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `chart_of_accounts_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (codes.length === 0) {
+            toast.error("No accounting codes available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = codes.map((c, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Account Code": c.code || 'N/A',
+                "Account Name": c.name || 'N/A',
+                "Category": c.category || 'N/A',
+                "Account Type": c.accountType || 'N/A',
+                "Description": c.description || '—',
+                "Parent Account": typeof c.parentAccount === 'object' ? (c.parentAccount as any)?.name : c.parentAccount || '—',
+                "Status": c.accountStatus || 'Active'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `chart_of_accounts_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        if (codes.length === 0) {
+            toast.error("No accounting codes available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Chart of Accounts Report";
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+
+            const head = [["Sl No.", "Code", "Name", "Category", "Account Type", "Status"]];
+            const body = codes.map((c, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                c.code || 'N/A',
+                c.name || 'N/A',
+                c.category || 'N/A',
+                c.accountType || 'N/A',
+                c.accountStatus || 'Active'
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`chart_of_accounts_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
+    };
 
     const fetchCodes = useCallback(async () => {
         setLoading(true);
@@ -342,6 +467,30 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                     <p className="text-xs font-medium text-dim mt-0.5">Manage financial buckets and accounting codes</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-emerald-500" /> Excel
+                    </button>
+
+                    <button
+                        onClick={handleExportCsv}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-blue-400" /> CSV
+                    </button>
+
+                    <button
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-rose-500" /> PDF
+                    </button>
+
                     <button
                         onClick={fetchCodes}
                         className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"

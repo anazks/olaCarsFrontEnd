@@ -8,6 +8,11 @@ import { getAllBranches, type Branch } from '../../../services/branchService';
 import HasPermission from '../../../components/HasPermission';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import BulkVehicleUpload from './BulkVehicleUpload';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import toast from 'react-hot-toast';
+import { FileText } from 'lucide-react';
 
 // ── Status Styles ──────────────────────────────────────────────────────────────
 
@@ -99,6 +104,132 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
         limit: 25,
         totalPages: 0
     });
+
+    const handleExportExcel = () => {
+        if (vehicles.length === 0) {
+            toast.error("No vehicles available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = vehicles.map((v, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Vehicle Number": v.vehicleNumber || 'N/A',
+                "Brand": v.brand || 'N/A',
+                "Model": v.model || 'N/A',
+                "Year": v.year || 'N/A',
+                "Category": v.category || 'N/A',
+                "Color": v.color || 'N/A',
+                "Fuel Type": v.fuelType || 'N/A',
+                "Branch": typeof v.branch === 'object' ? v.branch?.name : 'N/A',
+                "Status": v.status || 'N/A'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Vehicles");
+            
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `${mode}_vehicles_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (vehicles.length === 0) {
+            toast.error("No vehicles available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = vehicles.map((v, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Vehicle Number": v.vehicleNumber || 'N/A',
+                "Brand": v.brand || 'N/A',
+                "Model": v.model || 'N/A',
+                "Year": v.year || 'N/A',
+                "Category": v.category || 'N/A',
+                "Color": v.color || 'N/A',
+                "Fuel Type": v.fuelType || 'N/A',
+                "Branch": typeof v.branch === 'object' ? v.branch?.name : 'N/A',
+                "Status": v.status || 'N/A'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `${mode}_vehicles_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        if (vehicles.length === 0) {
+            toast.error("No vehicles available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = `${mode === 'pending' ? 'Pending' : 'Active'} Vehicles Report`;
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+
+            const head = [["Sl No.", "Vehicle Number", "Brand", "Model", "Year", "Category", "Branch", "Status"]];
+            const body = vehicles.map((v, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                v.vehicleNumber || 'N/A',
+                v.brand || 'N/A',
+                v.model || 'N/A',
+                String(v.year || 'N/A'),
+                v.category || 'N/A',
+                typeof v.branch === 'object' ? v.branch?.name : 'N/A',
+                v.status || 'N/A'
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`${mode}_vehicles_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
+    };
 
     const getPageNumbers = () => {
         const totalPages = pagination.totalPages;
@@ -248,6 +379,30 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-emerald-500" /> Excel
+                    </button>
+
+                    <button
+                        onClick={handleExportCsv}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-blue-400" /> CSV
+                    </button>
+
+                    <button
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-rose-500" /> PDF
+                    </button>
+
                     <button
                         onClick={() => fetchVehicles()}
                         className="flex items-center justify-center p-2 rounded-xl transition-all duration-300 hover:bg-white/10 active:scale-95"
