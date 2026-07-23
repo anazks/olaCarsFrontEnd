@@ -467,6 +467,43 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
         }
     };
 
+    const handleRowPdf = (item: CollectionListItem) => {
+        try {
+            const doc = new jsPDF();
+            doc.setFontSize(18);
+            doc.text("Collection Invoice Statement", 14, 20);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 28);
+            
+            doc.setFontSize(11);
+            doc.text(`Invoice #: ${item.invoiceNumber || 'N/A'}`, 14, 38);
+            doc.text(`Customer Name: ${item.driverName || 'N/A'}`, 14, 45);
+            doc.text(`Customer ID: ${item.driverId || 'N/A'}`, 14, 52);
+            doc.text(`Vehicle Number: ${item.vehicleNumber || 'N/A'} (Fleet #${item.fleetNumber || 'N/A'})`, 14, 59);
+            doc.text(`Branch / Location: ${item.branch || 'N/A'} (${item.country || 'N/A'})`, 14, 66);
+            doc.text(`Due Date: ${item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : 'N/A'}`, 14, 73);
+            doc.text(`Status: ${item.status || 'N/A'}`, 14, 80);
+
+            autoTable(doc, {
+                head: [["Description / Item", "Amount ($)"]],
+                body: [
+                    ["Gross Billed Amount", `$${(item.totalAmountDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+                    ["Net Amount Settled", `$${(item.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+                    ["Outstanding Balance", `$${(item.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`]
+                ],
+                startY: 88,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`Invoice_${item.invoiceNumber || item._id}.pdf`);
+            toast.success(`Exported PDF for Invoice ${item.invoiceNumber || item._id}`);
+        } catch (e) {
+            console.error(e);
+            toast.error("Failed to generate PDF for invoice.");
+        }
+    };
+
     return (
         <div className="p-6 md:p-8 min-h-screen transition-colors duration-300" style={{ background: 'var(--bg-main)', color: 'var(--text-main)' }}>
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Collections Ledger View', active: true }]} />
@@ -492,6 +529,39 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                             )})
                         </span>
                     </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <button 
+                        disabled={exportingPdf || loading}
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide bg-brand-lime text-black hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                        style={{ backgroundColor: 'var(--brand-lime)' }}
+                    >
+                        {exportingPdf ? (
+                            <><Loader2 size={14} className="animate-spin" /> Exporting PDF...</>
+                        ) : (
+                            <><FileText size={14} /> Export PDF</>
+                        )}
+                    </button>
+                    
+                    <button 
+                        disabled={exportingExcel || loading}
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm hover:scale-105 active:scale-95 border"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileSpreadsheet size={14} className="text-emerald-500" /> Export Excel
+                    </button>
+
+                    <button 
+                        disabled={exporting || loading}
+                        onClick={handleExport}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm hover:scale-105 active:scale-95 border"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileSpreadsheet size={14} className="text-blue-400" /> Export CSV
+                    </button>
                 </div>
             </div>
 
@@ -661,13 +731,14 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                 <th className="py-4 px-3 text-right">Gross Billed</th>
                                 <th className="py-4 px-3 text-right">Net Settled</th>
                                 <th className="py-4 px-3 text-right">Current Balance</th>
-                                {type !== 'OVERDUE' && <th className="py-4 pr-4 pl-3 text-center">Status</th>}
+                                {type !== 'OVERDUE' && <th className="py-4 px-3 text-center">Status</th>}
+                                <th className="py-4 pr-4 pl-3 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="text-sm divide-y" style={{ borderColor: 'var(--border-main)' }}>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={type === 'OVERDUE' ? 9 : 9} className="py-24 text-center">
+                                    <td colSpan={11} className="py-24 text-center">
                                         <div className="animate-pulse font-bold text-[#C8E600] text-sm tracking-wider uppercase">Streaming live system ledgers...</div>
                                     </td>
                                 </tr>
@@ -736,7 +807,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                             </td>
 
                                             {type !== 'OVERDUE' && (
-                                                <td className="py-4 pr-4 pl-3 text-center">
+                                                <td className="py-4 px-3 text-center">
                                                     <span className={`px-2.5 py-1 rounded text-[10px] font-black tracking-widest uppercase ${
                                                         item.status === 'PAID' ? 'bg-green-500/10 text-green-500' :
                                                         item.status === 'OVERDUE' ? 'bg-red-500/10 text-red-500' :
@@ -746,11 +817,21 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                                     </span>
                                                 </td>
                                             )}
+
+                                            <td className="py-4 pr-4 pl-3 text-center">
+                                                <button 
+                                                    onClick={() => handleRowPdf(item)}
+                                                    title="Export Invoice PDF"
+                                                    className="p-1.5 rounded-lg border border-[var(--border-main)] hover:bg-[#C8E600]/20 hover:border-[#C8E600] text-[var(--text-main)] transition-all cursor-pointer inline-flex items-center justify-center"
+                                                >
+                                                    <FileText size={14} className="text-[#C8E600]" />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                     {listItems.length === 0 && (
                                         <tr>
-                                            <td colSpan={10} className="py-24 text-center text-gray-500 italic font-medium">
+                                            <td colSpan={11} className="py-24 text-center text-gray-500 italic font-medium">
                                                 Zero records found. Refine date bounds or relax search inputs.
                                             </td>
                                         </tr>

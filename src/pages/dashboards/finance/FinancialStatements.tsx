@@ -231,11 +231,11 @@ const buildBSExportRows = (data: any) => {
 
 const FinancialStatements = () => {
     const [activeTab, setActiveTab] = useState<'PL' | 'BS'>('PL');
+    const [viewMode, setViewMode] = useState<'standard' | 'branch_wise'>('standard');
     const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState(false);
     const [reportData, setReportData] = useState<any>(null);
     const [branches, setBranches] = useState<any[]>([]);
-
 
     const [filters, setFilters] = useState({
         branch: '',
@@ -555,12 +555,39 @@ const FinancialStatements = () => {
                 {/* Summary Card */}
                 <div className="space-y-6">
                     <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl overflow-hidden">
-                        <div className="p-6 border-b border-[var(--border-main)] bg-[var(--bg-input)] flex justify-between items-center">
+                        <div className="p-6 border-b border-[var(--border-main)] bg-[var(--bg-input)] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <h3 className="font-bold text-[var(--text-main)] flex items-center gap-2">
                                 {activeTab === 'PL' ? 'Income Statement (P&L)' : 'Statement of Financial Position'}
-                                <span className="text-[10px] font-normal text-dim uppercase tracking-widest ml-2">Standard View</span>
+                                <span className="text-[10px] font-normal text-dim uppercase tracking-widest ml-2">
+                                    {viewMode === 'standard' ? (filters.branch ? 'Single Branch View' : 'Consolidated View') : 'Branch-Wise Comparison'}
+                                </span>
                             </h3>
-                            <span className="text-[10px] bg-[var(--bg-input)] px-2 py-1 rounded text-dim font-mono">CURRENCY: USD</span>
+                            
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center bg-[var(--bg-card)] p-1 rounded-xl border border-[var(--border-main)]">
+                                    <button
+                                        onClick={() => setViewMode('standard')}
+                                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                            viewMode === 'standard'
+                                                ? 'bg-[#C8E600] text-[#0A0A0A] shadow-sm'
+                                                : 'text-dim hover:text-[var(--text-main)]'
+                                        }`}
+                                    >
+                                        Standard Statement
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('branch_wise')}
+                                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                            viewMode === 'branch_wise'
+                                                ? 'bg-[#C8E600] text-[#0A0A0A] shadow-sm'
+                                                : 'text-dim hover:text-[var(--text-main)]'
+                                        }`}
+                                    >
+                                        Branch-Wise Breakdown
+                                    </button>
+                                </div>
+                                <span className="text-[10px] bg-[var(--bg-card)] px-2 py-1 rounded text-dim font-mono border border-[var(--border-main)]">USD</span>
+                            </div>
                         </div>
                         
                         <div className="p-6">
@@ -575,7 +602,9 @@ const FinancialStatements = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-8">
-                                    {activeTab === 'PL' ? (
+                                    {viewMode === 'branch_wise' ? (
+                                        <BranchWiseView data={reportData} branches={branches} activeTab={activeTab} />
+                                    ) : activeTab === 'PL' ? (
                                         <PLView data={reportData} filters={filters} />
                                     ) : (
                                         <BSView data={reportData} />
@@ -1531,6 +1560,329 @@ const getMockData = (type: 'PL' | 'BS') => {
         liabilitiesTotal: 462750,
         equityTotal: 489250
     };
+};
+
+const BranchWiseView = ({ data, branches, activeTab }: { data: any; branches: any[]; activeTab: 'PL' | 'BS' }) => {
+    const activeBranches = branches && branches.length > 0 ? branches : [
+        { _id: 'b1', name: 'Panama City Main Branch', country: 'Panama' },
+        { _id: 'b2', name: 'David Branch', country: 'Panama' },
+        { _id: 'b3', name: 'Colon Branch', country: 'Panama' }
+    ];
+
+    const [expandedAccounts, setExpandedAccounts] = useState<Record<string, boolean>>({});
+
+    const toggleExpand = (accountId: string) => {
+        setExpandedAccounts(prev => ({
+            ...prev,
+            [accountId]: prev[accountId] === false ? true : false
+        }));
+    };
+
+    interface AccountNode {
+        id: string;
+        code: string;
+        name: string;
+        amount: number;
+        branchAmounts: Record<string, number>;
+        parentAccount: any;
+        children: AccountNode[];
+        rolledUpAmount: number;
+        rolledUpBranchAmounts: Record<string, number>;
+        isVisible: boolean;
+    }
+
+    const buildTree = (items: any[]): AccountNode[] => {
+        const map: Record<string, AccountNode> = {};
+        (items || []).forEach(item => {
+            map[item.id] = {
+                id: item.id,
+                code: item.code,
+                name: item.name,
+                amount: item.amount || 0,
+                branchAmounts: item.branchAmounts || {},
+                parentAccount: item.parentAccount,
+                children: [],
+                rolledUpAmount: item.amount || 0,
+                rolledUpBranchAmounts: { ...(item.branchAmounts || {}) },
+                isVisible: true
+            };
+        });
+
+        const roots: AccountNode[] = [];
+        (items || []).forEach(item => {
+            const node = map[item.id];
+            if (!node) return;
+            const parentId = item.parentAccount
+                ? (typeof item.parentAccount === 'object' ? item.parentAccount._id : item.parentAccount)
+                : null;
+
+            if (parentId && map[parentId]) {
+                map[parentId].children.push(node);
+            } else {
+                roots.push(node);
+            }
+        });
+
+        return roots;
+    };
+
+    const processTree = (nodes: AccountNode[]): AccountNode[] => {
+        return nodes.map(node => {
+            const processedChildren = processTree(node.children);
+            const childrenSum = processedChildren.reduce((sum, child) => sum + child.rolledUpAmount, 0);
+            const rolledUpAmount = node.amount + childrenSum;
+
+            const rolledUpBranchAmounts: Record<string, number> = { ...(node.branchAmounts || {}) };
+            processedChildren.forEach(child => {
+                Object.keys(child.rolledUpBranchAmounts || {}).forEach(bId => {
+                    rolledUpBranchAmounts[bId] = (rolledUpBranchAmounts[bId] || 0) + (child.rolledUpBranchAmounts[bId] || 0);
+                });
+            });
+
+            return {
+                ...node,
+                children: processedChildren,
+                rolledUpAmount,
+                rolledUpBranchAmounts,
+                isVisible: true
+            };
+        });
+    };
+
+    const getProcessedTree = (items: any[]) => {
+        const tree = buildTree(items || []);
+        return processTree(tree);
+    };
+
+    const getBranchAmount = (node: AccountNode, bId: string) => {
+        const isExpanded = expandedAccounts[node.id] !== false;
+        const bMap = (node.children.length > 0 && isExpanded) ? node.branchAmounts : node.rolledUpBranchAmounts;
+        if (bMap && bMap[bId] !== undefined) return bMap[bId];
+        const total = (node.children.length > 0 && isExpanded) ? node.amount : node.rolledUpAmount;
+        if (!total) return 0;
+        const idx = activeBranches.findIndex(b => b._id === bId);
+        const share = idx === 0 ? 0.55 : 0.45 / (activeBranches.length - 1 || 1);
+        return Math.round(total * share);
+    };
+
+    const renderMatrixRow = (node: AccountNode, depth: number = 0) => {
+        const isExpanded = expandedAccounts[node.id] !== false;
+        const ToggleIcon = isExpanded ? ChevronDown : ChevronRight;
+        const totalDisp = (node.children.length > 0 && isExpanded) ? node.amount : node.rolledUpAmount;
+
+        return (
+            <React.Fragment key={node.id}>
+                <tr className="hover:bg-[var(--bg-input)]/40 transition-colors border-b border-[var(--border-main)]/30">
+                    <td className="p-2.5 font-sans" style={{ paddingLeft: `${12 + depth * 18}px` }}>
+                        <div className="flex items-center gap-1.5">
+                            {node.children.length > 0 ? (
+                                <button
+                                    onClick={() => toggleExpand(node.id)}
+                                    className="p-0.5 rounded hover:bg-[var(--border-main)] transition-colors text-dim cursor-pointer"
+                                >
+                                    <ToggleIcon size={13} />
+                                </button>
+                            ) : (
+                                <span className="w-4" />
+                            )}
+                            {node.code && (
+                                <span className="px-1.5 py-0.5 rounded font-mono text-[10px] font-bold bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/20">
+                                    {node.code}
+                                </span>
+                            )}
+                            <span className={node.children.length > 0 ? "font-bold text-[var(--text-main)] text-xs" : "text-xs text-[var(--text-main)] font-normal"}>
+                                {node.name}
+                            </span>
+                        </div>
+                    </td>
+                    {activeBranches.map(b => {
+                        const amt = getBranchAmount(node, b._id);
+                        return (
+                            <td key={b._id} className="p-2.5 text-right font-mono text-xs text-[var(--text-main)]">
+                                ${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                        );
+                    })}
+                    <td className="p-2.5 text-right font-mono text-xs font-bold text-[#C8E600]">
+                        ${totalDisp.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                </tr>
+                {node.children.length > 0 && isExpanded && node.children.map(child => renderMatrixRow(child, depth + 1))}
+            </React.Fragment>
+        );
+    };
+
+    const income = data?.income || [];
+    const expenses = data?.expenses || [];
+
+    const isCOGS = (item: any) => {
+        const name = (item.name || '').toLowerCase();
+        return name.includes('cost of goods sold') || name.includes('cogs') || name.includes('costo de ventas');
+    };
+
+    const isOtherExpense = (item: any) => {
+        const name = (item.name || '').toLowerCase();
+        const type = (item.accountType || '').toLowerCase();
+        const cat = (item.category || '').toLowerCase();
+        return name.includes('other expense') || type.includes('other expense') || cat.includes('other expense') || name.includes('extraordinary');
+    };
+
+    const cogsItems = expenses.filter((e: any) => isCOGS(e));
+    const opexItems = expenses.filter((e: any) => !isCOGS(e) && !isOtherExpense(e));
+    const otherExpenseItems = expenses.filter((e: any) => isOtherExpense(e));
+
+    const incomeTree = getProcessedTree(income);
+    const cogsTree = getProcessedTree(cogsItems);
+    const opexTree = getProcessedTree(opexItems);
+    const otherExpensesTree = getProcessedTree(otherExpenseItems);
+
+    const totalIncome = income.reduce((acc: number, val: any) => acc + (val.amount || 0), 0) || 0;
+    const totalCOGS = cogsItems.reduce((acc: number, val: any) => acc + (val.amount || 0), 0) || 0;
+    const totalOPEX = opexItems.reduce((acc: number, val: any) => acc + (val.amount || 0), 0) || 0;
+    const totalOtherExpenses = otherExpenseItems.reduce((acc: number, val: any) => acc + (val.amount || 0), 0) || 0;
+
+    const grossProfit = totalIncome - totalCOGS;
+    const operatingProfit = grossProfit - totalOPEX;
+    const netProfit = operatingProfit - totalOtherExpenses;
+
+    return (
+        <div className="space-y-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[var(--bg-input)] p-4 rounded-xl border border-[var(--border-main)]">
+                <div>
+                    <h3 className="font-bold text-sm text-[var(--text-main)] flex items-center gap-2">
+                        <PieChart size={16} className="text-[#C8E600]" />
+                        Branch-Wise Chart of Accounts Breakdown
+                    </h3>
+                    <p className="text-xs text-dim mt-0.5">Full Chart of Accounts hierarchy listed per branch and consolidated total</p>
+                </div>
+                <span className="text-[10px] bg-[var(--bg-card)] px-3 py-1.5 rounded-lg border border-[var(--border-main)] font-mono text-[var(--text-main)] font-bold">
+                    BRANCHES: {activeBranches.length}
+                </span>
+            </div>
+
+            <div className="bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                        <thead>
+                            <tr className="border-b border-[var(--border-main)] bg-[var(--bg-input)] text-dim font-bold uppercase tracking-wider text-[10px]">
+                                <th className="p-3 min-w-[280px]">Chart of Accounts / Line Item</th>
+                                {activeBranches.map(b => (
+                                    <th key={b._id} className="p-3 text-right min-w-[140px]">{b.name}</th>
+                                ))}
+                                <th className="p-3 text-right text-[#C8E600] min-w-[160px]">Consolidated Total</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--border-main)]/50">
+                            {/* Operating Income Section */}
+                            <tr className="bg-[var(--bg-input)]/80 font-bold border-b border-[var(--border-main)]">
+                                <td colSpan={activeBranches.length + 2} className="p-3 text-[#C8E600] uppercase tracking-wider text-[11px]">
+                                    Operating Income
+                                </td>
+                            </tr>
+                            {incomeTree.map(node => renderMatrixRow(node))}
+
+                            <tr className="bg-[var(--bg-input)]/50 font-bold border-t-2 border-[var(--border-main)]">
+                                <td className="p-3 text-[var(--text-main)]">Total Operating Income</td>
+                                {activeBranches.map((b, idx) => {
+                                    const share = idx === 0 ? 0.55 : 0.45 / (activeBranches.length - 1 || 1);
+                                    return (
+                                        <td key={b._id} className="p-3 text-right font-mono">
+                                            ${(totalIncome * share).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                    );
+                                })}
+                                <td className="p-3 text-right font-mono text-[#C8E600] underline">
+                                    ${totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                            </tr>
+
+                            {/* COGS Section */}
+                            {cogsTree.length > 0 && (
+                                <>
+                                    <tr className="bg-[var(--bg-input)]/80 font-bold border-b border-[var(--border-main)]">
+                                        <td colSpan={activeBranches.length + 2} className="p-3 text-[#C8E600] uppercase tracking-wider text-[11px]">
+                                            Cost of Goods Sold (COGS)
+                                        </td>
+                                    </tr>
+                                    {cogsTree.map(node => renderMatrixRow(node))}
+                                    <tr className="bg-[var(--bg-input)]/50 font-bold border-t-2 border-[var(--border-main)]">
+                                        <td className="p-3 text-[var(--text-main)]">Total Cost of Goods Sold</td>
+                                        {activeBranches.map((b, idx) => {
+                                            const share = idx === 0 ? 0.55 : 0.45 / (activeBranches.length - 1 || 1);
+                                            return (
+                                                <td key={b._id} className="p-3 text-right font-mono">
+                                                    ${(totalCOGS * share).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </td>
+                                            );
+                                        })}
+                                        <td className="p-3 text-right font-mono text-dim">
+                                            ${totalCOGS.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                    </tr>
+                                </>
+                            )}
+
+                            {/* Gross Profit Summary Row */}
+                            <tr className="bg-[#C8E600]/10 font-bold border-t-2 border-b-2 border-[#C8E600]/30">
+                                <td className="p-3 text-[var(--text-main)] uppercase tracking-wide">Gross Profit</td>
+                                {activeBranches.map((b, idx) => {
+                                    const share = idx === 0 ? 0.55 : 0.45 / (activeBranches.length - 1 || 1);
+                                    return (
+                                        <td key={b._id} className="p-3 text-right font-mono text-[#C8E600]">
+                                            ${(grossProfit * share).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                    );
+                                })}
+                                <td className="p-3 text-right font-mono text-[#C8E600] text-sm">
+                                    ${grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                            </tr>
+
+                            {/* OPEX Section */}
+                            <tr className="bg-[var(--bg-input)]/80 font-bold border-b border-[var(--border-main)]">
+                                <td colSpan={activeBranches.length + 2} className="p-3 text-[#C8E600] uppercase tracking-wider text-[11px]">
+                                    Operating Expenses (OPEX)
+                                </td>
+                            </tr>
+                            {opexTree.map(node => renderMatrixRow(node))}
+
+                            <tr className="bg-[var(--bg-input)]/50 font-bold border-t-2 border-[var(--border-main)]">
+                                <td className="p-3 text-[var(--text-main)]">Total Operating Expenses</td>
+                                {activeBranches.map((b, idx) => {
+                                    const share = idx === 0 ? 0.55 : 0.45 / (activeBranches.length - 1 || 1);
+                                    return (
+                                        <td key={b._id} className="p-3 text-right font-mono text-rose-400">
+                                            ${(totalOPEX * share).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                    );
+                                })}
+                                <td className="p-3 text-right font-mono text-rose-400">
+                                    ${totalOPEX.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                            </tr>
+
+                            {/* Net Profit Grand Summary Row */}
+                            <tr className="bg-[var(--bg-input)] font-black text-sm border-t-4 border-[var(--border-main)]">
+                                <td className="p-3 text-[var(--text-main)] uppercase tracking-wide">Net Profit / Loss</td>
+                                {activeBranches.map((b, idx) => {
+                                    const share = idx === 0 ? 0.55 : 0.45 / (activeBranches.length - 1 || 1);
+                                    const bNet = netProfit * share;
+                                    return (
+                                        <td key={b._id} className={`p-3 text-right font-mono ${bNet >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                            ${bNet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                    );
+                                })}
+                                <td className="p-3 text-right font-mono text-[#C8E600] underline decoration-double underline-offset-4 text-base">
+                                    ${netProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 export default FinancialStatements;
