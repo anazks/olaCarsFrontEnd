@@ -6,7 +6,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import {
     Crosshair, Search, Cpu, Wifi, WifiOff, Database,
     Calendar, Shield, Activity, Info, RefreshCw, SlidersHorizontal,
-    Copy, Check, FileSpreadsheet, User, Phone, MapPin, Gauge,
+    Copy, Check, FileSpreadsheet, FileText, User, Phone, MapPin, Gauge,
     Battery, Zap, Navigation, Link, ExternalLink, Satellite,
     Map, Eye, Columns, ArrowLeft, X, Printer, Clock
 } from 'lucide-react';
@@ -15,6 +15,7 @@ import {
     getGpsTripsReport, getGpsMileageList, getGpsNotificationsList, getGpsObdData,
     type GpsVehicle, type GpsLocation, type GpsMileage, type GpsNotification, type GpsObdData
 } from '../../../services/gpsService';
+import FleetSummaryReportModal from '../../../components/gps/FleetSummaryReportModal';
 import { getAllVehicles } from '../../../services/vehicleService';
 import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
@@ -54,6 +55,7 @@ const GpsVehicles = () => {
     const [obdData, setObdData] = useState<GpsObdData | null>(null);
 
     // Trips Report Modal state
+    const [showFleetReportModal, setShowFleetReportModal] = useState<boolean>(false);
     const [showTripsModal, setShowTripsModal] = useState<boolean>(false);
     const [tripsData, setTripsData] = useState<any[]>([]);
     const [tripsLoading, setTripsLoading] = useState<boolean>(false);
@@ -1006,12 +1008,20 @@ const GpsVehicles = () => {
                     )}
 
                     {activeView !== 'track' && (
-                        <button
-                            onClick={handleExportCSV}
-                            className="px-4 py-2.5 rounded-xl border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] transition-all font-semibold text-xs flex items-center gap-2 cursor-pointer shadow-sm text-[var(--text-main)]"
-                        >
-                            <FileSpreadsheet size={16} /> Export CSV
-                        </button>
+                        <>
+                            <button
+                                onClick={() => setShowFleetReportModal(true)}
+                                className="px-4 py-2.5 rounded-xl border border-[var(--brand-dynamic-border)] bg-[var(--brand-dynamic-light)] text-[var(--brand-dynamic)] hover:bg-[var(--brand-dynamic)] hover:text-[var(--bg-main)] transition-all font-bold text-xs flex items-center gap-2 cursor-pointer shadow-sm"
+                            >
+                                <FileText size={16} /> Fleet Summary Report
+                            </button>
+                            <button
+                                onClick={handleExportCSV}
+                                className="px-4 py-2.5 rounded-xl border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] transition-all font-semibold text-xs flex items-center gap-2 cursor-pointer shadow-sm text-[var(--text-main)]"
+                            >
+                                <FileSpreadsheet size={16} /> Export CSV
+                            </button>
+                        </>
                     )}
                     <button
                         onClick={() => loadGpsData(true)}
@@ -2169,6 +2179,15 @@ const GpsVehicles = () => {
                     </div>
                 </div>
             )}
+
+            {/* Fleet Summary Report Modal */}
+            <FleetSummaryReportModal
+                isOpen={showFleetReportModal}
+                onClose={() => setShowFleetReportModal(false)}
+                vehicles={vehicles}
+                fleetVehicles={fleetVehicles}
+                fleetDrivers={fleetDrivers}
+            />
         </div>
     );
 };

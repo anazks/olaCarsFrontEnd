@@ -92,9 +92,43 @@ export const getGpsTripsReport = async (imei: string, startTime: string, endTime
 };
 
 export const getGpsMileageList = async (imeis: string, startTime?: string, endTime?: string): Promise<GpsMileage[]> => {
-    const params = { imeis, startTime, endTime };
-    const response = await api.get('/api/gps/mileage', { params });
-    return response.data.data;
+    try {
+        const imeiArray = imeis.split(',').map(i => i.trim()).filter(Boolean);
+        if (imeiArray.length === 0) return [];
+
+        // Batch IMEIs into chunks of 20 per HTTP GET request to avoid URI too long and server timeouts
+        const chunkSize = 20;
+        const chunks: string[][] = [];
+        for (let i = 0; i < imeiArray.length; i += chunkSize) {
+            chunks.push(imeiArray.slice(i, i + chunkSize));
+        }
+
+        const results = await Promise.all(
+            chunks.map(async (chunk) => {
+                try {
+                    const params = { imeis: chunk.join(','), startTime, endTime };
+                    const response = await api.get('/api/gps/mileage', { params });
+                    return (response.data && Array.isArray(response.data.data)) ? response.data.data : [];
+                } catch (err) {
+                    console.warn('[GPS Service] Mileage chunk fetch error:', err);
+                    return chunk.map(imei => ({
+                        imei,
+                        startTime: startTime || '',
+                        endTime: endTime || '',
+                        elapsed: 0,
+                        distance: 0,
+                        avgSpeed: 0,
+                        totalMileage: 0
+                    }));
+                }
+            })
+        );
+
+        return results.flat();
+    } catch (err) {
+        console.error('[GPS Service] getGpsMileageList failed:', err);
+        return [];
+    }
 };
 
 export const getGpsNotificationsList = async (imei?: string, limit?: number): Promise<GpsNotification[]> => {
@@ -151,4 +185,49 @@ export const findGpsDeviceByVehicle = (
             (gPlate && vinUpper && gPlate === vinUpper)
         );
     });
+};
+
+export interface FleetSummaryRow {
+    imei: string;
+    device: string;
+    group: string;
+    vehicleNumber?: string;
+    customerName?: string;
+    driverName?: string;
+    driverStatus?: string;
+    distance: number;
+    maxSpeed: number;
+    engineHoursSeconds: number;
+    engineHoursFormatted: string;
+    fuelConsumed: number;
+    startDate: string;
+    odometerStart: number;
+    odometerEnd: number;
+    averageSpeed: number;
+    tripCount: number;
+}
+
+export interface FleetSummaryTotals {
+    totalDevices: number;
+    totalDistance: number;
+    totalFuel: number;
+    averageSpeed: number;
+    totalEngineHoursSeconds: number;
+    totalEngineHoursFormatted: string;
+}
+
+export interface FleetSummaryReportData {
+    summaryRows: FleetSummaryRow[];
+    totals: FleetSummaryTotals;
+}
+
+export const getFleetSummaryReport = async (params: {
+    imeis?: string;
+    group?: string;
+    startTime?: string;
+    endTime?: string;
+    reportType?: string;
+}): Promise<FleetSummaryReportData> => {
+    const response = await api.get('/api/gps/fleet-summary-report', { params });
+    return response.data.data;
 };
