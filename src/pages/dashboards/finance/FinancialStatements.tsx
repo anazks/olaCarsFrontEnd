@@ -170,16 +170,21 @@ const buildBSExportRows = (data: any) => {
     const totalAssets = currentAssetsTotal + nonCurrentAssetsTotal;
 
     const equity = data.equity || [];
-    const currentPeriodItem = equity.find((e: any) => e.code === "RE-CURRENT" || e.name.includes("Current Period"));
+    const currentPeriodItem = equity.find((e: any) => e.code === "RE-CURRENT" || e.name.includes("Current Period") || e.name.includes("Resultado del ejercicio"));
     const resultsOfTheExercise = currentPeriodItem ? currentPeriodItem.amount : 0;
-    const databaseEquity = equity.filter((e: any) => 
-        e.code !== "RE-CURRENT" && 
-        !e.name.includes("Current Period") && 
-        !e.name.toLowerCase().includes("retained earnings") && 
+
+    const staticItem = equity.find((e: any) => e.code === "RE-STATIC" || e.name.toLowerCase().includes("retained earnings") || e.name.toLowerCase().includes("utilidades retenidas"));
+    const staticRetainedEarnings = staticItem ? staticItem.amount : 258789.00;
+
+    const databaseEquity = equity.filter((e: any) =>
+        e.code !== "RE-CURRENT" &&
+        e.code !== "RE-STATIC" &&
+        !e.name.includes("Current Period") &&
+        !e.name.includes("Resultado del ejercicio") &&
+        !e.name.toLowerCase().includes("retained earnings") &&
         !e.name.toLowerCase().includes("utilidades retenidas")
     );
     const databaseEquityTotal = databaseEquity.reduce((sum: number, e: any) => sum + e.amount, 0);
-    const staticRetainedEarnings = 258789.00;
     const totalCapital = databaseEquityTotal + staticRetainedEarnings + resultsOfTheExercise;
     const grandTotalLiabilitiesAndEquity = totalLiabilities + totalCapital;
 
@@ -341,8 +346,8 @@ const FinancialStatements = () => {
         setExporting(true);
         const toastId = toast.loading("Generating Excel statement...");
         try {
-            const exportRows = activeTab === 'PL' 
-                ? buildPLExportRows(reportData) 
+            const exportRows = activeTab === 'PL'
+                ? buildPLExportRows(reportData)
                 : buildBSExportRows(reportData);
 
             if (exportRows.length === 0) {
@@ -384,8 +389,8 @@ const FinancialStatements = () => {
         setExporting(true);
         const toastId = toast.loading("Generating CSV statement...");
         try {
-            const exportRows = activeTab === 'PL' 
-                ? buildPLExportRows(reportData) 
+            const exportRows = activeTab === 'PL'
+                ? buildPLExportRows(reportData)
                 : buildBSExportRows(reportData);
 
             if (exportRows.length === 0) {
@@ -398,7 +403,7 @@ const FinancialStatements = () => {
             const csvContent = XLSX.utils.sheet_to_csv(ws);
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
-            
+
             const link = document.createElement("a");
             link.setAttribute("href", url);
             const dateStr = new Date().toISOString().split('T')[0];
@@ -423,21 +428,19 @@ const FinancialStatements = () => {
                 <div className="flex gap-4">
                     <button
                         onClick={() => setActiveTab('PL')}
-                        className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
-                            activeTab === 'PL'
+                        className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${activeTab === 'PL'
                                 ? 'border-brand-lime text-brand-lime font-black'
                                 : 'border-transparent text-dim hover:text-white'
-                        }`}
+                            }`}
                     >
                         Income Statement (P&L)
                     </button>
                     <button
                         onClick={() => setActiveTab('BS')}
-                        className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${
-                            activeTab === 'BS'
+                        className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${activeTab === 'BS'
                                 ? 'border-brand-lime text-brand-lime font-black'
                                 : 'border-transparent text-dim hover:text-white'
-                        }`}
+                            }`}
                     >
                         Balance Sheet
                     </button>
@@ -454,7 +457,7 @@ const FinancialStatements = () => {
                     <p className="text-xs font-medium text-dim mt-0.5">Consolidated and branch-level financial reporting</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    <button 
+                    <button
                         disabled={exporting || loading}
                         onClick={handleExportPdf}
                         id="export-pdf-btn"
@@ -473,7 +476,7 @@ const FinancialStatements = () => {
                         )}
                     </button>
 
-                    <button 
+                    <button
                         disabled={exporting || loading || !reportData}
                         onClick={handleExportExcel}
                         className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg hover:scale-105 active:scale-95"
@@ -486,7 +489,7 @@ const FinancialStatements = () => {
                         <FileText size={14} className="text-emerald-500" /> Export Excel
                     </button>
 
-                    <button 
+                    <button
                         disabled={exporting || loading || !reportData}
                         onClick={handleExportCsv}
                         className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg hover:scale-105 active:scale-95"
@@ -504,32 +507,32 @@ const FinancialStatements = () => {
             {/* Filter Bar */}
             <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-main)] flex flex-col sm:flex-row gap-4 items-center">
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <input 
-                        type="date" 
+                    <input
+                        type="date"
                         value={filters.startDate}
-                        onChange={e => setFilters({...filters, startDate: e.target.value})}
+                        onChange={e => setFilters({ ...filters, startDate: e.target.value })}
                         className="bg-transparent border-none text-sm text-[var(--text-main)] focus:ring-0 outline-none"
                     />
                     <span className="opacity-20">to</span>
-                    <input 
-                        type="date" 
+                    <input
+                        type="date"
                         value={filters.endDate}
                         min={filters.startDate}
                         onChange={e => {
                             const val = e.target.value;
                             if (filters.startDate && val && val < filters.startDate) {
-                                setFilters({...filters, endDate: filters.startDate});
+                                setFilters({ ...filters, endDate: filters.startDate });
                             } else {
-                                setFilters({...filters, endDate: val});
+                                setFilters({ ...filters, endDate: val });
                             }
                         }}
                         className="bg-transparent border-none text-sm text-[var(--text-main)] focus:ring-0 outline-none"
                     />
                 </div>
                 <div className="h-6 w-px bg-[var(--border-main)] hidden sm:block" />
-                <select 
+                <select
                     value={filters.branch}
-                    onChange={e => setFilters({...filters, branch: e.target.value})}
+                    onChange={e => setFilters({ ...filters, branch: e.target.value })}
                     className="bg-transparent border-none text-sm text-[var(--text-main)] focus:ring-0 outline-none min-w-[200px]"
                 >
                     <option value="" className="bg-[var(--bg-card)]">Consolidated (All Branches)</option>
@@ -537,7 +540,7 @@ const FinancialStatements = () => {
                         <option key={b._id} value={b._id} className="bg-[var(--bg-card)]">{b.name} ({b.country})</option>
                     ))}
                 </select>
-                <button 
+                <button
                     onClick={fetchReport}
                     disabled={loading}
                     className="w-full sm:w-auto sm:ml-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
@@ -562,26 +565,24 @@ const FinancialStatements = () => {
                                     {viewMode === 'standard' ? (filters.branch ? 'Single Branch View' : 'Consolidated View') : 'Branch-Wise Comparison'}
                                 </span>
                             </h3>
-                            
+
                             <div className="flex items-center gap-3">
                                 <div className="flex items-center bg-[var(--bg-card)] p-1 rounded-xl border border-[var(--border-main)]">
                                     <button
                                         onClick={() => setViewMode('standard')}
-                                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                            viewMode === 'standard'
+                                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${viewMode === 'standard'
                                                 ? 'bg-[#C8E600] text-[#0A0A0A] shadow-sm'
                                                 : 'text-dim hover:text-[var(--text-main)]'
-                                        }`}
+                                            }`}
                                     >
                                         Standard Statement
                                     </button>
                                     <button
                                         onClick={() => setViewMode('branch_wise')}
-                                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                            viewMode === 'branch_wise'
+                                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${viewMode === 'branch_wise'
                                                 ? 'bg-[#C8E600] text-[#0A0A0A] shadow-sm'
                                                 : 'text-dim hover:text-[var(--text-main)]'
-                                        }`}
+                                            }`}
                                     >
                                         Branch-Wise Breakdown
                                     </button>
@@ -589,7 +590,7 @@ const FinancialStatements = () => {
                                 <span className="text-[10px] bg-[var(--bg-card)] px-2 py-1 rounded text-dim font-mono border border-[var(--border-main)]">USD</span>
                             </div>
                         </div>
-                        
+
                         <div className="p-6">
                             {loading ? (
                                 <div className="flex items-center justify-center py-20">
@@ -638,7 +639,7 @@ const FinancialStatements = () => {
                             <div className="w-full bg-[var(--bg-input)] h-1.5 rounded-full overflow-hidden">
                                 <div className="bg-[#C8E600] h-full" style={{ width: '24.2%' }} />
                             </div>
-                            
+
                             <div className="flex justify-between items-center pt-2">
                                 <span className="text-xs text-dim">Tax Provision</span>
                                 <span className="text-xs font-bold text-rose-500 font-mono">$4,250.00</span>
@@ -672,11 +673,11 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
         if (!accountId) return;
         const basePath = location.pathname.replace(/\/financial-statements$/, '');
         const targetPath = `${basePath}/chart-of-accounts/${accountId}`;
-        
+
         const params = new URLSearchParams();
         if (filters?.startDate) params.set('startDate', filters.startDate);
         if (filters?.endDate) params.set('endDate', filters.endDate);
-        
+
         navigate(`${targetPath}?${params.toString()}`);
     };
 
@@ -757,8 +758,8 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
         const isExpanded = expandedAccounts[node.id] !== false;
         const ToggleIcon = isExpanded ? ChevronDown : ChevronRight;
 
-        const displayAmount = (node.children.length > 0 && isExpanded) 
-            ? node.amount 
+        const displayAmount = (node.children.length > 0 && isExpanded)
+            ? node.amount
             : node.rolledUpAmount;
 
         return (
@@ -767,8 +768,8 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                     <span className="text-sm text-dim group-hover:text-[var(--text-main)] transition-colors flex items-center" style={{ paddingLeft: `${depth * 20}px` }}>
                         {depth > 0 && <span className="opacity-45 text-[11px] font-mono select-none mr-1.5" style={{ color: 'var(--text-dim)' }}>↳</span>}
                         {node.children.length > 0 ? (
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); toggleExpand(node.id); }} 
+                            <button
+                                onClick={(e) => { e.stopPropagation(); toggleExpand(node.id); }}
                                 className="mr-1.5 p-0.5 rounded hover:bg-[var(--border-main)] transition-colors inline-flex items-center text-dim hover:text-[var(--text-main)] cursor-pointer"
                                 title={isExpanded ? "Collapse Account" : "Expand Account"}
                             >
@@ -797,15 +798,15 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                     </span>
                     <div className="flex-1 border-b border-dashed border-[var(--border-main)] mx-4" />
                     <span className={`text-sm font-mono text-[var(--text-main)] ${node.children.length > 0 ? "font-bold" : ""}`}>
-                        ${displayAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        ${displayAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                 </div>
                 {node.children.length > 0 && isExpanded && (
                     <div className="space-y-2">
                         {node.children.map(child => renderNode(child, depth + 1))}
-                        
+
                         {/* Parent Total Subtotal row */}
-                        <div 
+                        <div
                             className="flex justify-between items-center pt-1.5 pb-0.5 border-t border-dashed border-[var(--border-main)]/40 group cursor-default"
                             style={{ paddingLeft: `${(depth + 1) * 20}px` }}
                         >
@@ -815,7 +816,7 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                             </span>
                             <div className="flex-1 border-b border-dashed border-[var(--border-main)]/30 mx-4" />
                             <span className="text-xs font-mono font-bold text-[var(--text-main)]">
-                                ${(node.rolledUpAmount).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                ${(node.rolledUpAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </span>
                         </div>
                     </div>
@@ -873,7 +874,7 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                     <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
                         <span className="text-sm font-bold text-[var(--text-main)] font-medium">Total Operating Income</span>
                         <span className="text-sm font-mono font-bold text-[var(--text-main)] underline decoration-[#C8E600] decoration-2 underline-offset-4 font-black">
-                            ${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                            ${totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </span>
                     </div>
                 </div>
@@ -890,7 +891,7 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                         <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
                             <span className="text-sm font-bold text-[var(--text-main)] font-medium">Total Cost of Goods Sold</span>
                             <span className="text-sm font-mono font-bold text-[var(--text-main)]">
-                                (${totalCOGS.toLocaleString(undefined, {minimumFractionDigits: 2})})
+                                (${totalCOGS.toLocaleString(undefined, { minimumFractionDigits: 2 })})
                             </span>
                         </div>
                     </div>
@@ -905,7 +906,7 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                         <span className="text-[10px] text-dim block mt-0.5 font-bold uppercase tracking-wider">Total Operating Income − Total Cost of Goods Sold</span>
                     </div>
                     <span className="text-base font-mono font-bold text-[#C8E600]">
-                        ${grossProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        ${grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                 </div>
             </section>
@@ -920,7 +921,7 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                     <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
                         <span className="text-sm font-bold text-[var(--text-main)] font-medium">Total Operating Expenses</span>
                         <span className="text-sm font-mono font-bold text-[var(--text-main)]">
-                            (${totalOPEX.toLocaleString(undefined, {minimumFractionDigits: 2})})
+                            (${totalOPEX.toLocaleString(undefined, { minimumFractionDigits: 2 })})
                         </span>
                     </div>
                 </div>
@@ -931,19 +932,19 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                 <div className="flex justify-between items-center text-sm">
                     <span className="font-semibold text-dim">Gross Profit</span>
                     <span className="font-mono text-[var(--text-main)]">
-                        ${grossProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        ${grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                     <span className="font-semibold text-dim">Operating Expenses</span>
                     <span className="font-mono text-[var(--text-main)]">
-                        (${operatingExpenses.toLocaleString(undefined, {minimumFractionDigits: 2})})
+                        (${operatingExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })})
                     </span>
                 </div>
                 <div className="flex justify-between items-center pt-3 border-t border-[var(--border-main)]/50">
                     <span className="text-sm font-black uppercase text-[var(--text-main)]">Operating Profit</span>
                     <span className="font-mono font-bold text-[#C8E600]">
-                        ${operatingProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        ${operatingProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                 </div>
             </section>
@@ -959,7 +960,7 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                         <div className="flex justify-between items-center pt-2 border-t border-[var(--border-main)]">
                             <span className="text-sm font-bold text-[var(--text-main)] font-medium">Total Extraordinary Expenses</span>
                             <span className="text-sm font-mono font-bold text-[var(--text-main)]">
-                                (${totalOtherExpenses.toLocaleString(undefined, {minimumFractionDigits: 2})})
+                                (${totalOtherExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 })})
                             </span>
                         </div>
                     </div>
@@ -971,7 +972,7 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
                 <div className="flex justify-between items-center">
                     <h4 className="text-lg font-bold text-[var(--text-main)] uppercase tracking-wider">Net Profit / Loss</h4>
                     <div className="text-right">
-                        <p className="text-2xl font-mono font-bold text-[#C8E600]">${netProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                        <p className="text-2xl font-mono font-bold text-[#C8E600]">${netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                         <p className="text-[10px] text-dim">BEFORE TAX ADJUSTMENTS</p>
                     </div>
                 </div>
@@ -983,8 +984,8 @@ const PLView = ({ data, filters }: { data: any; filters: any }) => {
 const BSView = ({ data }: { data: any }) => {
     const formatValue = (val: number | undefined) => {
         if (val === undefined) return '$0.00';
-        return val < 0 
-            ? `-$${Math.abs(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+        return val < 0
+            ? `-$${Math.abs(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             : `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
@@ -1038,7 +1039,7 @@ const BSView = ({ data }: { data: any }) => {
     const assets = data?.assets || [];
     const cashAccounts = assets.filter((a: any) => classifyAsset(a) === 'cash');
     const bankAccounts = assets.filter((a: any) => classifyAsset(a) === 'bank');
-    
+
     const cashTotal = cashAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
     const bankTotal = bankAccounts.reduce((sum: number, a: any) => sum + a.amount, 0);
     const cashAndEquivalentsTotal = cashTotal + bankTotal;
@@ -1101,16 +1102,21 @@ const BSView = ({ data }: { data: any }) => {
     const totalAssets = currentAssetsTotal + nonCurrentAssetsTotal;
 
     const equity = data?.equity || [];
-    const currentPeriodItem = equity.find((e: any) => e.code === "RE-CURRENT" || e.name.includes("Current Period"));
+    const currentPeriodItem = equity.find((e: any) => e.code === "RE-CURRENT" || e.name.includes("Current Period") || e.name.includes("Resultado del ejercicio"));
     const resultsOfTheExercise = currentPeriodItem ? currentPeriodItem.amount : 0;
-    const databaseEquity = equity.filter((e: any) => 
-        e.code !== "RE-CURRENT" && 
-        !e.name.includes("Current Period") && 
-        !e.name.toLowerCase().includes("retained earnings") && 
+
+    const staticItem = equity.find((e: any) => e.code === "RE-STATIC" || e.name.toLowerCase().includes("retained earnings") || e.name.toLowerCase().includes("utilidades retenidas"));
+    const staticRetainedEarnings = staticItem ? staticItem.amount : 258789.00;
+
+    const databaseEquity = equity.filter((e: any) =>
+        e.code !== "RE-CURRENT" &&
+        e.code !== "RE-STATIC" &&
+        !e.name.includes("Current Period") &&
+        !e.name.includes("Resultado del ejercicio") &&
+        !e.name.toLowerCase().includes("retained earnings") &&
         !e.name.toLowerCase().includes("utilidades retenidas")
     );
     const databaseEquityTotal = databaseEquity.reduce((sum: number, e: any) => sum + e.amount, 0);
-    const staticRetainedEarnings = 258789.00;
     const totalCapital = databaseEquityTotal + staticRetainedEarnings + resultsOfTheExercise;
     const grandTotalLiabilitiesAndEquity = totalLiabilities + totalCapital;
 
@@ -1122,16 +1128,16 @@ const BSView = ({ data }: { data: any }) => {
                     <h4 className="text-xs font-bold text-[#C8E600] uppercase tracking-widest pb-2 flex items-center gap-2 border-b border-[var(--border-main)]">
                         <ChevronRight size={14} /> Assets
                     </h4>
-                    
+
                     <div className="space-y-4">
                         {/* Current Assets */}
                         <div className="space-y-3">
                             <div className="font-bold text-sm text-[var(--text-main)]">Current Assets</div>
-                            
+
                             {/* Cash and Cash Equivalents */}
                             <div className="pl-4 space-y-2">
                                 <div className="font-semibold text-xs text-dim uppercase tracking-wider">Cash and Cash Equivalents</div>
-                                
+
                                 {/* Cash accounts list */}
                                 <div className="pl-4 space-y-1">
                                     <div className="text-xs font-semibold text-dim italic">Cash</div>
@@ -1254,7 +1260,7 @@ const BSView = ({ data }: { data: any }) => {
                         {/* Non Current Assets */}
                         <div className="space-y-3 pt-4 border-t border-[var(--border-main)]/50">
                             <div className="font-bold text-sm text-[var(--text-main)]">Non Current Assets</div>
-                            
+
                             <div className="pl-4 space-y-2">
                                 <div className="font-semibold text-xs text-dim uppercase tracking-wider">Fixed Assets</div>
                                 {fixedAssets.filter((item: any) => item.amount !== 0).map((item: any, i: number) => {
@@ -1321,7 +1327,7 @@ const BSView = ({ data }: { data: any }) => {
                         <h4 className="text-xs font-bold text-rose-500 uppercase tracking-widest pb-2 flex items-center gap-2 border-b border-[var(--border-main)]">
                             <ChevronRight size={14} /> Liabilities
                         </h4>
-                        
+
                         <div className="space-y-4">
                             {/* Current Liabilities Group */}
                             <div className="space-y-3">
@@ -1456,7 +1462,7 @@ const BSView = ({ data }: { data: any }) => {
                         <h4 className="text-xs font-bold text-blue-500 uppercase tracking-widest pb-2 flex items-center gap-2 border-b border-[var(--border-main)]">
                             <ChevronRight size={14} /> Equity
                         </h4>
-                        
+
                         <div className="space-y-4">
                             <div className="pl-2 space-y-2">
                                 {/* Database Equity Accounts */}
