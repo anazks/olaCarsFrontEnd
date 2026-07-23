@@ -226,3 +226,18 @@ export const getInvoicesDateWise = async (filters: any = {}): Promise<{data: Inv
         metrics: response.data.metrics
     };
 };
+
+export const downloadInvoiceRegistryPdf = async (filters: any = {}): Promise<any> => {
+    const params = new URLSearchParams();
+    if (filters.search) params.append('search', filters.search);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.status && filters.status !== 'ALL') params.append('status', filters.status);
+    if (filters.month) params.append('month', filters.month);
+    if (filters.year) params.append('year', filters.year);
+
+    const response = await api.get(`/api/invoices/registry/pdf?${params.toString()}`, {
+        responseType: 'blob'
+    });
+    return response.data;
+};

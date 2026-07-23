@@ -3,10 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
     FileText, RefreshCw, Filter, Search, CheckCircle2,
     Clock, AlertCircle, ChevronLeft, ChevronRight, Calendar, Plus,
-    ArrowUpDown, ArrowUp, ArrowDown, Trash2, Settings
+    ArrowUpDown, ArrowUp, ArrowDown, Trash2, Settings, FileSpreadsheet, Download
 } from 'lucide-react';
-import { getInvoicesRegistry, deleteAllInvoices, getInvoicesDateWise } from '../../../services/invoiceService';
+import { getInvoicesRegistry, deleteAllInvoices, getInvoicesDateWise, downloadInvoiceRegistryPdf } from '../../../services/invoiceService';
 import type { Invoice } from '../../../services/invoiceService';
+import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import InvoiceSettingsModal from './InvoiceSettingsModal';
@@ -22,6 +23,8 @@ const InvoiceList = () => {
     const [error, setError] = useState<string | null>(null);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [showBulkUpload, setShowBulkUpload] = useState(false);
+    const [downloadingPdf, setDownloadingPdf] = useState(false);
+    const [downloadingExcel, setDownloadingExcel] = useState(false);
 
     const getDefaultStartDate = () => {
         const d = new Date();
@@ -200,19 +203,118 @@ const InvoiceList = () => {
         navigate(`./${id}`);
     };
 
-
-
     const handleDeleteAll = async () => {
-        if (!window.confirm('CRITICAL: Are you sure you want to delete ALL invoices? This action cannot be undone.')) return;
-        try {
-            await deleteAllInvoices();
-            toast.success('All invoices deleted successfully');
-            fetchData();
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to delete all invoices');
+        if (window.confirm('Are you sure you want to delete ALL invoices? This action cannot be undone.')) {
+            try {
+                await deleteAllInvoices();
+                toast.success('All invoices deleted successfully');
+                fetchData();
+            } catch (err: any) {
+                toast.error(err.response?.data?.message || 'Failed to delete invoices');
+            }
         }
     };
 
+    const handleDownloadPdf = async () => {
+        setDownloadingPdf(true);
+        const toastId = toast.loading('Generating Invoice Registry PDF report...');
+        try {
+            const filters: any = {
+                search: debouncedSearch.trim() || undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+                status: statusFilter !== 'ALL' ? statusFilter : undefined,
+                month: filterMonth || undefined,
+                year: filterYear || undefined
+            };
+            const data = await downloadInvoiceRegistryPdf(filters);
+            const blob = new Blob([data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute('download', `Invoice_Registry_Report_${dateStr}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            toast.success('Invoice Registry PDF downloaded!', { id: toastId });
+        } catch (err: any) {
+            console.error('Failed to download PDF:', err);
+            toast.error(err?.response?.data?.message || err.message || 'Failed to generate PDF', { id: toastId });
+        } finally {
+            setDownloadingPdf(false);
+        }
+    };
+
+    const handleDownloadExcel = async () => {
+        setDownloadingExcel(true);
+        const toastId = toast.loading('Generating Invoice Registry Excel report...');
+        try {
+            const filters: any = { limit: 2000, ignoreDefaultDates: 'true' };
+            if (debouncedSearch.trim()) filters.search = debouncedSearch.trim();
+            if (startDate) filters.startDate = startDate;
+            if (endDate) filters.endDate = endDate;
+            if (statusFilter !== 'ALL') filters.status = statusFilter;
+            if (filterMonth) filters.month = filterMonth;
+            if (filterYear) filters.year = filterYear;
+
+            const res = (startDate || endDate)
+                ? await getInvoicesDateWise(filters)
+                : await getInvoicesRegistry(filters);
+
+            const exportInvoices = res?.data || invoices;
+
+            const excelRows = exportInvoices.map((inv: any) => {
+                const dateVal = inv.generatedAt || inv.entryDate || inv.date;
+                const formattedDate = dateVal ? new Date(dateVal).toLocaleDateString() : 'N/A';
+
+                let customerName = 'N/A';
+                if (inv.customer) {
+                    customerName = typeof inv.customer === 'object' ? (inv.customer.name || inv.customer.customerId) : inv.customer;
+                } else if (inv.customerName) {
+                    customerName = inv.customerName;
+                }
+
+                let vehicleStr = '-';
+                if (inv.vehicle) {
+                    vehicleStr = typeof inv.vehicle === 'object' ? (inv.vehicle.plateNumber || inv.vehicle.make || 'Vehicle') : inv.vehicle;
+                } else if (inv.notes) {
+                    vehicleStr = inv.notes;
+                }
+
+                const totalBilled = Number(inv.totalAmountDue || inv.totalAmount || inv.amount || 0);
+                const taxAmount = Number(inv.taxAmount || 0);
+                const amountPaid = Number(inv.amountPaid || 0);
+                const balance = inv.balance !== undefined ? Number(inv.balance) : (totalBilled - amountPaid);
+
+                return {
+                    'Date': formattedDate,
+                    'Invoice #': inv.invoiceNumber || inv.invoice || 'N/A',
+                    'Customer': customerName,
+                    'Vehicle / Info': vehicleStr,
+                    'Status': (inv.status || 'PENDING').toUpperCase(),
+                    'Total Billed ($)': totalBilled,
+                    'Tax Amount ($)': taxAmount,
+                    'Amount Paid ($)': amountPaid,
+                    'Balance ($)': balance
+                };
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Invoice Registry');
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(workbook, `Invoice_Registry_Report_${dateStr}.xlsx`);
+            toast.success('Invoice Registry Excel downloaded!', { id: toastId });
+        } catch (err: any) {
+            console.error('Failed to download Excel:', err);
+            toast.error(err?.message || 'Failed to generate Excel file', { id: toastId });
+        } finally {
+            setDownloadingExcel(false);
+        }
+    };
 
     return (
         <div className="container-responsive relative space-y-6 pb-12">
@@ -316,11 +418,31 @@ const InvoiceList = () => {
                         )}
 
                         <button
+                            onClick={handleDownloadPdf}
+                            disabled={downloadingPdf}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 border border-emerald-500/30 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50"
+                            title="Download Invoice Registry PDF Report"
+                        >
+                            <FileText size={14} strokeWidth={3} />
+                            {downloadingPdf ? 'PDF...' : 'Download PDF'}
+                        </button>
+
+                        <button
+                            onClick={handleDownloadExcel}
+                            disabled={downloadingExcel}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 border border-amber-500/30 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50"
+                            title="Download Invoice Registry Excel Spreadsheet"
+                        >
+                            <FileSpreadsheet size={14} strokeWidth={3} />
+                            {downloadingExcel ? 'Excel...' : 'Download Excel'}
+                        </button>
+
+                        <button
                             onClick={() => setShowBulkUpload(true)}
                             className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
                             style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}
                         >
-                            <FileText size={14} strokeWidth={3} />
+                            <Download size={14} strokeWidth={3} />
                             Bulk Upload
                         </button>
 
