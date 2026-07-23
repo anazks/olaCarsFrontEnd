@@ -1008,6 +1008,23 @@ const BankAccountLedger = () => {
         });
     }, [entries, sortDirection]);
 
+    const isEntryConnectedWithInvoice = React.useCallback((entry: any): boolean => {
+        if (!entry) return false;
+        if (entry.invoice || entry.invoiceId || entry.invoiceNumber) return true;
+        if (Array.isArray(entry.invoices) && entry.invoices.length > 0) return true;
+        if (entry.setOffSummary && Array.isArray(entry.setOffSummary.invoices) && entry.setOffSummary.invoices.length > 0) return true;
+
+        if (entry.description) {
+            const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*|\b(?:invoice|inv\s*#|factura)\b)/i;
+            if (invoiceRegex.test(entry.description)) return true;
+        }
+        return false;
+    }, []);
+
+    const selectableEntries = React.useMemo(() => {
+        return sortedEntries.filter(entry => !isEntryConnectedWithInvoice(entry));
+    }, [sortedEntries, isEntryConnectedWithInvoice]);
+
     const runningBalancesMap = React.useMemo(() => {
         const map: Record<string, number> = {};
         if (!account) return map;
@@ -1814,15 +1831,17 @@ const BankAccountLedger = () => {
                                     <th className="px-6 py-4 w-12 text-center select-none">
                                         <input
                                             type="checkbox"
-                                            checked={sortedEntries.length > 0 && selectedIds.length === sortedEntries.length}
+                                            checked={selectableEntries.length > 0 && selectableEntries.every(entry => selectedIds.includes(entry._id))}
+                                            disabled={selectableEntries.length === 0}
                                             onChange={(e) => {
                                                 if (e.target.checked) {
-                                                    setSelectedIds(sortedEntries.map(entry => entry._id));
+                                                    setSelectedIds(selectableEntries.map(entry => entry._id));
                                                 } else {
                                                     setSelectedIds([]);
                                                 }
                                             }}
-                                            className="rounded border-white/20 text-[#C8E600] focus:ring-[#C8E600] bg-transparent cursor-pointer"
+                                            className={`rounded border-white/20 text-[#C8E600] focus:ring-[#C8E600] bg-transparent ${selectableEntries.length === 0 ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+                                            title={selectableEntries.length === 0 ? "No selectable transactions (all are connected with invoices)" : "Select all non-invoice transactions"}
                                         />
                                     </th>
                                     <th
@@ -1863,6 +1882,7 @@ const BankAccountLedger = () => {
                                         : (entry.credit || 0);
 
                                     const isSelected = selectedIds.includes(entry._id);
+                                    const isConnectedWithInvoice = isEntryConnectedWithInvoice(entry);
 
                                     return (
                                         <tr
@@ -1877,15 +1897,18 @@ const BankAccountLedger = () => {
                                             <td className="px-6 py-4 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="checkbox"
-                                                    checked={isSelected}
+                                                    checked={isSelected && !isConnectedWithInvoice}
+                                                    disabled={isConnectedWithInvoice}
                                                     onChange={(e) => {
+                                                        if (isConnectedWithInvoice) return;
                                                         if (e.target.checked) {
                                                             setSelectedIds(prev => [...prev, entry._id]);
                                                         } else {
                                                             setSelectedIds(prev => prev.filter(id => id !== entry._id));
                                                         }
                                                     }}
-                                                    className="rounded border-white/20 text-[#C8E600] focus:ring-[#C8E600] bg-transparent cursor-pointer"
+                                                    className={`rounded border-white/20 text-[#C8E600] focus:ring-[#C8E600] bg-transparent ${isConnectedWithInvoice ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+                                                    title={isConnectedWithInvoice ? "Transactions connected with invoices cannot be selected" : ""}
                                                 />
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
