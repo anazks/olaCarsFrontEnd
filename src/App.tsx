@@ -143,6 +143,7 @@ import FixedAssets from "./pages/dashboards/finance/FixedAssets";
 import CreateFixedAsset from "./pages/dashboards/finance/CreateFixedAsset";
 import FixedAssetDetail from "./pages/dashboards/finance/FixedAssetDetail";
 import InvoiceList from "./pages/dashboards/finance/InvoiceList";
+import InvoiceAgingSummary from "./pages/dashboards/finance/InvoiceAgingSummary";
 import InvoiceDetail from "./pages/dashboards/finance/InvoiceDetail";
 import FinancialAdminScraps from "./pages/dashboards/financialAdmin/FinancialAdminScraps";
 import FinancialAdminWriteOffs from "./pages/dashboards/financialAdmin/FinancialAdminWriteOffs";
@@ -469,6 +470,7 @@ function App() {
               <Route path="vouchers" element={<VoucherDashboard />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/create" element={<CreateInvoicePage />} />
+              <Route path="invoices/aging-summary" element={<InvoiceAgingSummary />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
               <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
               <Route path="finance-dashboard" element={<FinanceDashboard />} />
