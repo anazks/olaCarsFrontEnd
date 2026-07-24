@@ -169,12 +169,12 @@ const parseFlexibleDate = (dateStr: any): Date | null => {
 
 const getRowVal = (r: any, possibleKeys: string[]): any => {
     if (!r) return undefined;
+    const normalize = (s: string) => s.replace(/^\ufeff/, '').trim().toLowerCase().replace(/[\s\-_.:]/g, '');
     for (const key of possibleKeys) {
-        const cleanKey = key.replace(/^\ufeff/, '').trim().toLowerCase();
+        const cleanKey = normalize(key);
         if (r[key] !== undefined) return r[key];
         for (const k of Object.keys(r)) {
-            const cleanK = k.replace(/^\ufeff/, '').trim().toLowerCase();
-            if (cleanK === cleanKey) {
+            if (normalize(k) === cleanKey) {
                 return r[k];
             }
         }
@@ -187,8 +187,8 @@ const normalizeRowDates = (row: any): any => {
     
     const dueDateVal = getRowVal(row, ['Due Date', 'dueDate', 'due_date']);
     const dueDateKey = Object.keys(row).find(k => {
-        const clean = k.trim().toLowerCase();
-        return clean === 'due date' || clean === 'duedate' || clean === 'due_date';
+        const clean = k.trim().toLowerCase().replace(/[\s\-_.:]/g, '');
+        return clean === 'duedate';
     }) || 'Due Date';
     
     if (dueDateVal) {
@@ -204,10 +204,10 @@ const normalizeRowDates = (row: any): any => {
         }
     }
     
-    const invoiceDateVal = getRowVal(row, ['Invoice Date', 'invoiceDate', 'date', 'Date', 'invoice_date']);
+    const invoiceDateVal = getRowVal(row, ['Invoice Date', 'invoiceDate', 'date', 'Date', 'invoice_date', 'txn_posting_date']);
     const invoiceDateKey = Object.keys(row).find(k => {
-        const clean = k.trim().toLowerCase();
-        return clean === 'invoice date' || clean === 'invoicedate' || clean === 'invoice_date' || clean === 'date';
+        const clean = k.trim().toLowerCase().replace(/[\s\-_.:]/g, '');
+        return clean === 'invoicedate' || clean === 'date' || clean === 'txnpostingdate';
     }) || 'Invoice Date';
     
     if (invoiceDateVal) {
@@ -276,7 +276,7 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
 
         const uniqueTokens = new Set<string>();
         parsedRows.forEach(row => {
-            const invNo = getRowVal(row, ['Invoice Number', 'invoiceNumber']) || '';
+            const invNo = getRowVal(row, ['Invoice Number', 'invoiceNumber', 'invoice_number']) || '';
             if (invNo) {
                 uniqueTokens.add(invNo.toString().trim());
             }
@@ -358,8 +358,8 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
 
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
-        const name = (getRowVal(row, ['Customer Name', 'customerName', 'customer']) || '').toString().trim();
-        const customerId = (getRowVal(row, ['Customer ID', 'customerId', 'customerNumber']) || '').toString().trim();
+        const name = (getRowVal(row, ['Customer Name', 'customerName', 'customer_name', 'customer']) || '').toString().trim();
+        const customerId = (getRowVal(row, ['Customer ID', 'customerId', 'customer_id', 'customerNumber', 'customer_number']) || '').toString().trim();
 
         if (!name && !customerId) {
             const rowKeys = Object.keys(row).filter(k => !k.startsWith('_'));
@@ -391,7 +391,7 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
             }
         }
         
-        const subtotal = Number(getRowVal(row, ['SubTotal', 'subtotal', 'itemPrice', 'Item Price', 'amount']) || 0);
+        const subtotal = Number(getRowVal(row, ['SubTotal', 'subtotal', 'bcy_total', 'itemPrice', 'Item Price', 'amount', 'total']) || 0);
         if (isNaN(subtotal) || subtotal < 0) {
             errors.push('Invalid SubTotal/amount');
         }
@@ -404,7 +404,7 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
             }
         }
 
-        const invoiceDate = getRowVal(row, ['Invoice Date', 'invoiceDate', 'date', 'Date', 'invoice_date']);
+        const invoiceDate = getRowVal(row, ['Invoice Date', 'invoiceDate', 'date', 'Date', 'invoice_date', 'txn_posting_date']);
         if (invoiceDate) {
             const parsed = parseFlexibleDate(invoiceDate);
             if (!parsed) {
@@ -412,8 +412,8 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
             }
         }
 
-        const invNo = (getRowVal(row, ['Invoice Number', 'invoiceNumber']) || '').toString().trim();
-        const itemName = (getRowVal(row, ['Item Name', 'itemName']) || '').toString().trim();
+        const invNo = (getRowVal(row, ['Invoice Number', 'invoiceNumber', 'invoice_number']) || '').toString().trim();
+        const itemName = (getRowVal(row, ['Item Name', 'itemName', 'item_name']) || '').toString().trim();
 
         if (invNo && itemName) {
             const verification = verifiedInvoices.get(invNo.toLowerCase());
