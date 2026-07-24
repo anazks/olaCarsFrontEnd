@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { TrendingUp, RefreshCw, ChevronRight, ChevronDown, PieChart, Loader2, Search, FileText } from 'lucide-react';
 import { getPLReport, getBalanceSheetReport } from '../../../services/reportingService';
@@ -1569,6 +1569,7 @@ const getMockData = (type: 'PL' | 'BS') => {
 };
 
 const BranchWiseView = ({ data, branches, activeTab }: { data: any; branches: any[]; activeTab: 'PL' | 'BS' }) => {
+    void activeTab;
     const activeBranches = branches && branches.length > 0 ? branches : [
         { _id: 'b1', name: 'Panama City Main Branch', country: 'Panama' },
         { _id: 'b2', name: 'David Branch', country: 'Panama' },
@@ -1677,7 +1678,7 @@ const BranchWiseView = ({ data, branches, activeTab }: { data: any; branches: an
         const totalDisp = (node.children.length > 0 && isExpanded) ? node.amount : node.rolledUpAmount;
 
         return (
-            <React.Fragment key={node.id}>
+            <Fragment key={node.id}>
                 <tr className="hover:bg-[var(--bg-input)]/40 transition-colors border-b border-[var(--border-main)]/30">
                     <td className="p-2.5 font-sans" style={{ paddingLeft: `${12 + depth * 18}px` }}>
                         <div className="flex items-center gap-1.5">
@@ -1714,7 +1715,7 @@ const BranchWiseView = ({ data, branches, activeTab }: { data: any; branches: an
                     </td>
                 </tr>
                 {node.children.length > 0 && isExpanded && node.children.map(child => renderMatrixRow(child, depth + 1))}
-            </React.Fragment>
+            </Fragment>
         );
     };
 
@@ -1741,6 +1742,7 @@ const BranchWiseView = ({ data, branches, activeTab }: { data: any; branches: an
     const cogsTree = getProcessedTree(cogsItems);
     const opexTree = getProcessedTree(opexItems);
     const otherExpensesTree = getProcessedTree(otherExpenseItems);
+    void incomeTree; void cogsTree; void opexTree; void otherExpensesTree;
 
     const totalIncome = income.reduce((acc: number, val: any) => acc + (val.amount || 0), 0) || 0;
     const totalCOGS = cogsItems.reduce((acc: number, val: any) => acc + (val.amount || 0), 0) || 0;

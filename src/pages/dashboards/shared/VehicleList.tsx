@@ -114,14 +114,14 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
         try {
             const exportData = vehicles.map((v, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
-                "Vehicle Number": v.vehicleNumber || 'N/A',
-                "Brand": v.brand || 'N/A',
-                "Model": v.model || 'N/A',
-                "Year": v.year || 'N/A',
-                "Category": v.category || 'N/A',
-                "Color": v.color || 'N/A',
-                "Fuel Type": v.fuelType || 'N/A',
-                "Branch": typeof v.branch === 'object' ? v.branch?.name : 'N/A',
+                "Vehicle Number": (v as any).vehicleNumber || v.legalDocs?.registrationNumber || v.basicDetails?.fleetNumber || 'N/A',
+                "Brand": (v as any).brand || v.basicDetails?.make || 'N/A',
+                "Model": (v as any).model || v.basicDetails?.model || 'N/A',
+                "Year": (v as any).year || v.basicDetails?.year || 'N/A',
+                "Category": (v as any).category || v.basicDetails?.category || 'N/A',
+                "Color": (v as any).color || v.basicDetails?.colour || 'N/A',
+                "Fuel Type": (v as any).fuelType || v.basicDetails?.fuelType || 'N/A',
+                "Branch": typeof (v as any).branch === 'object' ? (v as any).branch?.name : (typeof v.purchaseDetails?.branch === 'object' ? (v.purchaseDetails?.branch as any)?.name : 'N/A'),
                 "Status": v.status || 'N/A'
             }));
 
@@ -156,14 +156,14 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
         try {
             const exportData = vehicles.map((v, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
-                "Vehicle Number": v.vehicleNumber || 'N/A',
-                "Brand": v.brand || 'N/A',
-                "Model": v.model || 'N/A',
-                "Year": v.year || 'N/A',
-                "Category": v.category || 'N/A',
-                "Color": v.color || 'N/A',
-                "Fuel Type": v.fuelType || 'N/A',
-                "Branch": typeof v.branch === 'object' ? v.branch?.name : 'N/A',
+                "Vehicle Number": (v as any).vehicleNumber || v.legalDocs?.registrationNumber || v.basicDetails?.fleetNumber || 'N/A',
+                "Brand": (v as any).brand || v.basicDetails?.make || 'N/A',
+                "Model": (v as any).model || v.basicDetails?.model || 'N/A',
+                "Year": (v as any).year || v.basicDetails?.year || 'N/A',
+                "Category": (v as any).category || v.basicDetails?.category || 'N/A',
+                "Color": (v as any).color || v.basicDetails?.colour || 'N/A',
+                "Fuel Type": (v as any).fuelType || v.basicDetails?.fuelType || 'N/A',
+                "Branch": typeof (v as any).branch === 'object' ? (v as any).branch?.name : (typeof v.purchaseDetails?.branch === 'object' ? (v.purchaseDetails?.branch as any)?.name : 'N/A'),
                 "Status": v.status || 'N/A'
             }));
 
@@ -206,12 +206,12 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
             const head = [["Sl No.", "Vehicle Number", "Brand", "Model", "Year", "Category", "Branch", "Status"]];
             const body = vehicles.map((v, idx) => [
                 String(idx + 1).padStart(2, '0'),
-                v.vehicleNumber || 'N/A',
-                v.brand || 'N/A',
-                v.model || 'N/A',
-                String(v.year || 'N/A'),
-                v.category || 'N/A',
-                typeof v.branch === 'object' ? v.branch?.name : 'N/A',
+                (v as any).vehicleNumber || v.legalDocs?.registrationNumber || v.basicDetails?.fleetNumber || 'N/A',
+                (v as any).brand || v.basicDetails?.make || 'N/A',
+                (v as any).model || v.basicDetails?.model || 'N/A',
+                String((v as any).year || v.basicDetails?.year || 'N/A'),
+                (v as any).category || v.basicDetails?.category || 'N/A',
+                typeof (v as any).branch === 'object' ? (v as any).branch?.name : (typeof v.purchaseDetails?.branch === 'object' ? (v.purchaseDetails?.branch as any)?.name : 'N/A'),
                 v.status || 'N/A'
             ]);
 

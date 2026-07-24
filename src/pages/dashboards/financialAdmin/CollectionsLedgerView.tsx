@@ -496,8 +496,8 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                 headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
             });
 
-            doc.save(`Invoice_${item.invoiceNumber || item._id}.pdf`);
-            toast.success(`Exported PDF for Invoice ${item.invoiceNumber || item._id}`);
+            doc.save(`Invoice_${item.invoiceNumber || (item as any)._id || 'N/A'}.pdf`);
+            toast.success(`Exported PDF for Invoice ${item.invoiceNumber || (item as any)._id || 'N/A'}`);
         } catch (e) {
             console.error(e);
             toast.error("Failed to generate PDF for invoice.");

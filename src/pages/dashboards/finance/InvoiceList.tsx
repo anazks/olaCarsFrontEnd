@@ -9,9 +9,6 @@ import { getInvoicesRegistry, deleteAllInvoices, getInvoicesDateWise, downloadIn
 import type { Invoice } from '../../../services/invoiceService';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import InvoiceSettingsModal from './InvoiceSettingsModal';
 import BulkInvoiceUpload from '../shared/BulkInvoiceUpload';
@@ -319,6 +316,57 @@ const InvoiceList = () => {
         } finally {
             setDownloadingExcel(false);
         }
+    };
+
+    const handleExportExcel = () => {
+        handleDownloadExcel();
+    };
+
+    const handleExportCsv = () => {
+        if (invoices.length === 0) {
+            toast.error("No invoices available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = invoices.map((inv, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Invoice Number": inv.invoiceNumber,
+                "Invoice ID": inv._id,
+                "Type": inv.invoiceType || "RENTAL",
+                "Description": (inv as any).description || inv.notes || (inv.invoiceType === 'RENTAL' ? `Rent ${inv.weekLabel || ''}` : 'Manual Entry'),
+                "Customer ID": (inv.customer as any)?.customerId || inv.driver?.driverId || 'N/A',
+                "Customer Name": (inv.customer as any)?.name || inv.driver?.personalInfo?.fullName || 'System Pool',
+                "Status": inv.status,
+                "Gross Billed": inv.totalAmountDue || 0,
+                "Net Settled": inv.amountPaid || 0,
+                "Current Balance": inv.balance || 0,
+                "Invoice Date": inv.generatedAt ? new Date(inv.generatedAt).toLocaleDateString() : (inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : 'N/A'),
+                "Due Date": inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : 'N/A'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `invoices_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        handleDownloadPdf();
     };
 
     return (

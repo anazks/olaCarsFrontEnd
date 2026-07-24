@@ -103,14 +103,14 @@ const FixedAssets = () => {
         try {
             const exportData = assets.map((a, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
-                "Asset Code": a.assetCode || 'N/A',
-                "Asset Name": a.assetName || 'N/A',
-                "Asset Type": typeof a.assetType === 'object' ? a.assetType?.name : 'N/A',
+                "Asset Code": a.code || 'N/A',
+                "Asset Name": a.name || 'N/A',
+                "Asset Type": typeof a.fixedAssetType === 'object' ? (a.fixedAssetType as any)?.name : 'N/A',
                 "Serial Number": a.serialNumber || '—',
                 "Purchase Date": a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString() : 'N/A',
-                "Purchase Cost ($)": a.purchaseCost || 0,
+                "Purchase Cost ($)": a.purchasePrice || 0,
                 "Current Value ($)": a.currentValue || 0,
-                "Depreciation Rate (%)": a.depreciationRate || 0,
+                "Depreciation Rate (%)": (a as any).depreciationRate || 0,
                 "Status": a.status || 'N/A',
                 "Location": a.location || '—'
             }));
@@ -146,14 +146,14 @@ const FixedAssets = () => {
         try {
             const exportData = assets.map((a, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
-                "Asset Code": a.assetCode || 'N/A',
-                "Asset Name": a.assetName || 'N/A',
-                "Asset Type": typeof a.assetType === 'object' ? a.assetType?.name : 'N/A',
+                "Asset Code": a.code || 'N/A',
+                "Asset Name": a.name || 'N/A',
+                "Asset Type": typeof a.fixedAssetType === 'object' ? (a.fixedAssetType as any)?.name : 'N/A',
                 "Serial Number": a.serialNumber || '—',
                 "Purchase Date": a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString() : 'N/A',
-                "Purchase Cost ($)": a.purchaseCost || 0,
+                "Purchase Cost ($)": a.purchasePrice || 0,
                 "Current Value ($)": a.currentValue || 0,
-                "Depreciation Rate (%)": a.depreciationRate || 0,
+                "Depreciation Rate (%)": (a as any).depreciationRate || 0,
                 "Status": a.status || 'N/A',
                 "Location": a.location || '—'
             }));
@@ -197,11 +197,11 @@ const FixedAssets = () => {
             const head = [["Sl No.", "Asset Code", "Asset Name", "Asset Type", "Purchase Date", "Cost ($)", "Status"]];
             const body = assets.map((a, idx) => [
                 String(idx + 1).padStart(2, '0'),
-                a.assetCode || 'N/A',
-                a.assetName || 'N/A',
-                typeof a.assetType === 'object' ? a.assetType?.name : 'N/A',
+                a.code || 'N/A',
+                a.name || 'N/A',
+                typeof a.fixedAssetType === 'object' ? (a.fixedAssetType as any)?.name : 'N/A',
                 a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString() : 'N/A',
-                `$${(a.purchaseCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                `$${(a.purchasePrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                 a.status || 'N/A'
             ]);
 

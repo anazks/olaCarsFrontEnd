@@ -51,11 +51,11 @@ const ManualJournals = () => {
             const exportData = journals.map((j, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Journal Number": j.journalNumber || 'N/A',
-                "Reference Number": j.referenceNumber || '—',
-                "Journal Date": j.journalDate ? new Date(j.journalDate).toLocaleDateString() : 'N/A',
+                "Reference Number": (j as any).referenceNumber || j.journalNumber || '—',
+                "Journal Date": (j as any).journalDate ? new Date((j as any).journalDate).toLocaleDateString() : (j.date ? new Date(j.date).toLocaleDateString() : 'N/A'),
                 "Status": j.status || 'N/A',
-                "Amount ($)": j.amount || 0,
-                "Notes": j.notes || '—',
+                "Amount ($)": j.totalAmount || (j as any).amount || 0,
+                "Notes": j.description || (j as any).notes || '—',
                 "Created By": j.createdBy?.name || 'N/A'
             }));
 
@@ -91,11 +91,11 @@ const ManualJournals = () => {
             const exportData = journals.map((j, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Journal Number": j.journalNumber || 'N/A',
-                "Reference Number": j.referenceNumber || '—',
-                "Journal Date": j.journalDate ? new Date(j.journalDate).toLocaleDateString() : 'N/A',
+                "Reference Number": (j as any).referenceNumber || j.journalNumber || '—',
+                "Journal Date": (j as any).journalDate ? new Date((j as any).journalDate).toLocaleDateString() : (j.date ? new Date(j.date).toLocaleDateString() : 'N/A'),
                 "Status": j.status || 'N/A',
-                "Amount ($)": j.amount || 0,
-                "Notes": j.notes || '—',
+                "Amount ($)": j.totalAmount || (j as any).amount || 0,
+                "Notes": j.description || (j as any).notes || '—',
                 "Created By": j.createdBy?.name || 'N/A'
             }));
 
@@ -139,10 +139,10 @@ const ManualJournals = () => {
             const body = journals.map((j, idx) => [
                 String(idx + 1).padStart(2, '0'),
                 j.journalNumber || 'N/A',
-                j.referenceNumber || '—',
-                j.journalDate ? new Date(j.journalDate).toLocaleDateString() : 'N/A',
+                (j as any).referenceNumber || j.journalNumber || '—',
+                (j as any).journalDate ? new Date((j as any).journalDate).toLocaleDateString() : (j.date ? new Date(j.date).toLocaleDateString() : 'N/A'),
                 j.status || 'N/A',
-                `$${(j.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                `$${(j.totalAmount || (j as any).amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                 j.createdBy?.name || 'N/A'
             ]);
 

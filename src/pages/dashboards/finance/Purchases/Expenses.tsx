@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
     CreditCard, Plus, Search, Filter, RefreshCw, 
     ArrowUpDown, ArrowUp, ArrowDown, ShoppingBag, User,
-    ChevronLeft, ChevronRight, X
+    ChevronLeft, ChevronRight, X, FileText
 } from 'lucide-react';
 import * as expenseService from '../../../../services/expenseService';
 import type { Expense } from '../../../../services/expenseService';

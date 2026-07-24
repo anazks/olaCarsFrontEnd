@@ -143,7 +143,7 @@ const ManageBranches = () => {
                 "City": b.city || 'N/A',
                 "Country": b.country || 'N/A',
                 "Status": b.status || 'N/A',
-                "Manager": b.branchManager?.fullName || 'N/A'
+                "Manager": typeof b.branchManager === 'object' ? b.branchManager?.fullName : 'N/A'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -185,7 +185,7 @@ const ManageBranches = () => {
                 "City": b.city || 'N/A',
                 "Country": b.country || 'N/A',
                 "Status": b.status || 'N/A',
-                "Manager": b.branchManager?.fullName || 'N/A'
+                "Manager": typeof b.branchManager === 'object' ? b.branchManager?.fullName : 'N/A'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -232,7 +232,7 @@ const ManageBranches = () => {
                 b.type || 'N/A',
                 b.country || 'N/A',
                 b.status || 'N/A',
-                b.branchManager?.fullName || 'N/A'
+                typeof b.branchManager === 'object' ? b.branchManager?.fullName : 'N/A'
             ]);
 
             autoTable(doc, {

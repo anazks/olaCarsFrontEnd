@@ -114,13 +114,12 @@ const DriverList = () => {
             const exportData = drivers.map((d, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Driver ID": d.driverId || 'N/A',
-                "First Name": d.firstName || 'N/A',
-                "Last Name": d.lastName || 'N/A',
-                "Email": d.email || 'N/A',
-                "Phone": d.phone || 'N/A',
-                "Branch": typeof d.branch === 'object' ? d.branch?.name : 'N/A',
-                "Status": d.status || 'N/A',
-                "Onboarding Date": d.createdAt ? new Date(d.createdAt).toLocaleDateString() : 'N/A'
+                "Full Name": d.personalInfo?.fullName || (d as any).firstName || 'N/A',
+                "Email": d.personalInfo?.email || (d as any).email || 'N/A',
+                "Phone": d.personalInfo?.phone || (d as any).phone || 'N/A',
+                "Branch": typeof (d as any).branch === 'object' ? (d as any).branch?.name : 'N/A',
+                "Status": (d as any).status || 'N/A',
+                "Onboarding Date": (d as any).createdAt ? new Date((d as any).createdAt).toLocaleDateString() : 'N/A'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -155,13 +154,12 @@ const DriverList = () => {
             const exportData = drivers.map((d, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Driver ID": d.driverId || 'N/A',
-                "First Name": d.firstName || 'N/A',
-                "Last Name": d.lastName || 'N/A',
-                "Email": d.email || 'N/A',
-                "Phone": d.phone || 'N/A',
-                "Branch": typeof d.branch === 'object' ? d.branch?.name : 'N/A',
-                "Status": d.status || 'N/A',
-                "Onboarding Date": d.createdAt ? new Date(d.createdAt).toLocaleDateString() : 'N/A'
+                "Full Name": d.personalInfo?.fullName || (d as any).firstName || 'N/A',
+                "Email": d.personalInfo?.email || (d as any).email || 'N/A',
+                "Phone": d.personalInfo?.phone || (d as any).phone || 'N/A',
+                "Branch": typeof (d as any).branch === 'object' ? (d as any).branch?.name : 'N/A',
+                "Status": (d as any).status || 'N/A',
+                "Onboarding Date": (d as any).createdAt ? new Date((d as any).createdAt).toLocaleDateString() : 'N/A'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -204,11 +202,11 @@ const DriverList = () => {
             const body = drivers.map((d, idx) => [
                 String(idx + 1).padStart(2, '0'),
                 d.driverId || 'N/A',
-                `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'N/A',
-                d.email || 'N/A',
-                d.phone || 'N/A',
-                typeof d.branch === 'object' ? d.branch?.name : 'N/A',
-                d.status || 'N/A'
+                d.personalInfo?.fullName || 'N/A',
+                d.personalInfo?.email || 'N/A',
+                d.personalInfo?.phone || 'N/A',
+                typeof (d as any).branch === 'object' ? (d as any).branch?.name : 'N/A',
+                (d as any).status || 'N/A'
             ]);
 
             autoTable(doc, {

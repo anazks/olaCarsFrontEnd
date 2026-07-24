@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     X,
-    Filter,
-    Calendar,
     Download,
     FileSpreadsheet,
     FileText,
@@ -11,11 +9,8 @@ import {
     ChevronDown,
     ChevronUp,
     ArrowUpDown,
-    Check,
     Columns,
     RefreshCw,
-    SlidersHorizontal,
-    Layers,
     Truck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -57,6 +52,8 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
     fleetVehicles = [],
     fleetDrivers = []
 }) => {
+    void fleetVehicles;
+    void fleetDrivers;
     // ----------------------------------------------------
     // Filter States
     // ----------------------------------------------------
@@ -323,8 +320,8 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
                 if (!isUnassignedA && isUnassignedB) return sortDirection === 'asc' ? -1 : 1;
             }
 
-            let valA = a[sortField];
-            let valB = b[sortField];
+            let valA = a[sortField] ?? '';
+            let valB = b[sortField] ?? '';
 
             if (typeof valA === 'string') valA = (valA as string).toLowerCase();
             if (typeof valB === 'string') valB = (valB as string).toLowerCase();
