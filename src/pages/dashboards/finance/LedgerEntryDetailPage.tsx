@@ -11,10 +11,18 @@ import {
     Receipt,
     Repeat,
     ArrowRight,
-    AlertTriangle
+    AlertTriangle,
+    Pencil,
+    Trash2,
+    Paperclip,
+    ExternalLink,
+    Plus,
+    Loader2
 } from 'lucide-react';
-import { getLedgerEntryById, getLedgerEntries } from '../../../services/ledgerService';
+import { getLedgerEntryById, getLedgerEntries, updateLedgerEntry } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
+import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
+import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
@@ -36,6 +44,127 @@ const LedgerEntryDetailPage = () => {
     const [invoiceDetails, setInvoiceDetails] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const [isEditingDescription, setIsEditingDescription] = useState(false);
+    const [editedDescription, setEditedDescription] = useState('');
+    const [updatingDescription, setUpdatingDescription] = useState(false);
+    const [uploadingFile, setUploadingFile] = useState(false);
+
+    const handleUpdateDescription = async () => {
+        if (!entry || !id) return;
+        if (!editedDescription.trim()) {
+            toast.error("Description cannot be empty");
+            return;
+        }
+        setUpdatingDescription(true);
+        const toastId = toast.loading("Updating description...");
+        try {
+            const updated = await updateLedgerEntry(id, { description: editedDescription.trim() });
+            setEntry(updated);
+            setIsEditingDescription(false);
+            toast.success("Description updated successfully", { id: toastId });
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to update description", { id: toastId });
+        } finally {
+            setUpdatingDescription(false);
+        }
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!entry || !id || !e.target.files || e.target.files.length === 0) return;
+        const file = e.target.files[0];
+        
+        const isValidType = file.type.startsWith("image/") || file.type === "application/pdf";
+        if (!isValidType) {
+            toast.error("Only images and PDF files are allowed!");
+            return;
+        }
+
+        const currentCount = entry.attachments?.length || 0;
+        if (currentCount >= 5) {
+            toast.error("Maximum 5 documents can be attached.");
+            return;
+        }
+
+        setUploadingFile(true);
+        const toastId = toast.loading(`Uploading ${file.name}...`);
+        try {
+            const updated = await updateLedgerEntry(id, { files: [file] });
+            setEntry(updated);
+            toast.success("Document attached successfully", { id: toastId });
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to attach document", { id: toastId });
+        } finally {
+            setUploadingFile(false);
+            e.target.value = "";
+        }
+    };
+
+    const handleDeleteAttachment = async (attachmentId: string) => {
+        if (!entry || !id) return;
+        if (!window.confirm("Are you sure you want to delete this document?")) return;
+
+        const remaining = (entry.attachments || []).filter(att => att._id !== attachmentId);
+        const toastId = toast.loading("Deleting document...");
+        try {
+            const updated = await updateLedgerEntry(id, { existingAttachments: remaining });
+            setEntry(updated);
+            toast.success("Document deleted successfully", { id: toastId });
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to delete document", { id: toastId });
+        }
+    };
+
+    const getDocUrl = (url: string) => {
+        if (!url) return "";
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
+        const sanitizedUrl = url.startsWith('/') ? url : `/${url}`;
+        return `${base}${sanitizedUrl}`;
+    };
+
+    const [isTransferringAccount, setIsTransferringAccount] = useState(false);
+    const [allAccounts, setAllAccounts] = useState<AccountingCode[]>([]);
+    const [selectedAccountCode, setSelectedAccountCode] = useState('');
+    const [updatingAccount, setUpdatingAccount] = useState(false);
+
+    const handleStartTransfer = async () => {
+        setIsTransferringAccount(true);
+        if (allAccounts.length === 0) {
+            const toastId = toast.loading("Loading charts of accounts...");
+            try {
+                const res = (await getAllAccountingCodes()) as any;
+                const codes = Array.isArray(res) ? res : (res.data || []);
+                setAllAccounts(codes);
+                toast.dismiss(toastId);
+            } catch (err) {
+                toast.error("Failed to load accounts", { id: toastId });
+            }
+        }
+        if (entry?.accountingCode?._id) {
+            setSelectedAccountCode(entry.accountingCode._id);
+        }
+    };
+
+    const handleTransferAccount = async () => {
+        if (!entry || !id || !selectedAccountCode) return;
+        if (selectedAccountCode === entry.accountingCode?._id) {
+            toast.error("Target account must be different from current account");
+            return;
+        }
+        setUpdatingAccount(true);
+        const toastId = toast.loading("Transferring account booking...");
+        try {
+            const updated = await updateLedgerEntry(id, { accountingCode: selectedAccountCode });
+            setEntry(updated);
+            setIsTransferringAccount(false);
+            toast.success("Transferred to new chart of account successfully", { id: toastId });
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to transfer account", { id: toastId });
+        } finally {
+            setUpdatingAccount(false);
+        }
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -208,19 +337,107 @@ const LedgerEntryDetailPage = () => {
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
                             <div>
-                                <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-dim)' }}>Description</p>
-                                <p className="font-medium" style={{ color: 'var(--text-main)' }}>{entry.description}</p>
+                                <p className="text-xs font-semibold mb-1 flex items-center justify-between" style={{ color: 'var(--text-dim)' }}>
+                                    <span>Description</span>
+                                    {!isEditingDescription && (
+                                        <button 
+                                            onClick={() => { setEditedDescription(entry.description); setIsEditingDescription(true); }}
+                                            className="text-[10px] font-black uppercase text-brand-lime hover:opacity-80 transition-all flex items-center gap-1 bg-transparent border-none cursor-pointer"
+                                            style={{ color: 'var(--brand-lime)' }}
+                                            title="Edit Description"
+                                        >
+                                            <Pencil size={10} /> Edit
+                                        </button>
+                                    )}
+                                </p>
+                                {isEditingDescription ? (
+                                    <div className="space-y-2 mt-1">
+                                        <textarea
+                                            value={editedDescription}
+                                            onChange={e => setEditedDescription(e.target.value)}
+                                            rows={2}
+                                            className="w-full px-3 py-2 rounded-xl border outline-none text-sm"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                            disabled={updatingDescription}
+                                        />
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={handleUpdateDescription}
+                                                disabled={updatingDescription}
+                                                className="px-3 py-1.5 bg-[#D4F12E] hover:bg-lime-400 text-black text-xs font-bold rounded-lg cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+                                            >
+                                                {updatingDescription ? "Saving..." : "Save"}
+                                            </button>
+                                            <button
+                                                onClick={() => setIsEditingDescription(false)}
+                                                disabled={updatingDescription}
+                                                className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[var(--text-main)] text-xs font-bold rounded-lg cursor-pointer transition-all active:scale-95 border border-[var(--border-main)]"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="font-medium" style={{ color: 'var(--text-main)' }}>{entry.description}</p>
+                                )}
                             </div>
                             <div>
                                 <p className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-dim)' }}><Clock size={12} /> Time of Entry</p>
                                 <p className="font-mono text-sm" style={{ color: 'var(--text-main)' }}>{formattedDate}</p>
                             </div>
                             <div>
-                                <p className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-dim)' }}><Tag size={12} /> Accounting Code</p>
-                                <div className="flex flex-col">
-                                    <span className="font-mono font-bold" style={{ color: 'var(--text-main)' }}>{entry.accountingCode?.code}</span>
-                                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{entry.accountingCode?.name}</span>
-                                </div>
+                                <p className="text-xs font-semibold mb-1 flex items-center justify-between" style={{ color: 'var(--text-dim)' }}>
+                                    <span className="flex items-center gap-1"><Tag size={12} /> Accounting Code</span>
+                                    {!isTransferringAccount && (
+                                        <button 
+                                            onClick={handleStartTransfer}
+                                            className="text-[10px] font-black uppercase text-brand-lime hover:opacity-80 transition-all flex items-center gap-1 bg-transparent border-none cursor-pointer"
+                                            style={{ color: 'var(--brand-lime)' }}
+                                            title="Transfer to Another Chart of Account"
+                                        >
+                                            <Repeat size={10} /> Transfer Account
+                                        </button>
+                                    )}
+                                </p>
+                                {isTransferringAccount ? (
+                                    <div className="space-y-2 mt-1">
+                                        <select
+                                            value={selectedAccountCode}
+                                            onChange={e => setSelectedAccountCode(e.target.value)}
+                                            className="w-full px-3 py-2 rounded-xl border outline-none text-sm"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                            disabled={updatingAccount}
+                                        >
+                                            <option value="">Select Target Account...</option>
+                                            {allAccounts.map(acc => (
+                                                <option key={acc._id} value={acc._id} className="bg-[var(--bg-card)]">
+                                                    {acc.code} - {acc.name} ({acc.category})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={handleTransferAccount}
+                                                disabled={updatingAccount || !selectedAccountCode}
+                                                className="px-3 py-1.5 bg-[#D4F12E] hover:bg-lime-400 text-black text-xs font-bold rounded-lg cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+                                            >
+                                                {updatingAccount ? "Transferring..." : "Confirm"}
+                                            </button>
+                                            <button
+                                                onClick={() => setIsTransferringAccount(false)}
+                                                disabled={updatingAccount}
+                                                className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[var(--text-main)] text-xs font-bold rounded-lg cursor-pointer transition-all active:scale-95 border border-[var(--border-main)]"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col">
+                                        <span className="font-mono font-bold" style={{ color: 'var(--text-main)' }}>{entry.accountingCode?.code}</span>
+                                        <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{entry.accountingCode?.name}</span>
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-dim)' }}>Category</p>
@@ -229,6 +446,79 @@ const LedgerEntryDetailPage = () => {
                                 </span>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Attachments / Supporting Documents */}
+                    <div className="p-6 rounded-2xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+                                <Paperclip size={16} /> Supporting Documents ({entry.attachments?.length || 0}/5)
+                            </h3>
+                            {(!entry.attachments || entry.attachments.length < 5) && (
+                                <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer hover:bg-brand-lime/10 ${uploadingFile ? 'opacity-50 pointer-events-none' : ''}`} style={{ borderColor: 'var(--brand-lime)', color: 'var(--brand-lime)' }}>
+                                    {uploadingFile ? (
+                                        <Loader2 size={13} className="animate-spin" />
+                                    ) : (
+                                        <Plus size={13} />
+                                    )}
+                                    Attach Document
+                                    <input 
+                                        type="file" 
+                                        className="hidden" 
+                                        accept="image/*,application/pdf" 
+                                        onChange={handleFileUpload} 
+                                        disabled={uploadingFile} 
+                                    />
+                                </label>
+                            )}
+                        </div>
+
+                        {!entry.attachments || entry.attachments.length === 0 ? (
+                            <div className="text-center py-8 text-xs font-semibold text-dim border border-dashed rounded-xl" style={{ borderColor: 'var(--border-main)' }}>
+                                No documents attached to this transaction yet.
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {entry.attachments.map((doc) => (
+                                    <div key={doc._id} className="flex items-center justify-between p-3.5 rounded-xl border transition-all" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                        <div className="flex items-center gap-3 overflow-hidden mr-2">
+                                            <div className="w-8 h-8 rounded-lg bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center flex-shrink-0">
+                                                <FileText size={16} style={{ color: 'var(--brand-lime)' }} />
+                                            </div>
+                                            <div className="flex flex-col overflow-hidden">
+                                                <span className="text-xs font-bold truncate text-[var(--text-main)]" title={doc.name}>
+                                                    {doc.name}
+                                                </span>
+                                                {doc.uploadedAt && (
+                                                    <span className="text-[9px] font-semibold text-dim mt-0.5">
+                                                        Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <a 
+                                                href={getDocUrl(doc.url)} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                className="p-2 rounded-lg border hover:bg-white/5 transition-all text-dim hover:text-[var(--text-main)]" 
+                                                style={{ borderColor: 'var(--border-main)' }}
+                                                title="View Document"
+                                            >
+                                                <ExternalLink size={13} />
+                                            </a>
+                                            <button 
+                                                onClick={() => handleDeleteAttachment(doc._id!)}
+                                                className="p-2 rounded-lg border hover:bg-rose-500/10 border-rose-500/20 text-rose-400 hover:text-rose-500 transition-all cursor-pointer" 
+                                                title="Delete Document"
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Double Entry Breakdown */}

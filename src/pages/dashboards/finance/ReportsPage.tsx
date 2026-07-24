@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
-import { 
-    FileText, Download, RefreshCw, Loader2, Calendar, Building, 
-    Shield, BarChart3, Users, DollarSign, Activity, 
+import {
+    FileText, Download, RefreshCw, Loader2, Calendar, Building,
+    Shield, BarChart3, Users, DollarSign, Activity,
     CheckCircle2, AlertCircle, FileSpreadsheet, ClipboardList, Briefcase, Car, Landmark
 } from 'lucide-react';
-import { 
-    getDailyFinanceReport, 
-    getDriverPerformanceReport, 
-    getStaffPerformanceReport, 
-    getPLReport, 
-    getBalanceSheetReport, 
+import {
+    getDailyFinanceReport,
+    getDriverPerformanceReport,
+    getStaffPerformanceReport,
+    getPLReport,
+    getBalanceSheetReport,
     getBankBalanceSheetReport,
-    downloadExcelReport 
+    downloadExcelReport
 } from '../../../services/reportingService';
 import { getAllBranches } from '../../../services/branchService';
 import { getInvoices } from '../../../services/invoiceService';
@@ -70,99 +70,99 @@ export const ReportsPage = () => {
 
     const reportTypes: ReportType[] = [
         // 1. Financial Intelligence
-        { 
-            id: 'balance-sheet', 
-            name: 'Balance Sheet', 
-            category: 'financial', 
-            icon: <Shield size={15} />, 
+        {
+            id: 'balance-sheet',
+            name: 'Balance Sheet',
+            category: 'financial',
+            icon: <Shield size={15} />,
             description: 'Financial snapshot of assets, liabilities, and equity.',
             supportsPdf: true,
-            supportsExcel: true 
+            supportsExcel: true
         },
-        { 
-            id: 'bank-balance-sheet', 
-            name: 'Bank Balance Sheet', 
-            category: 'financial', 
-            icon: <Landmark size={15} />, 
+        {
+            id: 'bank-balance-sheet',
+            name: 'Bank Balance Sheet',
+            category: 'financial',
+            icon: <Landmark size={15} />,
             description: 'Liquid positions showing Cash/Bank transactions and running balances.',
             supportsPdf: false,
-            supportsExcel: true 
+            supportsExcel: true
         },
-        { 
-            id: 'daily-finance', 
-            name: 'Daily Finance Report', 
-            category: 'financial', 
-            icon: <DollarSign size={15} />, 
+        {
+            id: 'daily-finance',
+            name: 'Daily Finance Report',
+            category: 'financial',
+            icon: <DollarSign size={15} />,
             description: 'Day-by-day cash flow ledger of income and expenses.',
             supportsPdf: true,
-            supportsExcel: true 
+            supportsExcel: true
         },
-        { 
-            id: 'ledger-report', 
-            name: 'General Ledger Report', 
-            category: 'financial', 
-            icon: <ClipboardList size={15} />, 
+        {
+            id: 'ledger-report',
+            name: 'General Ledger Report',
+            category: 'financial',
+            icon: <ClipboardList size={15} />,
             description: 'Aggregated journal entry transactions and postings.',
             supportsPdf: true,
-            supportsExcel: true 
+            supportsExcel: true
         },
-        { 
-            id: 'bills-report', 
-            name: 'Bills Report', 
-            category: 'financial', 
-            icon: <FileText size={15} />, 
+        {
+            id: 'bills-report',
+            name: 'Bills Report',
+            category: 'financial',
+            icon: <FileText size={15} />,
             description: 'Record of all vendor bills, payouts, and balances.',
             supportsPdf: true,
-            supportsExcel: true 
+            supportsExcel: true
         },
 
         // 2. Sales & Receivables
-        { 
-            id: 'invoices-report', 
-            name: 'Invoice Report', 
-            category: 'sales', 
-            icon: <FileSpreadsheet size={15} />, 
+        {
+            id: 'invoices-report',
+            name: 'Invoice Report',
+            category: 'sales',
+            icon: <FileSpreadsheet size={15} />,
             description: 'Registry of customer invoices, payments, and overdue balances.',
             supportsPdf: true,
-            supportsExcel: true 
+            supportsExcel: true
         },
-        { 
-            id: 'payments-received-report', 
-            name: 'Payments Received', 
-            category: 'sales', 
-            icon: <DollarSign size={15} />, 
+        {
+            id: 'payments-received-report',
+            name: 'Payments Received',
+            category: 'sales',
+            icon: <DollarSign size={15} />,
             description: 'Inflow receipts collected from customers and drivers.',
             supportsPdf: true,
-            supportsExcel: true 
+            supportsExcel: true
         },
-        { 
-            id: 'customer-report', 
-            name: 'Customer Directory', 
-            category: 'sales', 
-            icon: <Users size={15} />, 
+        {
+            id: 'customer-report',
+            name: 'Customer Directory',
+            category: 'sales',
+            icon: <Users size={15} />,
             description: 'List of registered customers, contact coordinates, and status.',
             supportsPdf: true,
-            supportsExcel: true 
+            supportsExcel: true
         },
-        { 
-            id: 'credit-notes-report', 
-            name: 'Credit Notes', 
-            category: 'sales', 
-            icon: <FileText size={15} />, 
+        {
+            id: 'credit-notes-report',
+            name: 'Credit Notes',
+            category: 'sales',
+            icon: <FileText size={15} />,
             description: 'Adjustments and refunds issued to customer invoices.',
             supportsPdf: true,
-            supportsExcel: true 
+            supportsExcel: true
         },
 
         // 3. Assets & Operations
-        { 
-            id: 'driver-performance', 
-            name: 'Driver Performance', 
-            category: 'operations', 
-            icon: <Activity size={15} />, 
+        {
+            id: 'driver-performance',
+            name: 'Driver Performance',
+            category: 'operations',
+            icon: <Activity size={15} />,
             description: 'Overview of speed, driving score, and rent balance of active drivers.',
             supportsPdf: true,
-            supportsExcel: true 
+            supportsExcel: true
         },
         /* { 
             id: 'staff-performance', 
@@ -173,61 +173,61 @@ export const ReportsPage = () => {
             supportsPdf: true,
             supportsExcel: true 
         }, */
-        { 
-            id: 'vehicle-report', 
-            name: 'Vehicle Inventory', 
-            category: 'operations', 
-            icon: <Car size={15} />, 
+        {
+            id: 'vehicle-report',
+            name: 'Vehicle Inventory',
+            category: 'operations',
+            icon: <Car size={15} />,
             description: 'Current fleet registry status, plate details, and assignments.',
             supportsPdf: true,
-            supportsExcel: true 
+            supportsExcel: true
         },
-        { 
-            id: 'vendor-report', 
-            name: 'Vendor Directory', 
-            category: 'operations', 
-            icon: <Briefcase size={15} />, 
+        {
+            id: 'vendor-report',
+            name: 'Vendor Directory',
+            category: 'operations',
+            icon: <Briefcase size={15} />,
             description: 'Directory of registered vendors, contractors, and suppliers.',
             supportsPdf: true,
-            supportsExcel: true 
+            supportsExcel: true
         },
 
         // 4. Raw Data Exports
-        { 
-            id: 'expenses', 
-            name: 'Operational Expenses (Raw)', 
-            category: 'raw', 
-            icon: <BarChart3 size={15} />, 
+        {
+            id: 'expenses',
+            name: 'Operational Expenses (Raw)',
+            category: 'raw',
+            icon: <BarChart3 size={15} />,
             description: 'Detailed list of all operational expenses.',
             supportsPdf: false,
-            supportsExcel: true 
+            supportsExcel: true
         },
-        { 
-            id: 'purchase-orders', 
-            name: 'Purchase Orders (Raw)', 
-            category: 'raw', 
-            icon: <FileText size={15} />, 
+        {
+            id: 'purchase-orders',
+            name: 'Purchase Orders (Raw)',
+            category: 'raw',
+            icon: <FileText size={15} />,
             description: 'Tracked procurement requests and approval flows.',
             supportsPdf: false,
-            supportsExcel: true 
+            supportsExcel: true
         },
-        { 
-            id: 'purchase-bills', 
-            name: 'Purchase Bills (Raw)', 
-            category: 'raw', 
-            icon: <FileText size={15} />, 
+        {
+            id: 'purchase-bills',
+            name: 'Purchase Bills (Raw)',
+            category: 'raw',
+            icon: <FileText size={15} />,
             description: 'Supplier invoices generated against procurement.',
             supportsPdf: false,
-            supportsExcel: true 
+            supportsExcel: true
         },
-        { 
-            id: 'vendor-payments', 
-            name: 'Vendor Payments (Raw)', 
-            category: 'raw', 
-            icon: <DollarSign size={15} />, 
+        {
+            id: 'vendor-payments',
+            name: 'Vendor Payments (Raw)',
+            category: 'raw',
+            icon: <DollarSign size={15} />,
             description: 'Disbursals made to suppliers and contractors.',
             supportsPdf: false,
-            supportsExcel: true 
+            supportsExcel: true
         }
     ];
 
@@ -274,7 +274,7 @@ export const ReportsPage = () => {
             let res: any;
             const queryFilters = {
                 ...filters,
-                limit: 1000 
+                limit: 1000
             };
 
             if (selectedReport === 'pl') {
@@ -334,7 +334,7 @@ export const ReportsPage = () => {
     const buildExportRows = () => {
         if (!reportData) return [];
         let rows: any[] = [];
-        
+
         if (selectedReport === 'pl') {
             const revTotal = reportData.revenueTotal || reportData.grossRevenue || 0;
             const expTotal = reportData.expensesTotal || reportData.totalExpenses || 0;
@@ -347,7 +347,7 @@ export const ReportsPage = () => {
                 rows.push({ "Type": "EXPENSE DETAIL", "Account": `${e.name} (${e.code})`, "Balance": e.amount });
             });
             rows.push({ "Type": "NET SUMMARY", "Account": "Net Surplus / Profit", "Balance": reportData.netProfit || 0 });
-        
+
         } else if (selectedReport === 'balance-sheet') {
             rows.push({ "Classification": "ASSETS TOTAL", "Account Name": "Aggregate Assets", "Balance": reportData.assetsTotal || 0 });
             reportData.assets?.forEach((a: any) => {
@@ -472,7 +472,7 @@ export const ReportsPage = () => {
                 "Refund Amount": row.amount || 0,
                 "Reason": row.reason || "",
                 "Status": row.status || ""
-                }));
+            }));
 
         } else if (selectedReport === 'driver-performance') {
             rows = getReportList(reportData).map((row: any) => ({
@@ -535,7 +535,7 @@ export const ReportsPage = () => {
                 const res = await api.get('/api/reporting/export/pdf', { params: query, responseType: 'blob' });
                 const blob = new Blob([res.data], { type: 'application/pdf' });
                 const url = window.URL.createObjectURL(blob);
-                
+
                 const link = document.createElement('a');
                 link.href = url;
                 const dateStr = new Date().toISOString().split('T')[0];
@@ -747,7 +747,7 @@ export const ReportsPage = () => {
             const csvContent = XLSX.utils.sheet_to_csv(ws);
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
-            
+
             const link = document.createElement("a");
             link.setAttribute("href", url);
             const dateStr = new Date().toISOString().split('T')[0];
@@ -786,8 +786,8 @@ export const ReportsPage = () => {
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Reports Command Center', active: true }]} />
 
             {/* Premium Header - Glassmorphic Block */}
-            <div className="relative overflow-hidden rounded-3xl border border-[var(--border-main)] p-6 md:p-8 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[var(--bg-card)]" 
-                 style={{ backdropFilter: 'blur(20px)' }}>
+            <div className="relative overflow-hidden rounded-3xl border border-[var(--border-main)] p-6 md:p-8 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[var(--bg-card)]"
+                style={{ backdropFilter: 'blur(20px)' }}>
                 <div className="space-y-2">
                     <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-brand-lime animate-pulse" />
@@ -800,9 +800,9 @@ export const ReportsPage = () => {
                         Analyze operations, track financial indices, and generate high-fidelity audits.
                     </p>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
-                    <button 
+                    <button
                         onClick={loadReportData}
                         disabled={loading}
                         className="p-3 rounded-2xl border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] transition-all text-dim hover:text-main cursor-pointer active:scale-95 flex items-center justify-center shadow-lg bg-[var(--bg-input)]"
@@ -817,7 +817,7 @@ export const ReportsPage = () => {
 
             {/* Layout Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-                
+
                 {/* Left Sidebar - Reports Selector & Filters */}
                 <div className="xl:col-span-1 space-y-6">
                     {/* Filters Deck */}
@@ -827,7 +827,7 @@ export const ReportsPage = () => {
                                 <Building size={14} className="text-brand-lime" /> Data Scoping
                             </h2>
                         </div>
-                        
+
                         {/* Branch Filter */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-bold uppercase tracking-wider text-dim">Branch Context</label>
@@ -895,7 +895,7 @@ export const ReportsPage = () => {
 
                     {/* Report Type List */}
                     <div className="rounded-3xl border border-[var(--border-main)] p-5 space-y-6 shadow-xl relative overflow-y-auto max-h-[580px] custom-scrollbar" style={{ backgroundColor: 'var(--bg-card)' }}>
-                        
+
                         {/* Financial Statements */}
                         <div className="space-y-3">
                             <span className="text-[9px] font-black uppercase tracking-widest text-brand-lime/80 px-1">Financial Intelligence</span>
@@ -905,8 +905,8 @@ export const ReportsPage = () => {
                                         key={r.id}
                                         onClick={() => setSelectedReport(r.id)}
                                         className={`w-full text-left px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition-all cursor-pointer border
-                                            ${selectedReport === r.id 
-                                                ? 'bg-brand-lime/10 border-brand-lime/30 text-brand-lime font-black shadow-lg shadow-brand-lime/[0.02]' 
+                                            ${selectedReport === r.id
+                                                ? 'bg-brand-lime/10 border-brand-lime/30 text-brand-lime font-black shadow-lg shadow-brand-lime/[0.02]'
                                                 : 'border-transparent text-dim hover:text-main hover:bg-[var(--sidebar-hover)]'
                                             }
                                         `}
@@ -929,8 +929,8 @@ export const ReportsPage = () => {
                                         key={r.id}
                                         onClick={() => setSelectedReport(r.id)}
                                         className={`w-full text-left px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition-all cursor-pointer border
-                                            ${selectedReport === r.id 
-                                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 font-black' 
+                                            ${selectedReport === r.id
+                                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 font-black'
                                                 : 'border-transparent text-dim hover:text-main hover:bg-[var(--sidebar-hover)]'
                                             }
                                         `}
@@ -953,8 +953,8 @@ export const ReportsPage = () => {
                                         key={r.id}
                                         onClick={() => setSelectedReport(r.id)}
                                         className={`w-full text-left px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition-all cursor-pointer border
-                                            ${selectedReport === r.id 
-                                                ? 'bg-[#0EA5E9]/10 border-[#0EA5E9]/30 text-[#0EA5E9] font-black' 
+                                            ${selectedReport === r.id
+                                                ? 'bg-[#0EA5E9]/10 border-[#0EA5E9]/30 text-[#0EA5E9] font-black'
                                                 : 'border-transparent text-dim hover:text-main hover:bg-[var(--sidebar-hover)]'
                                             }
                                         `}
@@ -977,8 +977,8 @@ export const ReportsPage = () => {
                                         key={r.id}
                                         onClick={() => setSelectedReport(r.id)}
                                         className={`w-full text-left px-3.5 py-2.5 rounded-2xl flex items-center gap-3 transition-all cursor-pointer border
-                                            ${selectedReport === r.id 
-                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-black' 
+                                            ${selectedReport === r.id
+                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-black'
                                                 : 'border-transparent text-dim hover:text-main hover:bg-[var(--sidebar-hover)]'
                                             }
                                         `}
@@ -998,9 +998,9 @@ export const ReportsPage = () => {
                 {/* Right Panel - Report Preview & Actions */}
                 <div className="xl:col-span-3 flex flex-col gap-6">
                     {/* Glassmorphic Container for Preview */}
-                    <div className="rounded-3xl border border-[var(--border-main)] p-6 flex flex-col h-[670px] shadow-2xl relative overflow-hidden" 
-                         style={{ backgroundColor: 'var(--bg-card)' }}>
-                        
+                    <div className="rounded-3xl border border-[var(--border-main)] p-6 flex flex-col h-[670px] shadow-2xl relative overflow-hidden"
+                        style={{ backgroundColor: 'var(--bg-card)' }}>
+
                         {/* Decorative Background Blur */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-white/[0.01] rounded-full blur-[80px] pointer-events-none" />
 
@@ -1012,7 +1012,7 @@ export const ReportsPage = () => {
                                 </span>
                                 <h2 className="text-xl font-black uppercase tracking-wider text-main mt-1">{activeReport?.name}</h2>
                             </div>
-                            
+
                             {/* Actions bar (PDF, Excel, CSV) */}
                             <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                                 {activeReport?.supportsPdf && (
@@ -1074,7 +1074,7 @@ export const ReportsPage = () => {
                             ) : reportData ? (
                                 /* Converted Wrapper with Fixed max height and dedicated scrollbar */
                                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-4" id="report-preview-table-container">
-                                    
+
                                     {/* 2. Preview Balance Sheet */}
                                     {selectedReport === 'balance-sheet' && (
                                         <div className="space-y-6">
@@ -1107,14 +1107,14 @@ export const ReportsPage = () => {
                                             {/* Details Sheet */}
                                             <div className="border border-[var(--border-main)] rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)' }}>
                                                 <div className="p-5 space-y-4">
-                                                    
+
                                                     {/* Assets */}
                                                     <div className="space-y-3">
                                                         <div className="flex justify-between text-xs font-black text-emerald-400 uppercase tracking-wider border-b border-[var(--border-main)] pb-2">
                                                             <span>Assets</span>
                                                             <span>{formatCurrency(reportData.assetsTotal || 0)}</span>
                                                         </div>
-                                                        
+
                                                         {(() => {
                                                             const classifyAsset = (a: any) => {
                                                                 const cat = (a.category || "").toLowerCase();
@@ -1159,11 +1159,11 @@ export const ReportsPage = () => {
                                                                 <div className="space-y-4 pl-2">
                                                                     <div className="space-y-2">
                                                                         <div className="text-xs font-bold text-main uppercase tracking-wide">Current Assets</div>
-                                                                        
+
                                                                         {/* Cash and Cash Equivalents */}
                                                                         <div className="pl-3 space-y-2">
                                                                             <div className="text-[11px] font-bold text-dim uppercase tracking-wider">Cash and Cash Equivalents</div>
-                                                                            
+
                                                                             {/* Cash Subcategory */}
                                                                             <div className="pl-3 space-y-1">
                                                                                 <div className="text-[10px] font-bold text-dim/60 uppercase tracking-wider italic">Cash</div>
@@ -1367,9 +1367,8 @@ export const ReportsPage = () => {
                                                                     <td className="p-4 font-mono font-bold">{tx.reference || "—"}</td>
                                                                     <td className="p-4">{tx.description || "—"}</td>
                                                                     <td className="p-4 text-center">
-                                                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black tracking-wide ${
-                                                                            tx.type === 'DEBIT' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
-                                                                        }`}>{tx.type}</span>
+                                                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black tracking-wide ${tx.type === 'DEBIT' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                                                                            }`}>{tx.type}</span>
                                                                     </td>
                                                                     <td className={`p-4 text-right font-mono font-bold ${tx.type === 'DEBIT' ? 'text-emerald-400' : 'text-rose-400'}`}>
                                                                         {tx.type === 'DEBIT' ? '+' : '-'}{formatCurrency(tx.amount)}
@@ -1532,10 +1531,9 @@ export const ReportsPage = () => {
                                                         <td className="p-4 text-right font-bold font-mono">{formatCurrency(row.totalAmount)}</td>
                                                         <td className="p-4 text-right text-rose-400 font-bold font-mono">{formatCurrency(row.balanceDue)}</td>
                                                         <td className="p-4 text-center">
-                                                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black tracking-wide ${
-                                                                row.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400' :
-                                                                row.status === 'VOID' ? 'bg-dim/10 text-dim' : 'bg-rose-500/10 text-rose-400'
-                                                            }`}>{row.status}</span>
+                                                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black tracking-wide ${row.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400' :
+                                                                    row.status === 'VOID' ? 'bg-dim/10 text-dim' : 'bg-rose-500/10 text-rose-400'
+                                                                }`}>{row.status}</span>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -1572,10 +1570,9 @@ export const ReportsPage = () => {
                                                         <td className="p-4 text-right text-emerald-400 font-bold font-mono">{formatCurrency(row.amountPaid)}</td>
                                                         <td className="p-4 text-right text-rose-400 font-bold font-mono">{formatCurrency(row.balance)}</td>
                                                         <td className="p-4 text-center">
-                                                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black tracking-wide ${
-                                                                row.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400' :
-                                                                row.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 animate-pulse' : 'bg-amber-500/10 text-amber-400'
-                                                            }`}>{row.status}</span>
+                                                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black tracking-wide ${row.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400' :
+                                                                    row.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 animate-pulse' : 'bg-amber-500/10 text-amber-400'
+                                                                }`}>{row.status}</span>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -1680,9 +1677,8 @@ export const ReportsPage = () => {
                                                         <td className="p-4 text-right text-emerald-400 font-bold font-mono">{formatCurrency(row.amount)}</td>
                                                         <td className="p-4 opacity-75 max-w-[150px] truncate">{row.reason}</td>
                                                         <td className="p-4 text-center">
-                                                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black tracking-wide ${
-                                                                row.status === 'VOID' ? 'bg-dim/10 text-dim' : 'bg-emerald-500/10 text-emerald-400'
-                                                            }`}>{row.status}</span>
+                                                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black tracking-wide ${row.status === 'VOID' ? 'bg-dim/10 text-dim' : 'bg-emerald-500/10 text-emerald-400'
+                                                                }`}>{row.status}</span>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -1713,10 +1709,9 @@ export const ReportsPage = () => {
                                                     <tr key={idx} className="border-b border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-xs text-main transition-colors">
                                                         <td className="p-4 font-semibold">{row.name}</td>
                                                         <td className="p-4 text-center font-bold">
-                                                            <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold ${
-                                                                (row.drivingScore || 0) >= 80 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' :
-                                                                (row.drivingScore || 0) >= 60 ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/10' : 'bg-rose-500/10 text-rose-400 border border-rose-500/10'
-                                                            }`}>
+                                                            <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold ${(row.drivingScore || 0) >= 80 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' :
+                                                                    (row.drivingScore || 0) >= 60 ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/10' : 'bg-rose-500/10 text-rose-400 border border-rose-500/10'
+                                                                }`}>
                                                                 {row.drivingScore || 'Unscored'}
                                                             </span>
                                                         </td>
@@ -1795,9 +1790,8 @@ export const ReportsPage = () => {
                                                         <td className="p-4">{row.basicDetails?.year}</td>
                                                         <td className="p-4 uppercase text-[10px] text-dim">{row.basicDetails?.fuelType}</td>
                                                         <td className="p-4 text-center">
-                                                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black ${
-                                                                row.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-                                                            }`}>{row.status}</span>
+                                                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black ${row.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                                                                }`}>{row.status}</span>
                                                         </td>
                                                         <td className="p-4 font-semibold">{row.driverId?.personalInfo?.fullName || "Unassigned"}</td>
                                                     </tr>

@@ -1,13 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { 
     DollarSign, Search, Filter, RefreshCw, Calendar, X,
-    ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, MoreHorizontal, Coins
+    ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, MoreHorizontal, Coins, FileText
 } from 'lucide-react';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import api from '../../../../services/api';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import CreatePaymentReceivedModal from './CreatePaymentReceivedModal';
 import PaymentReceivedDetail from './PaymentReceivedDetail';
 import { getUserRole } from '../../../../utils/auth';
+import toast from 'react-hot-toast';
 
 interface InvoiceReference {
     invoiceId: string;
@@ -96,6 +100,135 @@ const PaymentsReceived = () => {
     const [page, setPage] = useState<number>(1);
     const limit = 25;
     const [pagination, setPagination] = useState({ total: 0, pages: 1 });
+
+    const handleExportExcel = () => {
+        if (payments.length === 0) {
+            toast.error("No payments available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = payments.map((pmt, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Receipt Number": pmt.paymentNumber,
+                "Customer Name": pmt.customerId?.name || pmt.driverId?.personalInfo?.fullName || pmt.driverId?.name || 'System Pool',
+                "Customer/Driver ID": pmt.customerId?.customerId || pmt.driverId?.driverId || 'N/A',
+                "Payment Date": pmt.paymentDate ? new Date(pmt.paymentDate).toLocaleDateString() : 'N/A',
+                "Amount Received": pmt.amountReceived || 0,
+                "Method": pmt.paymentMethod || 'N/A',
+                "Reference Number": pmt.referenceNumber || 'N/A',
+                "Deposited To": pmt.depositedTo ? `${pmt.depositedTo.code} - ${pmt.depositedTo.name}` : 'N/A',
+                "Status": pmt.status || 'COMPLETED'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Payments");
+            
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `payments_received_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (payments.length === 0) {
+            toast.error("No payments available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = payments.map((pmt, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Receipt Number": pmt.paymentNumber,
+                "Customer Name": pmt.customerId?.name || pmt.driverId?.personalInfo?.fullName || pmt.driverId?.name || 'System Pool',
+                "Customer/Driver ID": pmt.customerId?.customerId || pmt.driverId?.driverId || 'N/A',
+                "Payment Date": pmt.paymentDate ? new Date(pmt.paymentDate).toLocaleDateString() : 'N/A',
+                "Amount Received": pmt.amountReceived || 0,
+                "Method": pmt.paymentMethod || 'N/A',
+                "Reference Number": pmt.referenceNumber || 'N/A',
+                "Deposited To": pmt.depositedTo ? `${pmt.depositedTo.code} - ${pmt.depositedTo.name}` : 'N/A',
+                "Status": pmt.status || 'COMPLETED'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `payments_received_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        if (payments.length === 0) {
+            toast.error("No payments available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Payments Received Report";
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            if (startDate || endDate) {
+                doc.text(`Period: ${startDate || 'N/A'} to ${endDate || 'N/A'}`, 14, 35);
+            }
+
+            const head = [["Sl No.", "Receipt No.", "Customer Name", "Customer/Driver ID", "Date", "Amount", "Method", "Status"]];
+            const body = payments.map((pmt, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                pmt.paymentNumber || 'N/A',
+                pmt.customerId?.name || pmt.driverId?.personalInfo?.fullName || pmt.driverId?.name || 'System Pool',
+                pmt.customerId?.customerId || pmt.driverId?.driverId || 'N/A',
+                pmt.paymentDate ? new Date(pmt.paymentDate).toLocaleDateString() : 'N/A',
+                `$${(pmt.amountReceived || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                pmt.paymentMethod || 'N/A',
+                pmt.status || 'COMPLETED'
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: (startDate || endDate) ? 40 : 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`payments_received_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
+    };
 
     const getPageNumbers = () => {
         const totalPages = pagination.pages;
@@ -243,6 +376,31 @@ const PaymentsReceived = () => {
                     >
                         <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                     </button>
+
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
+                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-emerald-500" /> Excel
+                    </button>
+
+                    <button
+                        onClick={handleExportCsv}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
+                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-blue-400" /> CSV
+                    </button>
+
+                    <button
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
+                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-rose-500" /> PDF
+                    </button>
+
                     {userRole !== 'admin' && (
                         <button
                             onClick={() => setIsRecordModalOpen(true)}

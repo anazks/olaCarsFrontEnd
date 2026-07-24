@@ -16,6 +16,9 @@ import { getAllCustomers, type Customer } from '../../../../services/customerSer
 import { getInvoicesByCustomer } from '../../../../services/invoiceService';
 import BulkCreditNoteUpload from '../../shared/BulkCreditNoteUpload';
 import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const CreditNotes = () => {
     const navigate = useNavigate();
@@ -66,10 +69,140 @@ const CreditNotes = () => {
     const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('');
     const [amount, setAmount] = useState<string>('');
     const [reason, setReason] = useState<string>('');
+    const [customReason, setCustomReason] = useState<string>('');
     const [notes, setNotes] = useState<string>('');
     const [creditNoteDate, setCreditNoteDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [supportingDocFile, setSupportingDocFile] = useState<File | null>(null);
+
+    const handleExportExcel = () => {
+        if (creditNotes.length === 0) {
+            toast.error("No credit notes available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = creditNotes.map((note, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "CN Number": note.creditNoteNumber || 'CN-DRAFT',
+                "Customer Name": note.customerId?.name || note.driverId?.personalInfo?.fullName || 'Legacy Customer',
+                "Customer/Driver ID": note.customerId?.customerId || note.driverId?.driverId || 'N/A',
+                "Linked Invoice": note.invoiceId?.invoiceNumber || 'N/A',
+                "Issued Date": note.creditNoteDate ? new Date(note.creditNoteDate).toLocaleDateString() : (note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'N/A'),
+                "Amount": note.amount || 0,
+                "Reason": note.reason || 'N/A',
+                "Notes": note.notes || 'N/A',
+                "Status": note.status || 'APPROVED'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Credit Notes");
+            
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `credit_notes_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (creditNotes.length === 0) {
+            toast.error("No credit notes available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = creditNotes.map((note, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "CN Number": note.creditNoteNumber || 'CN-DRAFT',
+                "Customer Name": note.customerId?.name || note.driverId?.personalInfo?.fullName || 'Legacy Customer',
+                "Customer/Driver ID": note.customerId?.customerId || note.driverId?.driverId || 'N/A',
+                "Linked Invoice": note.invoiceId?.invoiceNumber || 'N/A',
+                "Issued Date": note.creditNoteDate ? new Date(note.creditNoteDate).toLocaleDateString() : (note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'N/A'),
+                "Amount": note.amount || 0,
+                "Reason": note.reason || 'N/A',
+                "Notes": note.notes || 'N/A',
+                "Status": note.status || 'APPROVED'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `credit_notes_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        if (creditNotes.length === 0) {
+            toast.error("No credit notes available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Credit Notes Report";
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            if (startDate || endDate) {
+                doc.text(`Period: ${startDate || 'N/A'} to ${endDate || 'N/A'}`, 14, 35);
+            }
+
+            const head = [["Sl No.", "CN Number", "Customer Name", "Customer/Driver ID", "Linked Invoice", "Issued Date", "Amount", "Status"]];
+            const body = creditNotes.map((note, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                note.creditNoteNumber || 'CN-DRAFT',
+                note.customerId?.name || note.driverId?.personalInfo?.fullName || 'Legacy Customer',
+                note.customerId?.customerId || note.driverId?.driverId || 'N/A',
+                note.invoiceId?.invoiceNumber || 'N/A',
+                note.creditNoteDate ? new Date(note.creditNoteDate).toLocaleDateString() : (note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'N/A'),
+                `$${(note.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                note.status || 'APPROVED'
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: (startDate || endDate) ? 40 : 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`credit_notes_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
+    };
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchQuery), 350);
@@ -267,7 +400,8 @@ const CreditNotes = () => {
 
     const handleCreateCreditNote = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedCustomerId || !amount || !reason) {
+        const finalReason = reason === 'Custom' ? customReason.trim() : reason;
+        if (!selectedCustomerId || !amount || !finalReason) {
             toast.error("Fill mandatory fields.");
             return;
         }
@@ -281,7 +415,7 @@ const CreditNotes = () => {
             const payload: any = {
                 customerId: selectedCustomerId,
                 amount: Number(amount),
-                reason,
+                reason: finalReason,
                 notes,
                 creditNoteDate,
                 supportingDocument: supportingDocFile || undefined
@@ -317,6 +451,7 @@ const CreditNotes = () => {
         setSelectedInvoiceId('');
         setAmount('');
         setReason('');
+        setCustomReason('');
         setNotes('');
         setCreditNoteDate(new Date().toISOString().split('T')[0]);
         setSupportingDocFile(null);
@@ -366,6 +501,30 @@ const CreditNotes = () => {
                             <Upload size={14} />
                             Bulk Upload
                         </button>
+                        <button
+                            onClick={handleExportExcel}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
+                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <FileText size={14} className="text-emerald-500" /> Excel
+                        </button>
+
+                        <button
+                            onClick={handleExportCsv}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
+                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <FileText size={14} className="text-blue-400" /> CSV
+                        </button>
+
+                        <button
+                            onClick={handleExportPdf}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm hover:bg-white/5 active:scale-95"
+                            style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <FileText size={14} className="text-rose-500" /> PDF
+                        </button>
+
                         <button 
                             onClick={() => setIsCreateModalOpen(true)} 
                             className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
@@ -690,8 +849,24 @@ const CreditNotes = () => {
                                     <option value="Goodwill / Rental Discount" style={{background: 'var(--bg-card)'}}>Goodwill / Rental Discount</option>
                                     <option value="Damages Dispute Refund" style={{background: 'var(--bg-card)'}}>Damages Dispute Refund</option>
                                     <option value="Administrative Correction" style={{background: 'var(--bg-card)'}}>Administrative Correction</option>
+                                    <option value="Custom" style={{background: 'var(--bg-card)'}}>Custom Reason...</option>
                                 </select>
                             </div>
+
+                            {reason === 'Custom' && (
+                                <div className="space-y-1.5 animate-in slide-in-from-top-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Specify Custom Reason *</label>
+                                    <input 
+                                        required 
+                                        type="text" 
+                                        value={customReason} 
+                                        onChange={e => setCustomReason(e.target.value)} 
+                                        placeholder="Enter custom reason..." 
+                                        className="w-full px-3.5 py-2.5 border rounded-xl text-xs font-semibold outline-none" 
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            )}
 
                             <div className="space-y-1.5"><label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>6. Notes</label><textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} className="w-full p-3 border rounded-xl text-xs resize-none outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/></div>
 

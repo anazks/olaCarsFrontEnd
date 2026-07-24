@@ -14,7 +14,8 @@ import {
     ArrowUpRight,
     Plus,
     Eye,
-    RefreshCw
+    RefreshCw,
+    FileText
 } from 'lucide-react';
 import * as billService from '../../../../services/billService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
@@ -23,6 +24,10 @@ import DateRangeReportModal from '../../shared/DateRangeReportModal';
 import { downloadExcelReport } from '../../../../services/reportingService';
 import type { RootState } from '../../../../store';
 import { setFinanceDashboardData } from '../../../../store/dashboardSlice';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import toast from 'react-hot-toast';
 
 const BillList = () => {
     const navigate = useNavigate();
@@ -44,6 +49,129 @@ const BillList = () => {
             startDate: start,
             endDate: end
         });
+    };
+
+    const handleExportExcel = () => {
+        if (paginatedBills.length === 0) {
+            toast.error("No bills available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = paginatedBills.map((bill, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Bill Number": bill.billNumber || 'N/A',
+                "Status": bill.status || 'N/A',
+                "Vendor": bill.supplier?.name || 'N/A',
+                "Bill Date": bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
+                "Due Date": bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
+                "Total Amount ($)": bill.totalAmount || 0,
+                "Amount Paid ($)": bill.amountPaid || 0,
+                "Balance Due ($)": bill.balanceDue || 0
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Bills");
+            
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `bills_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (paginatedBills.length === 0) {
+            toast.error("No bills available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = paginatedBills.map((bill, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Bill Number": bill.billNumber || 'N/A',
+                "Status": bill.status || 'N/A',
+                "Vendor": bill.supplier?.name || 'N/A',
+                "Bill Date": bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
+                "Due Date": bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
+                "Total Amount ($)": bill.totalAmount || 0,
+                "Amount Paid ($)": bill.amountPaid || 0,
+                "Balance Due ($)": bill.balanceDue || 0
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `bills_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        if (paginatedBills.length === 0) {
+            toast.error("No bills available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Bills Report";
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+
+            const head = [["Sl No.", "Bill Number", "Status", "Vendor", "Bill Date", "Due Date", "Total Amount"]];
+            const body = paginatedBills.map((bill, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                bill.billNumber || 'N/A',
+                bill.status || 'N/A',
+                bill.supplier?.name || 'N/A',
+                bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
+                bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
+                `$${(bill.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`bills_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
     };
 
     const getDefaultStartDate = () => {
@@ -277,6 +405,30 @@ const BillList = () => {
                     >
                         <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
                     </button>
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-2xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-emerald-500" /> Excel
+                    </button>
+
+                    <button
+                        onClick={handleExportCsv}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-2xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-blue-400" /> CSV
+                    </button>
+
+                    <button
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-2xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-rose-500" /> PDF
+                    </button>
+
                     <button
                         onClick={() => setIsReportModalOpen(true)}
                         className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-wide transition-all border border-white/10 hover:bg-white/5 active:scale-95 cursor-pointer"

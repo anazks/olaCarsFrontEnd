@@ -8,7 +8,9 @@ import { format, startOfMonth } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getUserRole } from '../../../utils/auth';
-import api from '../../../services/api';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // Services
 import { 
@@ -90,6 +92,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [exporting, setExporting] = useState(false);
+    const [exportingExcel, setExportingExcel] = useState(false);
     const [exportingPdf, setExportingPdf] = useState(false);
 
     // Filter state
@@ -217,6 +220,71 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
         return pages;
     };
 
+    const handleExportExcel = async () => {
+        setExportingExcel(true);
+        const toastId = toast.loading("Fetching all records for export...");
+        try {
+            const query = {
+                ...filters,
+                search: debouncedSearch,
+                status: statusFilter,
+                page: 1,
+                limit: 100000,
+                listType: meta.listType
+            };
+            const data = await getCollectionsList(query);
+            const items = data.items || [];
+            
+            if (items.length === 0) {
+                toast.error("No records found to export.", { id: toastId });
+                setExportingExcel(false);
+                return;
+            }
+
+            toast.loading("Generating Excel file...", { id: toastId });
+
+            const exportData = items.map((item, idx) => ({
+                "Sl No.": idx + 1,
+                "Invoice Number": item.invoiceNumber || 'N/A',
+                "Driver Name": item.driverName || 'N/A',
+                "Driver ID": item.driverId || 'N/A',
+                "Vehicle Number": item.vehicleNumber || 'N/A',
+                "Fleet Number": item.fleetNumber || 'N/A',
+                "Branch": item.branch || 'N/A',
+                "Country": item.country || 'N/A',
+                "Due Date": item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : 'N/A',
+                "Days Overdue": item.daysOverdue || 0,
+                "Gross Billed ($)": item.totalAmountDue || 0,
+                "Net Settled ($)": item.amountPaid || 0,
+                "Current Balance ($)": item.balance || 0,
+                "Status": item.status || 'N/A'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Collections Ledger");
+
+            // Auto fit column widths
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = format(new Date(), 'yyyy-MM-dd');
+            XLSX.writeFile(wb, `${meta.title.toLowerCase().replace(/\s+/g, '_')}_ledger_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        } finally {
+            setExportingExcel(false);
+        }
+    };
+
     const handleExport = async () => {
         setExporting(true);
         const toastId = toast.loading("Fetching all records for export...");
@@ -320,28 +388,119 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                 ...filters,
                 search: debouncedSearch,
                 status: statusFilter,
+                page: 1,
+                limit: 100000,
                 listType: meta.listType
             };
-            const res = await api.get('/api/collections/export/pdf', { params: query, responseType: 'blob' });
-            const blob = new Blob([res.data], { type: 'application/pdf' });
-            const url = window.URL.createObjectURL(blob);
-            
-            // Download PDF file
-            const link = document.createElement('a');
-            link.href = url;
-            const dateStr = format(new Date(), 'yyyy-MM-dd');
-            const filename = `${meta.title.toLowerCase().replace(/\s+/g, '_')}_report_${dateStr}.pdf`;
-            link.setAttribute('download', filename);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const data = await getCollectionsList(query);
+            const items = data.items || [];
 
+            if (items.length === 0) {
+                toast.error("No records found to export.", { id: toastId });
+                setExportingPdf(false);
+                return;
+            }
+
+            const doc = new jsPDF({
+                orientation: 'landscape'
+            });
+            const dateStr = format(new Date(), 'yyyy-MM-dd');
+            
+            doc.setFontSize(18);
+            doc.text(meta.title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            if (filters.startDate || filters.endDate) {
+                doc.text(`Period: ${filters.startDate || 'N/A'} to ${filters.endDate || 'N/A'}`, 14, 35);
+            }
+
+            const head = [[
+                "Sl No.",
+                "Invoice Number",
+                "Driver Name",
+                "Driver ID",
+                "Vehicle Number",
+                "Fleet Number",
+                "Branch",
+                "Country",
+                "Due Date",
+                "Days Overdue",
+                "Gross Billed",
+                "Net Paid",
+                "Current Bal",
+                "Status"
+            ]];
+
+            const body = items.map((item, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                item.invoiceNumber || '—',
+                item.driverName || 'N/A',
+                item.driverId || 'N/A',
+                item.vehicleNumber || '—',
+                item.fleetNumber || '—',
+                item.branch || '—',
+                item.country || '—',
+                item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : '—',
+                String(item.daysOverdue || 0),
+                `$${(item.totalAmountDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                `$${(item.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                `$${(item.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                item.status || '—'
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: (filters.startDate || filters.endDate) ? 40 : 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] },
+                styles: { fontSize: 8 }
+            });
+
+            doc.save(`${meta.title.toLowerCase().replace(/\s+/g, '_')}_ledger_${dateStr}.pdf`);
             toast.success("PDF report downloaded successfully!", { id: toastId });
-        } catch (err: any) {
+        } catch (err) {
             console.error("PDF generation failed:", err);
             toast.error("Failed to generate PDF report. Please try again.", { id: toastId });
         } finally {
             setExportingPdf(false);
+        }
+    };
+
+    const handleRowPdf = (item: CollectionListItem) => {
+        try {
+            const doc = new jsPDF();
+            doc.setFontSize(18);
+            doc.text("Collection Invoice Statement", 14, 20);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 28);
+            
+            doc.setFontSize(11);
+            doc.text(`Invoice #: ${item.invoiceNumber || 'N/A'}`, 14, 38);
+            doc.text(`Customer Name: ${item.driverName || 'N/A'}`, 14, 45);
+            doc.text(`Customer ID: ${item.driverId || 'N/A'}`, 14, 52);
+            doc.text(`Vehicle Number: ${item.vehicleNumber || 'N/A'} (Fleet #${item.fleetNumber || 'N/A'})`, 14, 59);
+            doc.text(`Branch / Location: ${item.branch || 'N/A'} (${item.country || 'N/A'})`, 14, 66);
+            doc.text(`Due Date: ${item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : 'N/A'}`, 14, 73);
+            doc.text(`Status: ${item.status || 'N/A'}`, 14, 80);
+
+            autoTable(doc, {
+                head: [["Description / Item", "Amount ($)"]],
+                body: [
+                    ["Gross Billed Amount", `$${(item.totalAmountDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+                    ["Net Amount Settled", `$${(item.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+                    ["Outstanding Balance", `$${(item.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`]
+                ],
+                startY: 88,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`Invoice_${item.invoiceNumber || item._id}.pdf`);
+            toast.success(`Exported PDF for Invoice ${item.invoiceNumber || item._id}`);
+        } catch (e) {
+            console.error(e);
+            toast.error("Failed to generate PDF for invoice.");
         }
     };
 
@@ -370,6 +529,39 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                             )})
                         </span>
                     </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <button 
+                        disabled={exportingPdf || loading}
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide bg-brand-lime text-black hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                        style={{ backgroundColor: 'var(--brand-lime)' }}
+                    >
+                        {exportingPdf ? (
+                            <><Loader2 size={14} className="animate-spin" /> Exporting PDF...</>
+                        ) : (
+                            <><FileText size={14} /> Export PDF</>
+                        )}
+                    </button>
+                    
+                    <button 
+                        disabled={exportingExcel || loading}
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm hover:scale-105 active:scale-95 border"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileSpreadsheet size={14} className="text-emerald-500" /> Export Excel
+                    </button>
+
+                    <button 
+                        disabled={exporting || loading}
+                        onClick={handleExport}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm hover:scale-105 active:scale-95 border"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileSpreadsheet size={14} className="text-blue-400" /> Export CSV
+                    </button>
                 </div>
             </div>
 
@@ -471,6 +663,23 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                             </div>
                         )}
                         <button 
+                            disabled={exportingExcel || loading}
+                            onClick={handleExportExcel}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer" 
+                            style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            {exportingExcel ? (
+                                <>
+                                    <Loader2 className="animate-spin" size={16} /> Exporting...
+                                </>
+                            ) : (
+                                <>
+                                    <FileSpreadsheet size={16} className="text-emerald-500" /> Export Excel
+                                </>
+                            )}
+                        </button>
+
+                        <button 
                             disabled={exporting || loading}
                             onClick={handleExport}
                             className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer" 
@@ -482,7 +691,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                 </>
                             ) : (
                                 <>
-                                    <FileSpreadsheet size={16} /> Export CSV
+                                    <FileSpreadsheet size={16} className="text-blue-400" /> Export CSV
                                 </>
                             )}
                         </button>
@@ -522,13 +731,14 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                 <th className="py-4 px-3 text-right">Gross Billed</th>
                                 <th className="py-4 px-3 text-right">Net Settled</th>
                                 <th className="py-4 px-3 text-right">Current Balance</th>
-                                {type !== 'OVERDUE' && <th className="py-4 pr-4 pl-3 text-center">Status</th>}
+                                {type !== 'OVERDUE' && <th className="py-4 px-3 text-center">Status</th>}
+                                <th className="py-4 pr-4 pl-3 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="text-sm divide-y" style={{ borderColor: 'var(--border-main)' }}>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={type === 'OVERDUE' ? 9 : 9} className="py-24 text-center">
+                                    <td colSpan={11} className="py-24 text-center">
                                         <div className="animate-pulse font-bold text-[#C8E600] text-sm tracking-wider uppercase">Streaming live system ledgers...</div>
                                     </td>
                                 </tr>
@@ -597,7 +807,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                             </td>
 
                                             {type !== 'OVERDUE' && (
-                                                <td className="py-4 pr-4 pl-3 text-center">
+                                                <td className="py-4 px-3 text-center">
                                                     <span className={`px-2.5 py-1 rounded text-[10px] font-black tracking-widest uppercase ${
                                                         item.status === 'PAID' ? 'bg-green-500/10 text-green-500' :
                                                         item.status === 'OVERDUE' ? 'bg-red-500/10 text-red-500' :
@@ -607,11 +817,21 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                                     </span>
                                                 </td>
                                             )}
+
+                                            <td className="py-4 pr-4 pl-3 text-center">
+                                                <button 
+                                                    onClick={() => handleRowPdf(item)}
+                                                    title="Export Invoice PDF"
+                                                    className="p-1.5 rounded-lg border border-[var(--border-main)] hover:bg-[#C8E600]/20 hover:border-[#C8E600] text-[var(--text-main)] transition-all cursor-pointer inline-flex items-center justify-center"
+                                                >
+                                                    <FileText size={14} className="text-[#C8E600]" />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                     {listItems.length === 0 && (
                                         <tr>
-                                            <td colSpan={10} className="py-24 text-center text-gray-500 italic font-medium">
+                                            <td colSpan={11} className="py-24 text-center text-gray-500 italic font-medium">
                                                 Zero records found. Refine date bounds or relax search inputs.
                                             </td>
                                         </tr>

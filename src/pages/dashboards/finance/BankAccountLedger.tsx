@@ -1158,7 +1158,6 @@ const BankAccountLedger = () => {
                                                         const updated = [...editEntries];
                                                         updated[idx].tempBankName = val;
                                                         updated[idx].bankName = val;
-
                                                         // Look up matching bank ID
                                                         const match = allBankAccountsList.find(b =>
                                                             (b.accountName || '').toLowerCase().trim() === val.toLowerCase().trim() ||

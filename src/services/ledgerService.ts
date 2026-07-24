@@ -25,6 +25,12 @@ export interface LedgerEntry {
     createdBy?: any;
     creatorRole?: string;
     runningBalance?: number;
+    attachments?: {
+        name: string;
+        url: string;
+        uploadedAt?: string;
+        _id?: string;
+    }[];
     createdAt?: string;
 }
 
@@ -91,6 +97,32 @@ export const getLedgerEntries = async (filters: Record<string, any> = {}): Promi
 
 export const getLedgerEntryById = async (id: string): Promise<LedgerEntry> => {
     const response = await api.get(`/api/ledger/${id}`);
+    return response.data.data;
+};
+
+export const updateLedgerEntry = async (
+    id: string,
+    data: { description?: string; accountingCode?: string; existingAttachments?: any[]; files?: File[] }
+): Promise<LedgerEntry> => {
+    const formData = new FormData();
+    if (data.description !== undefined) {
+        formData.append("description", data.description);
+    }
+    if (data.accountingCode !== undefined) {
+        formData.append("accountingCode", data.accountingCode);
+    }
+    if (data.existingAttachments !== undefined) {
+        formData.append("existingAttachments", JSON.stringify(data.existingAttachments));
+    }
+    if (data.files && data.files.length > 0) {
+        data.files.forEach((file) => {
+            formData.append("files", file);
+        });
+    }
+
+    const response = await api.put(`/api/ledger/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return response.data.data;
 };
 

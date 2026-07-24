@@ -9,6 +9,9 @@ import { getInvoicesRegistry, deleteAllInvoices, getInvoicesDateWise, downloadIn
 import type { Invoice } from '../../../services/invoiceService';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import InvoiceSettingsModal from './InvoiceSettingsModal';
 import BulkInvoiceUpload from '../shared/BulkInvoiceUpload';
@@ -48,6 +51,7 @@ const InvoiceList = () => {
     };
 
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [typeFilter, setTypeFilter] = useState('ALL');
     const [filterMonth, setFilterMonth] = useState<string>('');
     const [filterYear, setFilterYear] = useState<string>('');
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
@@ -90,7 +94,7 @@ const InvoiceList = () => {
 
     useEffect(() => {
         setPage(1);
-    }, [debouncedSearch, sortBy, sortOrder, startDate, endDate, statusFilter, filterMonth, filterYear]);
+    }, [debouncedSearch, sortBy, sortOrder, startDate, endDate, statusFilter, typeFilter, filterMonth, filterYear]);
 
     const handlePageChange = (pageNum: number) => {
         setPage(pageNum);
@@ -165,6 +169,7 @@ const InvoiceList = () => {
             if (endDate) filters.endDate = endDate;
             if (!startDate && !endDate && !filterMonth && !filterYear) filters.allTime = 'true';
             if (statusFilter !== 'ALL') filters.status = statusFilter;
+            if (typeFilter !== 'ALL') filters.invoiceType = typeFilter;
             if (filterMonth) filters.month = filterMonth;
             if (filterYear) filters.year = filterYear;
 
@@ -193,7 +198,7 @@ const InvoiceList = () => {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearch, page, limit, sortBy, sortOrder, startDate, endDate, statusFilter, filterMonth, filterYear]);
+    }, [debouncedSearch, page, limit, sortBy, sortOrder, startDate, endDate, statusFilter, typeFilter, filterMonth, filterYear]);
 
     useEffect(() => {
         fetchData();
@@ -447,6 +452,33 @@ const InvoiceList = () => {
                         </button>
 
                         <button
+                            onClick={handleExportExcel}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                            style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}
+                        >
+                            <FileText size={14} strokeWidth={3} className="text-emerald-500" />
+                            Export Excel
+                        </button>
+
+                        <button
+                            onClick={handleExportCsv}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                            style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}
+                        >
+                            <FileText size={14} strokeWidth={3} className="text-blue-400" />
+                            Export CSV
+                        </button>
+
+                        <button
+                            onClick={handleExportPdf}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 animate-pulse-subtle"
+                            style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}
+                        >
+                            <FileText size={14} strokeWidth={3} className="text-rose-500" />
+                            Export PDF
+                        </button>
+
+                        <button
                             onClick={() => navigate('./create')}
                             className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
                             style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
@@ -497,6 +529,7 @@ const InvoiceList = () => {
                                     setStartDate('');
                                     setEndDate('');
                                     setStatusFilter('ALL');
+                                    setTypeFilter('ALL');
                                 }}
                                 className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:opacity-80 transition-all bg-transparent border-none cursor-pointer"
                                 style={{ color: 'var(--brand-lime)' }}
@@ -505,7 +538,7 @@ const InvoiceList = () => {
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
                             {/* Month Selector */}
                             <div className="space-y-1.5">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Month</label>
@@ -585,6 +618,23 @@ const InvoiceList = () => {
                                     <option value="PARTIAL">PARTIAL</option>
                                     <option value="PAID">PAID</option>
                                     <option value="OVERDUE">OVERDUE</option>
+                                </select>
+                            </div>
+
+                            {/* Type Filter */}
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Type</label>
+                                <select
+                                    value={typeFilter}
+                                    onChange={(e) => setTypeFilter(e.target.value)}
+                                    className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <option value="ALL">ALL TYPES</option>
+                                    <option value="RENTAL">RENTAL</option>
+                                    <option value="WORKSHOP">WORKSHOP</option>
+                                    <option value="MANUAL">MANUAL</option>
+                                    <option value="DEPOSIT">DEPOSIT</option>
                                 </select>
                             </div>
 

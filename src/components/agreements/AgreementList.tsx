@@ -5,6 +5,8 @@ import agreementService from '../../services/agreementService';
 import type { Agreement } from '../../services/agreementService';
 import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 
 interface AgreementListProps {
@@ -18,6 +20,125 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
     const [loading, setLoading] = useState(true);
     const [countryFilter, setCountryFilter] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+
+    const handleExportExcel = () => {
+        if (filteredAgreements.length === 0) {
+            toast.error("No agreements available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = filteredAgreements.map((a, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Title": a.title || 'N/A',
+                "Country": a.country || 'N/A',
+                "Type": a.type || 'N/A',
+                "Version": a.version || 0,
+                "Status": a.status || 'N/A',
+                "Last Updated": a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : 'N/A'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Agreements");
+
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `agreements_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (filteredAgreements.length === 0) {
+            toast.error("No agreements available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = filteredAgreements.map((a, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Title": a.title || 'N/A',
+                "Country": a.country || 'N/A',
+                "Type": a.type || 'N/A',
+                "Version": a.version || 0,
+                "Status": a.status || 'N/A',
+                "Last Updated": a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : 'N/A'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `agreements_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        if (filteredAgreements.length === 0) {
+            toast.error("No agreements available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Agreements Report";
+
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+
+            const head = [["Sl No.", "Title", "Country", "Type", "Version", "Status", "Last Updated"]];
+            const body = filteredAgreements.map((a, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                a.title || 'N/A',
+                a.country || 'N/A',
+                a.type || 'N/A',
+                String(a.version || 0),
+                a.status || 'N/A',
+                a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : 'N/A'
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`agreements_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
+    };
 
     const fetchAgreements = async () => {
         setLoading(true);
@@ -47,7 +168,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
             container.style.color = '#111';
             container.style.fontFamily = 'serif';
             container.style.lineHeight = '1.6';
-            
+
             container.innerHTML = `
                 <div style="border-bottom: 2pt solid #A3E635; padding-bottom: 10pt; margin-bottom: 20pt;">
                     <h1 style="font-size: 24pt; margin: 0; color: #111;">${agreement.title}</h1>
@@ -106,7 +227,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
         fetchAgreements();
     }, [countryFilter]);
 
-    const filteredAgreements = agreements.filter(a => 
+    const filteredAgreements = agreements.filter(a =>
         a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         a.type.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -150,117 +271,140 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                             <option value="KE">Kenya</option>
                             <option value="NG">Nigeria</option>
                         </select>
-                    </div>
-                </div>
+                        <button
+                            onClick={handleExportExcel}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <FileText size={14} className="text-emerald-500" /> Excel
+                        </button>
 
-                <button
-                    onClick={() => navigate('new')}
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
-                    style={{ background: 'var(--brand-lime)', color: 'var(--brand-black)' }}
-                >
-                    <Plus size={20} /> {t('management.agreements.list.createBtn')}
-                </button>
+                        <button
+                            onClick={handleExportCsv}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <FileText size={14} className="text-blue-400" /> CSV
+                        </button>
+
+                        <button
+                            onClick={handleExportPdf}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <FileText size={14} className="text-rose-500" /> PDF
+                        </button>
+                    </div>
+
+                    <button
+                        onClick={() => navigate('new')}
+                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+                        style={{ background: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                    >
+                        <Plus size={20} /> {t('management.agreements.list.createBtn')}
+                    </button>
+                </div>
             </div>
 
             {/* Table */}
-            <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.title')}</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.country')}</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.type')}</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.version')}</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.status')}</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.lastUpdated')}</th>
-                                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim text-right">{t('management.common.table.actions')}</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5" style={{ borderColor: 'var(--border-main)' }}>
-                            {loading ? (
-                                Array(5).fill(0).map((_, i) => (
-                                    <tr key={i} className="animate-pulse">
-                                        <td colSpan={7} className="px-6 py-4">
-                                            <div className="h-6 bg-white/5 rounded w-full"></div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : filteredAgreements.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-12 text-center text-dim">
-                                        {t('management.agreements.list.noAgreements')}
-                                    </td>
+                <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.title')}</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.country')}</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.type')}</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.version')}</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.status')}</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim">{t('management.agreements.list.table.lastUpdated')}</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-dim text-right">{t('management.common.table.actions')}</th>
                                 </tr>
-                            ) : (
-                                filteredAgreements.map((agreement) => (
-                                    <tr key={agreement._id} className="hover:bg-white/[0.02] transition-colors group">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 rounded-lg bg-lime/10 text-lime">
-                                                    <FileText size={18} />
-                                                </div>
-                                                <span className="font-semibold text-main">{agreement.title}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2 text-sm text-main">
-                                                <Globe size={14} className="text-dim" />
-                                                {agreement.country}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="text-xs font-bold px-2 py-1 rounded bg-white/5 text-dim border border-white/10 uppercase">
-                                                {agreement.type.replace(/_/g, ' ')}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="text-sm font-mono text-lime bg-lime/10 px-2 py-0.5 rounded">
-                                                v{agreement.version}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${getStatusColor(agreement.status)}`}>
-                                                {t(`management.agreements.statusLabels.${agreement.status}`)}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-dim">
-                                            {new Date(agreement.updatedAt || agreement.createdAt).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2 transition-opacity opacity-100">
-                                                <button
-                                                    onClick={() => navigate(`edit/${agreement._id}`)}
-                                                    className="p-2 rounded-lg hover:bg-white/10 text-main transition-colors"
-                                                    title={t('management.agreements.list.actions.edit')}
-                                                >
-                                                    <Edit size={18} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDownloadPDF(agreement)}
-                                                    className="p-2 rounded-lg hover:bg-white/10 text-main transition-colors"
-                                                    title={t('management.agreements.list.actions.download')}
-                                                >
-                                                    <Download size={18} />
-                                                </button>
-                                                <button
-                                                    onClick={() => onViewHistory(agreement)}
-                                                    className="p-2 rounded-lg hover:bg-white/10 text-main transition-colors"
-                                                    title={t('management.agreements.list.actions.history')}
-                                                >
-                                                    <History size={18} />
-                                                </button>
-                                            </div>
+                            </thead>
+                            <tbody className="divide-y divide-white/5" style={{ borderColor: 'var(--border-main)' }}>
+                                {loading ? (
+                                    Array(5).fill(0).map((_, i) => (
+                                        <tr key={i} className="animate-pulse">
+                                            <td colSpan={7} className="px-6 py-4">
+                                                <div className="h-6 bg-white/5 rounded w-full"></div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : filteredAgreements.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-12 text-center text-dim">
+                                            {t('management.agreements.list.noAgreements')}
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                ) : (
+                                    filteredAgreements.map((agreement) => (
+                                        <tr key={agreement._id} className="hover:bg-white/[0.02] transition-colors group">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 rounded-lg bg-lime/10 text-lime">
+                                                        <FileText size={18} />
+                                                    </div>
+                                                    <span className="font-semibold text-main">{agreement.title}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2 text-sm text-main">
+                                                    <Globe size={14} className="text-dim" />
+                                                    {agreement.country}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-xs font-bold px-2 py-1 rounded bg-white/5 text-dim border border-white/10 uppercase">
+                                                    {agreement.type.replace(/_/g, ' ')}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-sm font-mono text-lime bg-lime/10 px-2 py-0.5 rounded">
+                                                    v{agreement.version}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${getStatusColor(agreement.status)}`}>
+                                                    {t(`management.agreements.statusLabels.${agreement.status}`)}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-dim">
+                                                {new Date(agreement.updatedAt || agreement.createdAt).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex justify-end gap-2 transition-opacity opacity-100">
+                                                    <button
+                                                        onClick={() => navigate(`edit/${agreement._id}`)}
+                                                        className="p-2 rounded-lg hover:bg-white/10 text-main transition-colors"
+                                                        title={t('management.agreements.list.actions.edit')}
+                                                    >
+                                                        <Edit size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDownloadPDF(agreement)}
+                                                        className="p-2 rounded-lg hover:bg-white/10 text-main transition-colors"
+                                                        title={t('management.agreements.list.actions.download')}
+                                                    >
+                                                        <Download size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => onViewHistory(agreement)}
+                                                        className="p-2 rounded-lg hover:bg-white/10 text-main transition-colors"
+                                                        title={t('management.agreements.list.actions.history')}
+                                                    >
+                                                        <History size={18} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-    );
+            );
 };
 
-export default AgreementList;
+            export default AgreementList;

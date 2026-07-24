@@ -44,6 +44,7 @@ const InvoiceDetail = () => {
     const [isCreditNoteModalOpen, setIsCreditNoteModalOpen] = useState(false);
     const [cnAmount, setCnAmount] = useState<number>(0);
     const [cnReason, setCnReason] = useState('Vehicle Downtime Adjustment');
+    const [customReason, setCustomReason] = useState('');
     const [cnNotes, setCnNotes] = useState('');
     const [submittingCN, setSubmittingCN] = useState(false);
     const [cnFile, setCnFile] = useState<File | null>(null);
@@ -204,13 +205,19 @@ const InvoiceDetail = () => {
         if (!invoice) return;
         setCnAmount(invoice.balance);
         setCnNotes('');
-        setCnReason('Vehicle Downtime Assessment');
+        setCnReason('Vehicle Downtime Adjustment');
+        setCustomReason('');
         setIsCreditNoteModalOpen(true);
     };
 
     const handleCreateCN = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!invoice) return;
+        const finalReason = cnReason === 'Custom' ? customReason.trim() : cnReason;
+        if (!finalReason) {
+            toast.error("Reason cannot be empty");
+            return;
+        }
         if (cnAmount <= 0 || cnAmount > invoice.balance) {
             toast.error(`Credit Note cannot exceed the active balance of $${invoice.balance}`);
             return;
@@ -224,7 +231,7 @@ const InvoiceDetail = () => {
                 driverId: driverId || undefined,
                 invoiceId: invoice._id,
                 amount: Number(cnAmount),
-                reason: cnReason,
+                reason: finalReason,
                 notes: cnNotes,
                 creditNoteDate: new Date().toISOString().split('T')[0],
                 supportingDocument: cnFile || undefined
@@ -233,6 +240,7 @@ const InvoiceDetail = () => {
             setIsCreditNoteModalOpen(false);
             setCnAmount(0);
             setCnNotes('');
+            setCustomReason('');
             setCnFile(null);
             await fetchInvoice();
             await fetchLinkedCreditNotes();
@@ -829,8 +837,25 @@ const InvoiceDetail = () => {
                                     <option value="Billing Error / Correction">Billing Error / Correction</option>
                                     <option value="Goodwill Refund">Goodwill Refund</option>
                                     <option value="Other Operations Subsidy">Other Operations Subsidy</option>
+                                    <option value="Custom">Custom Reason...</option>
                                 </select>
                             </div>
+
+                            {cnReason === 'Custom' && (
+                                <div className="space-y-1.5 animate-in slide-in-from-top-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Specify Custom Reason *</label>
+                                    <input 
+                                        required 
+                                        type="text" 
+                                        value={customReason} 
+                                        onChange={e => setCustomReason(e.target.value)} 
+                                        placeholder="Enter custom reason..." 
+                                        className="w-full px-4 py-2.5 border rounded-xl font-bold outline-none" 
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            )}
+
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Memo Notes (Internal)</label>
                                 <textarea

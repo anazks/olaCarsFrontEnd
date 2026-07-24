@@ -5,6 +5,11 @@ import { getAllTaxes, createTax, updateTaxStatus, updateTax } from '../../../ser
 import type { Tax, CreateTaxPayload } from '../../../services/taxService';
 import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import toast from 'react-hot-toast';
+import { FileText } from 'lucide-react';
 
 // Parses API/backend errors into a clean user-facing message.
 // Specifically handles MongoDB E11000 duplicate key errors.
@@ -59,6 +64,119 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
 
     const userRole = getUserRole() || '';
     const canManageTaxes = ['admin', 'financialadmin'].includes(userRole);
+
+    const handleExportExcel = () => {
+        if (taxes.length === 0) {
+            toast.error("No taxes available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const exportData = taxes.map((t, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Tax Name": t.name || 'N/A',
+                "Rate (%)": t.rate || 0,
+                "Status": t.isActive ? 'Active' : 'Inactive',
+                "Created At": t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Taxes");
+            
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `taxes_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = () => {
+        if (taxes.length === 0) {
+            toast.error("No taxes available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const exportData = taxes.map((t, idx) => ({
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Tax Name": t.name || 'N/A',
+                "Rate (%)": t.rate || 0,
+                "Status": t.isActive ? 'Active' : 'Inactive',
+                "Created At": t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `taxes_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = () => {
+        if (taxes.length === 0) {
+            toast.error("No taxes available to export.");
+            return;
+        }
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const doc = new jsPDF();
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Taxes Report";
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+
+            const head = [["Sl No.", "Tax Name", "Rate (%)", "Status", "Created At"]];
+            const body = taxes.map((t, idx) => [
+                String(idx + 1).padStart(2, '0'),
+                t.name || 'N/A',
+                `${t.rate || 0}%`,
+                t.isActive ? 'Active' : 'Inactive',
+                t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A'
+            ]);
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: 34,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+            });
+
+            doc.save(`taxes_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
+    };
 
     const fetchTaxes = useCallback(async () => {
         setLoading(true);
@@ -205,6 +323,30 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                     <p className="text-xs font-medium text-dim mt-0.5">Manage tax profiles and percentage rates</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-emerald-500" /> Excel
+                    </button>
+
+                    <button
+                        onClick={handleExportCsv}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-blue-400" /> CSV
+                    </button>
+
+                    <button
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-rose-500" /> PDF
+                    </button>
+
                     <button
                         onClick={fetchTaxes}
                         className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"
