@@ -98,8 +98,8 @@ export const InvoiceAgingSummary: React.FC = () => {
         setLoading(true);
         try {
             const [invRes, custRes] = await Promise.all([
-                getInvoicesRegistry({ limit: 10000, ignoreDefaultDates: 'true' }),
-                getAllCustomers({ limit: 1000 })
+                getInvoicesRegistry({ status: 'UNPAID', allTime: 'true', limit: 100000, ignoreDefaultDates: 'true' }),
+                getAllCustomers({ limit: 10000 })
             ]);
 
             setInvoices(invRes.data || []);
