@@ -10,12 +10,14 @@ import {
     Library, DollarSign, ShieldAlert, Calendar,
     MapPin, Building, Search, Filter,
     TrendingUp, Wallet, FileText, Clock, FilterX,
-    RefreshCw
+    RefreshCw, FileSpreadsheet
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../store';
 import { setCollectionsDashboardData } from '../../../store/dashboardSlice';
+import * as XLSX from 'xlsx';
+import toast from 'react-hot-toast';
 
 // Services
 import { 
@@ -85,6 +87,7 @@ const CollectionsDashboard = () => {
     // List and Paginated state
     const [listItems, setListItems] = useState<CollectionListItem[]>(collectionsState.listItems);
     const [listLoading, setListLoading] = useState(false);
+    const [exportingExcel, setExportingExcel] = useState(false);
     const [pagination, setPagination] = useState(collectionsState.pagination);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -250,6 +253,68 @@ const CollectionsDashboard = () => {
             console.error('Failed fetching invoice grid', err);
         } finally {
             setListLoading(false);
+        }
+    };
+
+    const handleExportExcel = async () => {
+        setExportingExcel(true);
+        const toastId = toast.loading("Generating Collections Ledger Excel file...");
+        try {
+            const payload = {
+                ...filters,
+                search: debouncedSearch,
+                status: statusFilter,
+                page: 1,
+                limit: 100000
+            };
+            const data = await getCollectionsList(payload);
+            const items = data.items || [];
+
+            if (items.length === 0) {
+                toast.error("No collections records found to export.", { id: toastId });
+                setExportingExcel(false);
+                return;
+            }
+
+            const exportData = items.map((item: CollectionListItem, idx: number) => ({
+                "Sl No.": idx + 1,
+                "Invoice Number": item.invoiceNumber || 'N/A',
+                "Customer / Driver": item.customerName || item.driverName || 'N/A',
+                "Driver ID": item.driverId || 'N/A',
+                "Vehicle Number": item.vehicleNumber || 'N/A',
+                "Fleet Number": item.fleetNumber || 'N/A',
+                "Branch": item.branch || 'N/A',
+                "Country": item.country || 'N/A',
+                "Due Date": item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : 'N/A',
+                "Days Overdue": item.daysOverdue || 0,
+                "Gross Billed ($)": item.totalAmountDue || 0,
+                "Net Settled ($)": item.amountPaid || 0,
+                "Current Balance ($)": item.balance || 0,
+                "Status": item.status || 'N/A'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Collections Ledger");
+
+            // Auto-fit column widths
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = format(new Date(), 'yyyy-MM-dd');
+            XLSX.writeFile(wb, `collections_ledger_${dateStr}.xlsx`);
+            toast.success("Collections Ledger Excel downloaded successfully!", { id: toastId });
+        } catch (err: any) {
+            console.error('Failed to export Excel:', err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        } finally {
+            setExportingExcel(false);
         }
     };
 
@@ -788,8 +853,15 @@ const CollectionsDashboard = () => {
                             </select>
                             <Filter size={14} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" />
                         </div>
-                        <button className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                            <FileText size={16} /> Export
+                        <button 
+                            onClick={handleExportExcel}
+                            disabled={exportingExcel}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
+                            style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            title="Download Collections Ledger Excel File"
+                        >
+                            <FileSpreadsheet size={16} className="text-emerald-500" />
+                            <span>{exportingExcel ? 'Exporting Excel...' : 'Export Excel'}</span>
                         </button>
                     </div>
                 </div>
