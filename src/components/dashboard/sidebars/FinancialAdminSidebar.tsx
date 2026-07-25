@@ -195,6 +195,10 @@ const FinancialAdminSidebar = ({
           label: t("sidebar.items.creditNotes"),
           path: "/admin/financial-admin/credit-notes",
         },
+        {
+          label: "Debit Notes",
+          path: "/admin/financial-admin/debit-notes",
+        },
       ],
     },
     {

@@ -156,6 +156,8 @@ import CustomerDetail from "./pages/dashboards/finance/Sales/CustomerDetail";
 import PaymentsReceived from "./pages/dashboards/finance/Sales/PaymentsReceived";
 import CreditNotes from "./pages/dashboards/finance/Sales/CreditNotes";
 import CreditNoteDetail from "./pages/dashboards/finance/Sales/CreditNoteDetail";
+import DebitNotes from "./pages/dashboards/finance/Sales/DebitNotes";
+import DebitNoteDetail from "./pages/dashboards/finance/Sales/DebitNoteDetail";
 
 // Purchases Pages
 import Expenses from "./pages/dashboards/finance/Purchases/Expenses";
@@ -502,6 +504,8 @@ function App() {
               <Route path="payments-received" element={<PaymentsReceived />} />
               <Route path="credit-notes" element={<CreditNotes />} />
               <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
+              <Route path="debit-notes" element={<DebitNotes />} />
+              <Route path="debit-notes/:id" element={<DebitNoteDetail />} />
 
               {/* Purchases Routes */}
               <Route path="expenses" element={<Expenses />} />
@@ -1045,6 +1049,8 @@ function App() {
               <Route path="payments-received" element={<PaymentsReceived />} />
               <Route path="credit-notes" element={<CreditNotes />} />
               <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
+              <Route path="debit-notes" element={<DebitNotes />} />
+              <Route path="debit-notes/:id" element={<DebitNoteDetail />} />
 
               {/* Purchases Routes */}
               <Route path="expenses" element={<Expenses />} />

@@ -18,6 +18,23 @@ const InvoiceList = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const userRole = getUserRole();
+
+    const getRoutePrefix = () => {
+        const role = getUserRole();
+        switch (role) {
+            case 'admin': return '/admin/admin';
+            case 'financeadmin':
+            case 'financialadmin': return '/admin/financial-admin';
+            case 'operationadmin':
+            case 'operationaladmin': return '/admin/operational-admin';
+            case 'countrymanager': return '/admin/country-manager';
+            case 'branchmanager': return '/admin/branch-manager';
+            case 'financestaff': return '/admin/branch-fin-staff';
+            case 'operationstaff': return '/admin/branch-op-staff';
+            default: return '/admin/financial-admin';
+        }
+    };
+
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -463,6 +480,15 @@ const InvoiceList = () => {
                         >
                             <Clock size={14} strokeWidth={2.5} className="text-amber-500" />
                             Aging Summary
+                        </button>
+
+                        <button
+                            onClick={() => navigate(`${getRoutePrefix()}/sales/debit-notes`)}
+                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 border border-blue-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                            title="Manage Debit Notes Ledger"
+                        >
+                            <FileText size={14} strokeWidth={2.5} className="text-blue-500" />
+                            Debit Notes
                         </button>
 
                         <button

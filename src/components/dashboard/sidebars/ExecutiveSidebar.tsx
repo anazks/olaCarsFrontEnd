@@ -235,6 +235,10 @@ const ExecutiveSidebar = ({
           label: t("sidebar.items.creditNotes"),
           path: "/admin/admin/credit-notes",
         },
+        {
+          label: "Debit Notes",
+          path: "/admin/admin/debit-notes",
+        },
       ],
     },
     {
