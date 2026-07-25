@@ -84,6 +84,7 @@ export const getInvoicesRegistry = async (filters: any = {}): Promise<{data: Inv
     if (filters.invoiceType && filters.invoiceType !== 'ALL') params.append('invoiceType', filters.invoiceType);
     if (filters.month) params.append('month', filters.month);
     if (filters.year) params.append('year', filters.year);
+    if (filters.allTime) params.append('allTime', filters.allTime);
     if (filters.ignoreDefaultDates) params.append('ignoreDefaultDates', filters.ignoreDefaultDates);
     
     const response = await api.get(`/api/invoices/registry?${params.toString()}`);
@@ -108,6 +109,7 @@ export const getInvoices = async (filters: any = {}): Promise<{data: Invoice[], 
     if (filters.search) params.append('search', filters.search);
     if (filters.startDate) params.append('startDate', filters.startDate);
     if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.allTime) params.append('allTime', filters.allTime);
     if (filters.ignoreDefaultDates) params.append('ignoreDefaultDates', filters.ignoreDefaultDates);
     if (filters.sortBy) params.append('sortBy', filters.sortBy);
     if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
@@ -219,6 +221,7 @@ export const getInvoicesDateWise = async (filters: any = {}): Promise<{data: Inv
     if (filters.invoiceType && filters.invoiceType !== 'ALL') params.append('invoiceType', filters.invoiceType);
     if (filters.month) params.append('month', filters.month);
     if (filters.year) params.append('year', filters.year);
+    if (filters.allTime) params.append('allTime', filters.allTime);
     if (filters.ignoreDefaultDates) params.append('ignoreDefaultDates', filters.ignoreDefaultDates);
     
     const response = await api.get(`/api/invoices/date-wise?${params.toString()}`);
@@ -237,6 +240,7 @@ export const downloadInvoiceRegistryPdf = async (filters: any = {}): Promise<any
     if (filters.status && filters.status !== 'ALL') params.append('status', filters.status);
     if (filters.month) params.append('month', filters.month);
     if (filters.year) params.append('year', filters.year);
+    if (filters.allTime) params.append('allTime', filters.allTime);
 
     const response = await api.get(`/api/invoices/registry/pdf?${params.toString()}`, {
         responseType: 'blob'

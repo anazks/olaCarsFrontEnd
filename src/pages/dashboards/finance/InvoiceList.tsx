@@ -40,8 +40,8 @@ const InvoiceList = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
-    const [startDate, setStartDate] = useState(getDefaultStartDate());
-    const [endDate, setEndDate] = useState(getDefaultEndDate());
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     const handleApplyFilters = () => {
         fetchData();
@@ -50,7 +50,7 @@ const InvoiceList = () => {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [typeFilter, setTypeFilter] = useState('ALL');
     const [filterMonth, setFilterMonth] = useState<string>('');
-    const [filterYear, setFilterYear] = useState<string>('');
+    const [filterYear, setFilterYear] = useState<string>('2026');
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
 
@@ -162,15 +162,18 @@ const InvoiceList = () => {
         try {
             const filters: any = { page, limit, sortBy, sortOrder };
             if (debouncedSearch.trim()) filters.search = debouncedSearch.trim();
-            if (startDate) filters.startDate = startDate;
-            if (endDate) filters.endDate = endDate;
+            if (filterYear === 'CUSTOM') {
+                if (startDate) filters.startDate = startDate;
+                if (endDate) filters.endDate = endDate;
+            } else {
+                if (filterYear) filters.year = filterYear;
+                if (filterMonth) filters.month = filterMonth;
+            }
             if (!startDate && !endDate && !filterMonth && !filterYear) filters.allTime = 'true';
             if (statusFilter !== 'ALL') filters.status = statusFilter;
             if (typeFilter !== 'ALL') filters.invoiceType = typeFilter;
-            if (filterMonth) filters.month = filterMonth;
-            if (filterYear) filters.year = filterYear;
 
-            const res = (startDate || endDate)
+            const res = (filterYear === 'CUSTOM' && (startDate || endDate))
                 ? await getInvoicesDateWise(filters)
                 : await getInvoicesRegistry(filters);
             console.log('[InvoiceList] API Response:', res);
@@ -223,12 +226,18 @@ const InvoiceList = () => {
         try {
             const filters: any = {
                 search: debouncedSearch.trim() || undefined,
-                startDate: startDate || undefined,
-                endDate: endDate || undefined,
                 status: statusFilter !== 'ALL' ? statusFilter : undefined,
-                month: filterMonth || undefined,
-                year: filterYear || undefined
             };
+            if (filterYear === 'CUSTOM') {
+                filters.startDate = startDate || undefined;
+                filters.endDate = endDate || undefined;
+            } else {
+                filters.month = filterMonth || undefined;
+                filters.year = filterYear || undefined;
+            }
+            if (!startDate && !endDate && !filterMonth && !filterYear) {
+                filters.allTime = 'true';
+            }
             const data = await downloadInvoiceRegistryPdf(filters);
             const blob = new Blob([data], { type: 'application/pdf' });
             const url = window.URL.createObjectURL(blob);
@@ -255,13 +264,19 @@ const InvoiceList = () => {
         try {
             const filters: any = { limit: 2000, ignoreDefaultDates: 'true' };
             if (debouncedSearch.trim()) filters.search = debouncedSearch.trim();
-            if (startDate) filters.startDate = startDate;
-            if (endDate) filters.endDate = endDate;
+            if (filterYear === 'CUSTOM') {
+                if (startDate) filters.startDate = startDate;
+                if (endDate) filters.endDate = endDate;
+            } else {
+                if (filterYear) filters.year = filterYear;
+                if (filterMonth) filters.month = filterMonth;
+            }
+            if (!startDate && !endDate && !filterMonth && !filterYear) {
+                filters.allTime = 'true';
+            }
             if (statusFilter !== 'ALL') filters.status = statusFilter;
-            if (filterMonth) filters.month = filterMonth;
-            if (filterYear) filters.year = filterYear;
 
-            const res = (startDate || endDate)
+            const res = (filterYear === 'CUSTOM' && (startDate || endDate))
                 ? await getInvoicesDateWise(filters)
                 : await getInvoicesRegistry(filters);
 
@@ -318,56 +333,7 @@ const InvoiceList = () => {
         }
     };
 
-    const handleExportExcel = () => {
-        handleDownloadExcel();
-    };
 
-    const handleExportCsv = () => {
-        if (invoices.length === 0) {
-            toast.error("No invoices available to export.");
-            return;
-        }
-        const toastId = toast.loading("Generating CSV file...");
-        try {
-            const exportData = invoices.map((inv, idx) => ({
-                "Sl No.": String(idx + 1).padStart(2, '0'),
-                "Invoice Number": inv.invoiceNumber,
-                "Invoice ID": inv._id,
-                "Type": inv.invoiceType || "RENTAL",
-                "Description": (inv as any).description || inv.notes || (inv.invoiceType === 'RENTAL' ? `Rent ${inv.weekLabel || ''}` : 'Manual Entry'),
-                "Customer ID": (inv.customer as any)?.customerId || inv.driver?.driverId || 'N/A',
-                "Customer Name": (inv.customer as any)?.name || inv.driver?.personalInfo?.fullName || 'System Pool',
-                "Status": inv.status,
-                "Gross Billed": inv.totalAmountDue || 0,
-                "Net Settled": inv.amountPaid || 0,
-                "Current Balance": inv.balance || 0,
-                "Invoice Date": inv.generatedAt ? new Date(inv.generatedAt).toLocaleDateString() : (inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : 'N/A'),
-                "Due Date": inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : 'N/A'
-            }));
-
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            const csvContent = XLSX.utils.sheet_to_csv(ws);
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            const dateStr = new Date().toISOString().split('T')[0];
-            link.setAttribute("download", `invoices_export_${dateStr}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            toast.success("CSV file downloaded successfully!", { id: toastId });
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to export CSV file.", { id: toastId });
-        }
-    };
-
-    const handleExportPdf = () => {
-        handleDownloadPdf();
-    };
 
     return (
         <div className="container-responsive relative space-y-6 pb-12">
@@ -508,32 +474,6 @@ const InvoiceList = () => {
                             Bulk Upload
                         </button>
 
-                        <button
-                            onClick={handleExportExcel}
-                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
-                            style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}
-                        >
-                            <FileText size={14} strokeWidth={3} className="text-emerald-500" />
-                            Export Excel
-                        </button>
-
-                        <button
-                            onClick={handleExportCsv}
-                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
-                            style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}
-                        >
-                            <FileText size={14} strokeWidth={3} className="text-blue-400" />
-                            Export CSV
-                        </button>
-
-                        <button
-                            onClick={handleExportPdf}
-                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 animate-pulse-subtle"
-                            style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}
-                        >
-                            <FileText size={14} strokeWidth={3} className="text-rose-500" />
-                            Export PDF
-                        </button>
 
                         <button
                             onClick={() => navigate('./create')}
@@ -582,7 +522,7 @@ const InvoiceList = () => {
                                 type="button"
                                 onClick={() => {
                                     setFilterMonth('');
-                                    setFilterYear('');
+                                    setFilterYear('2026');
                                     setStartDate('');
                                     setEndDate('');
                                     setStatusFilter('ALL');
@@ -595,71 +535,90 @@ const InvoiceList = () => {
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
-                            {/* Month Selector */}
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Month</label>
-                                <select
-                                    value={filterMonth}
-                                    onChange={(e) => setFilterMonth(e.target.value)}
-                                    className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
-                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                >
-                                    <option value="">All Months</option>
-                                    <option value="1">January</option>
-                                    <option value="2">February</option>
-                                    <option value="3">March</option>
-                                    <option value="4">April</option>
-                                    <option value="5">May</option>
-                                    <option value="6">June</option>
-                                    <option value="7">July</option>
-                                    <option value="8">August</option>
-                                    <option value="9">September</option>
-                                    <option value="10">October</option>
-                                    <option value="11">November</option>
-                                    <option value="12">December</option>
-                                </select>
-                            </div>
-
+                        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${filterYear === 'CUSTOM' ? 'lg:grid-cols-6' : 'lg:grid-cols-5'} gap-4`}>
                             {/* Year Selector */}
                             <div className="space-y-1.5">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Year</label>
                                 <select
                                     value={filterYear}
-                                    onChange={(e) => setFilterYear(e.target.value)}
-                                    className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setFilterYear(val);
+                                        if (val !== 'CUSTOM') {
+                                            setStartDate('');
+                                            setEndDate('');
+                                        } else {
+                                            if (!startDate) setStartDate(getDefaultStartDate());
+                                            if (!endDate) setEndDate(getDefaultEndDate());
+                                        }
+                                    }}
+                                    className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs font-medium"
                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                 >
                                     <option value="">All Years</option>
+                                    <option value="2024">2024</option>
                                     <option value="2025">2025</option>
                                     <option value="2026">2026</option>
                                     <option value="2027">2027</option>
+                                    <option value="CUSTOM">Custom Range</option>
                                 </select>
                             </div>
 
-                            {/* From Date */}
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>From Date</label>
-                                <input
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
-                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                />
-                            </div>
+                            {/* Month Selector - Shown when not CUSTOM */}
+                            {filterYear !== 'CUSTOM' && (
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Month</label>
+                                    <select
+                                        value={filterMonth}
+                                        onChange={(e) => setFilterMonth(e.target.value)}
+                                        className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs font-medium"
+                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        <option value="">All Months</option>
+                                        <option value="1">January</option>
+                                        <option value="2">February</option>
+                                        <option value="3">March</option>
+                                        <option value="4">April</option>
+                                        <option value="5">May</option>
+                                        <option value="6">June</option>
+                                        <option value="7">July</option>
+                                        <option value="8">August</option>
+                                        <option value="9">September</option>
+                                        <option value="10">October</option>
+                                        <option value="11">November</option>
+                                        <option value="12">December</option>
+                                    </select>
+                                </div>
+                            )}
 
-                            {/* To Date */}
-                            <div className="space-y-1.5">
-                                <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>To Date</label>
-                                <input
-                                    type="date"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                    className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
-                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                />
-                            </div>
+                            {/* Date-wise selection fields (From Date & To Date) - ONLY SHOWN WHEN filterYear === 'CUSTOM' */}
+                            {filterYear === 'CUSTOM' && (
+                                <>
+                                    {/* From Date */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>From Date</label>
+                                        <input
+                                            type="date"
+                                            value={startDate}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                            className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs font-medium"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
+
+                                    {/* To Date */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>To Date</label>
+                                        <input
+                                            type="date"
+                                            value={endDate}
+                                            onChange={(e) => setEndDate(e.target.value)}
+                                            className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs font-medium"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
+                                </>
+                            )}
 
                             {/* Status Filter */}
                             <div className="space-y-1.5">
