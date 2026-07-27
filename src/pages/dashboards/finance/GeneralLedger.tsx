@@ -58,9 +58,9 @@ const GeneralLedger = () => {
         }
     };
 
-    const getThisMonthStart = () => {
+    const getThisYearStart = () => {
         const now = new Date();
-        return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        return `${now.getFullYear()}-01-01`;
     };
 
     const getThisMonthEnd = () => {
@@ -69,7 +69,7 @@ const GeneralLedger = () => {
     };
 
     // Filters
-    const [startDate, setStartDate] = useState(getThisMonthStart);
+    const [startDate, setStartDate] = useState(getThisYearStart);
     const [endDate, setEndDate] = useState(getThisMonthEnd);
     const [selectedCode, setSelectedCode] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');

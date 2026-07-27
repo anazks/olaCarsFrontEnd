@@ -39,11 +39,10 @@ const AccountingCodeDetails = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Date initialization for last 30 days
+    // Date initialization for This Year
     const getInitialDates = () => {
         const today = new Date();
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(today.getDate() - 30);
+        const startOfYear = new Date(today.getFullYear(), 0, 1);
         const formatISO = (d: Date) => {
             const year = d.getFullYear();
             const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -57,9 +56,9 @@ const AccountingCodeDetails = () => {
             return `${month}/${day}/${year}`;
         };
         return { 
-            startISO: formatISO(thirtyDaysAgo), 
+            startISO: formatISO(startOfYear), 
             endISO: formatISO(today),
-            startVisual: formatVisual(thirtyDaysAgo),
+            startVisual: formatVisual(startOfYear),
             endVisual: formatVisual(today)
         };
     };

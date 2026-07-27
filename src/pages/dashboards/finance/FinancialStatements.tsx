@@ -14,13 +14,9 @@ const getTodayString = () => {
     return `${year}-${month}-${day}`;
 };
 
-const getPastDateString = (monthsAgo: number) => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - monthsAgo);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+const getStartOfYearString = () => {
+    const year = new Date().getFullYear();
+    return `${year}-01-01`;
 };
 
 const buildPLExportRows = (data: any) => {
@@ -244,7 +240,7 @@ const FinancialStatements = () => {
 
     const [filters, setFilters] = useState({
         branch: '',
-        startDate: getPastDateString(1),
+        startDate: getStartOfYearString(),
         endDate: getTodayString()
     });
 

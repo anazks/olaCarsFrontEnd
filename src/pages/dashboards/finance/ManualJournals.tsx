@@ -20,9 +20,9 @@ const ManualJournals = () => {
     const [journalLines, setJournalLines] = useState<Record<string, LedgerEntry[]>>({});
     const [loadingLines, setLoadingLines] = useState<Record<string, boolean>>({});
 
-    const getThisMonthStart = () => {
+    const getThisYearStart = () => {
         const now = new Date();
-        return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        return `${now.getFullYear()}-01-01`;
     };
 
     const getThisMonthEnd = () => {
@@ -31,7 +31,7 @@ const ManualJournals = () => {
     };
 
     // Filter states
-    const [startDate, setStartDate] = useState(getThisMonthStart);
+    const [startDate, setStartDate] = useState(getThisYearStart);
     const [endDate, setEndDate] = useState(getThisMonthEnd);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');

@@ -52,8 +52,8 @@ const BankAccountLedger = () => {
     const [limit, setLimit] = useState(25);
     const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: 25 });
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [startDate, setStartDate] = useState(`${new Date().getFullYear()}-01-01`);
+    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [search, setSearch] = useState('');
     const [balance, setBalance] = useState('');
 
