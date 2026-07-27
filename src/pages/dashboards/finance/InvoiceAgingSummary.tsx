@@ -694,17 +694,8 @@ export const InvoiceAgingSummary: React.FC = () => {
 
                 {/* Row 2 */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {/* Card 5: DEPOSIT DUE */}
-                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#1565C0' }}>
-                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">DEPOSIT DUE (USD)</div>
-                        <div className="text-2xl font-black tracking-tight my-1">
-                            ${kpiMetrics.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                        <div className="text-[11px] font-medium text-white/70">{kpiMetrics.depositPct}% of total</div>
-                    </div>
-
-                    {/* Card 6: RENT DUE */}
-                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#1B5E20' }}>
+                    {/* Card 5: RENT DUE */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px] lg:col-span-2" style={{ background: '#1B5E20' }}>
                         <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">RENT DUE (USD)</div>
                         <div className="text-2xl font-black tracking-tight my-1">
                             ${kpiMetrics.rentDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -712,17 +703,8 @@ export const InvoiceAgingSummary: React.FC = () => {
                         <div className="text-[11px] font-medium text-white/70">{kpiMetrics.rentPct}% of total</div>
                     </div>
 
-                    {/* Card 7: OTHERS DUE */}
-                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#E65100' }}>
-                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">OTHERS DUE (USD)</div>
-                        <div className="text-2xl font-black tracking-tight my-1">
-                            ${kpiMetrics.othersDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                        <div className="text-[11px] font-medium text-white/70">{kpiMetrics.othersPct}% of total</div>
-                    </div>
-
-                    {/* Card 8: AVG OUTSTANDING / CUSTOMER */}
-                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#512DA8' }}>
+                    {/* Card 6: AVG OUTSTANDING / CUSTOMER */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px] lg:col-span-2" style={{ background: '#512DA8' }}>
                         <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">AVG OUTSTANDING / CUSTOMER</div>
                         <div className="text-2xl font-black tracking-tight my-1">
                             ${kpiMetrics.avgPerCustomer.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
