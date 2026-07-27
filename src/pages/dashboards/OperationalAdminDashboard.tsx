@@ -57,9 +57,8 @@ const OperationalAdminDashboard = () => {
     const [branches, setBranches] = useState<Branch[]>([]);
     
     const getOneMonthAgo = () => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        return d.toISOString().split('T')[0];
+        const year = new Date().getFullYear();
+        return `${year}-01-01`;
     };
 
     const getToday = () => {

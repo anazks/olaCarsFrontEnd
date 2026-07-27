@@ -44,9 +44,8 @@ const DashboardHub = () => {
 
     // Helper to calculate date range for the last month
     const getOneMonthAgo = () => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        return d.toISOString().split('T')[0];
+        const year = new Date().getFullYear();
+        return `${year}-01-01`;
     };
 
     const getToday = () => {

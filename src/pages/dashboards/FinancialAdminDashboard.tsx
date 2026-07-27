@@ -46,9 +46,8 @@ const FinancialAdminDashboard = () => {
     const [activeTab, setActiveTab] = useState<'overview' | 'vehicles' | 'collections' | 'pos'>('overview');
 
     const getOneMonthAgo = () => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - 1);
-        return format(d, 'yyyy-MM-dd');
+        const year = new Date().getFullYear();
+        return `${year}-01-01`;
     };
 
     const getToday = () => {

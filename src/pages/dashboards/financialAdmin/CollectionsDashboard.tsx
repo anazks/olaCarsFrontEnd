@@ -96,10 +96,9 @@ const CollectionsDashboard = () => {
     // Lookup collections
     const [allBranches, setAllBranches] = useState<any[]>(collectionsState.branches);
 
-    const get30DaysAgoStr = () => {
-        const d = new Date();
-        d.setDate(d.getDate() - 30);
-        return d.toISOString().split('T')[0];
+    const getStartOfYearStr = () => {
+        const year = new Date().getFullYear();
+        return `${year}-01-01`;
     };
     const getTodayStr = () => {
         return new Date().toISOString().split('T')[0];
@@ -109,7 +108,7 @@ const CollectionsDashboard = () => {
     const [filters, setFilters] = useState({
         country: '',
         branch: '',
-        startDate: get30DaysAgoStr(),
+        startDate: getStartOfYearStr(),
         endDate: getTodayStr()
     });
 
@@ -117,7 +116,7 @@ const CollectionsDashboard = () => {
     const [tempFilters, setTempFilters] = useState({
         country: '',
         branch: '',
-        startDate: get30DaysAgoStr(),
+        startDate: getStartOfYearStr(),
         endDate: getTodayStr()
     });
 

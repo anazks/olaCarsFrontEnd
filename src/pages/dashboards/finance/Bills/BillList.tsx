@@ -175,10 +175,8 @@ const BillList = () => {
     };
 
     const getDefaultStartDate = () => {
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        return `${y}-${m}-01`;
+        const y = new Date().getFullYear();
+        return `${y}-01-01`;
     };
 
     const getDefaultEndDate = () => {

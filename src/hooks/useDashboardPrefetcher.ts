@@ -91,17 +91,15 @@ export const useDashboardPrefetcher = () => {
                 tasks.push((async () => {
                     try {
                         const todayStr = new Date().toISOString().split('T')[0];
-                        const oneMonthAgoDate = new Date();
-                        oneMonthAgoDate.setDate(oneMonthAgoDate.getDate() - 30); // Exactly 30 days ago
-                        const oneMonthAgoStr = oneMonthAgoDate.toISOString().split('T')[0];
+                        const yearStartStr = `${new Date().getFullYear()}-01-01`;
 
-                        const startD = new Date(oneMonthAgoStr + 'T00:00:00.000Z');
+                        const startD = new Date(yearStartStr + 'T00:00:00.000Z');
                         const endD = new Date(todayStr + 'T23:59:59.999Z');
 
                         const baseFilters: any = {};
                         baseFilters.sortOrder = 'desc';
                         baseFilters.sortBy = 'createdAt';
-                        baseFilters.startDate = oneMonthAgoStr;
+                        baseFilters.startDate = yearStartStr;
                         baseFilters.endDate = todayStr;
 
                         let fetchedBranches: any[] = [];
@@ -214,10 +212,9 @@ export const useDashboardPrefetcher = () => {
             if (shouldPrefetchColl) {
                 tasks.push((async () => {
                     try {
-                        const get30DaysAgoStr = () => {
-                            const d = new Date();
-                            d.setDate(d.getDate() - 30);
-                            return d.toISOString().split('T')[0];
+                        const getStartOfYearStr = () => {
+                            const year = new Date().getFullYear();
+                            return `${year}-01-01`;
                         };
                         const getTodayStr = () => {
                             return new Date().toISOString().split('T')[0];
@@ -225,7 +222,7 @@ export const useDashboardPrefetcher = () => {
                         const defaultFilters = {
                             country: '',
                             branch: '',
-                            startDate: get30DaysAgoStr(),
+                            startDate: getStartOfYearStr(),
                             endDate: getTodayStr()
                         };
 

@@ -45,10 +45,8 @@ const DebitNotes = () => {
     const [loading, setLoading] = useState<boolean>(true);
     
     const getDefaultStartDate = () => {
-        const d = new Date();
-        d.setDate(d.getDate() - 30);
-        const pad = (n: number) => String(n).padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        const year = new Date().getFullYear();
+        return `${year}-01-01`;
     };
 
     const getDefaultEndDate = () => {

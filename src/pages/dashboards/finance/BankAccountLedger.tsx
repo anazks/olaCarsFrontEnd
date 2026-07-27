@@ -181,7 +181,18 @@ const BankAccountLedger = () => {
 
     // Record Payment Modal States
     const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] = useState(false);
+    const [paymentType, setPaymentType] = useState<'RECEIPT' | 'PAYMENT'>('RECEIPT');
     const [otherAccounts, setOtherAccounts] = useState<BankAccount[]>([]);
+    const [chartAccounts, setChartAccounts] = useState<Array<{
+        _id: string;
+        accountName: string;
+        accountCode?: string;
+        accountNumber?: string;
+        category?: string;
+        currency?: string;
+        currentBalance?: number;
+        type: 'BANK_ACCOUNT' | 'ACCOUNTING_CODE';
+    }>>([]);
     const [loadingAccounts, setLoadingAccounts] = useState(false);
     const [recording, setRecording] = useState(false);
 
@@ -196,7 +207,7 @@ const BankAccountLedger = () => {
     const [paymentDescription, setPaymentDescription] = useState('');
     const [supportingDocFile, setSupportingDocFile] = useState<File | null>(null);
 
-    // Customer Selection States for Rental Income (500031)
+    // Customer Selection States
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [customerSearch, setCustomerSearch] = useState('');
     const [showCustomerList, setShowCustomerList] = useState(false);
@@ -205,51 +216,128 @@ const BankAccountLedger = () => {
     const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
     const [loadingInvoices, setLoadingInvoices] = useState(false);
 
-    const selectedFromAccountObj = otherAccounts.find(acc => acc._id === fromAccountId);
-    const isRentalIncomeSelected = selectedFromAccountObj?.accountCode === '500031';
+    const selectedFromAccountObj = chartAccounts.find(acc => acc._id === fromAccountId);
 
     const filteredToAccounts = React.useMemo(() => {
-        if (!toAccountSearch.trim()) return otherAccounts;
+        if (!toAccountSearch.trim()) return chartAccounts;
         const query = toAccountSearch.toLowerCase().trim();
-        return otherAccounts.filter(acc => {
-            const name = (acc.accountName || acc.bankName || '').toLowerCase();
+        return chartAccounts.filter(acc => {
+            const name = (acc.accountName || '').toLowerCase();
             const num = (acc.accountNumber || '').toLowerCase();
             const code = (acc.accountCode || '').toLowerCase();
-            return name.includes(query) || num.includes(query) || code.includes(query);
+            const cat = (acc.category || '').toLowerCase();
+            return name.includes(query) || num.includes(query) || code.includes(query) || cat.includes(query);
         });
-    }, [otherAccounts, toAccountSearch]);
+    }, [chartAccounts, toAccountSearch]);
 
     const filteredCustomers = customers.filter(c =>
         c.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
         c.customerId?.toLowerCase().includes(customerSearch.toLowerCase())
     );
 
+    const liveSetOffPreview = React.useMemo(() => {
+        if (!selectedCustomer || !customerInvoices || customerInvoices.length === 0) {
+            return null;
+        }
+        const amt = Number(paymentAmount) || 0;
+        if (amt <= 0) return null;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const isOverdue = (inv: Invoice) => {
+            if (inv.status === 'OVERDUE') return true;
+            if (inv.dueDate && new Date(inv.dueDate) < today) return true;
+            return false;
+        };
+
+        const overdue = customerInvoices.filter(inv => isOverdue(inv)).sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+        const partial = customerInvoices.filter(inv => !isOverdue(inv) && inv.status === 'PARTIAL').sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+        const pending = customerInvoices.filter(inv => !isOverdue(inv) && inv.status !== 'PARTIAL').sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+        const sorted = [...overdue, ...partial, ...pending];
+
+        let remaining = amt;
+        const allocations: Array<{
+            invoice: Invoice;
+            currentBalance: number;
+            amountApplied: number;
+            newBalance: number;
+            newStatus: string;
+        }> = [];
+
+        for (const inv of sorted) {
+            if (remaining <= 0) break;
+            const curBal = inv.balance ?? ((inv.totalAmountDue || 0) - (inv.amountPaid || 0));
+            if (curBal <= 0) continue;
+
+            const applied = Math.min(remaining, curBal);
+            const newBal = Math.max(0, curBal - applied);
+            const newStatus = newBal <= 0 ? 'PAID' : 'PARTIAL';
+
+            allocations.push({
+                invoice: inv,
+                currentBalance: curBal,
+                amountApplied: applied,
+                newBalance: newBal,
+                newStatus
+            });
+
+            remaining -= applied;
+        }
+
+        return {
+            allocations,
+            totalSetOff: amt - remaining,
+            excessAdvance: remaining
+        };
+    }, [selectedCustomer, customerInvoices, paymentAmount]);
+
     useEffect(() => {
         if (isRecordPaymentModalOpen) {
-            const fetchOtherAccounts = async () => {
+            const fetchAccountsAndCustomers = async () => {
                 setLoadingAccounts(true);
                 try {
-                    const res = await getAllBankAccounts({ limit: 100 });
-                    const allAccounts = res.data || [];
-                    // filter out current ledger account
-                    setOtherAccounts(allAccounts.filter((acc: BankAccount) => acc._id !== id && acc.status === 'ACTIVE'));
+                    const [bankRes, codeRes, custRes] = await Promise.all([
+                        getAllBankAccounts({ limit: 100 }),
+                        getAllAccountingCodes({ limit: 1000 }),
+                        getAllCustomers({ status: 'ACTIVE', limit: 200 })
+                    ]);
+
+                    const bankList = (bankRes.data || [])
+                        .filter((acc: BankAccount) => acc._id !== id && acc.status === 'ACTIVE')
+                        .map((acc: BankAccount) => ({
+                            _id: acc._id,
+                            accountName: acc.accountName || acc.bankName,
+                            accountCode: acc.accountCode || acc.accountNumber,
+                            accountNumber: acc.accountNumber,
+                            category: 'BANK ACCOUNT',
+                            currency: acc.currency,
+                            currentBalance: acc.currentBalance,
+                            type: 'BANK_ACCOUNT' as const
+                        }));
+
+                    const rawCodes = Array.isArray(codeRes) ? codeRes : (codeRes.data || []);
+                    const codeList = rawCodes.map((c: AccountingCode) => ({
+                        _id: c._id,
+                        accountName: `${c.code} - ${c.name}`,
+                        accountCode: c.code,
+                        category: c.category,
+                        currency: c.currency,
+                        type: 'ACCOUNTING_CODE' as const
+                    }));
+
+                    setChartAccounts([...bankList, ...codeList]);
+                    setOtherAccounts(bankRes.data || []);
+                    setCustomers(custRes.data || (custRes as any).customers || []);
                 } catch (err) {
-                    console.error('Failed to fetch other accounts', err);
-                    toast.error('Failed to load other accounts');
+                    console.error('Failed to fetch accounts and customers', err);
+                    toast.error('Failed to load accounts list');
                 } finally {
                     setLoadingAccounts(false);
                 }
             };
-            const fetchCustomers = async () => {
-                try {
-                    const res = await getAllCustomers({ status: 'ACTIVE', limit: 200 });
-                    setCustomers(res.data || (res as any).customers || []);
-                } catch (err) {
-                    console.error('Failed to fetch customers', err);
-                }
-            };
-            fetchOtherAccounts();
-            fetchCustomers();
+            fetchAccountsAndCustomers();
         }
     }, [isRecordPaymentModalOpen, id]);
 
@@ -537,15 +625,14 @@ const BankAccountLedger = () => {
             toast.error('Please enter a valid amount');
             return;
         }
-        if (!fromAccountId) {
-            toast.error('Please select the destination account (To Account)');
+
+        if (paymentType === 'PAYMENT' && !fromAccountId) {
+            toast.error('Please select the destination account (To Account) from Chart of Accounts');
             return;
         }
 
-        const selectedFromAccountObj = otherAccounts.find(acc => acc._id === fromAccountId);
-        const isRentalIncomeSelected = selectedFromAccountObj?.accountCode === '500031';
-        if (isRentalIncomeSelected && !selectedCustomer) {
-            toast.error('Please select a customer for rental income');
+        if (paymentType === 'RECEIPT' && !selectedCustomer && !fromAccountId) {
+            toast.error('Please select either a Customer or a To Account from Chart of Accounts');
             return;
         }
 
@@ -556,13 +643,16 @@ const BankAccountLedger = () => {
             formData.append('depositDate', depositDate);
             formData.append('paymentMode', paymentMode);
             formData.append('currency', paymentCurrency);
-            formData.append('toAccountId', fromAccountId);
-            formData.append('fromAccountId', fromAccountId);
+            formData.append('entryType', paymentType);
+            if (fromAccountId) {
+                formData.append('toAccountId', fromAccountId);
+                formData.append('fromAccountId', fromAccountId);
+            }
             formData.append('description', paymentDescription);
             if (supportingDocFile) {
                 formData.append('supportingDocument', supportingDocFile);
             }
-            if (isRentalIncomeSelected && selectedCustomer) {
+            if (selectedCustomer) {
                 formData.append('customerId', selectedCustomer._id);
                 if (selectedInvoiceId) {
                     formData.append('invoiceId', selectedInvoiceId);
@@ -570,7 +660,7 @@ const BankAccountLedger = () => {
             }
 
             const res = await recordManualPayment(id, formData);
-            toast.success(res.message || 'Payment recorded successfully');
+            toast.success(res.message || `${paymentType === 'PAYMENT' ? 'Payment (Money Out)' : 'Receipt (Money In)'} recorded successfully`);
 
             // Reset states
             setIsRecordPaymentModalOpen(false);
@@ -578,11 +668,13 @@ const BankAccountLedger = () => {
             setPaymentDescription('');
             setSupportingDocFile(null);
             setFromAccountId('');
+            setToAccountSearch('');
             setCustomerSearch('');
             setSelectedCustomer(null);
             setShowCustomerList(false);
             setSelectedInvoiceId('');
             setCustomerInvoices([]);
+            setPaymentType('RECEIPT');
 
             // Reload ledger
             fetchData();
@@ -2182,14 +2274,68 @@ const BankAccountLedger = () => {
                     <div className="relative border rounded-[2.5rem] w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in duration-300 shadow-[0_0_80px_rgba(0,0,0,0.5)] z-10" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="p-8 border-b flex justify-between items-center" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
                             <div>
-                                <h2 className="text-md font-black" style={{ color: 'var(--text-main)' }}>Record Manual Payment</h2>
+                                <h2 className="text-md font-black" style={{ color: 'var(--text-main)' }}>Record Bank Payment / Receipt</h2>
                                 <p className="text-[10px] font-black uppercase tracking-widest mt-1 text-lime" style={{ color: 'var(--brand-lime)' }}>Post Double-Entry Ledger Transaction</p>
                             </div>
                         </div>
 
                         <form onSubmit={handleRecordPaymentSubmit} className="p-8 space-y-6 max-h-[80vh] overflow-y-auto">
-                            {/* Row 1: Date, Mode, Source Account */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* Segmented Toggle for Receipt (Money In) vs Payment (Money Out) */}
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Transaction Type</label>
+                                <div className="flex gap-3 p-1.5 rounded-2xl bg-black/5 dark:bg-white/5 border" style={{ borderColor: 'var(--border-main)' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentType('RECEIPT')}
+                                        className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border ${
+                                            paymentType === 'RECEIPT'
+                                                ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 shadow-sm'
+                                                : 'border-transparent text-dim hover:text-main'
+                                        }`}
+                                    >
+                                        <ArrowDownRight size={16} className="text-emerald-500" />
+                                        Receipt (Money In)
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPaymentType('PAYMENT');
+                                            setSelectedCustomer(null);
+                                            setCustomerSearch('');
+                                            setSelectedInvoiceId('');
+                                        }}
+                                        className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border ${
+                                            paymentType === 'PAYMENT'
+                                                ? 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/40 shadow-sm'
+                                                : 'border-transparent text-dim hover:text-main'
+                                        }`}
+                                    >
+                                        <ArrowUpRight size={16} className="text-red-500" />
+                                        Payment (Money Out)
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Active Bank Account Display */}
+                            <div className="p-3.5 rounded-2xl border bg-black/5 dark:bg-white/5 text-xs flex items-center justify-between" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center gap-2.5">
+                                    <Building2 size={16} className="text-lime" style={{ color: 'var(--brand-lime)' }} />
+                                    <span className="font-bold text-main" style={{ color: 'var(--text-main)' }}>
+                                        Bank Account: <span className="underline decoration-lime">{account?.accountName || account?.bankName}</span>
+                                    </span>
+                                </div>
+                                <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border ${
+                                    paymentType === 'RECEIPT' 
+                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                                        : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+                                }`}>
+                                    {paymentType === 'RECEIPT' ? 'Target Account (DEBIT +)' : 'Source Account (CREDIT -)'}
+                                </span>
+                            </div>
+
+                            {/* Row 1: Date, Mode, Amount, Currency */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Deposit Date</label>
                                     <input
@@ -2220,158 +2366,8 @@ const BankAccountLedger = () => {
                                     </select>
                                 </div>
 
-                                <div className="space-y-1 relative">
-                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>To Account *</label>
-                                    {loadingAccounts ? (
-                                        <div className="w-full border rounded-2xl px-4 py-3 text-xs text-dim bg-transparent" style={{ borderColor: 'var(--border-main)' }}>
-                                            Loading accounts...
-                                        </div>
-                                    ) : (
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                placeholder="Search account by name, number, or code..."
-                                                value={selectedFromAccountObj ? `${selectedFromAccountObj.accountName || selectedFromAccountObj.bankName} (${selectedFromAccountObj.currency || 'USD'} ${selectedFromAccountObj.currentBalance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})` : toAccountSearch}
-                                                onChange={e => { setToAccountSearch(e.target.value); setFromAccountId(''); setShowToAccountList(true); }}
-                                                onFocus={() => setShowToAccountList(true)}
-                                                onBlur={() => setTimeout(() => setShowToAccountList(false), 200)}
-                                                className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none pr-10"
-                                                style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
-                                                required
-                                            />
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-dim">
-                                                <Search size={16} />
-                                            </div>
-
-                                            {showToAccountList && filteredToAccounts.length > 0 && !selectedFromAccountObj && (
-                                                <div className="absolute z-50 w-full mt-1 border rounded-2xl shadow-2xl max-h-56 overflow-auto custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                                                    {filteredToAccounts.map(acc => (
-                                                        <button
-                                                            type="button"
-                                                            key={acc._id}
-                                                            onMouseDown={() => { setFromAccountId(acc._id); setToAccountSearch(''); setShowToAccountList(false); }}
-                                                            className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between transition-colors cursor-pointer border-b border-white/5 last:border-none"
-                                                        >
-                                                            <div>
-                                                                <p className="text-xs font-black text-main" style={{ color: 'var(--text-main)' }}>{acc.accountName || acc.bankName}</p>
-                                                                <p className="text-[10px] text-dim font-mono" style={{ color: 'var(--text-dim)' }}>{acc.accountNumber ? `Acc #${acc.accountNumber}` : acc.accountCode ? `Code: ${acc.accountCode}` : ''}</p>
-                                                            </div>
-                                                            <span className="text-xs font-mono font-bold text-lime" style={{ color: 'var(--brand-lime)' }}>
-                                                                {acc.currency || 'USD'} ${acc.currentBalance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                            </span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {showToAccountList && filteredToAccounts.length === 0 && !selectedFromAccountObj && (
-                                                <div className="absolute z-50 w-full mt-1 p-3 border rounded-2xl shadow-2xl text-xs text-dim text-center animate-in fade-in slide-in-from-top-1 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                                                    No accounts found matching "{toAccountSearch}"
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    {selectedFromAccountObj && (
-                                        <div className="flex items-center justify-between mt-1 text-xs">
-                                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">Selected To Account: {selectedFromAccountObj.accountName || selectedFromAccountObj.bankName}</span>
-                                            <button type="button" onClick={() => { setFromAccountId(''); setToAccountSearch(''); }} className="text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 font-bold cursor-pointer">Clear Selection</button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Customer selection for Rental Income (500031) */}
-                            {isRentalIncomeSelected && (
-                                <div className="space-y-4">
-                                    <div className="space-y-1 relative animate-in fade-in slide-in-from-top-1 duration-200">
-                                        <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Select Customer</label>
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                placeholder="Search customer by name or ID..."
-                                                value={selectedCustomer ? `${selectedCustomer.name} (${selectedCustomer.customerId})` : customerSearch}
-                                                onChange={e => { setCustomerSearch(e.target.value); setSelectedCustomer(null); setShowCustomerList(true); }}
-                                                onFocus={() => setShowCustomerList(true)}
-                                                onBlur={() => setTimeout(() => setShowCustomerList(false), 200)}
-                                                className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none"
-                                                style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
-                                                required
-                                            />
-                                            {showCustomerList && filteredCustomers.length > 0 && !selectedCustomer && (
-                                                <div className="absolute z-50 w-full mt-1 border rounded-2xl shadow-2xl max-h-52 overflow-auto custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                                                    {filteredCustomers.slice(0, 15).map(c => (
-                                                        <button
-                                                            type="button"
-                                                            key={c._id}
-                                                            onMouseDown={() => { setSelectedCustomer(c); setCustomerSearch(''); setShowCustomerList(false); }}
-                                                            className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-3 transition-colors cursor-pointer"
-                                                        >
-                                                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 dark:bg-brand-lime/10 dark:border-brand-lime/20 flex items-center justify-center flex-shrink-0">
-                                                                <span className="text-[10px] font-black text-emerald-700 dark:text-lime">
-                                                                    {c.name ? c.name.slice(0, 2).toUpperCase() : 'CU'}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs font-black" style={{ color: 'var(--text-main)' }}>{c.name}</p>
-                                                                <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-dim)' }}>{c.customerId}</p>
-                                                            </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                        {selectedCustomer && (
-                                            <div className="flex items-center justify-between mt-1 text-xs">
-                                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Selected: {selectedCustomer.name} ({selectedCustomer.customerId})</span>
-                                                <button type="button" onClick={() => { setSelectedCustomer(null); setCustomerSearch(''); }} className="text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 font-bold cursor-pointer">Clear Selection</button>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {selectedCustomer && (
-                                        <div className="space-y-1 relative animate-in fade-in slide-in-from-top-1 duration-200">
-                                            <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Apply to Invoice (Optional)</label>
-                                            {loadingInvoices ? (
-                                                <div className="text-xs font-bold py-2" style={{ color: 'var(--text-dim)' }}>Loading customer invoices...</div>
-                                            ) : customerInvoices.length === 0 ? (
-                                                <div className="text-xs font-bold py-2 text-amber-500">No open or partial invoices found for this customer.</div>
-                                            ) : (
-                                                <select
-                                                    value={selectedInvoiceId}
-                                                    onChange={e => {
-                                                        const val = e.target.value;
-                                                        setSelectedInvoiceId(val);
-                                                        if (val) {
-                                                            const selectedInv = customerInvoices.find(inv => inv._id === val);
-                                                            if (selectedInv && (!paymentAmount || Number(paymentAmount) === 0)) {
-                                                                setPaymentAmount(String(selectedInv.balance ?? selectedInv.totalAmountDue ?? ''));
-                                                            }
-                                                        }
-                                                    }}
-                                                    className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none"
-                                                    style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
-                                                >
-                                                    <option value="" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>-- Select an Invoice --</option>
-                                                    {customerInvoices.map(inv => (
-                                                        <option
-                                                            key={inv._id}
-                                                            value={inv._id}
-                                                            style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}
-                                                        >
-                                                            {inv.invoiceNumber} ({inv.invoiceType || 'Rental'}) - Due: ${inv.balance?.toFixed(2) || inv.totalAmountDue?.toFixed(2)} [Total: ${inv.totalAmountDue?.toFixed(2)}]
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Row 2: Amount, Currency, Supporting Document */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount *</label>
                                     <input
                                         type="number"
                                         step="0.01"
@@ -2399,7 +2395,209 @@ const BankAccountLedger = () => {
                                         <option value="AED" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>AED</option>
                                     </select>
                                 </div>
+                            </div>
 
+                            {/* Section: Customer Selection for RECEIPT */}
+                            {paymentType === 'RECEIPT' && (
+                                <div className="space-y-4 p-4 rounded-2xl border bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-black uppercase tracking-wider text-lime" style={{ color: 'var(--brand-lime)' }}>Customer Receipt & Auto Set-Off</span>
+                                        <span className="text-[10px] text-dim font-medium">Select a customer to route payment to Accounts Receivable & auto set-off invoices</span>
+                                    </div>
+
+                                    <div className="space-y-1 relative animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Customer (Optional)</label>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                placeholder="Search customer by name or ID..."
+                                                value={selectedCustomer ? `${selectedCustomer.name} (${selectedCustomer.customerId})` : customerSearch}
+                                                onChange={e => { setCustomerSearch(e.target.value); setSelectedCustomer(null); setShowCustomerList(true); }}
+                                                onFocus={() => setShowCustomerList(true)}
+                                                onBlur={() => setTimeout(() => setShowCustomerList(false), 200)}
+                                                className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none"
+                                                style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                            />
+                                            {showCustomerList && filteredCustomers.length > 0 && !selectedCustomer && (
+                                                <div className="absolute z-50 w-full mt-1 border rounded-2xl shadow-2xl max-h-52 overflow-auto custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                                    {filteredCustomers.slice(0, 15).map(c => (
+                                                        <button
+                                                            type="button"
+                                                            key={c._id}
+                                                            onMouseDown={() => { setSelectedCustomer(c); setCustomerSearch(''); setShowCustomerList(false); }}
+                                                            className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-3 transition-colors cursor-pointer"
+                                                        >
+                                                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 dark:bg-brand-lime/10 dark:border-brand-lime/20 flex items-center justify-center flex-shrink-0">
+                                                                <span className="text-[10px] font-black text-emerald-700 dark:text-lime">
+                                                                    {c.name ? c.name.slice(0, 2).toUpperCase() : 'CU'}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-black" style={{ color: 'var(--text-main)' }}>{c.name}</p>
+                                                                <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-dim)' }}>{c.customerId}</p>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {selectedCustomer && (
+                                            <div className="flex items-center justify-between mt-1 text-xs">
+                                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Selected Customer: {selectedCustomer.name} ({selectedCustomer.customerId})</span>
+                                                <button type="button" onClick={() => { setSelectedCustomer(null); setCustomerSearch(''); }} className="text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 font-bold cursor-pointer">Clear Customer Selection</button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Live Auto Set-Off Allocation Preview Breakdown Card */}
+                                    {liveSetOffPreview && (
+                                        <div className="space-y-3 p-4 rounded-2xl border bg-emerald-500/5 border-emerald-500/30 animate-in fade-in slide-in-from-top-1 duration-200">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Coins size={16} className="text-emerald-500" />
+                                                    <span className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                                                        Live Auto Set-Off Breakdown
+                                                    </span>
+                                                </div>
+                                                <div className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                                    Amount: ${Number(paymentAmount).toFixed(2)}
+                                                </div>
+                                            </div>
+
+                                            <div className="overflow-x-auto max-h-48 custom-scrollbar border rounded-xl border-emerald-500/20 bg-black/5 dark:bg-black/20">
+                                                <table className="w-full text-left text-[11px] border-collapse">
+                                                    <thead>
+                                                        <tr className="border-b border-white/10 text-dim">
+                                                            <th className="p-2 font-bold">Invoice #</th>
+                                                            <th className="p-2 font-bold text-right">Open Due</th>
+                                                            <th className="p-2 font-bold text-right text-emerald-400">Applied</th>
+                                                            <th className="p-2 font-bold text-right">Rem. Due</th>
+                                                            <th className="p-2 font-bold text-center">New Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-white/5">
+                                                        {liveSetOffPreview.allocations.map((alloc, i) => (
+                                                            <tr key={i} className="hover:bg-white/5">
+                                                                <td className="p-2 font-mono font-bold text-main" style={{ color: 'var(--text-main)' }}>
+                                                                    {alloc.invoice.invoiceNumber}
+                                                                </td>
+                                                                <td className="p-2 text-right font-mono text-dim">
+                                                                    ${alloc.currentBalance.toFixed(2)}
+                                                                </td>
+                                                                <td className="p-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                                                    +${alloc.amountApplied.toFixed(2)}
+                                                                </td>
+                                                                <td className="p-2 text-right font-mono font-bold text-main" style={{ color: 'var(--text-main)' }}>
+                                                                    ${alloc.newBalance.toFixed(2)}
+                                                                </td>
+                                                                <td className="p-2 text-center">
+                                                                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${
+                                                                        alloc.newStatus === 'PAID'
+                                                                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                                                                            : 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                                                                    }`}>
+                                                                        {alloc.newStatus}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            <div className="flex items-center justify-between text-xs font-bold pt-1 border-t border-emerald-500/20">
+                                                <span className="text-dim">Total Set-off Against Invoices:</span>
+                                                <span className="font-mono text-emerald-600 dark:text-emerald-400">${liveSetOffPreview.totalSetOff.toFixed(2)}</span>
+                                            </div>
+
+                                            {liveSetOffPreview.excessAdvance > 0 && (
+                                                <div className="flex items-center justify-between text-xs font-bold p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400">
+                                                    <span>Logged as Customer Advance Received (2.1.02):</span>
+                                                    <span className="font-mono">${liveSetOffPreview.excessAdvance.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Section: Chart of Accounts Selection for To Account */}
+                            {(!selectedCustomer || paymentType === 'PAYMENT') && (
+                                <div className="space-y-1 relative">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                        {paymentType === 'RECEIPT' ? 'To Account (Income / Category / Offset Account) *' : 'To Account (Expense / Supplier / Offset Account) *'}
+                                    </label>
+                                    {loadingAccounts ? (
+                                        <div className="w-full border rounded-2xl px-4 py-3 text-xs text-dim bg-transparent" style={{ borderColor: 'var(--border-main)' }}>
+                                            Loading Chart of Accounts...
+                                        </div>
+                                    ) : (
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                placeholder="Search Chart of Accounts or Bank Accounts by code or name..."
+                                                value={selectedFromAccountObj ? `${selectedFromAccountObj.accountName}${selectedFromAccountObj.category ? ` [${selectedFromAccountObj.category}]` : ''}` : toAccountSearch}
+                                                onChange={e => { setToAccountSearch(e.target.value); setFromAccountId(''); setShowToAccountList(true); }}
+                                                onFocus={() => setShowToAccountList(true)}
+                                                onBlur={() => setTimeout(() => setShowToAccountList(false), 200)}
+                                                className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none pr-10"
+                                                style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                                required={!selectedCustomer}
+                                            />
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-dim">
+                                                <Search size={16} />
+                                            </div>
+
+                                            {showToAccountList && filteredToAccounts.length > 0 && !selectedFromAccountObj && (
+                                                <div className="absolute z-50 w-full mt-1 border rounded-2xl shadow-2xl max-h-56 overflow-auto custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                                    {filteredToAccounts.map(acc => (
+                                                        <button
+                                                            type="button"
+                                                            key={acc._id}
+                                                            onMouseDown={() => { setFromAccountId(acc._id); setToAccountSearch(''); setShowToAccountList(false); }}
+                                                            className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between transition-colors cursor-pointer border-b border-white/5 last:border-none"
+                                                        >
+                                                            <div>
+                                                                <p className="text-xs font-black text-main" style={{ color: 'var(--text-main)' }}>{acc.accountName}</p>
+                                                                <p className="text-[10px] text-dim font-mono uppercase" style={{ color: 'var(--text-dim)' }}>
+                                                                    {acc.category ? `Category: ${acc.category}` : acc.accountNumber ? `Acc #${acc.accountNumber}` : ''}
+                                                                </p>
+                                                            </div>
+                                                            {acc.currentBalance !== undefined && (
+                                                                <span className="text-xs font-mono font-bold text-lime" style={{ color: 'var(--brand-lime)' }}>
+                                                                    {acc.currency || 'USD'} ${acc.currentBalance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                </span>
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {showToAccountList && filteredToAccounts.length === 0 && !selectedFromAccountObj && (
+                                                <div className="absolute z-50 w-full mt-1 p-3 border rounded-2xl shadow-2xl text-xs text-dim text-center animate-in fade-in slide-in-from-top-1 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                                    No accounts found matching "{toAccountSearch}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {selectedFromAccountObj && (
+                                        <div className="flex items-center justify-between mt-1 text-xs">
+                                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">Selected To Account: {selectedFromAccountObj.accountName}</span>
+                                            <button type="button" onClick={() => { setFromAccountId(''); setToAccountSearch(''); }} className="text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 font-bold cursor-pointer">Clear Selection</button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {selectedCustomer && paymentType === 'RECEIPT' && (
+                                <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-2">
+                                    <Info size={16} className="flex-shrink-0" />
+                                    <span>Offset account automatically routed to <strong>Accounts Receivable (1.1.03)</strong> for Customer Receipt.</span>
+                                </div>
+                            )}
+
+                            {/* Row: Supporting Document & Description */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Supporting Document (Optional)</label>
                                     <div className="border border-dashed rounded-2xl px-4 py-3 text-center relative cursor-pointer flex items-center justify-center gap-2 h-[46px]" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
@@ -2417,18 +2615,17 @@ const BankAccountLedger = () => {
                                         />
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Row 3: Description */}
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Description</label>
-                                <textarea
-                                    value={paymentDescription}
-                                    onChange={e => setPaymentDescription(e.target.value)}
-                                    placeholder="Enter payment description details"
-                                    className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none min-h-[80px]"
-                                    style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
-                                />
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Description</label>
+                                    <textarea
+                                        value={paymentDescription}
+                                        onChange={e => setPaymentDescription(e.target.value)}
+                                        placeholder="Enter payment description details"
+                                        className="w-full border rounded-2xl px-4 py-2 text-sm font-bold bg-transparent outline-none h-[46px] min-h-[46px] resize-none"
+                                        style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                    />
+                                </div>
                             </div>
 
                             <div className="pt-4 flex gap-3">
@@ -2452,7 +2649,7 @@ const BankAccountLedger = () => {
                                     {recording ? (
                                         <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
                                     ) : (
-                                        <>Record Payment</>
+                                        <>{paymentType === 'PAYMENT' ? 'Record Payment (Money Out)' : 'Record Receipt (Money In)'}</>
                                     )}
                                 </button>
                             </div>

@@ -40,7 +40,7 @@ const Reports = () => {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [countryManagers, setCountryManagers] = useState<CountryManager[]>([]);
     const [filters, setFilters] = useState({
-        startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+        startDate: `${new Date().getFullYear()}-01-01`,
         endDate: new Date().toISOString().split('T')[0],
         branch: isBM ? user?.branchId : '',
         country: isCM ? user?.country : ''

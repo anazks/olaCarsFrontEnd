@@ -47,19 +47,17 @@ const ExecutiveDashboard = () => {
     const kpiData = executiveState.kpiData;
 
     const todayStr = new Date().toISOString().split('T')[0];
-    const oneMonthAgoDate = new Date();
-    oneMonthAgoDate.setDate(oneMonthAgoDate.getDate() - 30); // Exactly 30 days ago
-    const oneMonthAgoStr = oneMonthAgoDate.toISOString().split('T')[0];
+    const yearStartStr = `${new Date().getFullYear()}-01-01`;
 
     // Global Filters (Applied)
     const [globalBranch, setGlobalBranch] = useState<string>('all');
     const [globalSort] = useState<'asc' | 'desc'>('desc');
-    const [globalStartDate, setGlobalStartDate] = useState<string>(oneMonthAgoStr);
+    const [globalStartDate, setGlobalStartDate] = useState<string>(yearStartStr);
     const [globalEndDate, setGlobalEndDate] = useState<string>(todayStr);
 
     // Form Temporary States
     const [tempBranch, setTempBranch] = useState<string>('all');
-    const [tempStartDate, setTempStartDate] = useState<string>(oneMonthAgoStr);
+    const [tempStartDate, setTempStartDate] = useState<string>(yearStartStr);
     const [tempEndDate, setTempEndDate] = useState<string>(todayStr);
 
     const handleApplyFilters = () => {

@@ -52,19 +52,18 @@ const FinanceDashboard = () => {
     const [fiscalYearRange, setFiscalYearRange] = useState<string>('This Fiscal Year');
 
     // Custom Date Range Filters
-    const get30DaysAgoStr = () => {
-        const d = new Date();
-        d.setDate(d.getDate() - 30);
-        return d.toISOString().split('T')[0];
+    const getStartOfYearStr = () => {
+        const year = new Date().getFullYear();
+        return `${year}-01-01`;
     };
     const getTodayStr = () => {
         return new Date().toISOString().split('T')[0];
     };
 
-    const [startDate, setStartDate] = useState<string>(get30DaysAgoStr());
+    const [startDate, setStartDate] = useState<string>(getStartOfYearStr());
     const [endDate, setEndDate] = useState<string>(getTodayStr());
 
-    const [tempStartDate, setTempStartDate] = useState<string>(get30DaysAgoStr());
+    const [tempStartDate, setTempStartDate] = useState<string>(getStartOfYearStr());
     const [tempEndDate, setTempEndDate] = useState<string>(getTodayStr());
 
     const handleApplyFilters = () => {

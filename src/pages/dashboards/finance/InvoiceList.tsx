@@ -44,9 +44,8 @@ const InvoiceList = () => {
     const [downloadingExcel, setDownloadingExcel] = useState(false);
 
     const getDefaultStartDate = () => {
-        const d = new Date();
-        d.setDate(d.getDate() - 30);
-        return d.toISOString().substring(0, 10);
+        const year = new Date().getFullYear();
+        return `${year}-01-01`;
     };
 
     const getDefaultEndDate = () => {
@@ -57,8 +56,8 @@ const InvoiceList = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [startDate, setStartDate] = useState(getDefaultStartDate());
+    const [endDate, setEndDate] = useState(getDefaultEndDate());
 
     const handleApplyFilters = () => {
         fetchData();
