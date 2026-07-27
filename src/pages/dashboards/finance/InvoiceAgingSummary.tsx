@@ -13,9 +13,7 @@ import {
     SlidersHorizontal,
     ArrowLeft,
     Clock,
-    DollarSign,
     Users,
-    AlertTriangle,
     Eye
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -267,7 +265,139 @@ export const InvoiceAgingSummary: React.FC = () => {
         );
     }, [agingData]);
 
-    const overdueTotal = totals.b1 + totals.b2 + totals.b3 + totals.b4 + totals.b5;
+    // KPI Metrics calculation matching exact dashboard spec
+    const kpiMetrics = useMemo(() => {
+        const classifyInvoiceCategory = (inv: Invoice): 'DEPOSIT' | 'RENT' | 'OTHERS' => {
+            const typeStr = (inv.invoiceType || (inv as any).type || '').toUpperCase();
+            const notesStr = (inv.notes || '').toLowerCase();
+            const lineItemNames = (inv.lineItems || []).map(i => `${i.name || ''} ${i.description || ''}`.toLowerCase()).join(' ');
+
+            if (typeStr === 'DEPOSIT' || notesStr.includes('deposit') || notesStr.includes('fianza') || lineItemNames.includes('deposit') || lineItemNames.includes('fianza')) {
+                return 'DEPOSIT';
+            }
+            if (typeStr === 'RENTAL' || typeStr === 'RENT' || typeStr === 'VEHICLE_RENT' || notesStr.includes('rent') || notesStr.includes('alquiler') || notesStr.includes('cuota') || lineItemNames.includes('rent') || lineItemNames.includes('alquiler')) {
+                return 'RENT';
+            }
+            if (typeStr === 'WORKSHOP' || notesStr.includes('workshop') || notesStr.includes('maintenance') || lineItemNames.includes('workshop') || lineItemNames.includes('repair')) {
+                return 'OTHERS';
+            }
+            return 'RENT';
+        };
+
+        const activeInvoices = invoices.filter(inv => {
+            if (inv.status === 'CANCELLED') return false;
+            const bal = inv.balance ?? (inv.totalAmountDue - inv.amountPaid);
+            return bal > 0.001;
+        });
+
+        const asOf = new Date(asOfDate);
+        asOf.setHours(23, 59, 59, 999);
+
+        let totalOutstanding = 0;
+        let totalOverdueBalance = 0;
+        let totalWeightedDays = 0;
+        let oldestDays = 0;
+
+        let depositDue = 0;
+        let rentDue = 0;
+        let othersDue = 0;
+
+        const customerMaxDays: Record<string, { maxDays: number; totalBal: number; isOverdue: boolean }> = {};
+
+        activeInvoices.forEach(inv => {
+            const bal = inv.balance ?? (inv.totalAmountDue - inv.amountPaid);
+            totalOutstanding += bal;
+
+            const due = new Date(inv.dueDate || inv.generatedAt || inv.createdAt || Date.now());
+            due.setHours(0, 0, 0, 0);
+
+            const diffTime = asOf.getTime() - due.getTime();
+            const daysOverdue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+            if (daysOverdue > 0) {
+                totalOverdueBalance += bal;
+                totalWeightedDays += bal * daysOverdue;
+                if (daysOverdue > oldestDays) {
+                    oldestDays = daysOverdue;
+                }
+            }
+
+            const cat = classifyInvoiceCategory(inv);
+            if (cat === 'DEPOSIT') depositDue += bal;
+            else if (cat === 'RENT') rentDue += bal;
+            else othersDue += bal;
+
+            let custKey = 'unassigned';
+            if (inv.customer && typeof inv.customer === 'object') custKey = inv.customer._id || inv.customer.customerId || 'unassigned';
+            else if (inv.driver && typeof inv.driver === 'object') custKey = inv.driver._id || inv.driver.driverId || 'unassigned';
+            else if (typeof inv.customer === 'string' && inv.customer) custKey = inv.customer;
+
+            if (!customerMaxDays[custKey]) {
+                customerMaxDays[custKey] = { maxDays: daysOverdue, totalBal: bal, isOverdue: daysOverdue > 0 };
+            } else {
+                customerMaxDays[custKey].totalBal += bal;
+                if (daysOverdue > customerMaxDays[custKey].maxDays) {
+                    customerMaxDays[custKey].maxDays = daysOverdue;
+                }
+                if (daysOverdue > 0) customerMaxDays[custKey].isOverdue = true;
+            }
+        });
+
+        const customersInArrearsList = Object.values(customerMaxDays).filter(c => c.isOverdue);
+        const customersInArrearsCount = customersInArrearsList.length;
+
+        const weightedAvgDaysOverdue = totalOverdueBalance > 0
+            ? (totalWeightedDays / totalOverdueBalance).toFixed(1)
+            : '0.0';
+
+        const totalForPct = totalOutstanding || 1;
+        const depositPct = ((depositDue / totalForPct) * 100).toFixed(1);
+        const rentPct = ((rentDue / totalForPct) * 100).toFixed(1);
+        const othersPct = ((othersDue / totalForPct) * 100).toFixed(1);
+
+        const avgPerCustomer = customersInArrearsCount > 0
+            ? totalOutstanding / customersInArrearsCount
+            : (agingData.length > 0 ? totalOutstanding / agingData.length : 0);
+
+        const sortedBalances = Object.values(customerMaxDays)
+            .map(c => c.totalBal)
+            .sort((a, b) => b - a);
+
+        const top70Count = Math.min(70, sortedBalances.length);
+        const top70Sum = sortedBalances.slice(0, top70Count).reduce((acc, v) => acc + v, 0);
+        const top70Pct = totalOutstanding > 0 ? ((top70Sum / totalOutstanding) * 100).toFixed(1) : '0.0';
+
+        let currentBucketDrivers = 0;
+        let reminderBucketDrivers = 0;
+        let urgentBucketDrivers = 0;
+
+        Object.values(customerMaxDays).forEach(c => {
+            if (c.maxDays >= 1 && c.maxDays <= 7) currentBucketDrivers++;
+            else if (c.maxDays >= 8 && c.maxDays <= 28) reminderBucketDrivers++;
+            else if (c.maxDays >= 29) urgentBucketDrivers++;
+            else currentBucketDrivers++;
+        });
+
+        return {
+            totalOutstanding,
+            openLinesCount: activeInvoices.length,
+            customersInArrearsCount,
+            weightedAvgDaysOverdue,
+            oldestDays,
+            depositDue,
+            depositPct,
+            rentDue,
+            rentPct,
+            othersDue,
+            othersPct,
+            avgPerCustomer,
+            top70Pct,
+            top70Count,
+            currentBucketDrivers,
+            reminderBucketDrivers,
+            urgentBucketDrivers
+        };
+    }, [invoices, asOfDate, agingData]);
 
     // Handlers
     const handleSort = (field: keyof CustomerAgingSummary) => {
@@ -527,52 +657,107 @@ export const InvoiceAgingSummary: React.FC = () => {
                 </div>
             </div>
 
-            {/* Top KPI Metrics Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-4 rounded-2xl border space-y-1.5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex items-center justify-between text-dim text-xs font-bold">
-                        <span>Total AR Outstanding</span>
-                        <DollarSign size={16} className="text-emerald-500" />
+            {/* Top KPI Metrics Cards - 3 Row Dashboard Specification */}
+            <div className="space-y-3">
+                {/* Row 1 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {/* Card 1: TOTAL OUTSTANDING */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#0D47A1' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">TOTAL OUTSTANDING (USD)</div>
+                        <div className="text-2xl font-black tracking-tight my-1">
+                            ${kpiMetrics.totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[11px] font-medium text-white/70">Across {kpiMetrics.openLinesCount} open lines</div>
                     </div>
-                    <div className="text-2xl font-black" style={{ color: 'var(--brand-lime)' }}>
-                        ${totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+
+                    {/* Card 2: CUSTOMERS IN ARREARS */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#1565C0' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">CUSTOMERS IN ARREARS</div>
+                        <div className="text-2xl font-black tracking-tight my-1">{kpiMetrics.customersInArrearsCount}</div>
+                        <div className="text-[11px] font-medium text-white/70">Unique drivers with overdue balance</div>
                     </div>
-                    <p className="text-[11px] text-dim">{totals.invoices} unpaid invoice(s)</p>
+
+                    {/* Card 3: WEIGHTED AVG DAYS OVERDUE */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#005B52' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">WEIGHTED AVG DAYS OVERDUE</div>
+                        <div className="text-2xl font-black tracking-tight my-1">{kpiMetrics.weightedAvgDaysOverdue}</div>
+                        <div className="text-[11px] font-medium text-white/70">Balance-weighted average age</div>
+                    </div>
+
+                    {/* Card 4: OLDEST OUTSTANDING (DAYS) */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#B71C1C' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">OLDEST OUTSTANDING (DAYS)</div>
+                        <div className="text-2xl font-black tracking-tight my-1">{kpiMetrics.oldestDays}</div>
+                        <div className="text-[11px] font-medium text-white/70">Longest running overdue item</div>
+                    </div>
                 </div>
 
-                <div className="p-4 rounded-2xl border space-y-1.5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex items-center justify-between text-dim text-xs font-bold">
-                        <span>Total Overdue AR</span>
-                        <AlertTriangle size={16} className="text-rose-500" />
+                {/* Row 2 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {/* Card 5: DEPOSIT DUE */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#1565C0' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">DEPOSIT DUE (USD)</div>
+                        <div className="text-2xl font-black tracking-tight my-1">
+                            ${kpiMetrics.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[11px] font-medium text-white/70">{kpiMetrics.depositPct}% of total</div>
                     </div>
-                    <div className="text-2xl font-black text-rose-500">
-                        ${overdueTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+
+                    {/* Card 6: RENT DUE */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#1B5E20' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">RENT DUE (USD)</div>
+                        <div className="text-2xl font-black tracking-tight my-1">
+                            ${kpiMetrics.rentDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[11px] font-medium text-white/70">{kpiMetrics.rentPct}% of total</div>
                     </div>
-                    <p className="text-[11px] text-dim">
-                        {totals.total > 0 ? ((overdueTotal / totals.total) * 100).toFixed(1) : 0}% of total AR
-                    </p>
+
+                    {/* Card 7: OTHERS DUE */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#E65100' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">OTHERS DUE (USD)</div>
+                        <div className="text-2xl font-black tracking-tight my-1">
+                            ${kpiMetrics.othersDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[11px] font-medium text-white/70">{kpiMetrics.othersPct}% of total</div>
+                    </div>
+
+                    {/* Card 8: AVG OUTSTANDING / CUSTOMER */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#512DA8' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">AVG OUTSTANDING / CUSTOMER</div>
+                        <div className="text-2xl font-black tracking-tight my-1">
+                            ${kpiMetrics.avgPerCustomer.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[11px] font-medium text-white/70">Top-70 = {kpiMetrics.top70Pct}% of book</div>
+                    </div>
                 </div>
 
-                <div className="p-4 rounded-2xl border space-y-1.5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex items-center justify-between text-dim text-xs font-bold">
-                        <span>Current / Not Due</span>
-                        <Clock size={16} className="text-blue-400" />
+                {/* Row 3: Segmented Row Bar */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 rounded-2xl overflow-hidden shadow-sm gap-0.5 sm:gap-1 bg-black/20 p-1">
+                    {/* Segment 1: CURRENT */}
+                    <div className="p-3 text-white flex flex-col items-center justify-center rounded-xl" style={{ background: '#1B5E20' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/90">CURRENT (1-7 DAYS)</div>
+                        <div className="text-xl font-black text-white mt-1">{kpiMetrics.currentBucketDrivers} drivers</div>
                     </div>
-                    <div className="text-2xl font-black text-blue-400">
-                        ${totals.current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                    <p className="text-[11px] text-dim">Due in future dates</p>
-                </div>
 
-                <div className="p-4 rounded-2xl border space-y-1.5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex items-center justify-between text-dim text-xs font-bold">
-                        <span>Active Customers</span>
-                        <Users size={16} className="text-amber-500" />
+                    {/* Segment 2: REMINDER */}
+                    <div className="p-3 text-white flex flex-col items-center justify-center rounded-xl" style={{ background: '#0D47A1' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/90">REMINDER (8-28 DAYS)</div>
+                        <div className="text-xl font-black text-white mt-1">{kpiMetrics.reminderBucketDrivers} drivers</div>
                     </div>
-                    <div className="text-2xl font-black" style={{ color: 'var(--text-main)' }}>
-                        {agingData.length}
+
+                    {/* Segment 3: URGENT */}
+                    <div className="p-3 text-white flex flex-col items-center justify-center rounded-xl" style={{ background: '#B71C1C' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/90 flex items-center gap-1">
+                            <span>🚨</span> URGENT (29+ DAYS)
+                        </div>
+                        <div className="text-xl font-black text-white mt-1">{kpiMetrics.urgentBucketDrivers} drivers</div>
                     </div>
-                    <p className="text-[11px] text-dim">Customers with open balance</p>
+
+                    {/* Segment 4: TOP-70 CONCENTRATION */}
+                    <div className="p-3 text-white flex flex-col items-center justify-center rounded-xl" style={{ background: '#E65100' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/90">TOP-70 CONCENTRATION</div>
+                        <div className="text-xl font-black text-white mt-1">{kpiMetrics.top70Pct}%</div>
+                    </div>
                 </div>
             </div>
 

@@ -414,10 +414,10 @@ const GeneralLedger = () => {
                 </select>
 
                 {/* Clear Filters */}
-                {(startDate !== getThisMonthStart() || endDate !== getThisMonthEnd() || selectedCode !== 'ALL' || searchQuery !== '') && (
+                {(startDate !== getThisYearStart() || endDate !== getThisMonthEnd() || selectedCode !== 'ALL' || searchQuery !== '') && (
                     <button
                         onClick={() => {
-                            setStartDate(getThisMonthStart());
+                            setStartDate(getThisYearStart());
                             setEndDate(getThisMonthEnd());
                             setSelectedCode('ALL');
                             setSearchQuery('');
