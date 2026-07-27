@@ -10,7 +10,6 @@ import {
     Download,
     FileSpreadsheet,
     Calendar,
-    SlidersHorizontal,
     ArrowLeft,
     Clock,
     Users,
@@ -24,29 +23,29 @@ import { getInvoicesRegistry, type Invoice } from '../../../services/invoiceServ
 import { getAllCustomers, type Customer } from '../../../services/customerService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
-// Bucket Range Config Interface
-export interface AgingBucketConfig {
-    b1Min: number; // e.g. 1
-    b1Max: number; // e.g. 5
-    b2Min: number; // e.g. 6
-    b2Max: number; // e.g. 10
-    b3Min: number; // e.g. 11
-    b3Max: number; // e.g. 30
-    b4Min: number; // e.g. 31
-    b4Max: number; // e.g. 50
-    b5Min: number; // e.g. 51+
+export interface DynamicAgingInterval {
+    key: string;
+    label: string;
+    shortLabel: string;
+    minDays: number;
+    maxDays: number | null;
 }
 
-const DEFAULT_BUCKETS: AgingBucketConfig = {
-    b1Min: 1,
-    b1Max: 5,
-    b2Min: 6,
-    b2Max: 10,
-    b3Min: 11,
-    b3Max: 30,
-    b4Min: 31,
-    b4Max: 50,
-    b5Min: 51
+const getDaysOverdue = (dueDateStr?: string, asOfDateStr?: string): number => {
+    if (!dueDateStr || !asOfDateStr) return 0;
+    const dueClean = String(dueDateStr).split('T')[0];
+    const asOfClean = String(asOfDateStr).split('T')[0];
+
+    const dueParts = dueClean.split('-').map(Number);
+    const asOfParts = asOfClean.split('-').map(Number);
+
+    if (dueParts.length !== 3 || asOfParts.length !== 3) return 0;
+
+    const due = new Date(dueParts[0], dueParts[1] - 1, dueParts[2]);
+    const asOf = new Date(asOfParts[0], asOfParts[1] - 1, asOfParts[2]);
+
+    const diffTime = asOf.getTime() - due.getTime();
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
 };
 
 interface CustomerAgingSummary {
@@ -56,11 +55,7 @@ interface CustomerAgingSummary {
     email?: string;
     phone?: string;
     current: number;
-    b1: number;
-    b2: number;
-    b3: number;
-    b4: number;
-    b5: number;
+    buckets: Record<string, number>;
     total: number;
     invoiceCount: number;
     invoices: (Invoice & { daysOverdue: number })[];
@@ -78,9 +73,16 @@ export const InvoiceAgingSummary: React.FC = () => {
     const [asOfDate, setAsOfDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [selectedCustomer, setSelectedCustomer] = useState<string>('ALL');
     const [searchQuery, setSearchQuery] = useState<string>('');
-    const [bucketConfig, setBucketConfig] = useState<AgingBucketConfig>(DEFAULT_BUCKETS);
     const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
-    const [tempConfig, setTempConfig] = useState<AgingBucketConfig>(DEFAULT_BUCKETS);
+
+    // Aging Intervals States
+    const [numIntervals, setNumIntervals] = useState<number>(4);
+    const [intervalValue, setIntervalValue] = useState<number>(7);
+    const [intervalUnit, setIntervalUnit] = useState<'Days' | 'Weeks' | 'Months'>('Days');
+
+    const [tempNumIntervals, setTempNumIntervals] = useState<number>(4);
+    const [tempIntervalValue, setTempIntervalValue] = useState<number>(7);
+    const [tempIntervalUnit, setTempIntervalUnit] = useState<'Days' | 'Weeks' | 'Months'>('Days');
 
     // Table Expansion & Sorting
     const [expandedCustomerKey, setExpandedCustomerKey] = useState<string | null>(null);
@@ -114,11 +116,41 @@ export const InvoiceAgingSummary: React.FC = () => {
         fetchData();
     }, []);
 
+    // Active Dynamic Aging Intervals
+    const activeIntervals = useMemo<DynamicAgingInterval[]>(() => {
+        const effectiveDays = intervalUnit === 'Weeks'
+            ? intervalValue * 7
+            : (intervalUnit === 'Months' ? intervalValue * 30 : intervalValue);
+
+        const list: DynamicAgingInterval[] = [];
+
+        for (let i = 0; i < numIntervals; i++) {
+            const minDays = i * effectiveDays + 1;
+            const maxDays = (i + 1) * effectiveDays;
+            list.push({
+                key: `b_${i}`,
+                label: `${minDays} – ${maxDays} Days`,
+                shortLabel: `${minDays}-${maxDays}d`,
+                minDays,
+                maxDays
+            });
+        }
+
+        // Plus / Overdue+ bucket
+        const plusMin = numIntervals * effectiveDays + 1;
+        list.push({
+            key: `b_plus`,
+            label: `${plusMin}+ Days`,
+            shortLabel: `${plusMin}+d`,
+            minDays: plusMin,
+            maxDays: null
+        });
+
+        return list;
+    }, [numIntervals, intervalValue, intervalUnit]);
+
     // Process Aging Summaries
     const agingData = useMemo(() => {
-        const asOf = new Date(asOfDate);
-        asOf.setHours(23, 59, 59, 999);
-
         // Filter active unpaid/partially paid invoices with balance > 0
         const activeInvoices = invoices.filter(inv => {
             if (inv.status === 'CANCELLED') return false;
@@ -160,6 +192,9 @@ export const InvoiceAgingSummary: React.FC = () => {
             }
 
             if (!map[custKey]) {
+                const initialBuckets: Record<string, number> = {};
+                activeIntervals.forEach(int => { initialBuckets[int.key] = 0; });
+
                 map[custKey] = {
                     customerKey: custKey,
                     customerName: custName,
@@ -167,11 +202,7 @@ export const InvoiceAgingSummary: React.FC = () => {
                     email,
                     phone,
                     current: 0,
-                    b1: 0,
-                    b2: 0,
-                    b3: 0,
-                    b4: 0,
-                    b5: 0,
+                    buckets: initialBuckets,
                     total: 0,
                     invoiceCount: 0,
                     invoices: []
@@ -179,29 +210,33 @@ export const InvoiceAgingSummary: React.FC = () => {
             }
 
             // Calculate days past due from dueDate or generatedAt
-            const due = new Date(inv.dueDate || inv.generatedAt || inv.createdAt || Date.now());
-            due.setHours(0, 0, 0, 0);
-
-            const diffTime = asOf.getTime() - due.getTime();
-            const daysOverdue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
+            const dueStr = inv.dueDate || inv.generatedAt || inv.createdAt;
+            const daysOverdue = getDaysOverdue(dueStr, asOfDate);
             const bal = inv.balance ?? (inv.totalAmountDue - inv.amountPaid);
 
-            // Categorize into buckets
+            // Categorize into dynamic buckets
             if (daysOverdue <= 0) {
                 map[custKey].current += bal;
-            } else if (daysOverdue >= bucketConfig.b1Min && daysOverdue <= bucketConfig.b1Max) {
-                map[custKey].b1 += bal;
-            } else if (daysOverdue >= bucketConfig.b2Min && daysOverdue <= bucketConfig.b2Max) {
-                map[custKey].b2 += bal;
-            } else if (daysOverdue >= bucketConfig.b3Min && daysOverdue <= bucketConfig.b3Max) {
-                map[custKey].b3 += bal;
-            } else if (daysOverdue >= bucketConfig.b4Min && daysOverdue <= bucketConfig.b4Max) {
-                map[custKey].b4 += bal;
-            } else if (daysOverdue >= bucketConfig.b5Min) {
-                map[custKey].b5 += bal;
             } else {
-                map[custKey].b1 += bal; // fallback
+                let assigned = false;
+                for (const int of activeIntervals) {
+                    if (int.maxDays !== null) {
+                        if (daysOverdue >= int.minDays && daysOverdue <= int.maxDays) {
+                            map[custKey].buckets[int.key] += bal;
+                            assigned = true;
+                            break;
+                        }
+                    } else {
+                        if (daysOverdue >= int.minDays) {
+                            map[custKey].buckets[int.key] += bal;
+                            assigned = true;
+                            break;
+                        }
+                    }
+                }
+                if (!assigned && activeIntervals.length > 0) {
+                    map[custKey].buckets[activeIntervals[0].key] += bal;
+                }
             }
 
             map[custKey].total += bal;
@@ -230,8 +265,13 @@ export const InvoiceAgingSummary: React.FC = () => {
 
         // Sorting
         list.sort((a, b) => {
-            const valA = a[sortField];
-            const valB = b[sortField];
+            let valA: any = (a as any)[sortField];
+            let valB: any = (b as any)[sortField];
+
+            if (String(sortField).startsWith('b_')) {
+                valA = a.buckets[String(sortField)] || 0;
+                valB = b.buckets[String(sortField)] || 0;
+            }
 
             if (typeof valA === 'string' && typeof valB === 'string') {
                 return sortOrder === 'asc'
@@ -245,25 +285,31 @@ export const InvoiceAgingSummary: React.FC = () => {
         });
 
         return list;
-    }, [invoices, customers, asOfDate, selectedCustomer, searchQuery, bucketConfig, sortField, sortOrder]);
+    }, [invoices, customers, asOfDate, selectedCustomer, searchQuery, activeIntervals, sortField, sortOrder]);
 
     // Grand Totals
     const totals = useMemo(() => {
-        return agingData.reduce(
-            (acc, curr) => {
-                acc.current += curr.current;
-                acc.b1 += curr.b1;
-                acc.b2 += curr.b2;
-                acc.b3 += curr.b3;
-                acc.b4 += curr.b4;
-                acc.b5 += curr.b5;
-                acc.total += curr.total;
-                acc.invoices += curr.invoiceCount;
-                return acc;
-            },
-            { current: 0, b1: 0, b2: 0, b3: 0, b4: 0, b5: 0, total: 0, invoices: 0 }
-        );
-    }, [agingData]);
+        const initialBucketTotals: Record<string, number> = {};
+        activeIntervals.forEach(int => { initialBucketTotals[int.key] = 0; });
+
+        const result = {
+            current: 0,
+            buckets: initialBucketTotals,
+            total: 0,
+            invoices: 0
+        };
+
+        agingData.forEach(curr => {
+            result.current += curr.current;
+            result.total += curr.total;
+            result.invoices += curr.invoiceCount;
+            activeIntervals.forEach(int => {
+                result.buckets[int.key] = (result.buckets[int.key] || 0) + (curr.buckets[int.key] || 0);
+            });
+        });
+
+        return result;
+    }, [agingData, activeIntervals]);
 
     // KPI Metrics calculation matching exact dashboard spec
     const kpiMetrics = useMemo(() => {
@@ -409,11 +455,13 @@ export const InvoiceAgingSummary: React.FC = () => {
         }
     };
 
-    const handleSaveBuckets = (e: React.FormEvent) => {
+    const handleSaveIntervals = (e: React.FormEvent) => {
         e.preventDefault();
-        setBucketConfig(tempConfig);
+        setNumIntervals(tempNumIntervals);
+        setIntervalValue(tempIntervalValue);
+        setIntervalUnit(tempIntervalUnit);
         setShowConfigModal(false);
-        toast.success('Aging buckets updated successfully');
+        toast.success(`Aging buckets set to ${tempNumIntervals} X ${tempIntervalValue} ${tempIntervalUnit}`);
     };
 
     // Excel Export
@@ -425,34 +473,39 @@ export const InvoiceAgingSummary: React.FC = () => {
         setExportingExcel(true);
         const toastId = toast.loading('Exporting Excel report...');
         try {
-            const rows = agingData.map((c, idx) => ({
-                'Sl No.': String(idx + 1).padStart(2, '0'),
-                'Customer Code': c.customerId,
-                'Customer Name': c.customerName,
-                'Current / Not Due ($)': c.current,
-                [`${bucketConfig.b1Min}-${bucketConfig.b1Max} Days ($)`]: c.b1,
-                [`${bucketConfig.b2Min}-${bucketConfig.b2Max} Days ($)`]: c.b2,
-                [`${bucketConfig.b3Min}-${bucketConfig.b3Max} Days ($)`]: c.b3,
-                [`${bucketConfig.b4Min}-${bucketConfig.b4Max} Days ($)`]: c.b4,
-                [`${bucketConfig.b5Min}+ Days ($)`]: c.b5,
-                'Total Outstanding ($)': c.total,
-                'Unpaid Invoices': c.invoiceCount
-            }));
+            const rows = agingData.map((c, idx) => {
+                const rowObj: Record<string, any> = {
+                    'Sl No.': String(idx + 1).padStart(2, '0'),
+                    'Customer Code': c.customerId,
+                    'Customer Name': c.customerName,
+                    'Current / Not Due ($)': c.current
+                };
+
+                activeIntervals.forEach(int => {
+                    rowObj[`${int.label} ($)`] = c.buckets[int.key] || 0;
+                });
+
+                rowObj['Total Outstanding ($)'] = c.total;
+                rowObj['Unpaid Invoices'] = c.invoiceCount;
+                return rowObj;
+            });
 
             // Totals row
-            rows.push({
+            const totalObj: Record<string, any> = {
                 'Sl No.': '',
                 'Customer Code': 'TOTAL',
                 'Customer Name': 'GRAND TOTALS',
-                'Current / Not Due ($)': totals.current,
-                [`${bucketConfig.b1Min}-${bucketConfig.b1Max} Days ($)`]: totals.b1,
-                [`${bucketConfig.b2Min}-${bucketConfig.b2Max} Days ($)`]: totals.b2,
-                [`${bucketConfig.b3Min}-${bucketConfig.b3Max} Days ($)`]: totals.b3,
-                [`${bucketConfig.b4Min}-${bucketConfig.b4Max} Days ($)`]: totals.b4,
-                [`${bucketConfig.b5Min}+ Days ($)`]: totals.b5,
-                'Total Outstanding ($)': totals.total,
-                'Unpaid Invoices': totals.invoices
+                'Current / Not Due ($)': totals.current
+            };
+
+            activeIntervals.forEach(int => {
+                totalObj[`${int.label} ($)`] = totals.buckets[int.key] || 0;
             });
+
+            totalObj['Total Outstanding ($)'] = totals.total;
+            totalObj['Unpaid Invoices'] = totals.invoices;
+
+            rows.push(totalObj);
 
             const ws = XLSX.utils.json_to_sheet(rows);
             const wb = XLSX.utils.book_new();
@@ -476,18 +529,21 @@ export const InvoiceAgingSummary: React.FC = () => {
         }
         const toastId = toast.loading('Exporting CSV report...');
         try {
-            const rows = agingData.map((c, idx) => ({
-                'Sl No.': String(idx + 1).padStart(2, '0'),
-                'Customer Code': c.customerId,
-                'Customer Name': c.customerName,
-                'Current / Not Due ($)': c.current,
-                [`${bucketConfig.b1Min}-${bucketConfig.b1Max} Days ($)`]: c.b1,
-                [`${bucketConfig.b2Min}-${bucketConfig.b2Max} Days ($)`]: c.b2,
-                [`${bucketConfig.b3Min}-${bucketConfig.b3Max} Days ($)`]: c.b3,
-                [`${bucketConfig.b4Min}-${bucketConfig.b4Max} Days ($)`]: c.b4,
-                [`${bucketConfig.b5Min}+ Days ($)`]: c.b5,
-                'Total Outstanding ($)': c.total
-            }));
+            const rows = agingData.map((c, idx) => {
+                const rowObj: Record<string, any> = {
+                    'Sl No.': String(idx + 1).padStart(2, '0'),
+                    'Customer Code': c.customerId,
+                    'Customer Name': c.customerName,
+                    'Current / Not Due ($)': c.current
+                };
+
+                activeIntervals.forEach(int => {
+                    rowObj[`${int.label} ($)`] = c.buckets[int.key] || 0;
+                });
+
+                rowObj['Total Outstanding ($)'] = c.total;
+                return rowObj;
+            });
 
             const ws = XLSX.utils.json_to_sheet(rows);
             const csvContent = XLSX.utils.sheet_to_csv(ws);
@@ -521,17 +577,13 @@ export const InvoiceAgingSummary: React.FC = () => {
             doc.setFontSize(16);
             doc.text('Accounts Receivable (AR) Aging Summary Report', 14, 18);
             doc.setFontSize(9);
-            doc.text(`As of Date: ${asOfDate} | Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
+            doc.text(`As of Date: ${asOfDate} | Aging Intervals: ${numIntervals} X ${intervalValue} ${intervalUnit}`, 14, 25);
 
             const head = [[
                 'Customer Code',
                 'Customer Name',
                 'Current',
-                `${bucketConfig.b1Min}-${bucketConfig.b1Max} Days`,
-                `${bucketConfig.b2Min}-${bucketConfig.b2Max} Days`,
-                `${bucketConfig.b3Min}-${bucketConfig.b3Max} Days`,
-                `${bucketConfig.b4Min}-${bucketConfig.b4Max} Days`,
-                `${bucketConfig.b5Min}+ Days`,
+                ...activeIntervals.map(int => int.label),
                 'Total Balance'
             ]];
 
@@ -539,41 +591,30 @@ export const InvoiceAgingSummary: React.FC = () => {
                 c.customerId,
                 c.customerName,
                 `$${c.current.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `$${c.b1.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `$${c.b2.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `$${c.b3.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `$${c.b4.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `$${c.b5.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                ...activeIntervals.map(int => `$${(c.buckets[int.key] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`),
                 `$${c.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
             ]);
 
-            // Add totals row
-            body.push([
-                'TOTAL',
-                'GRAND TOTALS',
+            const totalsRow = [
+                'TOTALS',
+                `Grand Total (${agingData.length} Customers)`,
                 `$${totals.current.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `$${totals.b1.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `$${totals.b2.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `$${totals.b3.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `$${totals.b4.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `$${totals.b5.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                ...activeIntervals.map(int => `$${(totals.buckets[int.key] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`),
                 `$${totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-            ]);
+            ];
 
             autoTable(doc, {
-                head,
-                body,
                 startY: 30,
-                theme: 'striped',
-                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] },
+                head,
+                body: [...body, totalsRow],
                 styles: { fontSize: 8 }
             });
 
             doc.save(`AR_Aging_Summary_${asOfDate}.pdf`);
-            toast.success('PDF downloaded successfully!', { id: toastId });
+            toast.success('PDF exported successfully!', { id: toastId });
         } catch (err: any) {
             console.error(err);
-            toast.error('Failed to generate PDF', { id: toastId });
+            toast.error('Failed to export PDF file', { id: toastId });
         } finally {
             setExportingPdf(false);
         }
@@ -611,13 +652,19 @@ export const InvoiceAgingSummary: React.FC = () => {
                     </button>
 
                     <button
-                        onClick={() => { setTempConfig(bucketConfig); setShowConfigModal(true); }}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border active:scale-95 cursor-pointer"
+                        onClick={() => {
+                            setTempNumIntervals(numIntervals);
+                            setTempIntervalValue(intervalValue);
+                            setTempIntervalUnit(intervalUnit);
+                            setShowConfigModal(true);
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all border active:scale-95 cursor-pointer"
                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                        title="Configure Days Ranges"
+                        title="Configure Aging Intervals"
                     >
-                        <SlidersHorizontal size={14} className="text-amber-500" />
-                        Configure Ranges
+                        <Calendar size={15} className="text-dim" />
+                        <span>Aging Intervals : <strong className="text-[var(--text-main)] font-black">{numIntervals} X {intervalValue} {intervalUnit}</strong></span>
+                        <ChevronDown size={14} className="text-dim" />
                     </button>
 
                     <button
@@ -694,8 +741,17 @@ export const InvoiceAgingSummary: React.FC = () => {
 
                 {/* Row 2 */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {/* Card 5: RENT DUE */}
-                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px] lg:col-span-2" style={{ background: '#1B5E20' }}>
+                    {/* Card 5: DEPOSIT DUE */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#1565C0' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">DEPOSIT DUE (USD)</div>
+                        <div className="text-2xl font-black tracking-tight my-1">
+                            ${kpiMetrics.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[11px] font-medium text-white/70">{kpiMetrics.depositPct}% of total</div>
+                    </div>
+
+                    {/* Card 6: RENT DUE */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#1B5E20' }}>
                         <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">RENT DUE (USD)</div>
                         <div className="text-2xl font-black tracking-tight my-1">
                             ${kpiMetrics.rentDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -703,8 +759,17 @@ export const InvoiceAgingSummary: React.FC = () => {
                         <div className="text-[11px] font-medium text-white/70">{kpiMetrics.rentPct}% of total</div>
                     </div>
 
-                    {/* Card 6: AVG OUTSTANDING / CUSTOMER */}
-                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px] lg:col-span-2" style={{ background: '#512DA8' }}>
+                    {/* Card 7: OTHERS DUE */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#E65100' }}>
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">OTHERS DUE (USD)</div>
+                        <div className="text-2xl font-black tracking-tight my-1">
+                            ${kpiMetrics.othersDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[11px] font-medium text-white/70">{kpiMetrics.othersPct}% of total</div>
+                    </div>
+
+                    {/* Card 8: AVG OUTSTANDING / CUSTOMER */}
+                    <div className="p-4 rounded-2xl shadow-md text-white flex flex-col justify-between min-h-[105px]" style={{ background: '#512DA8' }}>
                         <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/80">AVG OUTSTANDING / CUSTOMER</div>
                         <div className="text-2xl font-black tracking-tight my-1">
                             ${kpiMetrics.avgPerCustomer.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -793,14 +858,15 @@ export const InvoiceAgingSummary: React.FC = () => {
                 </div>
 
                 {/* Active Bucket Range Indicator */}
-                <div className="flex items-center gap-2 text-[11px] font-bold text-dim px-3 py-1.5 rounded-xl border" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold text-dim px-3 py-1.5 rounded-xl border" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
                     <span className="text-amber-500 font-mono">Ranges:</span>
                     <span>Current</span> |
-                    <span>{bucketConfig.b1Min}-{bucketConfig.b1Max}d</span> |
-                    <span>{bucketConfig.b2Min}-{bucketConfig.b2Max}d</span> |
-                    <span>{bucketConfig.b3Min}-{bucketConfig.b3Max}d</span> |
-                    <span>{bucketConfig.b4Min}-{bucketConfig.b4Max}d</span> |
-                    <span>{bucketConfig.b5Min}+d</span>
+                    {activeIntervals.map((int, idx) => (
+                        <React.Fragment key={int.key}>
+                            <span>{int.shortLabel}</span>
+                            {idx < activeIntervals.length - 1 && ' | '}
+                        </React.Fragment>
+                    ))}
                 </div>
             </div>
 
@@ -823,36 +889,14 @@ export const InvoiceAgingSummary: React.FC = () => {
                                         <ArrowUpDown size={12} />
                                     </div>
                                 </th>
-                                <th className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('b1')}>
-                                    <div className="flex items-center justify-end gap-1">
-                                        {bucketConfig.b1Min} – {bucketConfig.b1Max} Days
-                                        <ArrowUpDown size={12} />
-                                    </div>
-                                </th>
-                                <th className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('b2')}>
-                                    <div className="flex items-center justify-end gap-1">
-                                        {bucketConfig.b2Min} – {bucketConfig.b2Max} Days
-                                        <ArrowUpDown size={12} />
-                                    </div>
-                                </th>
-                                <th className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('b3')}>
-                                    <div className="flex items-center justify-end gap-1">
-                                        {bucketConfig.b3Min} – {bucketConfig.b3Max} Days
-                                        <ArrowUpDown size={12} />
-                                    </div>
-                                </th>
-                                <th className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('b4')}>
-                                    <div className="flex items-center justify-end gap-1">
-                                        {bucketConfig.b4Min} – {bucketConfig.b4Max} Days
-                                        <ArrowUpDown size={12} />
-                                    </div>
-                                </th>
-                                <th className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('b5')}>
-                                    <div className="flex items-center justify-end gap-1 text-rose-400">
-                                        {bucketConfig.b5Min}+ Days
-                                        <ArrowUpDown size={12} />
-                                    </div>
-                                </th>
+                                {activeIntervals.map(int => (
+                                    <th key={int.key} className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort(int.key as any)}>
+                                        <div className={`flex items-center justify-end gap-1 ${int.maxDays === null ? 'text-rose-400' : ''}`}>
+                                            {int.label}
+                                            <ArrowUpDown size={12} />
+                                        </div>
+                                    </th>
+                                ))}
                                 <th className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('total')}>
                                     <div className="flex items-center justify-end gap-1" style={{ color: 'var(--brand-lime)' }}>
                                         Total Balance
@@ -864,14 +908,14 @@ export const InvoiceAgingSummary: React.FC = () => {
                         <tbody className="divide-y font-medium" style={{ borderColor: 'var(--border-main)' }}>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={9} className="py-12 text-center text-dim">
+                                    <td colSpan={4 + activeIntervals.length} className="py-12 text-center text-dim">
                                         <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-brand-lime" />
                                         Loading aging summary calculations...
                                     </td>
                                 </tr>
                             ) : agingData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="py-12 text-center text-dim font-bold">
+                                    <td colSpan={4 + activeIntervals.length} className="py-12 text-center text-dim font-bold">
                                         No outstanding customer invoices found for the selected criteria.
                                     </td>
                                 </tr>
@@ -903,21 +947,16 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                 <td className="py-3.5 px-4 text-right font-mono font-bold text-blue-400">
                                                     {row.current > 0 ? `$${row.current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
                                                 </td>
-                                                <td className="py-3.5 px-4 text-right font-mono font-bold text-emerald-400">
-                                                    {row.b1 > 0 ? `$${row.b1.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
-                                                </td>
-                                                <td className="py-3.5 px-4 text-right font-mono font-bold text-amber-400">
-                                                    {row.b2 > 0 ? `$${row.b2.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
-                                                </td>
-                                                <td className="py-3.5 px-4 text-right font-mono font-bold text-orange-400">
-                                                    {row.b3 > 0 ? `$${row.b3.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
-                                                </td>
-                                                <td className="py-3.5 px-4 text-right font-mono font-bold text-rose-400">
-                                                    {row.b4 > 0 ? `$${row.b4.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
-                                                </td>
-                                                <td className="py-3.5 px-4 text-right font-mono font-bold text-red-500">
-                                                    {row.b5 > 0 ? `$${row.b5.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
-                                                </td>
+                                                {activeIntervals.map((int, idx) => {
+                                                    const amt = row.buckets[int.key] || 0;
+                                                    const colorClasses = ['text-emerald-400', 'text-amber-400', 'text-orange-400', 'text-rose-400', 'text-red-500'];
+                                                    const colorClass = colorClasses[idx % colorClasses.length];
+                                                    return (
+                                                        <td key={int.key} className={`py-3.5 px-4 text-right font-mono font-bold ${colorClass}`}>
+                                                            {amt > 0 ? `$${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                                        </td>
+                                                    );
+                                                })}
                                                 <td className="py-3.5 px-4 text-right font-mono font-black text-sm" style={{ color: 'var(--brand-lime)' }}>
                                                     ${row.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </td>
@@ -926,7 +965,7 @@ export const InvoiceAgingSummary: React.FC = () => {
                                             {/* Expanded Detailed Invoice List */}
                                             {isExpanded && (
                                                 <tr>
-                                                    <td colSpan={9} className="p-4 bg-black/20 border-y" style={{ borderColor: 'var(--border-main)' }}>
+                                                    <td colSpan={4 + activeIntervals.length} className="p-4 bg-black/20 border-y" style={{ borderColor: 'var(--border-main)' }}>
                                                         <div className="space-y-3 pl-6 pr-2">
                                                             <div className="flex items-center justify-between">
                                                                 <h4 className="text-xs font-bold tracking-wide uppercase text-dim flex items-center gap-2">
@@ -1024,21 +1063,16 @@ export const InvoiceAgingSummary: React.FC = () => {
                                     <td className="py-4 px-4 text-right text-blue-400">
                                         ${totals.current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
-                                    <td className="py-4 px-4 text-right text-emerald-400">
-                                        ${totals.b1.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </td>
-                                    <td className="py-4 px-4 text-right text-amber-400">
-                                        ${totals.b2.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </td>
-                                    <td className="py-4 px-4 text-right text-orange-400">
-                                        ${totals.b3.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </td>
-                                    <td className="py-4 px-4 text-right text-rose-400">
-                                        ${totals.b4.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </td>
-                                    <td className="py-4 px-4 text-right text-red-500">
-                                        ${totals.b5.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </td>
+                                    {activeIntervals.map((int, idx) => {
+                                        const amt = totals.buckets[int.key] || 0;
+                                        const colorClasses = ['text-emerald-400', 'text-amber-400', 'text-orange-400', 'text-rose-400', 'text-red-500'];
+                                        const colorClass = colorClasses[idx % colorClasses.length];
+                                        return (
+                                            <td key={int.key} className={`py-4 px-4 text-right ${colorClass}`}>
+                                                ${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </td>
+                                        );
+                                    })}
                                     <td className="py-4 px-4 text-right text-sm font-black" style={{ color: 'var(--brand-lime)' }}>
                                         ${totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
@@ -1050,154 +1084,78 @@ export const InvoiceAgingSummary: React.FC = () => {
             </div>
 
             {/* Configure Aging Buckets Modal */}
+            {/* Aging Intervals Config Popover Modal */}
             {showConfigModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-                    <div className="w-full max-w-md rounded-2xl border p-6 space-y-6 shadow-2xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--border-main)' }}>
-                            <h3 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                                <SlidersHorizontal size={18} className="text-amber-500" />
-                                Configure Aging Bucket Ranges
-                            </h3>
+                <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+                    <div className="relative w-full max-w-xs rounded-2xl border shadow-2xl p-5 space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between pb-2 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                            <h3 className="text-sm font-bold tracking-wide" style={{ color: 'var(--text-main)' }}>Aging Intervals</h3>
                             <button
                                 onClick={() => setShowConfigModal(false)}
-                                className="p-1 rounded-lg hover:bg-white/10 text-dim"
+                                className="text-dim hover:text-white transition-colors cursor-pointer text-xs font-bold"
                             >
                                 ✕
                             </button>
                         </div>
 
-                        <form onSubmit={handleSaveBuckets} className="space-y-4 text-xs font-bold">
-                            <p className="text-dim font-normal text-[11px]">
-                                Customize the days past due boundaries for your AR Aging Summary columns.
-                            </p>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-dim block mb-1">Bucket 1 Min Days</label>
-                                    <input
-                                        type="number"
-                                        value={tempConfig.b1Min}
-                                        onChange={e => setTempConfig({ ...tempConfig, b1Min: Number(e.target.value) })}
-                                        className="w-full bg-transparent border rounded-xl px-3 py-2 outline-none focus:border-[#C8E600]"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-dim block mb-1">Bucket 1 Max Days</label>
-                                    <input
-                                        type="number"
-                                        value={tempConfig.b1Max}
-                                        onChange={e => setTempConfig({ ...tempConfig, b1Max: Number(e.target.value) })}
-                                        className="w-full bg-transparent border rounded-xl px-3 py-2 outline-none focus:border-[#C8E600]"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-dim block mb-1">Bucket 2 Min Days</label>
-                                    <input
-                                        type="number"
-                                        value={tempConfig.b2Min}
-                                        onChange={e => setTempConfig({ ...tempConfig, b2Min: Number(e.target.value) })}
-                                        className="w-full bg-transparent border rounded-xl px-3 py-2 outline-none focus:border-[#C8E600]"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-dim block mb-1">Bucket 2 Max Days</label>
-                                    <input
-                                        type="number"
-                                        value={tempConfig.b2Max}
-                                        onChange={e => setTempConfig({ ...tempConfig, b2Max: Number(e.target.value) })}
-                                        className="w-full bg-transparent border rounded-xl px-3 py-2 outline-none focus:border-[#C8E600]"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-dim block mb-1">Bucket 3 Min Days</label>
-                                    <input
-                                        type="number"
-                                        value={tempConfig.b3Min}
-                                        onChange={e => setTempConfig({ ...tempConfig, b3Min: Number(e.target.value) })}
-                                        className="w-full bg-transparent border rounded-xl px-3 py-2 outline-none focus:border-[#C8E600]"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-dim block mb-1">Bucket 3 Max Days</label>
-                                    <input
-                                        type="number"
-                                        value={tempConfig.b3Max}
-                                        onChange={e => setTempConfig({ ...tempConfig, b3Max: Number(e.target.value) })}
-                                        className="w-full bg-transparent border rounded-xl px-3 py-2 outline-none focus:border-[#C8E600]"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-dim block mb-1">Bucket 4 Min Days</label>
-                                    <input
-                                        type="number"
-                                        value={tempConfig.b4Min}
-                                        onChange={e => setTempConfig({ ...tempConfig, b4Min: Number(e.target.value) })}
-                                        className="w-full bg-transparent border rounded-xl px-3 py-2 outline-none focus:border-[#C8E600]"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-dim block mb-1">Bucket 4 Max Days</label>
-                                    <input
-                                        type="number"
-                                        value={tempConfig.b4Max}
-                                        onChange={e => setTempConfig({ ...tempConfig, b4Max: Number(e.target.value) })}
-                                        className="w-full bg-transparent border rounded-xl px-3 py-2 outline-none focus:border-[#C8E600]"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-dim block mb-1">Bucket 5 Min Days (Overdue +)</label>
-                                <input
-                                    type="number"
-                                    value={tempConfig.b5Min}
-                                    onChange={e => setTempConfig({ ...tempConfig, b5Min: Number(e.target.value) })}
-                                    className="w-full bg-transparent border rounded-xl px-3 py-2 outline-none focus:border-[#C8E600]"
+                        <form onSubmit={handleSaveIntervals} className="space-y-4">
+                            {/* Select Number of Intervals */}
+                            <div className="space-y-1">
+                                <select
+                                    value={tempNumIntervals}
+                                    onChange={e => setTempNumIntervals(Number(e.target.value))}
+                                    className="w-full bg-transparent border rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[#C8E600] cursor-pointer"
                                     style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                    required
-                                />
+                                >
+                                    <option value={3} className="bg-[var(--bg-card)]">3</option>
+                                    <option value={4} className="bg-[var(--bg-card)]">4</option>
+                                    <option value={5} className="bg-[var(--bg-card)]">5</option>
+                                    <option value={6} className="bg-[var(--bg-card)]">6</option>
+                                </select>
                             </div>
 
-                            <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                            {/* Intervals of */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-dim block">Intervals of</label>
+                                <div className="flex items-center rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={365}
+                                        value={tempIntervalValue}
+                                        onChange={e => setTempIntervalValue(Math.max(1, Number(e.target.value)))}
+                                        className="w-full bg-transparent px-3 py-2 text-sm font-bold outline-none border-r"
+                                        style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        required
+                                    />
+                                    <select
+                                        value={tempIntervalUnit}
+                                        onChange={e => setTempIntervalUnit(e.target.value as any)}
+                                        className="bg-transparent px-3 py-2 text-sm font-bold outline-none cursor-pointer"
+                                        style={{ color: 'var(--text-main)' }}
+                                    >
+                                        <option value="Days" className="bg-[var(--bg-card)]">Days</option>
+                                        <option value="Weeks" className="bg-[var(--bg-card)]">Weeks</option>
+                                        <option value="Months" className="bg-[var(--bg-card)]">Months</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Buttons */}
+                            <div className="flex items-center gap-2 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 rounded-xl font-bold text-xs text-white bg-[#10B981] hover:bg-[#059669] transition-all cursor-pointer shadow-md"
+                                >
+                                    Apply
+                                </button>
                                 <button
                                     type="button"
                                     onClick={() => setShowConfigModal(false)}
-                                    className="px-4 py-2 rounded-xl border text-dim hover:text-white"
-                                    style={{ borderColor: 'var(--border-main)' }}
+                                    className="px-4 py-2 rounded-xl border text-xs font-bold text-dim hover:text-white transition-all cursor-pointer"
+                                    style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}
                                 >
                                     Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-5 py-2 rounded-xl font-black text-black"
-                                    style={{ background: 'var(--brand-lime)' }}
-                                >
-                                    Apply Ranges
                                 </button>
                             </div>
                         </form>
