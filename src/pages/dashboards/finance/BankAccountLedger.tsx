@@ -182,7 +182,6 @@ const BankAccountLedger = () => {
     // Record Payment Modal States
     const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] = useState(false);
     const [paymentType, setPaymentType] = useState<'RECEIPT' | 'PAYMENT'>('RECEIPT');
-    const [otherAccounts, setOtherAccounts] = useState<BankAccount[]>([]);
     const [chartAccounts, setChartAccounts] = useState<Array<{
         _id: string;
         accountName: string;
@@ -214,7 +213,6 @@ const BankAccountLedger = () => {
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [customerInvoices, setCustomerInvoices] = useState<Invoice[]>([]);
     const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
-    const [loadingInvoices, setLoadingInvoices] = useState(false);
 
     const selectedFromAccountObj = chartAccounts.find(acc => acc._id === fromAccountId);
 
@@ -317,7 +315,7 @@ const BankAccountLedger = () => {
                             type: 'BANK_ACCOUNT' as const
                         }));
 
-                    const rawCodes = Array.isArray(codeRes) ? codeRes : (codeRes.data || []);
+                    const rawCodes = Array.isArray(codeRes) ? codeRes : ((codeRes as any)?.data || []);
                     const codeList = rawCodes.map((c: AccountingCode) => ({
                         _id: c._id,
                         accountName: `${c.code} - ${c.name}`,
@@ -328,7 +326,6 @@ const BankAccountLedger = () => {
                     }));
 
                     setChartAccounts([...bankList, ...codeList]);
-                    setOtherAccounts(bankRes.data || []);
                     setCustomers(custRes.data || (custRes as any).customers || []);
                 } catch (err) {
                     console.error('Failed to fetch accounts and customers', err);
@@ -344,7 +341,6 @@ const BankAccountLedger = () => {
     useEffect(() => {
         if (selectedCustomer) {
             const fetchCustomerInvoices = async () => {
-                setLoadingInvoices(true);
                 try {
                     const invoices = await getInvoicesByCustomer(selectedCustomer._id);
                     // Filter to keep only PENDING, PARTIAL, OVERDUE invoices
@@ -355,8 +351,6 @@ const BankAccountLedger = () => {
                 } catch (err) {
                     console.error('Failed to fetch customer invoices', err);
                     toast.error('Failed to load invoices for selected customer');
-                } finally {
-                    setLoadingInvoices(false);
                 }
             };
             fetchCustomerInvoices();
