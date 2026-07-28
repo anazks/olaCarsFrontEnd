@@ -4,7 +4,7 @@ import {
     Plus, Search, Filter, X, FileText, RefreshCw, 
     User, DollarSign, CheckCircle2,
     Eye, ChevronLeft, ChevronRight, Calendar,
-    ArrowUpDown, ArrowUp, ArrowDown, Upload
+    ArrowUpDown, ArrowUp, ArrowDown, Upload, Briefcase
 } from 'lucide-react';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import { 
@@ -13,6 +13,8 @@ import {
     type CreditNote 
 } from '../../../../services/creditNoteService';
 import { getAllCustomers, type Customer } from '../../../../services/customerService';
+import { getAllSuppliers, type Supplier } from '../../../../services/supplierService';
+import api from '../../../../services/api';
 import { getInvoicesByCustomer } from '../../../../services/invoiceService';
 import BulkCreditNoteUpload from '../../shared/BulkCreditNoteUpload';
 import toast from 'react-hot-toast';
@@ -42,6 +44,7 @@ const CreditNotes = () => {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [debouncedSearch, setDebouncedSearch] = useState<string>('');
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [entityTypeFilter, setEntityTypeFilter] = useState<'ALL' | 'CUSTOMER' | 'SUPPLIER'>('ALL');
     const [startDate, setStartDate] = useState<string>(getDefaultStartDate());
     const [endDate, setEndDate] = useState<string>(getDefaultEndDate());
 
@@ -54,6 +57,12 @@ const CreditNotes = () => {
     const [sortBy, setSortBy] = useState('createdAt');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     
+    // Target Selection Type
+    const [targetType, setTargetType] = useState<'CUSTOMER' | 'SUPPLIER'>('CUSTOMER');
+    const [suppliers, setSuppliers] = useState<any[]>([]);
+    const [loadingSuppliers, setLoadingSuppliers] = useState<boolean>(false);
+    const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
+
     // Creation State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
     const [isBulkModalOpen, setIsBulkModalOpen] = useState<boolean>(false);
@@ -72,6 +81,51 @@ const CreditNotes = () => {
     const [creditNoteDate, setCreditNoteDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [supportingDocFile, setSupportingDocFile] = useState<File | null>(null);
+
+    // Debounce search
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+            setPage(1);
+        }, 400);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
+    // Fetch Credit Notes
+    const fetchCreditNotes = useCallback(async () => {
+        setLoading(true);
+        try {
+            const params: any = {
+                page,
+                limit,
+                search: debouncedSearch || undefined,
+                status: statusFilter !== 'ALL' ? statusFilter : undefined,
+                targetType: entityTypeFilter !== 'ALL' ? entityTypeFilter : undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+                sortBy,
+                sortOrder
+            };
+
+            const res = await getAllCreditNotes(params);
+            if (res) {
+                const dataArray = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
+                setCreditNotes(dataArray);
+                if (res.pagination) {
+                    setPagination(res.pagination);
+                }
+            }
+        } catch (e) {
+            console.error("Sync error:", e);
+            toast.error("Failed syncing credit notes.");
+        } finally {
+            setLoading(false);
+        }
+    }, [page, limit, statusFilter, entityTypeFilter, debouncedSearch, sortBy, sortOrder, startDate, endDate]);
+
+    useEffect(() => {
+        fetchCreditNotes();
+    }, [fetchCreditNotes]);
 
     const handleExportExcel = () => {
         if (creditNotes.length === 0) {
@@ -225,52 +279,41 @@ const CreditNotes = () => {
         return sortOrder === 'asc' ? <ArrowUp size={10} className="text-brand-lime" /> : <ArrowDown size={10} className="text-brand-lime" />;
     };
 
-    const fetchCreditNotes = useCallback(async () => {
-        setLoading(true);
-        try {
-            const params: any = { page, limit, sortBy, sortOrder };
-            if (statusFilter !== 'ALL') params.status = statusFilter;
-            if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
-            if (startDate) params.startDate = startDate;
-            if (endDate) params.endDate = endDate;
-            
-            const res = await getAllCreditNotes(params);
-            if (res) {
-                const dataArray = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
-                setCreditNotes(dataArray);
-                if (res.pagination) {
-                    setPagination(res.pagination);
-                }
+    // Fetch customers and suppliers for Issuance
+    useEffect(() => {
+        if (isCreateModalOpen) {
+            if (customers.length === 0) {
+                const loadCustomers = async () => {
+                    setLoadingCustomers(true);
+                    try {
+                        const res = await getAllCustomers({ status: 'ACTIVE', limit: 300 });
+                        setCustomers(res?.data || res || []);
+                    } catch (err) {
+                        console.error("Customer load error", err);
+                    } finally {
+                        setLoadingCustomers(false);
+                    }
+                };
+                loadCustomers();
             }
-        } catch (e) {
-            console.error("Sync error:", e);
-            toast.error("Failed syncing credit notes.");
-        } finally {
-            setLoading(false);
-        }
-    }, [page, limit, statusFilter, debouncedSearch, sortBy, sortOrder, startDate, endDate]);
 
-    useEffect(() => {
-        fetchCreditNotes();
-    }, [fetchCreditNotes]);
-
-    // Fetch customers for Issuance
-    useEffect(() => {
-        if (isCreateModalOpen && customers.length === 0) {
-            const loadCustomers = async () => {
-                setLoadingCustomers(true);
-                try {
-                    const res = await getAllCustomers({ status: 'ACTIVE', limit: 300 });
-                    setCustomers(res?.data || res || []);
-                } catch (err) {
-                    console.error("Customer load error", err);
-                } finally {
-                    setLoadingCustomers(false);
-                }
-            };
-            loadCustomers();
+            if (suppliers.length === 0) {
+                const loadSuppliers = async () => {
+                    setLoadingSuppliers(true);
+                    try {
+                        const res = await getAllSuppliers({ limit: 10000 });
+                        const docs = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+                        setSuppliers(docs);
+                    } catch (err) {
+                        console.error('Failed loading suppliers:', err);
+                    } finally {
+                        setLoadingSuppliers(false);
+                    }
+                };
+                loadSuppliers();
+            }
         }
-    }, [isCreateModalOpen, customers.length]);
+    }, [isCreateModalOpen, customers.length, suppliers.length]);
 
     // Specific customer's invoices for the modal
     const [invoiceSort] = useState<'date' | 'number'>('date');
@@ -399,7 +442,15 @@ const CreditNotes = () => {
     const handleCreateCreditNote = async (e: React.FormEvent) => {
         e.preventDefault();
         const finalReason = reason === 'Custom' ? customReason.trim() : reason;
-        if (!selectedCustomerId || !amount || !finalReason) {
+        if (targetType === 'CUSTOMER' && !selectedCustomerId) {
+            toast.error("Please select a Customer.");
+            return;
+        }
+        if (targetType === 'SUPPLIER' && !selectedSupplierId) {
+            toast.error("Please select a Supplier / Vendor.");
+            return;
+        }
+        if (!amount || !finalReason) {
             toast.error("Fill mandatory fields.");
             return;
         }
@@ -411,7 +462,8 @@ const CreditNotes = () => {
         setSubmitting(true);
         try {
             const payload: any = {
-                customerId: selectedCustomerId,
+                customerId: targetType === 'CUSTOMER' ? selectedCustomerId : undefined,
+                supplierId: targetType === 'SUPPLIER' ? selectedSupplierId : undefined,
                 amount: Number(amount),
                 reason: finalReason,
                 notes,
@@ -419,14 +471,11 @@ const CreditNotes = () => {
                 supportingDocument: supportingDocFile || undefined
             };
             
-            // Resolve linked driver if available
-            const selectedCust = customers.find(c => c._id === selectedCustomerId);
-            if (selectedCust?.driver?._id) {
-                payload.driverId = selectedCust.driver._id;
-            }
-
-            if (selectedInvoiceId) {
-                payload.invoiceId = selectedInvoiceId;
+            if (targetType === 'CUSTOMER' && selectedCustomerId) {
+                const selectedCust = customers.find(c => c._id === selectedCustomerId);
+                if (selectedCust?.driver?._id) {
+                    payload.driverId = selectedCust.driver._id;
+                }
             }
             
             const res = await createCreditNote(payload);
@@ -548,6 +597,21 @@ const CreditNotes = () => {
                         />
                     </div>
                     <div className="flex gap-3 flex-shrink-0">
+                        {/* Account Entity Type Filter */}
+                        <div className="relative select-none">
+                            <select
+                                value={entityTypeFilter}
+                                onChange={e => { setEntityTypeFilter(e.target.value as any); setPage(1); }}
+                                className="px-4 py-3 border rounded-2xl text-xs font-bold outline-none cursor-pointer select-none"
+                                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="ALL" style={{background: 'var(--bg-card)'}}>ALL PROFILES (CUSTOMERS & VENDORS)</option>
+                                <option value="CUSTOMER" style={{background: 'var(--bg-card)'}}>CUSTOMERS ONLY</option>
+                                <option value="SUPPLIER" style={{background: 'var(--bg-card)'}}>VENDORS / SUPPLIERS ONLY</option>
+                            </select>
+                        </div>
+
+                        {/* Status Filter */}
                         <div className="relative select-none">
                             <Filter className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-dim" size={14} style={{ color: 'var(--text-dim)' }} />
                             <select
@@ -621,7 +685,7 @@ const CreditNotes = () => {
                                     </th>
                                     <th className="py-4 px-6 text-left w-[25%] group cursor-pointer select-none" onClick={() => handleSort('customerId')}>
                                         <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            Customer <SortIcon field="customerId" />
+                                            Customer / Supplier <SortIcon field="customerId" />
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-left w-[15%] group cursor-pointer select-none" onClick={() => handleSort('creditNoteDate')}>
@@ -675,19 +739,22 @@ const CreditNotes = () => {
                                             <td className="py-4 px-6 font-black">
                                                 <div className="flex flex-col">
                                                     <span className="tracking-wide font-black uppercase" style={{ color: 'var(--text-main)' }}>{note.creditNoteNumber || 'CN-DRAFT'}</span>
-                                                    {note.invoiceId?.invoiceNumber && (
-                                                        <span className="text-[9px] font-black text-indigo-400 uppercase tracking-wider mt-0.5 border border-indigo-500/30 bg-indigo-500/5 inline-block px-1.5 py-0.5 rounded self-start">Linked: {note.invoiceId.invoiceNumber}</span>
-                                                    )}
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0 shadow-inner">
-                                                        <span className="text-indigo-400 text-[10px] font-black">{(note.customerId?.name || note.driverId?.personalInfo?.fullName || 'CU').slice(0,2).toUpperCase()}</span>
+                                                        <span className="text-indigo-400 text-[10px] font-black">
+                                                            {(note.supplierId?.name || note.supplierId?.companyName || note.customerId?.name || note.driverId?.personalInfo?.fullName || 'CU').slice(0,2).toUpperCase()}
+                                                        </span>
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="font-black leading-snug tracking-tight">{note.customerId?.name || note.driverId?.personalInfo?.fullName || 'Legacy Customer'}</span>
-                                                        <span className="text-[9px] font-mono font-semibold text-dim uppercase tracking-widest mt-0.5">{note.customerId?.customerId || note.driverId?.driverId || 'N/A'}</span>
+                                                        <span className="font-black leading-snug tracking-tight">
+                                                            {note.supplierId ? (note.supplierId.name || note.supplierId.companyName || 'Vendor/Supplier') : (note.customerId?.name || note.driverId?.personalInfo?.fullName || 'Legacy Customer')}
+                                                        </span>
+                                                        <span className="text-[9px] font-mono font-semibold text-dim uppercase tracking-widest mt-0.5">
+                                                            {note.supplierId ? (note.supplierId.supplierCode || 'Vendor') : (note.customerId?.customerId || note.driverId?.driverId || 'N/A')}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -787,53 +854,68 @@ const CreditNotes = () => {
                         </div>
 
                         <form onSubmit={handleCreateCreditNote} className="max-h-[70vh] overflow-y-auto p-6 space-y-5 custom-scrollbar">
+                            {/* Target Entity Type Toggle */}
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>1. Target Customer *</label>
-                                <div className="relative">
-                                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                                    <select required value={selectedCustomerId} onChange={(e) => setSelectedCustomerId(e.target.value)} className="w-full pl-10 pr-8 py-2.5 border rounded-xl text-xs font-semibold appearance-none cursor-pointer" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                        <option value="" style={{background: 'var(--bg-card)'}}>Choose Profile</option>
-                                        {loadingCustomers ? (
-                                            <option disabled style={{background: 'var(--bg-card)'}}>Loading customers...</option>
-                                        ) : customers.map(c => <option key={c._id} value={c._id} style={{background: 'var(--bg-card)'}}>{c.name || 'Unnamed Customer'} ({c.customerId || 'N/A'})</option>)}
-                                    </select>
+                                <label className="text-[10px] font-black uppercase tracking-widest block" style={{ color: 'var(--text-dim)' }}>1. Issue Credit Note To *</label>
+                                <div className="flex items-center gap-2 p-1.5 rounded-xl border" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setTargetType('CUSTOMER'); setSelectedSupplierId(''); }}
+                                        className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                            targetType === 'CUSTOMER' ? 'bg-brand-lime text-black shadow-md' : 'text-dim hover:text-white'
+                                        }`}
+                                    >
+                                        Customers
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setTargetType('SUPPLIER'); setSelectedCustomerId(''); }}
+                                        className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                            targetType === 'SUPPLIER' ? 'bg-brand-lime text-black shadow-md' : 'text-dim hover:text-white'
+                                        }`}
+                                    >
+                                        Vendors / Suppliers
+                                    </button>
                                 </div>
                             </div>
 
-                            {selectedCustomerId && (
-                                <div className="space-y-1.5 p-3.5 border rounded-2xl animate-in zoom-in-95" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                                    <div className="mb-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>2. Link Ledger Invoice</label>
+                            {targetType === 'CUSTOMER' && (
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Target Customer *</label>
+                                    <div className="relative">
+                                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                                        <select required value={selectedCustomerId} onChange={(e) => setSelectedCustomerId(e.target.value)} className="w-full pl-10 pr-8 py-2.5 border rounded-xl text-xs font-semibold appearance-none cursor-pointer" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                            <option value="" style={{background: 'var(--bg-card)'}}>Choose Profile</option>
+                                            {loadingCustomers ? (
+                                                <option disabled style={{background: 'var(--bg-card)'}}>Loading customers...</option>
+                                            ) : customers.map(c => <option key={c._id} value={c._id} style={{background: 'var(--bg-card)'}}>{c.name || 'Unnamed Customer'} ({c.customerId || 'N/A'})</option>)}
+                                        </select>
                                     </div>
+                                </div>
+                            )}
 
-                                    <select value={selectedInvoiceId} onChange={(e) => setSelectedInvoiceId(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl text-xs font-semibold appearance-none cursor-pointer" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                        <option value="" style={{background: 'var(--bg-card)'}}>General Pool Adjustment ({sortedCustomerInvoices.length} visible)</option>
-                                        {loadingInvoices ? (
-                                            <option disabled style={{background: 'var(--bg-card)'}}>Querying ledger...</option>
-                                        ) : sortedCustomerInvoices.length === 0 ? (
-                                            <option disabled style={{background: 'var(--bg-card)'}}>No matching invoices</option>
-                                        ) : sortedCustomerInvoices.map(i => (
-                                            <option key={i._id} value={i._id} style={{background: 'var(--bg-card)'}}>
-                                                {i.invoiceNumber} — {i.status} (${i.balance} left) — {new Date(i.dueDate).toLocaleDateString()}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {selectedInvoiceData && (
-                                        <div className="mt-3 p-3 bg-brand-lime/10 border border-brand-lime/20 rounded-xl text-xs flex flex-col gap-1 shadow-inner animate-in slide-in-from-top-1">
-                                            <div className="flex justify-between text-dim"><span>Gross:</span><span className="font-black" style={{ color: 'var(--text-main)' }}>${selectedInvoiceData.totalAmountDue}</span></div>
-                                            <div className="flex justify-between font-bold"><span className="text-brand-lime">Outstanding Balance:</span><span className="text-sm font-black" style={{ color: 'var(--text-main)' }}>${selectedInvoiceData.balance}</span></div>
-                                        </div>
-                                    )}
+                            {targetType === 'SUPPLIER' && (
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Target Vendor / Supplier *</label>
+                                    <div className="relative">
+                                        <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                                        <select required value={selectedSupplierId} onChange={(e) => setSelectedSupplierId(e.target.value)} className="w-full pl-10 pr-8 py-2.5 border rounded-xl text-xs font-semibold appearance-none cursor-pointer" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                            <option value="" style={{background: 'var(--bg-card)'}}>Choose Vendor</option>
+                                            {loadingSuppliers ? (
+                                                <option disabled style={{background: 'var(--bg-card)'}}>Loading vendors...</option>
+                                            ) : suppliers.map(s => <option key={s._id} value={s._id} style={{background: 'var(--bg-card)'}}>{s.name || s.companyName || 'Unnamed Vendor'} ({s.supplierCode || 'N/A'})</option>)}
+                                        </select>
+                                    </div>
                                 </div>
                             )}
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>3. Amount *</label>
-                                    <div className="relative"><DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} /><input required type="number" step="0.01" min="0.01" max={selectedInvoiceData ? selectedInvoiceData.balance : undefined} value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="w-full pl-9 pr-3 py-2.5 border rounded-xl text-xs font-bold outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/></div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>2. Amount *</label>
+                                    <div className="relative"><DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={14} /><input required type="number" step="0.01" min="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="w-full pl-9 pr-3 py-2.5 border rounded-xl text-xs font-bold outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/></div>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>4. Date *</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>3. Date *</label>
                                     <input required type="date" min={new Date().toISOString().split('T')[0]} value={creditNoteDate} onChange={e => setCreditNoteDate(e.target.value)} className="w-full px-3 py-2.5 border rounded-xl text-xs font-semibold outline-none" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}/>
                                 </div>
                             </div>
@@ -943,13 +1025,23 @@ const CreditNotes = () => {
 
 const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
+        case 'PAID':
         case 'CLOSED':
         case 'APPLIED':
-            return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-emerald-500/10 text-emerald-400 border-emerald-500/20 select-none">Closed</span>;
+            return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-emerald-500/10 text-emerald-400 border-emerald-500/20 select-none">Paid</span>;
+        case 'PARTIAL':
+            return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-blue-500/10 text-blue-400 border-blue-500/20 select-none">Partial</span>;
+        case 'OVERDUE':
+            return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-rose-500/10 text-rose-400 border-rose-500/20 select-none">Overdue</span>;
+        case 'CANCELLED':
         case 'VOID':
-            return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-rose-500/10 text-rose-500 border-rose-500/20 select-none">Void</span>;
+            return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-rose-500/10 text-rose-500 border-rose-500/20 select-none">Cancelled</span>;
+        case 'DRAFT':
+            return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-gray-500/10 text-gray-400 border-gray-500/20 select-none">Draft</span>;
+        case 'PENDING':
+        case 'OPEN':
         default:
-            return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-amber-500/10 text-amber-400 border-amber-500/20 select-none">Open</span>;
+            return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-amber-500/10 text-amber-400 border-amber-500/20 select-none">Pending</span>;
     }
 };
 

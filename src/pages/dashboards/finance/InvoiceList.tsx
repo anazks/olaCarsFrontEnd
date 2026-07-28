@@ -482,15 +482,6 @@ const InvoiceList = () => {
                         </button>
 
                         <button
-                            onClick={() => navigate(`${getRoutePrefix()}/sales/debit-notes`)}
-                            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 border border-blue-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
-                            title="Manage Debit Notes Ledger"
-                        >
-                            <FileText size={14} strokeWidth={2.5} className="text-blue-500" />
-                            Debit Notes
-                        </button>
-
-                        <button
                             onClick={() => setShowBulkUpload(true)}
                             className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
                             style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}

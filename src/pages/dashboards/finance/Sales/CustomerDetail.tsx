@@ -22,12 +22,19 @@ const CustomerDetail = () => {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [payments, setPayments] = useState<any[]>([]);
     const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
+    const [debitNotes, setDebitNotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'emi' | 'invoices' | 'payments' | 'credit_notes' | 'statements'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'emi' | 'invoices' | 'payments' | 'credit_notes' | 'debit_notes' | 'statements'>('overview');
     const [sortBy, setSortBy] = useState<'date' | 'status'>('date');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [exportFormat, setExportFormat] = useState<'pdf' | 'csv'>('pdf');
+
+    // Statement download date modal state
+    const [showDownloadModal, setShowDownloadModal] = useState(false);
+    const [dlFrom, setDlFrom] = useState('');
+    const [dlTo, setDlTo] = useState('');
+
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['PAID', 'UNPAID', 'PARTIALLY_PAID', 'OVERDUE']);
@@ -53,15 +60,17 @@ const CustomerDetail = () => {
             const customerId = resolvedCustomer._id || id;
 
             // Fetch related data in parallel, but don't let one failure block the rest
-            const [invoicesResult, creditNotesResult, paymentsResult] = await Promise.allSettled([
+            const [invoicesResult, creditNotesResult, paymentsResult, debitNotesResult] = await Promise.allSettled([
                 getInvoicesByCustomer(customerId),
                 getAllCreditNotes({ customerId }),
-                api.get('/api/payments-received', { params: { customerId, limit: 10000 } })
+                api.get('/api/payments-received', { params: { customerId, limit: 10000 } }),
+                api.get('/api/debit-notes', { params: { customerId, limit: 10000 }, headers: { 'X-Skip-Toast': 'true' } })
             ]);
 
             setInvoices(invoicesResult.status === 'fulfilled' ? invoicesResult.value : []);
             setCreditNotes(creditNotesResult.status === 'fulfilled' ? (creditNotesResult.value?.data || []) : []);
             setPayments(paymentsResult.status === 'fulfilled' ? (paymentsResult.value?.data?.data || paymentsResult.value?.data || []) : []);
+            setDebitNotes(debitNotesResult.status === 'fulfilled' ? (debitNotesResult.value?.data?.data || debitNotesResult.value?.data || []) : []);
         } catch (error) {
             console.error('Error fetching customer detail data:', error);
             toast.error('Failed to load customer details');
@@ -468,6 +477,7 @@ const CustomerDetail = () => {
                     { id: 'invoices', label: 'Payables (Invoices)', icon: <FileText size={14} /> },
                     { id: 'payments', label: 'Payments Received', icon: <DollarSign size={14} /> },
                     { id: 'credit_notes', label: 'Credit Notes', icon: <FileSpreadsheet size={14} /> },
+                    { id: 'debit_notes', label: 'Debit Notes', icon: <FileText size={14} /> },
                     { id: 'statements', label: 'Statements', icon: <FileText size={14} /> },
                 ].map((tab) => (
                     <button
@@ -501,6 +511,7 @@ const CustomerDetail = () => {
                 {activeTab === 'invoices' && <InvoicesTab invoices={invoices} />}
                 {activeTab === 'payments' && <PaymentsTab payments={payments} />}
                 {activeTab === 'credit_notes' && <CreditNotesTab creditNotes={creditNotes} />}
+                {activeTab === 'debit_notes' && <DebitNotesTab debitNotes={debitNotes} navigate={navigate} />}
                 {activeTab === 'statements' && <StatementsTab invoices={invoices} payments={payments} creditNotes={creditNotes} customerId={id || ''} />}
             </div>
 
@@ -1422,6 +1433,54 @@ const CreditNotesTab = ({ creditNotes }: { creditNotes: CreditNote[] }) => (
                                         'bg-white/5 text-dim border-white/10'
                                     }`}>
                                         {cn.status}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
+        </div>
+    </div>
+);
+
+const DebitNotesTab = ({ debitNotes, navigate }: { debitNotes: any[]; navigate: any }) => (
+    <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+        <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
+                <thead>
+                    <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Debit Note #</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Date</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Reason</th>
+                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount ($)</th>
+                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Paid ($)</th>
+                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Balance ($)</th>
+                        <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                    {debitNotes.length === 0 ? (
+                        <tr><td colSpan={7} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No debit notes issued for this customer.</td></tr>
+                    ) : (
+                        debitNotes.map((dn) => (
+                            <tr key={dn._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
+                                <td className="px-6 py-4 font-black text-xs text-brand-lime cursor-pointer hover:underline" onClick={() => navigate(`/admin/admin/sales/debit-notes/${dn._id}`)} style={{ color: 'var(--brand-lime)' }}>{dn.debitNoteNumber}</td>
+                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{dn.debitNoteDate ? new Date(dn.debitNoteDate).toLocaleDateString() : 'N/A'}</td>
+                                <td className="px-6 py-4 text-xs font-bold italic truncate max-w-[200px]" style={{ color: 'var(--text-dim)' }}>{dn.reason}</td>
+                                <td className="px-6 py-4 text-right text-xs font-black text-amber-400">${(dn.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td className="px-6 py-4 text-right text-xs font-bold text-emerald-400">${(dn.amountPaid !== undefined ? dn.amountPaid : (dn.status === 'PAID' ? dn.amount : 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td className="px-6 py-4 text-right text-xs font-black text-rose-400">${(dn.balance !== undefined ? dn.balance : (dn.status === 'PAID' ? 0 : dn.amount)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td className="px-6 py-4 text-center">
+                                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                        dn.status === 'PAID' || dn.status === 'CLOSED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                        dn.status === 'PARTIAL' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                        dn.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                                        dn.status === 'CANCELLED' || dn.status === 'VOID' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' :
+                                        dn.status === 'DRAFT' ? 'bg-gray-500/10 text-gray-400 border border-gray-500/20' :
+                                        'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                    }`}>
+                                        {dn.status}
                                     </span>
                                 </td>
                             </tr>

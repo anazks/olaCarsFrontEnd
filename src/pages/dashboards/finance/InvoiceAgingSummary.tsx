@@ -21,6 +21,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getInvoicesRegistry, type Invoice } from '../../../services/invoiceService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
+import { getAllDebitNotes, type DebitNote } from '../../../services/debitNoteService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 export interface DynamicAgingInterval {
@@ -56,9 +57,13 @@ interface CustomerAgingSummary {
     phone?: string;
     current: number;
     buckets: Record<string, number>;
+    invoiceTotal: number;
+    depositDue: number;
     total: number;
     invoiceCount: number;
+    debitNoteCount: number;
     invoices: (Invoice & { daysOverdue: number })[];
+    debitNotes: (DebitNote & { daysOverdue: number })[];
 }
 
 export const InvoiceAgingSummary: React.FC = () => {
@@ -67,12 +72,14 @@ export const InvoiceAgingSummary: React.FC = () => {
     // Data States
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
+    const [debitNotes, setDebitNotes] = useState<DebitNote[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Filter & Config States
     const [asOfDate, setAsOfDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [selectedCustomer, setSelectedCustomer] = useState<string>('ALL');
     const [searchQuery, setSearchQuery] = useState<string>('');
+    const [docTypeFilter, setDocTypeFilter] = useState<'ALL' | 'INVOICES' | 'DEBIT_NOTES'>('ALL');
     const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
 
     // Aging Intervals States
@@ -97,13 +104,15 @@ export const InvoiceAgingSummary: React.FC = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [invRes, custRes] = await Promise.all([
+            const [invRes, custRes, dnRes] = await Promise.all([
                 getInvoicesRegistry({ status: 'UNPAID', allTime: 'true', limit: 100000, ignoreDefaultDates: 'true' }),
-                getAllCustomers({ limit: 10000 })
+                getAllCustomers({ limit: 10000 }),
+                getAllDebitNotes({ limit: 100000 })
             ]);
 
             setInvoices(invRes.data || []);
             setCustomers(Array.isArray(custRes) ? custRes : (custRes as any)?.data || []);
+            setDebitNotes(dnRes.data || []);
         } catch (err: any) {
             console.error('Failed to load aging report data:', err);
             toast.error(err?.message || 'Failed to load invoices');
@@ -149,19 +158,33 @@ export const InvoiceAgingSummary: React.FC = () => {
         return list;
     }, [numIntervals, intervalValue, intervalUnit]);
 
-    // Process Aging Summaries
-    const agingData = useMemo(() => {
-        // Filter active unpaid/partially paid invoices with balance > 0
+    // Process Combined Receivable Items (Invoices + Debit Notes)
+    const combinedReceivableItems = useMemo(() => {
+        const items: {
+            id: string;
+            type: 'INVOICE' | 'DEBIT_NOTE';
+            number: string;
+            customerKey: string;
+            customerName: string;
+            customerId: string;
+            email?: string;
+            phone?: string;
+            dueDateStr: string;
+            daysOverdue: number;
+            balance: number;
+            category: 'DEPOSIT' | 'RENT' | 'OTHERS';
+            status: string;
+            rawItem: any;
+        }[] = [];
+
+        // 1. Invoices
         const activeInvoices = invoices.filter(inv => {
             if (inv.status === 'CANCELLED') return false;
             const bal = inv.balance ?? (inv.totalAmountDue - inv.amountPaid);
             return bal > 0.001;
         });
 
-        const map: Record<string, CustomerAgingSummary> = {};
-
         activeInvoices.forEach(inv => {
-            // Customer identification
             let custName = 'Unassigned / Cash Sales';
             let custId = '—';
             let custKey = 'unassigned';
@@ -191,30 +214,148 @@ export const InvoiceAgingSummary: React.FC = () => {
                 }
             }
 
+            const dueStr = inv.dueDate || inv.generatedAt || inv.createdAt;
+            const daysOverdue = getDaysOverdue(dueStr, asOfDate);
+            const bal = inv.balance ?? (inv.totalAmountDue - inv.amountPaid);
+
+            const typeStr = (inv.invoiceType || (inv as any).type || '').toUpperCase();
+            const notesStr = (inv.notes || '').toLowerCase();
+            const lineItemNames = (inv.lineItems || []).map(i => `${i.name || ''} ${i.description || ''}`.toLowerCase()).join(' ');
+
+            let category: 'DEPOSIT' | 'RENT' | 'OTHERS' = 'RENT';
+            if (typeStr === 'DEPOSIT' || notesStr.includes('deposit') || notesStr.includes('fianza') || lineItemNames.includes('deposit') || lineItemNames.includes('fianza')) {
+                category = 'DEPOSIT';
+            } else if (typeStr === 'RENTAL' || typeStr === 'RENT' || typeStr === 'VEHICLE_RENT' || notesStr.includes('rent') || notesStr.includes('alquiler') || notesStr.includes('cuota') || lineItemNames.includes('rent') || lineItemNames.includes('alquiler')) {
+                category = 'RENT';
+            } else if (typeStr === 'WORKSHOP' || notesStr.includes('workshop') || notesStr.includes('maintenance') || lineItemNames.includes('workshop') || lineItemNames.includes('repair')) {
+                category = 'OTHERS';
+            }
+
+            items.push({
+                id: inv._id,
+                type: 'INVOICE',
+                number: inv.invoiceNumber,
+                customerKey: custKey,
+                customerName: custName,
+                customerId: custId,
+                email,
+                phone,
+                dueDateStr: dueStr,
+                daysOverdue,
+                balance: bal,
+                category,
+                status: inv.status,
+                rawItem: inv
+            });
+        });
+
+        // 2. Debit Notes
+        const activeDebitNotes = debitNotes.filter(dn => {
+            if (dn.status === 'CANCELLED' || dn.status === 'VOID' || dn.status === 'CLOSED' || dn.status === 'PAID') return false;
+            const bal = dn.balance !== undefined ? dn.balance : (dn.amount || 0);
+            return bal > 0.001;
+        });
+
+        activeDebitNotes.forEach(dn => {
+            let custName = 'Unassigned Customer / Vendor';
+            let custId = '—';
+            let custKey = 'unassigned';
+            let email = '';
+            let phone = '';
+
+            if (dn.customerId && typeof dn.customerId === 'object') {
+                custName = dn.customerId.name || 'Unknown Customer';
+                custId = dn.customerId.customerId || dn.customerId._id || '—';
+                custKey = dn.customerId._id || custId;
+                email = dn.customerId.email || '';
+                phone = dn.customerId.phone || '';
+            } else if (typeof dn.customerId === 'string' && dn.customerId) {
+                custKey = dn.customerId;
+                const found = customers.find(c => c._id === dn.customerId);
+                if (found) {
+                    custName = found.name;
+                    custId = found.customerId || found._id;
+                    email = found.email || '';
+                    phone = found.phone || '';
+                }
+            } else if (dn.supplierId && typeof dn.supplierId === 'object') {
+                custName = dn.supplierId.name || dn.supplierId.companyName || 'Supplier';
+                custId = dn.supplierId.supplierCode || dn.supplierId._id || '—';
+                custKey = dn.supplierId._id || custId;
+            } else if (dn.driverId && typeof dn.driverId === 'object') {
+                custName = dn.driverId.personalInfo?.fullName || 'Driver';
+                custId = dn.driverId.driverId || dn.driverId._id || '—';
+                custKey = dn.driverId._id || custId;
+            }
+
+            const dueStr = dn.debitNoteDate || dn.createdAt;
+            const daysOverdue = getDaysOverdue(dueStr, asOfDate);
+            const bal = dn.balance !== undefined ? dn.balance : (dn.amount || 0);
+
+            const isDepositNote = (dn.isDeposit === true) || 
+                (dn.debitNoteNumber && /^DP/i.test(String(dn.debitNoteNumber).trim()));
+            const dnCategory: 'DEPOSIT' | 'RENT' | 'OTHERS' = isDepositNote ? 'DEPOSIT' : 'OTHERS';
+
+            items.push({
+                id: dn._id,
+                type: 'DEBIT_NOTE',
+                number: dn.debitNoteNumber,
+                customerKey: custKey,
+                customerName: custName,
+                customerId: custId,
+                email,
+                phone,
+                dueDateStr: dueStr,
+                daysOverdue,
+                balance: bal,
+                category: dnCategory,
+                status: dn.status || 'OPEN',
+                rawItem: dn
+            });
+        });
+
+        if (docTypeFilter === 'INVOICES') {
+            return items.filter(i => i.type === 'INVOICE');
+        }
+        if (docTypeFilter === 'DEBIT_NOTES') {
+            return items.filter(i => i.type === 'DEBIT_NOTE');
+        }
+        return items;
+    }, [invoices, debitNotes, customers, asOfDate, docTypeFilter]);
+
+    // Process Aging Summaries from Combined Receivables
+    const agingData = useMemo(() => {
+        const map: Record<string, CustomerAgingSummary> = {};
+
+        combinedReceivableItems.forEach(item => {
+            const custKey = item.customerKey;
+
             if (!map[custKey]) {
                 const initialBuckets: Record<string, number> = {};
                 activeIntervals.forEach(int => { initialBuckets[int.key] = 0; });
 
                 map[custKey] = {
                     customerKey: custKey,
-                    customerName: custName,
-                    customerId: custId,
-                    email,
-                    phone,
+                    customerName: item.customerName,
+                    customerId: item.customerId,
+                    email: item.email,
+                    phone: item.phone,
                     current: 0,
                     buckets: initialBuckets,
+                    invoiceTotal: 0,
+                    depositDue: 0,
                     total: 0,
                     invoiceCount: 0,
-                    invoices: []
+                    debitNoteCount: 0,
+                    invoices: [],
+                    debitNotes: []
                 };
             }
 
-            // Calculate days past due from dueDate or generatedAt
-            const dueStr = inv.dueDate || inv.generatedAt || inv.createdAt;
-            const daysOverdue = getDaysOverdue(dueStr, asOfDate);
-            const bal = inv.balance ?? (inv.totalAmountDue - inv.amountPaid);
+            const bal = item.balance;
+            const daysOverdue = item.daysOverdue;
 
-            // Categorize into dynamic buckets
+            // Categorize into dynamic buckets (Current vs Overdue Buckets)
             if (daysOverdue <= 0) {
                 map[custKey].current += bal;
             } else {
@@ -239,12 +380,19 @@ export const InvoiceAgingSummary: React.FC = () => {
                 }
             }
 
+            if (item.category === 'DEPOSIT') {
+                map[custKey].depositDue += bal;
+            }
+            if (item.type === 'INVOICE') {
+                map[custKey].invoiceTotal += bal;
+                map[custKey].invoiceCount += 1;
+                map[custKey].invoices.push({ ...item.rawItem, daysOverdue });
+            } else {
+                map[custKey].debitNoteCount += 1;
+                map[custKey].debitNotes.push({ ...item.rawItem, daysOverdue });
+            }
+
             map[custKey].total += bal;
-            map[custKey].invoiceCount += 1;
-            map[custKey].invoices.push({
-                ...inv,
-                daysOverdue
-            });
         });
 
         let list = Object.values(map);
@@ -285,7 +433,7 @@ export const InvoiceAgingSummary: React.FC = () => {
         });
 
         return list;
-    }, [invoices, customers, asOfDate, selectedCustomer, searchQuery, activeIntervals, sortField, sortOrder]);
+    }, [combinedReceivableItems, selectedCustomer, searchQuery, activeIntervals, sortField, sortOrder]);
 
     // Grand Totals
     const totals = useMemo(() => {
@@ -295,14 +443,18 @@ export const InvoiceAgingSummary: React.FC = () => {
         const result = {
             current: 0,
             buckets: initialBucketTotals,
+            depositDue: 0,
             total: 0,
-            invoices: 0
+            invoices: 0,
+            debitNotes: 0
         };
 
         agingData.forEach(curr => {
             result.current += curr.current;
+            result.depositDue += curr.depositDue;
             result.total += curr.total;
             result.invoices += curr.invoiceCount;
+            result.debitNotes += curr.debitNoteCount;
             activeIntervals.forEach(int => {
                 result.buckets[int.key] = (result.buckets[int.key] || 0) + (curr.buckets[int.key] || 0);
             });
@@ -311,31 +463,8 @@ export const InvoiceAgingSummary: React.FC = () => {
         return result;
     }, [agingData, activeIntervals]);
 
-    // KPI Metrics calculation matching exact dashboard spec
+    // KPI Metrics calculation matching exact dashboard spec (Combined Invoices + Debit Notes)
     const kpiMetrics = useMemo(() => {
-        const classifyInvoiceCategory = (inv: Invoice): 'DEPOSIT' | 'RENT' | 'OTHERS' => {
-            const typeStr = (inv.invoiceType || (inv as any).type || '').toUpperCase();
-            const notesStr = (inv.notes || '').toLowerCase();
-            const lineItemNames = (inv.lineItems || []).map(i => `${i.name || ''} ${i.description || ''}`.toLowerCase()).join(' ');
-
-            if (typeStr === 'DEPOSIT' || notesStr.includes('deposit') || notesStr.includes('fianza') || lineItemNames.includes('deposit') || lineItemNames.includes('fianza')) {
-                return 'DEPOSIT';
-            }
-            if (typeStr === 'RENTAL' || typeStr === 'RENT' || typeStr === 'VEHICLE_RENT' || notesStr.includes('rent') || notesStr.includes('alquiler') || notesStr.includes('cuota') || lineItemNames.includes('rent') || lineItemNames.includes('alquiler')) {
-                return 'RENT';
-            }
-            if (typeStr === 'WORKSHOP' || notesStr.includes('workshop') || notesStr.includes('maintenance') || lineItemNames.includes('workshop') || lineItemNames.includes('repair')) {
-                return 'OTHERS';
-            }
-            return 'RENT';
-        };
-
-        const activeInvoices = invoices.filter(inv => {
-            if (inv.status === 'CANCELLED') return false;
-            const bal = inv.balance ?? (inv.totalAmountDue - inv.amountPaid);
-            return bal > 0.001;
-        });
-
         const asOf = new Date(asOfDate);
         asOf.setHours(23, 59, 59, 999);
 
@@ -350,15 +479,11 @@ export const InvoiceAgingSummary: React.FC = () => {
 
         const customerMaxDays: Record<string, { maxDays: number; totalBal: number; isOverdue: boolean }> = {};
 
-        activeInvoices.forEach(inv => {
-            const bal = inv.balance ?? (inv.totalAmountDue - inv.amountPaid);
+        combinedReceivableItems.forEach(item => {
+            const bal = item.balance;
             totalOutstanding += bal;
 
-            const due = new Date(inv.dueDate || inv.generatedAt || inv.createdAt || Date.now());
-            due.setHours(0, 0, 0, 0);
-
-            const diffTime = asOf.getTime() - due.getTime();
-            const daysOverdue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const daysOverdue = item.daysOverdue;
 
             if (daysOverdue > 0) {
                 totalOverdueBalance += bal;
@@ -368,15 +493,11 @@ export const InvoiceAgingSummary: React.FC = () => {
                 }
             }
 
-            const cat = classifyInvoiceCategory(inv);
-            if (cat === 'DEPOSIT') depositDue += bal;
-            else if (cat === 'RENT') rentDue += bal;
+            if (item.category === 'DEPOSIT') depositDue += bal;
+            else if (item.category === 'RENT') rentDue += bal;
             else othersDue += bal;
 
-            let custKey = 'unassigned';
-            if (inv.customer && typeof inv.customer === 'object') custKey = inv.customer._id || inv.customer.customerId || 'unassigned';
-            else if (inv.driver && typeof inv.driver === 'object') custKey = inv.driver._id || inv.driver.driverId || 'unassigned';
-            else if (typeof inv.customer === 'string' && inv.customer) custKey = inv.customer;
+            const custKey = item.customerKey;
 
             if (!customerMaxDays[custKey]) {
                 customerMaxDays[custKey] = { maxDays: daysOverdue, totalBal: bal, isOverdue: daysOverdue > 0 };
@@ -426,7 +547,7 @@ export const InvoiceAgingSummary: React.FC = () => {
 
         return {
             totalOutstanding,
-            openLinesCount: activeInvoices.length,
+            openLinesCount: combinedReceivableItems.length,
             customersInArrearsCount,
             weightedAvgDaysOverdue,
             oldestDays,
@@ -443,7 +564,7 @@ export const InvoiceAgingSummary: React.FC = () => {
             reminderBucketDrivers,
             urgentBucketDrivers
         };
-    }, [invoices, asOfDate, agingData]);
+    }, [combinedReceivableItems, asOfDate, agingData]);
 
     // Handlers
     const handleSort = (field: keyof CustomerAgingSummary) => {
@@ -485,8 +606,10 @@ export const InvoiceAgingSummary: React.FC = () => {
                     rowObj[`${int.label} ($)`] = c.buckets[int.key] || 0;
                 });
 
+                rowObj['Deposit Due ($)'] = c.depositDue;
                 rowObj['Total Outstanding ($)'] = c.total;
                 rowObj['Unpaid Invoices'] = c.invoiceCount;
+                rowObj['Debit Notes'] = c.debitNoteCount;
                 return rowObj;
             });
 
@@ -502,8 +625,10 @@ export const InvoiceAgingSummary: React.FC = () => {
                 totalObj[`${int.label} ($)`] = totals.buckets[int.key] || 0;
             });
 
+            totalObj['Deposit Due ($)'] = totals.depositDue;
             totalObj['Total Outstanding ($)'] = totals.total;
             totalObj['Unpaid Invoices'] = totals.invoices;
+            totalObj['Debit Notes'] = totals.debitNotes;
 
             rows.push(totalObj);
 
@@ -541,6 +666,7 @@ export const InvoiceAgingSummary: React.FC = () => {
                     rowObj[`${int.label} ($)`] = c.buckets[int.key] || 0;
                 });
 
+                rowObj['Deposit Due ($)'] = c.depositDue;
                 rowObj['Total Outstanding ($)'] = c.total;
                 return rowObj;
             });
@@ -584,6 +710,7 @@ export const InvoiceAgingSummary: React.FC = () => {
                 'Customer Name',
                 'Current',
                 ...activeIntervals.map(int => int.label),
+                'Deposit Due',
                 'Total Balance'
             ]];
 
@@ -592,6 +719,7 @@ export const InvoiceAgingSummary: React.FC = () => {
                 c.customerName,
                 `$${c.current.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                 ...activeIntervals.map(int => `$${(c.buckets[int.key] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`),
+                `$${c.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                 `$${c.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
             ]);
 
@@ -600,6 +728,7 @@ export const InvoiceAgingSummary: React.FC = () => {
                 `Grand Total (${agingData.length} Customers)`,
                 `$${totals.current.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                 ...activeIntervals.map(int => `$${(totals.buckets[int.key] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`),
+                `$${totals.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                 `$${totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
             ];
 
@@ -824,6 +953,22 @@ export const InvoiceAgingSummary: React.FC = () => {
                         />
                     </div>
 
+                    {/* Document Source Filter (Combined / Invoices / Debit Notes) */}
+                    <div className="flex items-center gap-2">
+                        <FileText size={15} className="text-amber-400" />
+                        <span className="text-xs font-bold text-dim">Source:</span>
+                        <select
+                            value={docTypeFilter}
+                            onChange={e => setDocTypeFilter(e.target.value as any)}
+                            className="bg-transparent border rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-[#C8E600] cursor-pointer"
+                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <option value="ALL">Combined (Invoices & Debit Notes)</option>
+                            <option value="INVOICES">Invoices Only</option>
+                            <option value="DEBIT_NOTES">Debit Notes Only</option>
+                        </select>
+                    </div>
+
                     {/* Customer Filter Dropdown */}
                     <div className="flex items-center gap-2 min-w-[200px]">
                         <Users size={15} className="text-dim" />
@@ -897,6 +1042,12 @@ export const InvoiceAgingSummary: React.FC = () => {
                                         </div>
                                     </th>
                                 ))}
+                                <th className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('depositDue')}>
+                                    <div className="flex items-center justify-end gap-1 text-amber-400">
+                                        Deposit Due
+                                        <ArrowUpDown size={12} />
+                                    </div>
+                                </th>
                                 <th className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('total')}>
                                     <div className="flex items-center justify-end gap-1" style={{ color: 'var(--brand-lime)' }}>
                                         Total Balance
@@ -908,14 +1059,14 @@ export const InvoiceAgingSummary: React.FC = () => {
                         <tbody className="divide-y font-medium" style={{ borderColor: 'var(--border-main)' }}>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={4 + activeIntervals.length} className="py-12 text-center text-dim">
+                                    <td colSpan={5 + activeIntervals.length} className="py-12 text-center text-dim">
                                         <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-brand-lime" />
                                         Loading aging summary calculations...
                                     </td>
                                 </tr>
                             ) : agingData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4 + activeIntervals.length} className="py-12 text-center text-dim font-bold">
+                                    <td colSpan={5 + activeIntervals.length} className="py-12 text-center text-dim font-bold">
                                         No outstanding customer invoices found for the selected criteria.
                                     </td>
                                 </tr>
@@ -941,7 +1092,7 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                         {row.customerName}
                                                     </div>
                                                     <div className="text-[10px] font-mono text-dim">
-                                                        ID: {row.customerId} • {row.invoiceCount} unpaid invoice(s)
+                                                        ID: {row.customerId} • {row.invoiceCount} invoice(s) • {row.debitNoteCount} debit note(s)
                                                     </div>
                                                 </td>
                                                 <td className="py-3.5 px-4 text-right font-mono font-bold text-blue-400">
@@ -957,15 +1108,18 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                         </td>
                                                     );
                                                 })}
+                                                <td className="py-3.5 px-4 text-right font-mono font-bold text-amber-400">
+                                                    {row.depositDue > 0 ? `$${row.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                                </td>
                                                 <td className="py-3.5 px-4 text-right font-mono font-black text-sm" style={{ color: 'var(--brand-lime)' }}>
                                                     ${row.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </td>
                                             </tr>
 
-                                            {/* Expanded Detailed Invoice List */}
+                                            {/* Expanded Detailed Invoice & Debit Note List */}
                                             {isExpanded && (
                                                 <tr>
-                                                    <td colSpan={4 + activeIntervals.length} className="p-4 bg-black/20 border-y" style={{ borderColor: 'var(--border-main)' }}>
+                                                    <td colSpan={5 + activeIntervals.length} className="p-4 bg-black/20 border-y space-y-4" style={{ borderColor: 'var(--border-main)' }}>
                                                         <div className="space-y-3 pl-6 pr-2">
                                                             <div className="flex items-center justify-between">
                                                                 <h4 className="text-xs font-bold tracking-wide uppercase text-dim flex items-center gap-2">
@@ -993,57 +1147,133 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                                                                        {row.invoices.map(inv => (
-                                                                            <tr key={inv._id} className="hover:bg-white/5 transition-colors">
-                                                                                <td className="py-2 px-3 font-bold font-mono text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
-                                                                                    {inv.invoiceNumber}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 font-semibold uppercase text-[10px]">
-                                                                                    {inv.invoiceType}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-dim font-mono">
-                                                                                    {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : '—'}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-center font-bold">
-                                                                                    {inv.daysOverdue <= 0 ? (
-                                                                                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                                                                                            Not Due ({Math.abs(inv.daysOverdue)}d left)
-                                                                                        </span>
-                                                                                    ) : (
-                                                                                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                                                                                            +{inv.daysOverdue} Days Overdue
-                                                                                        </span>
-                                                                                    )}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-right font-mono">
-                                                                                    ${(inv.totalAmountDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-right font-mono text-emerald-400">
-                                                                                    ${(inv.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-right font-mono font-bold" style={{ color: 'var(--brand-lime)' }}>
-                                                                                    ${(inv.balance ?? (inv.totalAmountDue - inv.amountPaid)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-center">
-                                                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${inv.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
-                                                                                        {inv.status}
-                                                                                    </span>
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-right">
-                                                                                    <button
-                                                                                        onClick={(e) => { e.stopPropagation(); navigate(`/admin/financial-admin/invoices/${inv._id}`); }}
-                                                                                        className="p-1 rounded hover:bg-white/10 text-brand-lime transition-all"
-                                                                                        title="View Invoice Detail"
-                                                                                    >
-                                                                                        <Eye size={14} />
-                                                                                    </button>
-                                                                                </td>
+                                                                        {row.invoices.length === 0 ? (
+                                                                            <tr>
+                                                                                <td colSpan={9} className="py-4 text-center text-dim font-bold">No open invoices for this customer.</td>
                                                                             </tr>
-                                                                        ))}
+                                                                        ) : (
+                                                                            row.invoices.map(inv => (
+                                                                                <tr key={inv._id} className="hover:bg-white/5 transition-colors">
+                                                                                    <td className="py-2 px-3 font-bold font-mono text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                                                                                        {inv.invoiceNumber}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 font-semibold uppercase text-[10px]">
+                                                                                        {inv.invoiceType}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-dim font-mono">
+                                                                                        {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : '—'}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-center font-bold">
+                                                                                        {inv.daysOverdue <= 0 ? (
+                                                                                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                                                                                Not Due ({Math.abs(inv.daysOverdue)}d left)
+                                                                                            </span>
+                                                                                        ) : (
+                                                                                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                                                                                                +{inv.daysOverdue} Days Overdue
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-mono">
+                                                                                        ${(inv.totalAmountDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-mono text-emerald-400">
+                                                                                        ${(inv.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-mono font-bold" style={{ color: 'var(--brand-lime)' }}>
+                                                                                        ${(inv.balance ?? (inv.totalAmountDue - inv.amountPaid)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-center">
+                                                                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${inv.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
+                                                                                            {inv.status}
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right">
+                                                                                        <button
+                                                                                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/financial-admin/invoices/${inv._id}`); }}
+                                                                                            className="p-1 rounded hover:bg-white/10 text-brand-lime transition-all"
+                                                                                            title="View Invoice Detail"
+                                                                                        >
+                                                                                            <Eye size={14} />
+                                                                                        </button>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            ))
+                                                                        )}
                                                                     </tbody>
                                                                 </table>
                                                             </div>
                                                         </div>
+
+                                                        {/* Debit Notes Deposit Breakdown */}
+                                                        {row.debitNotes && row.debitNotes.length > 0 && (
+                                                            <div className="space-y-3 pl-6 pr-2 pt-2">
+                                                                <div className="flex items-center justify-between">
+                                                                    <h4 className="text-xs font-bold tracking-wide uppercase text-dim flex items-center gap-2">
+                                                                        <FileText size={14} className="text-amber-400" />
+                                                                        Deposit Debit Notes Breakdown for {row.customerName}
+                                                                    </h4>
+                                                                    <span className="text-[11px] text-dim">
+                                                                        Showing {row.debitNotes.length} debit note(s)
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
+                                                                    <table className="w-full text-left text-xs">
+                                                                        <thead className="border-b uppercase font-bold text-[10px]" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
+                                                                            <tr>
+                                                                                <th className="py-2.5 px-3">DN Number</th>
+                                                                                <th className="py-2.5 px-3">Date</th>
+                                                                                <th className="py-2.5 px-3">Reason</th>
+                                                                                <th className="py-2.5 px-3 text-right">Amount ($)</th>
+                                                                                <th className="py-2.5 px-3 text-right">Paid ($)</th>
+                                                                                <th className="py-2.5 px-3 text-right">Deposit Balance ($)</th>
+                                                                                <th className="py-2.5 px-3 text-center">Status</th>
+                                                                                <th className="py-2.5 px-3 text-right">Action</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                                                            {row.debitNotes.map(dn => (
+                                                                                <tr key={dn._id} className="hover:bg-white/5 transition-colors">
+                                                                                    <td className="py-2 px-3 font-bold font-mono text-amber-400">
+                                                                                        {dn.debitNoteNumber}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-dim font-mono">
+                                                                                        {dn.debitNoteDate ? new Date(dn.debitNoteDate).toLocaleDateString() : '—'}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-dim font-medium">
+                                                                                        {dn.reason || 'Deposit Charge'}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-mono">
+                                                                                        ${(dn.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-mono text-emerald-400">
+                                                                                        ${(dn.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-mono font-bold text-amber-400">
+                                                                                        ${(dn.balance !== undefined ? dn.balance : (dn.amount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-center">
+                                                                                        <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                                                            {dn.status || 'OPEN'}
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right">
+                                                                                        <button
+                                                                                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/finance/sales/debit-notes/${dn._id}`); }}
+                                                                                            className="p-1 rounded hover:bg-white/10 text-amber-400 transition-all"
+                                                                                            title="View Debit Note Detail"
+                                                                                        >
+                                                                                            <Eye size={14} />
+                                                                                        </button>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             )}
@@ -1073,6 +1303,9 @@ export const InvoiceAgingSummary: React.FC = () => {
                                             </td>
                                         );
                                     })}
+                                    <td className="py-4 px-4 text-right text-amber-400 font-black">
+                                        ${totals.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </td>
                                     <td className="py-4 px-4 text-right text-sm font-black" style={{ color: 'var(--brand-lime)' }}>
                                         ${totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
