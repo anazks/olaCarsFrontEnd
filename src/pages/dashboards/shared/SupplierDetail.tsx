@@ -94,12 +94,14 @@ const SupplierDetail = () => {
         setFormLoading(true);
         setFormError(null);
 
-        // Validate email format
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        if (!emailRegex.test(formData.email.trim())) {
-            setFormError('Please enter a valid email address.');
-            setFormLoading(false);
-            return;
+        // Validate email format if provided
+        if (formData.email.trim()) {
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailRegex.test(formData.email.trim())) {
+                setFormError('Please enter a valid email address.');
+                setFormLoading(false);
+                return;
+            }
         }
 
         // Validate phone number using the centralized helper
@@ -264,8 +266,8 @@ const SupplierDetail = () => {
 
     // Dynamic parent route segment mapping for breadcrumbs
     const currentPath = location.pathname;
-    const parentPath = currentPath.includes('/admin/financial-admin/') 
-        ? '/admin/financial-admin/manage-suppliers' 
+    const parentPath = currentPath.includes('/manage-suppliers')
+        ? currentPath.substring(0, currentPath.indexOf('/manage-suppliers') + '/manage-suppliers'.length)
         : '/admin/manage-suppliers';
 
     return (
@@ -817,7 +819,6 @@ const SupplierDetail = () => {
                                     </label>
                                     <input
                                         type="email"
-                                        required
                                         className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
                                         style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
                                         value={formData.email}
