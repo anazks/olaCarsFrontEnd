@@ -13,6 +13,7 @@ import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import InvoiceSettingsModal from './InvoiceSettingsModal';
 import BulkInvoiceUpload from '../shared/BulkInvoiceUpload';
 import { getUserRole } from '../../../utils/auth';
+import { getAllBranches, type Branch } from '../../../services/branchService';
 
 const InvoiceList = () => {
     const navigate = useNavigate();
@@ -67,6 +68,8 @@ const InvoiceList = () => {
     const [typeFilter, setTypeFilter] = useState('ALL');
     const [filterMonth, setFilterMonth] = useState<string>('');
     const [filterYear, setFilterYear] = useState<string>('2026');
+    const [branchFilter, setBranchFilter] = useState('ALL');
+    const [branches, setBranches] = useState<Branch[]>([]);
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
 
@@ -91,6 +94,20 @@ const InvoiceList = () => {
         }
     }, [location.state]);
 
+    useEffect(() => {
+        const fetchBranches = async () => {
+            try {
+                const res = await getAllBranches({ limit: 100 });
+                if (res && res.success) {
+                    setBranches(res.data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch branches', err);
+            }
+        };
+        fetchBranches();
+    }, []);
+
     // Server Pagination
     const [page, setPage] = useState(1);
     const limit = 25;
@@ -107,7 +124,7 @@ const InvoiceList = () => {
 
     useEffect(() => {
         setPage(1);
-    }, [debouncedSearch, sortBy, sortOrder, startDate, endDate, statusFilter, typeFilter, filterMonth, filterYear]);
+    }, [debouncedSearch, sortBy, sortOrder, startDate, endDate, statusFilter, typeFilter, filterMonth, filterYear, branchFilter]);
 
     const handlePageChange = (pageNum: number) => {
         setPage(pageNum);
@@ -188,6 +205,7 @@ const InvoiceList = () => {
             if (!startDate && !endDate && !filterMonth && !filterYear) filters.allTime = 'true';
             if (statusFilter !== 'ALL') filters.status = statusFilter;
             if (typeFilter !== 'ALL') filters.invoiceType = typeFilter;
+            if (branchFilter !== 'ALL') filters.branch = branchFilter;
 
             const res = (filterYear === 'CUSTOM' && (startDate || endDate))
                 ? await getInvoicesDateWise(filters)
@@ -214,7 +232,7 @@ const InvoiceList = () => {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearch, page, limit, sortBy, sortOrder, startDate, endDate, statusFilter, typeFilter, filterMonth, filterYear]);
+    }, [debouncedSearch, page, limit, sortBy, sortOrder, startDate, endDate, statusFilter, typeFilter, filterMonth, filterYear, branchFilter]);
 
     useEffect(() => {
         fetchData();
@@ -243,6 +261,7 @@ const InvoiceList = () => {
             const filters: any = {
                 search: debouncedSearch.trim() || undefined,
                 status: statusFilter !== 'ALL' ? statusFilter : undefined,
+                branch: branchFilter !== 'ALL' ? branchFilter : undefined,
             };
             if (filterYear === 'CUSTOM') {
                 filters.startDate = startDate || undefined;
@@ -291,6 +310,7 @@ const InvoiceList = () => {
                 filters.allTime = 'true';
             }
             if (statusFilter !== 'ALL') filters.status = statusFilter;
+            if (branchFilter !== 'ALL') filters.branch = branchFilter;
 
             const res = (filterYear === 'CUSTOM' && (startDate || endDate))
                 ? await getInvoicesDateWise(filters)
@@ -543,6 +563,7 @@ const InvoiceList = () => {
                                     setEndDate('');
                                     setStatusFilter('ALL');
                                     setTypeFilter('ALL');
+                                    setBranchFilter('ALL');
                                 }}
                                 className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:opacity-80 transition-all bg-transparent border-none cursor-pointer"
                                 style={{ color: 'var(--brand-lime)' }}
@@ -551,7 +572,7 @@ const InvoiceList = () => {
                             </button>
                         </div>
 
-                        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${filterYear === 'CUSTOM' ? 'lg:grid-cols-6' : 'lg:grid-cols-5'} gap-4`}>
+                        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${filterYear === 'CUSTOM' ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} gap-4`}>
                             {/* Year Selector */}
                             <div className="space-y-1.5">
                                 <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Year</label>
@@ -667,6 +688,22 @@ const InvoiceList = () => {
                                     <option value="WORKSHOP">WORKSHOP</option>
                                     <option value="MANUAL">MANUAL</option>
                                     <option value="DEPOSIT">DEPOSIT</option>
+                                </select>
+                            </div>
+
+                            {/* Branch Filter */}
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Branch</label>
+                                <select
+                                    value={branchFilter}
+                                    onChange={(e) => setBranchFilter(e.target.value)}
+                                    className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs font-medium"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                >
+                                    <option value="ALL">ALL BRANCHES</option>
+                                    {branches.map(b => (
+                                        <option key={b._id} value={b._id}>{b.name}</option>
+                                    ))}
                                 </select>
                             </div>
 

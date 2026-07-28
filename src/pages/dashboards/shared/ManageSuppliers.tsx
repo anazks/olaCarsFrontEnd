@@ -306,12 +306,14 @@ const ManageSuppliers = () => {
         setFormLoading(true);
         setFormError(null);
 
-        // Validate email format
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        if (!emailRegex.test(formData.email.trim())) {
-            setFormError(t('management.suppliers.form.invalidEmailFormat', { defaultValue: 'Please enter a valid email address.' }));
-            setFormLoading(false);
-            return;
+        // Validate email format if provided
+        if (formData.email.trim()) {
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailRegex.test(formData.email.trim())) {
+                setFormError(t('management.suppliers.form.invalidEmailFormat', { defaultValue: 'Please enter a valid email address.' }));
+                setFormLoading(false);
+                return;
+            }
         }
 
         // Validate phone number using the centralized helper
@@ -771,7 +773,6 @@ const ManageSuppliers = () => {
                                     </label>
                                     <input
                                         type="email"
-                                        required
                                         className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
                                         style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
                                         value={formData.email}
