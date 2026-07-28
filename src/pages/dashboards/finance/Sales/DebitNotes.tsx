@@ -13,9 +13,7 @@ import {
     type DebitNote 
 } from '../../../../services/debitNoteService';
 import { getAllCustomers, type Customer } from '../../../../services/customerService';
-import { getAllSuppliers, type Supplier } from '../../../../services/supplierService';
-import api from '../../../../services/api';
-import { getInvoicesByCustomer } from '../../../../services/invoiceService';
+import { getAllSuppliers } from '../../../../services/supplierService';
 import BulkDebitNoteUpload from '../../shared/BulkDebitNoteUpload';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
@@ -79,8 +77,6 @@ const DebitNotes = () => {
     const [isBulkModalOpen, setIsBulkModalOpen] = useState<boolean>(false);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loadingCustomers, setLoadingCustomers] = useState<boolean>(false);
-    const [customerInvoices, setCustomerInvoices] = useState<any[]>([]);
-    const [loadingInvoices, setLoadingInvoices] = useState<boolean>(false);
     
     // Target Selection Type
     const [targetType, setTargetType] = useState<'CUSTOMER' | 'SUPPLIER'>('CUSTOMER');
@@ -91,9 +87,7 @@ const DebitNotes = () => {
 
     // Form States
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
-    const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('');
     const [modalCustomerSearch, setModalCustomerSearch] = useState<string>('');
-    const [modalInvoiceSearch, setModalInvoiceSearch] = useState<string>('');
     const [amount, setAmount] = useState<string>('');
     const [reason, setReason] = useState<string>('');
     const [customReason, setCustomReason] = useState<string>('');
@@ -220,44 +214,6 @@ const DebitNotes = () => {
         return suppliers.find(s => s._id === selectedSupplierId);
     }, [suppliers, selectedSupplierId]);
 
-    // Filter customer invoices based on search input in modal
-    const filteredCustomerInvoices = useMemo(() => {
-        if (!modalInvoiceSearch.trim()) return customerInvoices;
-        const q = modalInvoiceSearch.toLowerCase().trim();
-        return customerInvoices.filter(inv =>
-            (inv.invoiceNumber && inv.invoiceNumber.toLowerCase().includes(q)) ||
-            (inv.status && inv.status.toLowerCase().includes(q)) ||
-            (inv.weekLabel && inv.weekLabel.toLowerCase().includes(q)) ||
-            (inv.balance !== undefined && String(inv.balance).includes(q)) ||
-            (inv.totalAmountDue !== undefined && String(inv.totalAmountDue).includes(q))
-        );
-    }, [customerInvoices, modalInvoiceSearch]);
-
-    const selectedInvoiceData = useMemo(() => {
-        return customerInvoices.find(inv => inv._id === selectedInvoiceId);
-    }, [customerInvoices, selectedInvoiceId]);
-
-    // Fetch customer invoices when customer selection changes
-    useEffect(() => {
-        if (selectedCustomerId) {
-            const loadInvoices = async () => {
-                setLoadingInvoices(true);
-                try {
-                    const res = await getInvoicesByCustomer(selectedCustomerId);
-                    const invList = Array.isArray(res) ? res : ((res as any)?.data || []);
-                    setCustomerInvoices(invList);
-                } catch (err) {
-                    console.error('Failed to fetch customer invoices:', err);
-                } finally {
-                    setLoadingInvoices(false);
-                }
-            };
-            loadInvoices();
-        } else {
-            setCustomerInvoices([]);
-            setSelectedInvoiceId('');
-        }
-    }, [selectedCustomerId]);
 
     // Handle Create Debit Note Submit
     const handleCreateDebitNote = async (e: React.FormEvent) => {
@@ -310,9 +266,7 @@ const DebitNotes = () => {
 
     const resetForm = () => {
         setSelectedCustomerId('');
-        setSelectedInvoiceId('');
         setModalCustomerSearch('');
-        setModalInvoiceSearch('');
         setAmount('');
         setReason('');
         setCustomReason('');

@@ -10,6 +10,14 @@ export interface DebitNote {
         email?: string;
         phone?: string;
     };
+    supplierId?: {
+        _id: string;
+        supplierCode?: string;
+        name?: string;
+        companyName?: string;
+        email?: string;
+        phone?: string;
+    };
     driverId?: {
         _id: string;
         driverId?: string;
@@ -26,10 +34,13 @@ export interface DebitNote {
         status?: string;
     };
     amount: number;
+    amountPaid?: number;
+    balance?: number;
+    isDeposit?: boolean;
     debitNoteDate: string;
     reason: string;
     notes?: string;
-    status: 'OPEN' | 'APPLIED' | 'CLOSED' | 'VOID';
+    status: 'OPEN' | 'APPLIED' | 'CLOSED' | 'VOID' | 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'CANCELLED' | 'DRAFT';
     supportingDocument?: {
         name: string;
         url: string;

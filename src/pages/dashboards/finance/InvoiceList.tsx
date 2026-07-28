@@ -20,22 +20,6 @@ const InvoiceList = () => {
     const location = useLocation();
     const userRole = getUserRole();
 
-    const getRoutePrefix = () => {
-        const role = getUserRole();
-        switch (role) {
-            case 'admin': return '/admin/admin';
-            case 'financeadmin':
-            case 'financialadmin': return '/admin/financial-admin';
-            case 'operationadmin':
-            case 'operationaladmin': return '/admin/operational-admin';
-            case 'countrymanager': return '/admin/country-manager';
-            case 'branchmanager': return '/admin/branch-manager';
-            case 'financestaff': return '/admin/branch-fin-staff';
-            case 'operationstaff': return '/admin/branch-op-staff';
-            default: return '/admin/financial-admin';
-        }
-    };
-
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

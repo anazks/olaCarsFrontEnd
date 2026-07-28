@@ -240,7 +240,7 @@ export const InvoiceAgingSummary: React.FC = () => {
                 customerId: custId,
                 email,
                 phone,
-                dueDateStr: dueStr,
+                dueDateStr: dueStr || '',
                 daysOverdue,
                 balance: bal,
                 category,
@@ -271,7 +271,8 @@ export const InvoiceAgingSummary: React.FC = () => {
                 phone = dn.customerId.phone || '';
             } else if (typeof dn.customerId === 'string' && dn.customerId) {
                 custKey = dn.customerId;
-                const found = customers.find(c => c._id === dn.customerId);
+                const custIdStr = dn.customerId as string;
+                const found = customers.find(c => c._id === custIdStr);
                 if (found) {
                     custName = found.name;
                     custId = found.customerId || found._id;

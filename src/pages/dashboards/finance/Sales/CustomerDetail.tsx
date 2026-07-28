@@ -30,11 +30,6 @@ const CustomerDetail = () => {
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [exportFormat, setExportFormat] = useState<'pdf' | 'csv'>('pdf');
 
-    // Statement download date modal state
-    const [showDownloadModal, setShowDownloadModal] = useState(false);
-    const [dlFrom, setDlFrom] = useState('');
-    const [dlTo, setDlTo] = useState('');
-
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['PAID', 'UNPAID', 'PARTIALLY_PAID', 'OVERDUE']);

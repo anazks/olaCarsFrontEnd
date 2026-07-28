@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Plus, Search, Filter, X, FileText, RefreshCw, 
@@ -13,9 +13,7 @@ import {
     type CreditNote 
 } from '../../../../services/creditNoteService';
 import { getAllCustomers, type Customer } from '../../../../services/customerService';
-import { getAllSuppliers, type Supplier } from '../../../../services/supplierService';
-import api from '../../../../services/api';
-import { getInvoicesByCustomer } from '../../../../services/invoiceService';
+import { getAllSuppliers } from '../../../../services/supplierService';
 import BulkCreditNoteUpload from '../../shared/BulkCreditNoteUpload';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
@@ -68,12 +66,9 @@ const CreditNotes = () => {
     const [isBulkModalOpen, setIsBulkModalOpen] = useState<boolean>(false);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loadingCustomers, setLoadingCustomers] = useState<boolean>(false);
-    const [customerInvoices, setCustomerInvoices] = useState<any[]>([]);
-    const [loadingInvoices, setLoadingInvoices] = useState<boolean>(false);
     
     // Issuance Form States
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
-    const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('');
     const [amount, setAmount] = useState<string>('');
     const [reason, setReason] = useState<string>('');
     const [customReason, setCustomReason] = useState<string>('');
@@ -315,78 +310,6 @@ const CreditNotes = () => {
         }
     }, [isCreateModalOpen, customers.length, suppliers.length]);
 
-    // Specific customer's invoices for the modal
-    const [invoiceSort] = useState<'date' | 'number'>('date');
-    const [invoiceSortOrder] = useState<'asc' | 'desc'>('desc');
-    const [invoiceSearch, setInvoiceSearch] = useState('');
-    const [invoiceDateFilter, setInvoiceDateFilter] = useState('');
-
-    useEffect(() => {
-        if (selectedCustomerId) {
-            const loadInvoices = async () => {
-                setLoadingInvoices(true);
-                try {
-                    const res = await getInvoicesByCustomer(selectedCustomerId);
-                    const invoices = res || [];
-                    setCustomerInvoices(invoices);
-                    
-                    // Auto-select the first invoice if available
-                    if (invoices.length > 0) {
-                        const sorted = [...invoices].sort((a, b) => {
-                            const dateA = new Date(a.dueDate || a.generatedAt).getTime();
-                            const dateB = new Date(b.dueDate || b.generatedAt).getTime();
-                            return dateB - dateA;
-                        });
-                        setSelectedInvoiceId(sorted[0]._id);
-                    }
-                } catch (err) {
-                    console.error(err);
-                } finally {
-                    setLoadingInvoices(false);
-                }
-            };
-            loadInvoices();
-            setInvoiceSearch('');
-            setInvoiceDateFilter('');
-        } else {
-            setCustomerInvoices([]);
-            setSelectedInvoiceId('');
-        }
-    }, [selectedCustomerId]);
-
-    const sortedCustomerInvoices = useMemo(() => {
-        if (!Array.isArray(customerInvoices)) return [];
-        
-        let filtered = [...customerInvoices];
-
-        // 1. Search Filter
-        if (invoiceSearch.trim()) {
-            const q = invoiceSearch.toLowerCase();
-            filtered = filtered.filter(i => i.invoiceNumber.toLowerCase().includes(q));
-        }
-
-        // 2. Date Filter
-        if (invoiceDateFilter) {
-            filtered = filtered.filter(i => {
-                const d = new Date(i.dueDate || i.generatedAt).toISOString().split('T')[0];
-                return d === invoiceDateFilter;
-            });
-        }
-
-        // 3. Sorting
-        return filtered.sort((a, b) => {
-            if (invoiceSort === 'date') {
-                const dateA = new Date(a.dueDate || a.generatedAt).getTime();
-                const dateB = new Date(b.dueDate || b.generatedAt).getTime();
-                return invoiceSortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-            } else {
-                return invoiceSortOrder === 'desc' 
-                    ? b.invoiceNumber.localeCompare(a.invoiceNumber)
-                    : a.invoiceNumber.localeCompare(b.invoiceNumber);
-            }
-        });
-    }, [customerInvoices, invoiceSort, invoiceSortOrder, invoiceSearch, invoiceDateFilter]);
-
     const handleRowClick = (id: string) => {
         navigate(`./${id}`);
     };
@@ -495,7 +418,6 @@ const CreditNotes = () => {
 
     const resetForm = () => {
         setSelectedCustomerId('');
-        setSelectedInvoiceId('');
         setAmount('');
         setReason('');
         setCustomReason('');
@@ -503,11 +425,6 @@ const CreditNotes = () => {
         setCreditNoteDate(new Date().toISOString().split('T')[0]);
         setSupportingDocFile(null);
     };
-
-    const selectedInvoiceData = useMemo(() => {
-        if (!selectedInvoiceId) return null;
-        return customerInvoices.find(i => i._id === selectedInvoiceId) || null;
-    }, [customerInvoices, selectedInvoiceId]);
 
     const displayedNotes = creditNotes;
 
