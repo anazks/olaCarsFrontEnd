@@ -567,6 +567,85 @@ export const InvoiceAgingSummary: React.FC = () => {
         };
     }, [combinedReceivableItems, asOfDate, agingData]);
 
+    // Ageing Matrix Calculation (Balance Due & Item Count per bucket & category)
+    const ageingMatrix = useMemo(() => {
+        const rows = activeIntervals.map(int => ({
+            key: int.key,
+            label: int.label,
+            shortLabel: int.shortLabel,
+            depositBalance: 0,
+            rentBalance: 0,
+            othersBalance: 0,
+            totalBalance: 0,
+            pctShare: 0,
+            depositCount: 0,
+            rentCount: 0,
+            othersCount: 0,
+            totalCount: 0
+        }));
+
+        let grandTotal = 0;
+
+        combinedReceivableItems.forEach(item => {
+            const bal = item.balance;
+            const days = item.daysOverdue;
+            const cat = item.category; // 'DEPOSIT' | 'RENT' | 'OTHERS'
+
+            let bucketIndex = -1;
+            for (let i = 0; i < activeIntervals.length; i++) {
+                const int = activeIntervals[i];
+                if (i === 0) {
+                    if (int.maxDays !== null && days <= int.maxDays) {
+                        bucketIndex = i;
+                        break;
+                    }
+                } else if (int.maxDays !== null) {
+                    if (days >= int.minDays && days <= int.maxDays) {
+                        bucketIndex = i;
+                        break;
+                    }
+                } else {
+                    if (days >= int.minDays) {
+                        bucketIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            if (bucketIndex === -1 && activeIntervals.length > 0) {
+                bucketIndex = 0;
+            }
+
+            if (bucketIndex >= 0 && bucketIndex < rows.length) {
+                const r = rows[bucketIndex];
+                grandTotal += bal;
+                r.totalBalance += bal;
+                r.totalCount += 1;
+
+                if (cat === 'DEPOSIT') {
+                    r.depositBalance += bal;
+                    r.depositCount += 1;
+                } else if (cat === 'RENT') {
+                    r.rentBalance += bal;
+                    r.rentCount += 1;
+                } else {
+                    r.othersBalance += bal;
+                    r.othersCount += 1;
+                }
+            }
+        });
+
+        rows.forEach(r => {
+            r.pctShare = grandTotal > 0 ? (r.totalBalance / grandTotal) * 100 : 0;
+        });
+
+        return {
+            rows,
+            grandTotalBalance: grandTotal,
+            grandTotalCount: combinedReceivableItems.length
+        };
+    }, [combinedReceivableItems, activeIntervals]);
+
     // Handlers
     const handleSort = (field: keyof CustomerAgingSummary) => {
         if (sortField === field) {
@@ -701,10 +780,124 @@ export const InvoiceAgingSummary: React.FC = () => {
         const toastId = toast.loading('Generating PDF report...');
         try {
             const doc = new jsPDF('landscape');
+            const pageWidth = doc.internal.pageSize.getWidth();
+
+            // Header Title
             doc.setFontSize(16);
-            doc.text('Accounts Receivable (AR) Aging Summary Report', 14, 18);
-            doc.setFontSize(9);
-            doc.text(`As of Date: ${asOfDate} | Aging Intervals: ${numIntervals} X ${intervalValue} ${intervalUnit}`, 14, 25);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(15, 23, 42); // slate-900
+            doc.text('Accounts Receivable (AR) Aging Summary Report', 14, 14);
+
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 116, 139); // slate-500
+            doc.text(`As of Date: ${asOfDate} | Aging Buckets: ${numIntervals} X ${intervalValue} ${intervalUnit} | Source: ${docTypeFilter}`, 14, 20);
+
+            let currentY = 24;
+
+            // 1. TOP KPIS SUMMARY TABLE
+            const kpiHead1 = ['TOTAL OUTSTANDING', 'CUSTOMERS IN ARREARS', 'WEIGHTED AVG OVERDUE', 'OLDEST OVERDUE'];
+            const kpiBody1 = [
+                `$${kpiMetrics.totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                `${kpiMetrics.customersInArrearsCount} drivers`,
+                `${kpiMetrics.weightedAvgDaysOverdue} days`,
+                `${kpiMetrics.oldestDays} days`
+            ];
+            const kpiHead2 = ['DEPOSIT DUE', 'RENT DUE', 'OTHERS DUE', 'AVG / CUSTOMER'];
+            const kpiBody2 = [
+                `$${kpiMetrics.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${kpiMetrics.depositPct}%)`,
+                `$${kpiMetrics.rentDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${kpiMetrics.rentPct}%)`,
+                `$${kpiMetrics.othersDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${kpiMetrics.othersPct}%)`,
+                `$${kpiMetrics.avgPerCustomer.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            ];
+
+            autoTable(doc, {
+                startY: currentY,
+                head: [kpiHead1],
+                body: [kpiBody1, kpiHead2, kpiBody2],
+                theme: 'grid',
+                headStyles: { fillColor: [13, 71, 161], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5, halign: 'center' },
+                bodyStyles: { fontSize: 7.5, fontStyle: 'bold', halign: 'center' },
+                styles: { cellPadding: 1.8 }
+            });
+
+            currentY = (doc as any).lastAutoTable.finalY + 5;
+
+            // 2. AGEING MATRIX SECTION (SIDE-BY-SIDE TABLES)
+            doc.setFontSize(9.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(13, 71, 161);
+            doc.text('AGEING MATRIX ANALYSIS', 14, currentY);
+            currentY += 3;
+
+            // Left Matrix Table: Balance Due
+            const matrixBalHead = [['Bucket', 'Deposit', 'Rent', 'Others', 'Total (USD)', '% Share']];
+            const matrixBalBody = ageingMatrix.rows.map(r => [
+                r.shortLabel || r.label,
+                r.depositBalance > 0 ? `$${r.depositBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—',
+                r.rentBalance > 0 ? `$${r.rentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—',
+                r.othersBalance > 0 ? `$${r.othersBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—',
+                `$${r.totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                `${r.pctShare.toFixed(1)}%`
+            ]);
+
+            autoTable(doc, {
+                startY: currentY,
+                tableWidth: 133,
+                margin: { left: 14 },
+                head: matrixBalHead,
+                body: matrixBalBody,
+                theme: 'striped',
+                headStyles: { fillColor: [21, 101, 192], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+                styles: { fontSize: 7, cellPadding: 1.6 },
+                columnStyles: {
+                    0: { fontStyle: 'bold' },
+                    1: { halign: 'right' },
+                    2: { halign: 'right' },
+                    3: { halign: 'right' },
+                    4: { halign: 'right', fontStyle: 'bold' },
+                    5: { halign: 'right' }
+                }
+            });
+            const leftFinalY = (doc as any).lastAutoTable.finalY;
+
+            // Right Matrix Table: Item Count
+            const matrixCntHead = [['Bucket', 'Deposit', 'Rent', 'Others', 'Total Items']];
+            const matrixCntBody = ageingMatrix.rows.map(r => [
+                r.shortLabel || r.label,
+                r.depositCount > 0 ? String(r.depositCount) : '—',
+                r.rentCount > 0 ? String(r.rentCount) : '—',
+                r.othersCount > 0 ? String(r.othersCount) : '—',
+                String(r.totalCount)
+            ]);
+
+            autoTable(doc, {
+                startY: currentY,
+                tableWidth: 133,
+                margin: { left: 150 },
+                head: matrixCntHead,
+                body: matrixCntBody,
+                theme: 'striped',
+                headStyles: { fillColor: [21, 101, 192], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+                styles: { fontSize: 7, cellPadding: 1.6 },
+                columnStyles: {
+                    0: { fontStyle: 'bold' },
+                    1: { halign: 'right' },
+                    2: { halign: 'right' },
+                    3: { halign: 'right' },
+                    4: { halign: 'right', fontStyle: 'bold' }
+                }
+            });
+            const rightFinalY = (doc as any).lastAutoTable.finalY;
+
+            currentY = Math.max(leftFinalY, rightFinalY) + 5;
+
+            // 3. DETAILED CUSTOMER AGING SUMMARY TABLE
+            doc.setFontSize(9.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(13, 71, 161);
+            doc.text('CUSTOMER AGING SUMMARY BREAKDOWN', 14, currentY);
+            currentY += 3;
 
             const head = [[
                 'Customer Code',
@@ -718,27 +911,53 @@ export const InvoiceAgingSummary: React.FC = () => {
             const body = agingData.map(c => [
                 c.customerId,
                 c.customerName,
-                `$${c.current.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                ...activeIntervals.map(int => `$${(c.buckets[int.key] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`),
-                `$${c.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `$${c.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                `$${c.current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                ...activeIntervals.map(int => `$${(c.buckets[int.key] || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`),
+                `$${c.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                `$${c.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             ]);
 
             const totalsRow = [
                 'TOTALS',
                 `Grand Total (${agingData.length} Customers)`,
-                `$${totals.current.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                ...activeIntervals.map(int => `$${(totals.buckets[int.key] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`),
-                `$${totals.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                `$${totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                `$${totals.current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                ...activeIntervals.map(int => `$${(totals.buckets[int.key] || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`),
+                `$${totals.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                `$${totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             ];
 
             autoTable(doc, {
-                startY: 30,
+                startY: currentY,
                 head,
                 body: [...body, totalsRow],
-                styles: { fontSize: 8 }
+                theme: 'striped',
+                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+                styles: { fontSize: 6.8, cellPadding: 1.5 },
+                columnStyles: {
+                    0: { fontStyle: 'bold' },
+                    2: { halign: 'right' },
+                    3: { halign: 'right' },
+                    4: { halign: 'right' },
+                    5: { halign: 'right' },
+                    6: { halign: 'right' },
+                    7: { halign: 'right', fontStyle: 'bold' }
+                }
             });
+
+            // Page numbers in footer
+            const pageCount = (doc as any).internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(7.5);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(148, 163, 184);
+                doc.text(
+                    `Page ${i} of ${pageCount} — AR Aging Summary Report — Generated on ${new Date().toLocaleString()}`,
+                    pageWidth / 2,
+                    doc.internal.pageSize.getHeight() - 6,
+                    { align: 'center' }
+                );
+            }
 
             doc.save(`AR_Aging_Summary_${asOfDate}.pdf`);
             toast.success('PDF exported successfully!', { id: toastId });
@@ -934,6 +1153,132 @@ export const InvoiceAgingSummary: React.FC = () => {
                     <div className="p-3 text-white flex flex-col items-center justify-center rounded-xl" style={{ background: '#E65100' }}>
                         <div className="text-[11px] font-extrabold uppercase tracking-wider text-white/90">TOP-70 CONCENTRATION</div>
                         <div className="text-xl font-black text-white mt-1">{kpiMetrics.top70Pct}%</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Ageing Matrix Section — Balance Due & Item Count side by side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Left Card: AGEING MATRIX — BALANCE DUE (USD) */}
+                <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="px-4 py-3 bg-gradient-to-r from-[#0D47A1] to-[#1565C0] text-white flex items-center justify-between">
+                        <div className="text-xs font-black uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-white/80 animate-pulse"></span>
+                            • AGEING MATRIX — BALANCE DUE (USD)
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                            <thead className="border-b uppercase font-bold text-[10px]" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
+                                <tr>
+                                    <th className="py-2.5 px-3">Bucket</th>
+                                    <th className="py-2.5 px-3 text-right">Deposit</th>
+                                    <th className="py-2.5 px-3 text-right">Rent</th>
+                                    <th className="py-2.5 px-3 text-right">Others</th>
+                                    <th className="py-2.5 px-3 text-right font-black">Total (USD)</th>
+                                    <th className="py-2.5 px-3 text-right">% Share</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y font-mono text-xs" style={{ borderColor: 'var(--border-main)' }}>
+                                {ageingMatrix.rows.map((r, idx) => {
+                                    const pillColors = [
+                                        'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                                        'bg-sky-500/10 text-sky-400 border-sky-500/20',
+                                        'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                                        'bg-orange-500/10 text-orange-400 border-orange-500/20',
+                                        'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                    ];
+                                    const pillColor = pillColors[idx % pillColors.length];
+
+                                    return (
+                                        <tr key={r.key} className="hover:bg-white/5 transition-colors">
+                                            <td className="py-2.5 px-3 font-sans">
+                                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${pillColor}`}>
+                                                    {r.shortLabel || r.label}
+                                                </span>
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-bold text-blue-400">
+                                                {r.depositBalance > 0 ? `$${r.depositBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-bold text-emerald-400">
+                                                {r.rentBalance > 0 ? `$${r.rentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-bold text-orange-400">
+                                                {r.othersBalance > 0 ? `$${r.othersBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-black text-white">
+                                                ${r.totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <div className="w-12 bg-white/10 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                                                        <div className="bg-blue-400 h-full rounded-full" style={{ width: `${Math.min(100, r.pctShare)}%` }}></div>
+                                                    </div>
+                                                    <span className="font-bold text-dim text-[11px]">{r.pctShare.toFixed(1)}%</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Right Card: AGEING MATRIX — ITEM COUNT */}
+                <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="px-4 py-3 bg-gradient-to-r from-[#0D47A1] to-[#1565C0] text-white flex items-center justify-between">
+                        <div className="text-xs font-black uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-white/80 animate-pulse"></span>
+                            • AGEING MATRIX — ITEM COUNT
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                            <thead className="border-b uppercase font-bold text-[10px]" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
+                                <tr>
+                                    <th className="py-2.5 px-3">Bucket</th>
+                                    <th className="py-2.5 px-3 text-right">Deposit</th>
+                                    <th className="py-2.5 px-3 text-right">Rent</th>
+                                    <th className="py-2.5 px-3 text-right">Others</th>
+                                    <th className="py-2.5 px-3 text-right font-black">Total Items</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y font-mono text-xs" style={{ borderColor: 'var(--border-main)' }}>
+                                {ageingMatrix.rows.map((r, idx) => {
+                                    const pillColors = [
+                                        'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                                        'bg-sky-500/10 text-sky-400 border-sky-500/20',
+                                        'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                                        'bg-orange-500/10 text-orange-400 border-orange-500/20',
+                                        'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                    ];
+                                    const pillColor = pillColors[idx % pillColors.length];
+
+                                    return (
+                                        <tr key={r.key} className="hover:bg-white/5 transition-colors">
+                                            <td className="py-2.5 px-3 font-sans">
+                                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${pillColor}`}>
+                                                    {r.shortLabel || r.label}
+                                                </span>
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-bold text-blue-400">
+                                                {r.depositCount > 0 ? r.depositCount : '—'}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-bold text-emerald-400">
+                                                {r.rentCount > 0 ? r.rentCount : '—'}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-bold text-orange-400">
+                                                {r.othersCount > 0 ? r.othersCount : '—'}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-black text-white">
+                                                {r.totalCount}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
