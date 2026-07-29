@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     FileText,
     RefreshCw,
@@ -68,6 +68,13 @@ interface CustomerAgingSummary {
 
 export const InvoiceAgingSummary: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const getBasePath = (pathname: string) => {
+        const m = pathname.match(/^(\/admin\/[^/]+)/);
+        return m ? m[1] : '';
+    };
+    const basePath = getBasePath(location.pathname);
 
     // Data States
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -993,7 +1000,7 @@ export const InvoiceAgingSummary: React.FC = () => {
 
                 <div className="flex flex-wrap items-center gap-2">
                     <button
-                        onClick={() => navigate('/admin/financial-admin/invoices')}
+                        onClick={() => navigate(`${basePath}/invoices`)}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border active:scale-95 cursor-pointer"
                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     >
@@ -1400,19 +1407,20 @@ export const InvoiceAgingSummary: React.FC = () => {
                                         <ArrowUpDown size={12} />
                                     </div>
                                 </th>
+                                <th className="py-3 px-4 text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y font-medium" style={{ borderColor: 'var(--border-main)' }}>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5 + activeIntervals.length} className="py-12 text-center text-dim">
+                                    <td colSpan={6 + activeIntervals.length} className="py-12 text-center text-dim">
                                         <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-brand-lime" />
                                         Loading aging summary calculations...
                                     </td>
                                 </tr>
                             ) : agingData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5 + activeIntervals.length} className="py-12 text-center text-dim font-bold">
+                                    <td colSpan={6 + activeIntervals.length} className="py-12 text-center text-dim font-bold">
                                         No outstanding customer invoices found for the selected criteria.
                                     </td>
                                 </tr>
@@ -1434,7 +1442,16 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                     )}
                                                 </td>
                                                 <td className="py-3.5 px-4">
-                                                    <div className="font-bold text-main" style={{ color: 'var(--text-main)' }}>
+                                                    <div
+                                                        className="font-bold text-main hover:text-brand-lime transition-colors cursor-pointer"
+                                                        style={{ color: 'var(--text-main)' }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (row.customerKey && row.customerKey !== 'unassigned') {
+                                                                navigate(`${basePath}/customers/${row.customerKey}?tab=invoices`);
+                                                            }
+                                                        }}
+                                                    >
                                                         {row.customerName}
                                                     </div>
                                                     <div className="text-[10px] font-mono text-dim">
@@ -1460,12 +1477,28 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                 <td className="py-3.5 px-4 text-right font-mono font-black text-sm" style={{ color: 'var(--brand-lime)' }}>
                                                     ${row.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </td>
+                                                <td className="py-3.5 px-4 text-center">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (row.customerKey && row.customerKey !== 'unassigned') {
+                                                                navigate(`${basePath}/customers/${row.customerKey}?tab=invoices`);
+                                                            } else {
+                                                                toast.error('Unassigned customer cannot be viewed');
+                                                            }
+                                                        }}
+                                                        className="p-1.5 rounded-lg hover:bg-white/10 text-brand-lime transition-all cursor-pointer inline-flex items-center justify-center"
+                                                        title="View Customer Invoices"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                </td>
                                             </tr>
 
                                             {/* Expanded Detailed Invoice & Debit Note List */}
                                             {isExpanded && (
                                                 <tr>
-                                                    <td colSpan={5 + activeIntervals.length} className="p-4 bg-black/20 border-y space-y-4" style={{ borderColor: 'var(--border-main)' }}>
+                                                    <td colSpan={6 + activeIntervals.length} className="p-4 bg-black/20 border-y space-y-4" style={{ borderColor: 'var(--border-main)' }}>
                                                         <div className="space-y-3 pl-6 pr-2">
                                                             <div className="flex items-center justify-between">
                                                                 <h4 className="text-xs font-bold tracking-wide uppercase text-dim flex items-center gap-2">
@@ -1500,7 +1533,11 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                                         ) : (
                                                                             row.invoices.map(inv => (
                                                                                 <tr key={inv._id} className="hover:bg-white/5 transition-colors">
-                                                                                    <td className="py-2 px-3 font-bold font-mono text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                                                                                    <td
+                                                                                        className="py-2 px-3 font-bold font-mono text-brand-lime hover:underline cursor-pointer"
+                                                                                        style={{ color: 'var(--brand-lime)' }}
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(`${basePath}/invoices/${inv._id}`); }}
+                                                                                    >
                                                                                         {inv.invoiceNumber}
                                                                                     </td>
                                                                                     <td className="py-2 px-3 font-semibold uppercase text-[10px]">
@@ -1536,8 +1573,8 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                                                     </td>
                                                                                     <td className="py-2 px-3 text-right">
                                                                                         <button
-                                                                                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/financial-admin/invoices/${inv._id}`); }}
-                                                                                            className="p-1 rounded hover:bg-white/10 text-brand-lime transition-all"
+                                                                                            onClick={(e) => { e.stopPropagation(); navigate(`${basePath}/invoices/${inv._id}`); }}
+                                                                                            className="p-1 rounded hover:bg-white/10 text-brand-lime transition-all cursor-pointer"
                                                                                             title="View Invoice Detail"
                                                                                         >
                                                                                             <Eye size={14} />
@@ -1581,7 +1618,10 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                                                             {row.debitNotes.map(dn => (
                                                                                 <tr key={dn._id} className="hover:bg-white/5 transition-colors">
-                                                                                    <td className="py-2 px-3 font-bold font-mono text-amber-400">
+                                                                                    <td
+                                                                                        className="py-2 px-3 font-bold font-mono text-amber-400 hover:underline cursor-pointer"
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(`${basePath}/debit-notes/${dn._id}`); }}
+                                                                                    >
                                                                                         {dn.debitNoteNumber}
                                                                                     </td>
                                                                                     <td className="py-2 px-3 text-dim font-mono">
@@ -1606,8 +1646,8 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                                                     </td>
                                                                                     <td className="py-2 px-3 text-right">
                                                                                         <button
-                                                                                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/finance/sales/debit-notes/${dn._id}`); }}
-                                                                                            className="p-1 rounded hover:bg-white/10 text-amber-400 transition-all"
+                                                                                            onClick={(e) => { e.stopPropagation(); navigate(`${basePath}/debit-notes/${dn._id}`); }}
+                                                                                            className="p-1 rounded hover:bg-white/10 text-amber-400 transition-all cursor-pointer"
                                                                                             title="View Debit Note Detail"
                                                                                         >
                                                                                             <Eye size={14} />
@@ -1655,6 +1695,7 @@ export const InvoiceAgingSummary: React.FC = () => {
                                     <td className="py-4 px-4 text-right text-sm font-black" style={{ color: 'var(--brand-lime)' }}>
                                         ${totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
+                                    <td></td>
                                 </tr>
                             </tfoot>
                         )}

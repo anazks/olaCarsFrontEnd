@@ -62,10 +62,10 @@ export interface Supplier {
 
 export interface CreateSupplierPayload {
     name: string;
-    contactPerson: string;
-    email: string;
-    phone: string;
-    address: string;
+    contactPerson?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
     category: string;
     isActive?: boolean;
 }

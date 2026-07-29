@@ -316,31 +316,30 @@ const ManageSuppliers = () => {
             }
         }
 
-        // Validate phone number using the centralized helper
-        const phoneValidation = validatePhoneDetails(formData.phone);
-        if (!phoneValidation.isValid) {
-            let errorMsg = '';
-            switch (phoneValidation.errorKey) {
-                case 'REQUIRED':
-                    errorMsg = t('management.suppliers.form.phoneRequired', { defaultValue: 'Phone number is required.' });
-                    break;
-                case 'REPEATED_DIGITS':
-                    errorMsg = t('management.suppliers.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' });
-                    break;
-                case 'TOO_SHORT':
-                    errorMsg = t('management.suppliers.form.phoneTooShort', { defaultValue: 'Phone number is too short.' });
-                    break;
-                case 'TOO_LONG':
-                    errorMsg = t('management.suppliers.form.phoneTooLong', { defaultValue: 'Phone number is too long.' });
-                    break;
-                case 'INVALID_FORMAT':
-                default:
-                    errorMsg = t('management.suppliers.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number.' });
-                    break;
+        // Validate phone number using the centralized helper if provided
+        if (formData.phone && formData.phone.trim()) {
+            const phoneValidation = validatePhoneDetails(formData.phone);
+            if (!phoneValidation.isValid) {
+                let errorMsg = '';
+                switch (phoneValidation.errorKey) {
+                    case 'REPEATED_DIGITS':
+                        errorMsg = t('management.suppliers.form.invalidPhoneRepeated', { defaultValue: 'Phone number cannot consist of repeated digits.' });
+                        break;
+                    case 'TOO_SHORT':
+                        errorMsg = t('management.suppliers.form.phoneTooShort', { defaultValue: 'Phone number is too short.' });
+                        break;
+                    case 'TOO_LONG':
+                        errorMsg = t('management.suppliers.form.phoneTooLong', { defaultValue: 'Phone number is too long.' });
+                        break;
+                    case 'INVALID_FORMAT':
+                    default:
+                        errorMsg = t('management.suppliers.form.invalidPhoneLength', { defaultValue: 'Please enter a valid phone number.' });
+                        break;
+                }
+                setFormError(errorMsg);
+                setFormLoading(false);
+                return;
             }
-            setFormError(errorMsg);
-            setFormLoading(false);
-            return;
         }
 
         const finalCategory = formData.category === t('management.suppliers.categories.Other') ? formData.customCategory : formData.category;
@@ -858,7 +857,6 @@ const ManageSuppliers = () => {
                                     {t('management.suppliers.form.address')}
                                 </label>
                                 <textarea
-                                    required
                                     rows={3}
                                     className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all resize-none"
                                     style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
