@@ -170,7 +170,7 @@ const buildBSExportRows = (data: any) => {
     const resultsOfTheExercise = currentPeriodItem ? currentPeriodItem.amount : 0;
 
     const staticItem = equity.find((e: any) => e.code === "RE-STATIC" || e.name.toLowerCase().includes("retained earnings") || e.name.toLowerCase().includes("utilidades retenidas"));
-    const staticRetainedEarnings = staticItem ? staticItem.amount : 258789.00;
+    const staticRetainedEarnings = staticItem ? staticItem.amount : 215141.27;
 
     const databaseEquity = equity.filter((e: any) =>
         e.code !== "RE-CURRENT" &&
@@ -425,8 +425,8 @@ const FinancialStatements = () => {
                     <button
                         onClick={() => setActiveTab('PL')}
                         className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${activeTab === 'PL'
-                                ? 'border-brand-lime text-brand-lime font-black'
-                                : 'border-transparent text-dim hover:text-white'
+                            ? 'border-brand-lime text-brand-lime font-black'
+                            : 'border-transparent text-dim hover:text-white'
                             }`}
                     >
                         Income Statement (P&L)
@@ -434,8 +434,8 @@ const FinancialStatements = () => {
                     <button
                         onClick={() => setActiveTab('BS')}
                         className={`px-6 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all cursor-pointer ${activeTab === 'BS'
-                                ? 'border-brand-lime text-brand-lime font-black'
-                                : 'border-transparent text-dim hover:text-white'
+                            ? 'border-brand-lime text-brand-lime font-black'
+                            : 'border-transparent text-dim hover:text-white'
                             }`}
                     >
                         Balance Sheet
@@ -567,8 +567,8 @@ const FinancialStatements = () => {
                                     <button
                                         onClick={() => setViewMode('standard')}
                                         className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${viewMode === 'standard'
-                                                ? 'bg-[#C8E600] text-[#0A0A0A] shadow-sm'
-                                                : 'text-dim hover:text-[var(--text-main)]'
+                                            ? 'bg-[#C8E600] text-[#0A0A0A] shadow-sm'
+                                            : 'text-dim hover:text-[var(--text-main)]'
                                             }`}
                                     >
                                         Standard Statement
@@ -576,8 +576,8 @@ const FinancialStatements = () => {
                                     <button
                                         onClick={() => setViewMode('branch_wise')}
                                         className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${viewMode === 'branch_wise'
-                                                ? 'bg-[#C8E600] text-[#0A0A0A] shadow-sm'
-                                                : 'text-dim hover:text-[var(--text-main)]'
+                                            ? 'bg-[#C8E600] text-[#0A0A0A] shadow-sm'
+                                            : 'text-dim hover:text-[var(--text-main)]'
                                             }`}
                                     >
                                         Branch-Wise Breakdown
@@ -1102,7 +1102,7 @@ const BSView = ({ data }: { data: any }) => {
     const resultsOfTheExercise = currentPeriodItem ? currentPeriodItem.amount : 0;
 
     const staticItem = equity.find((e: any) => e.code === "RE-STATIC" || e.name.toLowerCase().includes("retained earnings") || e.name.toLowerCase().includes("utilidades retenidas"));
-    const staticRetainedEarnings = staticItem ? staticItem.amount : 258789.00;
+    const staticRetainedEarnings = staticItem ? staticItem.amount : 215141.27;
 
     const databaseEquity = equity.filter((e: any) =>
         e.code !== "RE-CURRENT" &&
