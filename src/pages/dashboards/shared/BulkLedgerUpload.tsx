@@ -3,7 +3,7 @@ import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Inf
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getAllBankAccounts, bulkUploadBankAccountTransactions, type BankAccount } from '../../../services/bankAccountService';
+import { getAllBankAccounts, bulkUploadBankAccountTransactions, getBankAccountTransactions, type BankAccount } from '../../../services/bankAccountService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
@@ -214,6 +214,26 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
     const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
     const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
     const [allInvoices, setAllInvoices] = useState<Invoice[]>([]);
+    const [existingTxIdsSet, setExistingTxIdsSet] = useState<Set<string>>(new Set());
+
+    // Fetch existing transaction IDs when selected bank account changes
+    useEffect(() => {
+        if (!selectedAccountId) return;
+        const fetchTxIds = async () => {
+            try {
+                const res = await getBankAccountTransactions(selectedAccountId, { limit: 10000 });
+                const list = res.data || res.transactions || (Array.isArray(res) ? res : []);
+                const idsSet = new Set<string>();
+                list.forEach((tx: any) => {
+                    if (tx.transactionId) idsSet.add(String(tx.transactionId).trim());
+                });
+                setExistingTxIdsSet(idsSet);
+            } catch (err) {
+                console.error("Failed to fetch existing bank account transactions for ID validation", err);
+            }
+        };
+        fetchTxIds();
+    }, [selectedAccountId]);
 
     // Load bank accounts, branches, customers, suppliers and open invoices on mount
     useEffect(() => {
@@ -513,6 +533,23 @@ interface SetOffPreview {
             errors.push('Missing Number');
         }
 
+        if (prefixVal && numberVal) {
+            const txIdStr = `${String(prefixVal).trim()}${String(numberVal).trim()}`;
+            if (existingTxIdsSet.has(txIdStr)) {
+                errors.push(`Invalid upload: Transaction ID "${txIdStr}" already exists in ledger entries`);
+            } else if (rows && rows.length > 0) {
+                const count = rows.filter(r => {
+                    const rRaw = r._rawRow || r;
+                    const rP = getRowVal(rRaw, ['prefix', 'Prefix', 'PREFIX']);
+                    const rN = getRowVal(rRaw, ['number', 'Number', 'NUMBER']);
+                    return rP && rN && `${String(rP).trim()}${String(rN).trim()}` === txIdStr;
+                }).length;
+                if (count > 1) {
+                    errors.push(`Duplicate Transaction ID "${txIdStr}" in file`);
+                }
+            }
+        }
+
         const parentAccountVal = getRowVal(row, ['parent account', 'parent_account', 'Parent Account', 'PARENT ACCOUNT']);
         const parentAccountStr = String(parentAccountVal || '').trim();
 
@@ -596,7 +633,7 @@ interface SetOffPreview {
         }
 
         return errors;
-    }, [selectedAccount, branches, allAccountingCodes]);
+    }, [selectedAccount, branches, allAccountingCodes, existingTxIdsSet]);
 
     const revalidateAndRecalculateRows = useCallback((currentRows: ParsedTransaction[], targetAccount: BankAccount | undefined) => {
         if (!currentRows || currentRows.length === 0) return [];
@@ -984,7 +1021,7 @@ interface SetOffPreview {
 
                     {/* Setup Parameters */}
                     {!result && !uploading && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                        <div className="relative z-30 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                             {/* Bank Account Selection */}
                             <div className="space-y-1.5">
                                 <label className="block text-[10px] uppercase font-black tracking-widest" style={{ color: 'var(--text-dim)' }}>Target Bank Account *</label>
@@ -1151,7 +1188,7 @@ interface SetOffPreview {
                             </div>
 
                             {/* Table */}
-                            <div className="border rounded-xl overflow-hidden" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="border rounded-xl overflow-hidden relative z-1" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
                                     <table className="w-full text-left text-xs border-collapse">
                                         <thead className="sticky top-0 z-10" style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border-main)' }}>
@@ -1172,7 +1209,7 @@ interface SetOffPreview {
                                         </thead>
                                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                             {rows.map((row, idx) => (
-                                                <tr key={idx} className="relative hover:z-20" style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
+                                                <tr key={idx} className="relative hover:z-40" style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
                                                     <td className="py-3 px-4 font-mono">{formatDateDMY(row.Date) || '-'}</td>
                                                     <td className="py-3 px-4 font-semibold">{row.Description || '-'}</td>
                                                     <td className="py-3 px-4">
@@ -1227,8 +1264,8 @@ interface SetOffPreview {
                                                                                             i
                                                                                         </button>
 
-                                                                                        {/* Hover Popover Tooltip */}
-                                                                                        <div className={`absolute left-0 ${idx < 2 ? 'top-full mt-1.5' : 'bottom-full mb-1.5'} hidden group-hover/info:block z-50 w-72 p-3 rounded-xl bg-slate-900/95 border border-violet-500/40 text-white shadow-2xl backdrop-blur-md space-y-2 pointer-events-none transition-all`}>
+                                                                                         {/* Hover Popover Tooltip */}
+                                                                                        <div className={`absolute left-0 ${idx < 2 ? 'top-full mt-1.5' : 'bottom-full mb-1.5'} hidden group-hover/info:block z-[100] w-72 p-3 rounded-xl bg-slate-900/95 border border-violet-500/40 text-white shadow-2xl backdrop-blur-md space-y-2 pointer-events-none transition-all`}>
                                                                                             <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
                                                                                                 <span className="text-[10px] font-black uppercase tracking-widest text-violet-400 flex items-center gap-1">
                                                                                                     <Zap size={10} /> Set-Off Invoice Preview
@@ -1320,9 +1357,33 @@ interface SetOffPreview {
                                                     <td className="py-3 px-4 font-mono text-white/60">{row.transactionId || '-'}</td>
                                                     <td className="py-3 px-4">
                                                         {row._rowErrors.length > 0 ? (
-                                                            <div className="flex flex-col text-rose-500" title={row._rowErrors.join(', ')}>
-                                                                <div className="flex items-center gap-1 font-bold"><AlertTriangle size={12} /> Error</div>
-                                                                <span className="text-[10px] text-rose-400 mt-0.5 max-w-[180px] break-words">{row._rowErrors.join(', ')}</span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
+                                                                    <AlertTriangle size={10} /> Error
+                                                                </span>
+
+                                                                {/* Interactive (i) Button with Popover Tooltip */}
+                                                                <div className="relative group/errinfo">
+                                                                    <button
+                                                                        type="button"
+                                                                        className="w-4 h-4 rounded-full bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/40 flex items-center justify-center text-[9px] font-black cursor-pointer transition-colors shadow-sm"
+                                                                        title="View Validation Error"
+                                                                    >
+                                                                        i
+                                                                    </button>
+
+                                                                    {/* Hover Popover Tooltip */}
+                                                                    <div className={`absolute right-0 ${idx < 2 ? 'top-full mt-1.5' : 'bottom-full mb-1.5'} hidden group-hover/errinfo:block z-[100] w-72 p-3 rounded-xl bg-slate-900/95 border border-rose-500/50 text-white shadow-2xl backdrop-blur-md space-y-1.5 pointer-events-none transition-all`}>
+                                                                        <div className="flex items-center gap-1.5 border-b border-white/10 pb-1.5 text-rose-400 font-black text-[10px] uppercase tracking-wider">
+                                                                            <AlertTriangle size={11} /> Validation Details
+                                                                        </div>
+                                                                        {row._rowErrors.map((errMessage: string, eIdx: number) => (
+                                                                            <div key={eIdx} className="text-[11px] text-rose-200 leading-snug font-medium">
+                                                                                • {errMessage}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         ) : (
                                                             <div className="flex items-center gap-1 text-emerald-500 font-semibold"><CheckCircle size={12} /> Valid</div>
