@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-<<<<<<< HEAD
 import { ArrowLeft, Clock, User, Tag, Building2, Info, Coins, CircleCheck, Hash, MapPin, TriangleAlert, Layers } from 'lucide-react';
-=======
->>>>>>> 3c6def79721552e4de600b1c050b1ccdf8360340
 import { getBankTransactionById } from '../../../services/bankAccountService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
