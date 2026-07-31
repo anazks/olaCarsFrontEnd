@@ -8,6 +8,10 @@ import type { AccountingCode } from '../../../services/accountingService';
 import CreateJournalEntry from './CreateJournalEntry';
 import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
     'INCOME': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)' }, // Green
@@ -203,12 +207,235 @@ const GeneralLedger = () => {
     }, [location.search, navigate, location.pathname, accountingCodes, selectedCode, startDate, endDate]);
 
 
-    // Derived statistics
+    const getExportData = async () => {
+        const filters: Record<string, any> = { limit: 100000 };
+        if (startDate) filters.startDate = startDate;
+        if (endDate) filters.endDate = endDate;
+        if (selectedCode !== 'ALL') filters.accountingCode = selectedCode;
+        if (debouncedSearch) filters.search = debouncedSearch;
+
+        const response = await getLedgerEntries(filters);
+        return Array.isArray(response.data) ? response.data : [];
+    };
+
+    const handleExportExcel = async () => {
+        const { toast } = await import('react-hot-toast');
+        const toastId = toast.loading("Generating Excel file...");
+        try {
+            const dataToExport = await getExportData();
+            if (dataToExport.length === 0) {
+                toast.error("No ledger entries available to export.", { id: toastId });
+                return;
+            }
+
+            const exportData = dataToExport.map((entry, idx) => {
+                const entryDateStr = entry.entryDate || entry.date;
+                const dateObj = new Date(entryDateStr);
+                const formattedDate = !isNaN(dateObj.getTime())
+                    ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    : entryDateStr;
+
+                const debitVal = entry.amount !== undefined
+                    ? (entry.type === 'DEBIT' ? entry.amount : 0)
+                    : (entry.debit || 0);
+
+                const creditVal = entry.amount !== undefined
+                    ? (entry.type === 'CREDIT' ? entry.amount : 0)
+                    : (entry.credit || 0);
+
+                return {
+                    "Sl No.": String(idx + 1).padStart(2, '0'),
+                    "Date": formattedDate,
+                    "Description": entry.description || 'N/A',
+                    "Reference ID": entry.referenceId || 'N/A',
+                    "Account Code": entry.accountingCode?.code || 'N/A',
+                    "Account Name": entry.accountingCode?.name || 'N/A',
+                    "Category": entry.accountingCode?.category || 'N/A',
+                    "Audit Trace": entry.creatorRole || 'SYSTEM',
+                    "Debit": debitVal,
+                    "Credit": creditVal
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "General Ledger");
+
+            // Auto-fit columns
+            const keys = Object.keys(exportData[0]);
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: maxLen + 2 };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `general_ledger_export_${dateStr}.xlsx`);
+            toast.success("Excel file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export Excel file.", { id: toastId });
+        }
+    };
+
+    const handleExportCsv = async () => {
+        const { toast } = await import('react-hot-toast');
+        const toastId = toast.loading("Generating CSV file...");
+        try {
+            const dataToExport = await getExportData();
+            if (dataToExport.length === 0) {
+                toast.error("No ledger entries available to export.", { id: toastId });
+                return;
+            }
+
+            const exportData = dataToExport.map((entry, idx) => {
+                const entryDateStr = entry.entryDate || entry.date;
+                const dateObj = new Date(entryDateStr);
+                const formattedDate = !isNaN(dateObj.getTime())
+                    ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    : entryDateStr;
+
+                const debitVal = entry.amount !== undefined
+                    ? (entry.type === 'DEBIT' ? entry.amount : 0)
+                    : (entry.debit || 0);
+
+                const creditVal = entry.amount !== undefined
+                    ? (entry.type === 'CREDIT' ? entry.amount : 0)
+                    : (entry.credit || 0);
+
+                return {
+                    "Sl No.": String(idx + 1).padStart(2, '0'),
+                    "Date": formattedDate,
+                    "Description": entry.description || 'N/A',
+                    "Reference ID": entry.referenceId || 'N/A',
+                    "Account Code": entry.accountingCode?.code || 'N/A',
+                    "Account Name": entry.accountingCode?.name || 'N/A',
+                    "Category": entry.accountingCode?.category || 'N/A',
+                    "Audit Trace": entry.creatorRole || 'SYSTEM',
+                    "Debit": debitVal,
+                    "Credit": creditVal
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const csvContent = XLSX.utils.sheet_to_csv(ws);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `general_ledger_export_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            toast.success("CSV file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export CSV file.", { id: toastId });
+        }
+    };
+
+    const handleExportPdf = async () => {
+        const { toast } = await import('react-hot-toast');
+        const toastId = toast.loading("Generating PDF file...");
+        try {
+            const dataToExport = await getExportData();
+            if (dataToExport.length === 0) {
+                toast.error("No ledger entries available to export.", { id: toastId });
+                return;
+            }
+
+            // Use landscape 'l' orientation to give more width for columns
+            const doc = new jsPDF('l', 'mm', 'a4');
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "General Ledger Report";
+
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+
+            let filterText = `Period: ${startDate || 'All'} to ${endDate || 'All'}`;
+            if (selectedCode !== 'ALL') {
+                const activeCodeObj = accountingCodes.find(c => c._id === selectedCode);
+                if (activeCodeObj) {
+                    filterText += ` | Account: ${activeCodeObj.code} - ${activeCodeObj.name}`;
+                }
+            }
+            doc.text(filterText, 14, 35);
+
+            const head = [["Date", "Description", "Account", "Category", "Debit", "Credit"]];
+            const body = dataToExport.map((entry) => {
+                const entryDateStr = entry.entryDate || entry.date;
+                const dateObj = new Date(entryDateStr);
+                const formattedDate = !isNaN(dateObj.getTime())
+                    ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    : entryDateStr;
+
+                const debitVal = entry.amount !== undefined
+                    ? (entry.type === 'DEBIT' ? entry.amount : 0)
+                    : (entry.debit || 0);
+
+                const creditVal = entry.amount !== undefined
+                    ? (entry.type === 'CREDIT' ? entry.amount : 0)
+                    : (entry.credit || 0);
+
+                const debitFormatted = debitVal > 0 
+                    ? debitVal.toLocaleString(undefined, { minimumFractionDigits: 2 }) 
+                    : '-';
+                const creditFormatted = creditVal > 0 
+                    ? creditVal.toLocaleString(undefined, { minimumFractionDigits: 2 }) 
+                    : '-';
+
+                return [
+                    formattedDate,
+                    entry.description || 'N/A',
+                    `${entry.accountingCode?.code || ''} - ${entry.accountingCode?.name || 'N/A'}`,
+                    entry.accountingCode?.category || 'N/A',
+                    debitFormatted,
+                    creditFormatted
+                ];
+            });
+
+            autoTable(doc, {
+                head,
+                body,
+                startY: 40,
+                theme: 'striped',
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0], fontSize: 9 },
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2.5,
+                    overflow: 'linebreak'
+                },
+                columnStyles: {
+                    0: { cellWidth: 40 }, // Date
+                    1: { cellWidth: 90 }, // Description (larger to allow wrapping)
+                    2: { cellWidth: 55 }, // Account Code & Name
+                    3: { cellWidth: 30 }, // Category
+                    4: { cellWidth: 27, halign: 'right' }, // Debit
+                    5: { cellWidth: 27, halign: 'right' }  // Credit
+                }
+            });
+
+            doc.save(`general_ledger_export_${dateStr}.pdf`);
+            toast.success("PDF file downloaded successfully!", { id: toastId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to export PDF file.", { id: toastId });
+        }
+    };
+
     const totalDebit = summaryStats.totalDebit;
     const totalCredit = summaryStats.totalCredit;
 
     const handleInvoiceClick = async (e: React.MouseEvent, invoiceNumber: string) => {
         e.stopPropagation();
+
         try {
             const { getInvoices } = await import('../../../services/invoiceService');
             const response = await getInvoices({ search: invoiceNumber });
@@ -332,6 +559,31 @@ const GeneralLedger = () => {
                     >
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
+                    
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-emerald-500" /> Excel
+                    </button>
+
+                    <button
+                        onClick={handleExportCsv}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-blue-400" /> CSV
+                    </button>
+
+                    <button
+                        onClick={handleExportPdf}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <FileText size={14} className="text-rose-500" /> PDF
+                    </button>
+
                     {canCreateEntry && (
                         <button
                             onClick={() => setShowCreateModal(true)}
