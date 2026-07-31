@@ -32,7 +32,6 @@ import { getAllAccountingCodes, type AccountingCode } from '../../../services/ac
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
-import BulkLedgerUpload from '../shared/BulkLedgerUpload';
 
 const BankAccountLedger = () => {
     const { id } = useParams<{ id: string }>();
@@ -208,7 +207,6 @@ const BankAccountLedger = () => {
 
     // Import Statement Modal States
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-    const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
     const [importFile, setImportFile] = useState<File | null>(null);
     const [importing, setImporting] = useState(false);
 
