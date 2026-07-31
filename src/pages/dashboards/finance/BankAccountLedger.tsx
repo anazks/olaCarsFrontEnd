@@ -45,6 +45,7 @@ const BankAccountLedger = () => {
     const [totalDeposits, setTotalDeposits] = useState(0);
     const [totalWithdrawals, setTotalWithdrawals] = useState(0);
     const [openingBalance, setOpeningBalance] = useState(0);
+    const [closingBalance, setClosingBalance] = useState<number | null>(null);
     const [downloading, setDownloading] = useState(false);
     const [showDownloadModal, setShowDownloadModal] = useState(false);
     const [dlFrom, setDlFrom] = useState('');
@@ -450,6 +451,11 @@ const BankAccountLedger = () => {
             setTotalDeposits(txRes.totalDeposits || 0);
             setTotalWithdrawals(txRes.totalWithdrawals || 0);
             setOpeningBalance(txRes.openingBalance || 0);
+            if (txRes.closingBalance !== undefined && txRes.closingBalance !== null) {
+                setClosingBalance(txRes.closingBalance);
+            } else {
+                setClosingBalance(null);
+            }
             if (txRes.pagination) {
                 setPagination({
                     total: txRes.pagination.total || 0,
@@ -1041,7 +1047,7 @@ const BankAccountLedger = () => {
 
                 return {
                     id: entry.id,
-                    entryDate: entry.entryDate,
+                    entryDate: new Date().toISOString(),
                     description: entry.description,
                     type: entry.type,
                     amount: entry.amount,
@@ -1249,18 +1255,19 @@ const BankAccountLedger = () => {
                                     {editEntries.map((entry, idx) => (
                                         <tr key={entry.id || idx} className="border-b last:border-0 hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
                                             <td className="px-6 py-4">
-                                                <input
-                                                    type="datetime-local"
-                                                    value={entry.entryDate}
-                                                    onChange={e => {
-                                                        const updated = [...editEntries];
-                                                        updated[idx].entryDate = e.target.value;
-                                                        setEditEntries(updated);
-                                                    }}
-                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
-                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                                    required
-                                                />
+                                                <div className="space-y-1">
+                                                    <input
+                                                        type="datetime-local"
+                                                        value={entry.entryDate}
+                                                        disabled
+                                                        readOnly
+                                                        className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none opacity-60 cursor-not-allowed"
+                                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                    />
+                                                    <div className="text-[9px] font-bold text-amber-400/90 flex items-center gap-1">
+                                                        ⚡ Auto-refreshed on save
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <input
@@ -1896,13 +1903,17 @@ const BankAccountLedger = () => {
                             <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
                                 <Building2 className="text-blue-500" size={20} />
                             </div>
-                            <span className="text-[9px] font-black uppercase tracking-wider text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">Live Balance</span>
+                            <span className="text-[9px] font-black uppercase tracking-wider text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">
+                                {startDate || endDate ? 'Period Balance' : 'Live Balance'}
+                            </span>
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-dim)' }}>Current Balance</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--text-dim)' }}>
+                                {startDate || endDate ? 'Ending Balance' : 'Current Balance'}
+                            </p>
                             <h2 className="text-2xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
                                 <span className="text-blue-400 text-lg mr-1">$</span>
-                                {(account.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {(closingBalance !== null ? closingBalance : (account.currentBalance || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </h2>
                         </div>
                     </div>
