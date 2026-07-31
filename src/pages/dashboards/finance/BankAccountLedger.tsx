@@ -18,7 +18,9 @@ import {
     ArrowDownRight,
     ArrowUpRight,
     Eye,
-    DollarSign
+    DollarSign,
+    UserCheck,
+    Zap
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions, downloadBankAccountLedgerPdf } from '../../../services/bankAccountService';
