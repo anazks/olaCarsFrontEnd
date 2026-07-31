@@ -32,10 +32,10 @@ export const QuickAddSupplierModal = ({ isOpen, onClose, onSuccess }: QuickAddSu
         try {
             const result = await createSupplier({
                 name: formData.name.trim(),
-                contactPerson: formData.contactPerson.trim() || 'N/A',
-                phone: formData.phone.trim() || 'N/A',
-                email: formData.email.trim() || 'info@supplier.local',
-                address: formData.address.trim() || 'N/A',
+                contactPerson: formData.contactPerson.trim(),
+                phone: formData.phone.trim(),
+                email: formData.email.trim(),
+                address: formData.address.trim(),
                 category: formData.category,
                 isActive: true
             });

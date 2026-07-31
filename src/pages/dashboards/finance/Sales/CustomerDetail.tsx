@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { 
     User, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
     RefreshCw, Calendar, FileSpreadsheet,
     Download, CheckCircle2, AlertCircle,
     ArrowLeft, Zap, Briefcase, Filter, X,
-    ChevronLeft, ChevronRight, Search
+    ChevronLeft, ChevronRight, Search, Eye
 } from 'lucide-react';
 import { getCustomerById, updateCustomer, type Customer } from '../../../../services/customerService';
 import { driverService } from '../../../../services/driverService';
@@ -18,16 +18,38 @@ import toast from 'react-hot-toast';
 const CustomerDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const getBasePath = (pathname: string) => {
+        const m = pathname.match(/^(\/admin\/[^/]+)/);
+        return m ? m[1] : '';
+    };
+    const basePath = getBasePath(location.pathname);
+
+    const [searchParams] = useSearchParams();
+    const tabParam = searchParams.get('tab');
+
     const [customer, setCustomer] = useState<Customer | null>(null);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [payments, setPayments] = useState<any[]>([]);
     const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
+    const [debitNotes, setDebitNotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'emi' | 'invoices' | 'payments' | 'credit_notes' | 'statements'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'emi' | 'invoices' | 'payments' | 'credit_notes' | 'debit_notes' | 'statements'>(
+        (tabParam as any) || 'overview'
+    );
+
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab) {
+            setActiveTab(tab as any);
+        }
+    }, [searchParams]);
     const [sortBy, setSortBy] = useState<'date' | 'status'>('date');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [exportFormat, setExportFormat] = useState<'pdf' | 'csv'>('pdf');
+
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['PAID', 'UNPAID', 'PARTIALLY_PAID', 'OVERDUE']);
@@ -53,15 +75,17 @@ const CustomerDetail = () => {
             const customerId = resolvedCustomer._id || id;
 
             // Fetch related data in parallel, but don't let one failure block the rest
-            const [invoicesResult, creditNotesResult, paymentsResult] = await Promise.allSettled([
+            const [invoicesResult, creditNotesResult, paymentsResult, debitNotesResult] = await Promise.allSettled([
                 getInvoicesByCustomer(customerId),
                 getAllCreditNotes({ customerId }),
-                api.get('/api/payments-received', { params: { customerId, limit: 10000 } })
+                api.get('/api/payments-received', { params: { customerId, limit: 10000 } }),
+                api.get('/api/debit-notes', { params: { customerId, limit: 10000 }, headers: { 'X-Skip-Toast': 'true' } })
             ]);
 
             setInvoices(invoicesResult.status === 'fulfilled' ? invoicesResult.value : []);
             setCreditNotes(creditNotesResult.status === 'fulfilled' ? (creditNotesResult.value?.data || []) : []);
             setPayments(paymentsResult.status === 'fulfilled' ? (paymentsResult.value?.data?.data || paymentsResult.value?.data || []) : []);
+            setDebitNotes(debitNotesResult.status === 'fulfilled' ? (debitNotesResult.value?.data?.data || debitNotesResult.value?.data || []) : []);
         } catch (error) {
             console.error('Error fetching customer detail data:', error);
             toast.error('Failed to load customer details');
@@ -364,8 +388,8 @@ const CustomerDetail = () => {
         <div className="container-responsive space-y-6 pb-20 animate-in fade-in duration-500">
             <Breadcrumbs 
                 items={[
-                    { label: 'Sales', path: '/admin/financial-admin/customers' },
-                    { label: 'Customers', path: '/admin/financial-admin/customers' },
+                    { label: 'Sales', path: `${basePath}/customers` },
+                    { label: 'Customers', path: `${basePath}/customers` },
                     { label: customer.name, active: true }
                 ]} 
             />
@@ -468,6 +492,7 @@ const CustomerDetail = () => {
                     { id: 'invoices', label: 'Payables (Invoices)', icon: <FileText size={14} /> },
                     { id: 'payments', label: 'Payments Received', icon: <DollarSign size={14} /> },
                     { id: 'credit_notes', label: 'Credit Notes', icon: <FileSpreadsheet size={14} /> },
+                    { id: 'debit_notes', label: 'Debit Notes', icon: <FileText size={14} /> },
                     { id: 'statements', label: 'Statements', icon: <FileText size={14} /> },
                 ].map((tab) => (
                     <button
@@ -498,9 +523,10 @@ const CustomerDetail = () => {
                     />
                 )}
                 {activeTab === 'emi' && <EMITab customer={customer} invoices={invoices} />}
-                {activeTab === 'invoices' && <InvoicesTab invoices={invoices} />}
+                {activeTab === 'invoices' && <InvoicesTab invoices={invoices} navigate={navigate} basePath={basePath} />}
                 {activeTab === 'payments' && <PaymentsTab payments={payments} />}
-                {activeTab === 'credit_notes' && <CreditNotesTab creditNotes={creditNotes} />}
+                {activeTab === 'credit_notes' && <CreditNotesTab creditNotes={creditNotes} navigate={navigate} basePath={basePath} />}
+                {activeTab === 'debit_notes' && <DebitNotesTab debitNotes={debitNotes} navigate={navigate} basePath={basePath} />}
                 {activeTab === 'statements' && <StatementsTab invoices={invoices} payments={payments} creditNotes={creditNotes} customerId={id || ''} />}
             </div>
 
@@ -797,7 +823,7 @@ const formatPeriod = (inv: Invoice) => {
     return inv.weekLabel;
 };
 
-const InvoicesTab = ({ invoices }: { invoices: Invoice[] }) => {
+const InvoicesTab = ({ invoices, navigate, basePath }: { invoices: Invoice[]; navigate: any; basePath: string }) => {
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
     const limit = 10;
@@ -863,15 +889,16 @@ const InvoicesTab = ({ invoices }: { invoices: Invoice[] }) => {
                                 <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Total Due</th>
                                 <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Balance</th>
                                 <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
+                                <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                             {paginated.length === 0 ? (
-                                <tr><td colSpan={5} className="p-16 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No invoices found matching criteria.</td></tr>
+                                <tr><td colSpan={6} className="p-16 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No invoices found matching criteria.</td></tr>
                             ) : (
                                 paginated.map((inv) => (
                                     <tr key={inv._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
-                                        <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{inv.invoiceNumber}</td>
+                                        <td className="px-6 py-4 font-black text-xs text-brand-lime cursor-pointer hover:underline" onClick={() => navigate(`${basePath}/invoices/${inv._id}`)} style={{ color: 'var(--brand-lime)' }}>{inv.invoiceNumber}</td>
                                         <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{formatPeriod(inv)}</td>
                                         <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>${inv.totalAmountDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td className="px-6 py-4 text-right text-xs font-bold text-rose-400" style={{ color: 'var(--status-failed)' }}>${inv.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
@@ -883,6 +910,15 @@ const InvoicesTab = ({ invoices }: { invoices: Invoice[] }) => {
                                             }`}>
                                                 {inv.status}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); navigate(`${basePath}/invoices/${inv._id}`); }}
+                                                className="p-1.5 rounded-lg hover:bg-white/10 text-brand-lime transition-all cursor-pointer inline-flex items-center justify-center"
+                                                title="View Invoice Detail"
+                                            >
+                                                <Eye size={16} />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))
@@ -1392,7 +1428,7 @@ function StatementsTab({ invoices, payments, creditNotes, customerId }: { invoic
     );
 }
 
-const CreditNotesTab = ({ creditNotes }: { creditNotes: CreditNote[] }) => (
+const CreditNotesTab = ({ creditNotes, navigate, basePath }: { creditNotes: CreditNote[]; navigate: any; basePath: string }) => (
     <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
         <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse whitespace-nowrap">
@@ -1403,15 +1439,16 @@ const CreditNotesTab = ({ creditNotes }: { creditNotes: CreditNote[] }) => (
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Reason</th>
                         <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount</th>
                         <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
+                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Action</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                     {creditNotes.length === 0 ? (
-                        <tr><td colSpan={5} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No credit notes issued for this customer.</td></tr>
+                        <tr><td colSpan={6} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No credit notes issued for this customer.</td></tr>
                     ) : (
                         creditNotes.map((cn) => (
                             <tr key={cn._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
-                                <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{cn.creditNoteNumber}</td>
+                                <td className="px-6 py-4 font-black text-xs text-brand-lime cursor-pointer hover:underline" onClick={() => navigate(`${basePath}/credit-notes/${cn._id}`)} style={{ color: 'var(--brand-lime)' }}>{cn.creditNoteNumber}</td>
                                 <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(cn.creditNoteDate).toLocaleDateString()}</td>
                                 <td className="px-6 py-4 text-xs font-bold italic truncate max-w-[200px]" style={{ color: 'var(--text-dim)' }}>{cn.reason}</td>
                                 <td className="px-6 py-4 text-right text-xs font-black text-indigo-400">− ${cn.amount.toLocaleString()}</td>
@@ -1423,6 +1460,73 @@ const CreditNotesTab = ({ creditNotes }: { creditNotes: CreditNote[] }) => (
                                     }`}>
                                         {cn.status}
                                     </span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); navigate(`${basePath}/credit-notes/${cn._id}`); }}
+                                        className="p-1.5 rounded-lg hover:bg-white/10 text-brand-lime transition-all cursor-pointer inline-flex items-center justify-center"
+                                        title="View Credit Note Detail"
+                                    >
+                                        <Eye size={16} />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
+        </div>
+    </div>
+);
+
+const DebitNotesTab = ({ debitNotes, navigate, basePath }: { debitNotes: any[]; navigate: any; basePath: string }) => (
+    <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+        <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
+                <thead>
+                    <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Debit Note #</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Date</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Reason</th>
+                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount ($)</th>
+                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Paid ($)</th>
+                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Balance ($)</th>
+                        <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
+                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Action</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                    {debitNotes.length === 0 ? (
+                        <tr><td colSpan={8} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No debit notes issued for this customer.</td></tr>
+                    ) : (
+                        debitNotes.map((dn) => (
+                            <tr key={dn._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
+                                <td className="px-6 py-4 font-black text-xs text-brand-lime cursor-pointer hover:underline" onClick={() => navigate(`${basePath}/debit-notes/${dn._id}`)} style={{ color: 'var(--brand-lime)' }}>{dn.debitNoteNumber}</td>
+                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{dn.debitNoteDate ? new Date(dn.debitNoteDate).toLocaleDateString() : 'N/A'}</td>
+                                <td className="px-6 py-4 text-xs font-bold italic truncate max-w-[200px]" style={{ color: 'var(--text-dim)' }}>{dn.reason}</td>
+                                <td className="px-6 py-4 text-right text-xs font-black text-amber-400">${(dn.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td className="px-6 py-4 text-right text-xs font-bold text-emerald-400">${(dn.amountPaid !== undefined ? dn.amountPaid : (dn.status === 'PAID' ? dn.amount : 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td className="px-6 py-4 text-right text-xs font-black text-rose-400">${(dn.balance !== undefined ? dn.balance : (dn.status === 'PAID' ? 0 : dn.amount)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td className="px-6 py-4 text-center">
+                                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                        dn.status === 'PAID' || dn.status === 'CLOSED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                        dn.status === 'PARTIAL' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                        dn.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                                        dn.status === 'CANCELLED' || dn.status === 'VOID' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' :
+                                        dn.status === 'DRAFT' ? 'bg-gray-500/10 text-gray-400 border border-gray-500/20' :
+                                        'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                    }`}>
+                                        {dn.status}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); navigate(`${basePath}/debit-notes/${dn._id}`); }}
+                                        className="p-1.5 rounded-lg hover:bg-white/10 text-brand-lime transition-all cursor-pointer inline-flex items-center justify-center"
+                                        title="View Debit Note Detail"
+                                    >
+                                        <Eye size={16} />
+                                    </button>
                                 </td>
                             </tr>
                         ))

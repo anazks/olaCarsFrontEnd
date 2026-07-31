@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     FileText,
     RefreshCw,
@@ -21,6 +21,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getInvoicesRegistry, type Invoice } from '../../../services/invoiceService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
+import { getAllDebitNotes, type DebitNote } from '../../../services/debitNoteService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 export interface DynamicAgingInterval {
@@ -56,23 +57,36 @@ interface CustomerAgingSummary {
     phone?: string;
     current: number;
     buckets: Record<string, number>;
+    invoiceTotal: number;
+    depositDue: number;
     total: number;
     invoiceCount: number;
+    debitNoteCount: number;
     invoices: (Invoice & { daysOverdue: number })[];
+    debitNotes: (DebitNote & { daysOverdue: number })[];
 }
 
 export const InvoiceAgingSummary: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const getBasePath = (pathname: string) => {
+        const m = pathname.match(/^(\/admin\/[^/]+)/);
+        return m ? m[1] : '';
+    };
+    const basePath = getBasePath(location.pathname);
 
     // Data States
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
+    const [debitNotes, setDebitNotes] = useState<DebitNote[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Filter & Config States
     const [asOfDate, setAsOfDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [selectedCustomer, setSelectedCustomer] = useState<string>('ALL');
     const [searchQuery, setSearchQuery] = useState<string>('');
+    const [docTypeFilter, setDocTypeFilter] = useState<'ALL' | 'INVOICES' | 'DEBIT_NOTES'>('ALL');
     const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
 
     // Aging Intervals States
@@ -97,13 +111,15 @@ export const InvoiceAgingSummary: React.FC = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [invRes, custRes] = await Promise.all([
+            const [invRes, custRes, dnRes] = await Promise.all([
                 getInvoicesRegistry({ status: 'UNPAID', allTime: 'true', limit: 100000, ignoreDefaultDates: 'true' }),
-                getAllCustomers({ limit: 10000 })
+                getAllCustomers({ limit: 10000 }),
+                getAllDebitNotes({ limit: 100000 })
             ]);
 
             setInvoices(invRes.data || []);
             setCustomers(Array.isArray(custRes) ? custRes : (custRes as any)?.data || []);
+            setDebitNotes(dnRes.data || []);
         } catch (err: any) {
             console.error('Failed to load aging report data:', err);
             toast.error(err?.message || 'Failed to load invoices');
@@ -149,19 +165,33 @@ export const InvoiceAgingSummary: React.FC = () => {
         return list;
     }, [numIntervals, intervalValue, intervalUnit]);
 
-    // Process Aging Summaries
-    const agingData = useMemo(() => {
-        // Filter active unpaid/partially paid invoices with balance > 0
+    // Process Combined Receivable Items (Invoices + Debit Notes)
+    const combinedReceivableItems = useMemo(() => {
+        const items: {
+            id: string;
+            type: 'INVOICE' | 'DEBIT_NOTE';
+            number: string;
+            customerKey: string;
+            customerName: string;
+            customerId: string;
+            email?: string;
+            phone?: string;
+            dueDateStr: string;
+            daysOverdue: number;
+            balance: number;
+            category: 'DEPOSIT' | 'RENT' | 'OTHERS';
+            status: string;
+            rawItem: any;
+        }[] = [];
+
+        // 1. Invoices
         const activeInvoices = invoices.filter(inv => {
             if (inv.status === 'CANCELLED') return false;
             const bal = inv.balance ?? (inv.totalAmountDue - inv.amountPaid);
             return bal > 0.001;
         });
 
-        const map: Record<string, CustomerAgingSummary> = {};
-
         activeInvoices.forEach(inv => {
-            // Customer identification
             let custName = 'Unassigned / Cash Sales';
             let custId = '—';
             let custKey = 'unassigned';
@@ -191,30 +221,149 @@ export const InvoiceAgingSummary: React.FC = () => {
                 }
             }
 
+            const dueStr = inv.dueDate || inv.generatedAt || inv.createdAt;
+            const daysOverdue = getDaysOverdue(dueStr, asOfDate);
+            const bal = inv.balance ?? (inv.totalAmountDue - inv.amountPaid);
+
+            const typeStr = (inv.invoiceType || (inv as any).type || '').toUpperCase();
+            const notesStr = (inv.notes || '').toLowerCase();
+            const lineItemNames = (inv.lineItems || []).map(i => `${i.name || ''} ${i.description || ''}`.toLowerCase()).join(' ');
+
+            let category: 'DEPOSIT' | 'RENT' | 'OTHERS' = 'RENT';
+            if (typeStr === 'DEPOSIT' || notesStr.includes('deposit') || notesStr.includes('fianza') || lineItemNames.includes('deposit') || lineItemNames.includes('fianza')) {
+                category = 'DEPOSIT';
+            } else if (typeStr === 'RENTAL' || typeStr === 'RENT' || typeStr === 'VEHICLE_RENT' || notesStr.includes('rent') || notesStr.includes('alquiler') || notesStr.includes('cuota') || lineItemNames.includes('rent') || lineItemNames.includes('alquiler')) {
+                category = 'RENT';
+            } else if (typeStr === 'WORKSHOP' || notesStr.includes('workshop') || notesStr.includes('maintenance') || lineItemNames.includes('workshop') || lineItemNames.includes('repair')) {
+                category = 'OTHERS';
+            }
+
+            items.push({
+                id: inv._id,
+                type: 'INVOICE',
+                number: inv.invoiceNumber,
+                customerKey: custKey,
+                customerName: custName,
+                customerId: custId,
+                email,
+                phone,
+                dueDateStr: dueStr || '',
+                daysOverdue,
+                balance: bal,
+                category,
+                status: inv.status,
+                rawItem: inv
+            });
+        });
+
+        // 2. Debit Notes
+        const activeDebitNotes = debitNotes.filter(dn => {
+            if (dn.status === 'CANCELLED' || dn.status === 'VOID' || dn.status === 'CLOSED' || dn.status === 'PAID') return false;
+            const bal = dn.balance !== undefined ? dn.balance : (dn.amount || 0);
+            return bal > 0.001;
+        });
+
+        activeDebitNotes.forEach(dn => {
+            let custName = 'Unassigned Customer / Vendor';
+            let custId = '—';
+            let custKey = 'unassigned';
+            let email = '';
+            let phone = '';
+
+            if (dn.customerId && typeof dn.customerId === 'object') {
+                custName = dn.customerId.name || 'Unknown Customer';
+                custId = dn.customerId.customerId || dn.customerId._id || '—';
+                custKey = dn.customerId._id || custId;
+                email = dn.customerId.email || '';
+                phone = dn.customerId.phone || '';
+            } else if (typeof dn.customerId === 'string' && dn.customerId) {
+                custKey = dn.customerId;
+                const custIdStr = dn.customerId as string;
+                const found = customers.find(c => c._id === custIdStr);
+                if (found) {
+                    custName = found.name;
+                    custId = found.customerId || found._id;
+                    email = found.email || '';
+                    phone = found.phone || '';
+                }
+            } else if (dn.supplierId && typeof dn.supplierId === 'object') {
+                custName = dn.supplierId.name || dn.supplierId.companyName || 'Supplier';
+                custId = dn.supplierId.supplierCode || dn.supplierId._id || '—';
+                custKey = dn.supplierId._id || custId;
+            } else if (dn.driverId && typeof dn.driverId === 'object') {
+                custName = dn.driverId.personalInfo?.fullName || 'Driver';
+                custId = dn.driverId.driverId || dn.driverId._id || '—';
+                custKey = dn.driverId._id || custId;
+            }
+
+            const dueStr = dn.debitNoteDate || dn.createdAt;
+            const daysOverdue = getDaysOverdue(dueStr, asOfDate);
+            const bal = dn.balance !== undefined ? dn.balance : (dn.amount || 0);
+
+            const isDepositNote = (dn.isDeposit === true) || 
+                (dn.debitNoteNumber && /^DP/i.test(String(dn.debitNoteNumber).trim()));
+            const dnCategory: 'DEPOSIT' | 'RENT' | 'OTHERS' = isDepositNote ? 'DEPOSIT' : 'OTHERS';
+
+            items.push({
+                id: dn._id,
+                type: 'DEBIT_NOTE',
+                number: dn.debitNoteNumber,
+                customerKey: custKey,
+                customerName: custName,
+                customerId: custId,
+                email,
+                phone,
+                dueDateStr: dueStr,
+                daysOverdue,
+                balance: bal,
+                category: dnCategory,
+                status: dn.status || 'OPEN',
+                rawItem: dn
+            });
+        });
+
+        if (docTypeFilter === 'INVOICES') {
+            return items.filter(i => i.type === 'INVOICE');
+        }
+        if (docTypeFilter === 'DEBIT_NOTES') {
+            return items.filter(i => i.type === 'DEBIT_NOTE');
+        }
+        return items;
+    }, [invoices, debitNotes, customers, asOfDate, docTypeFilter]);
+
+    // Process Aging Summaries from Combined Receivables
+    const agingData = useMemo(() => {
+        const map: Record<string, CustomerAgingSummary> = {};
+
+        combinedReceivableItems.forEach(item => {
+            const custKey = item.customerKey;
+
             if (!map[custKey]) {
                 const initialBuckets: Record<string, number> = {};
                 activeIntervals.forEach(int => { initialBuckets[int.key] = 0; });
 
                 map[custKey] = {
                     customerKey: custKey,
-                    customerName: custName,
-                    customerId: custId,
-                    email,
-                    phone,
+                    customerName: item.customerName,
+                    customerId: item.customerId,
+                    email: item.email,
+                    phone: item.phone,
                     current: 0,
                     buckets: initialBuckets,
+                    invoiceTotal: 0,
+                    depositDue: 0,
                     total: 0,
                     invoiceCount: 0,
-                    invoices: []
+                    debitNoteCount: 0,
+                    invoices: [],
+                    debitNotes: []
                 };
             }
 
-            // Calculate days past due from dueDate or generatedAt
-            const dueStr = inv.dueDate || inv.generatedAt || inv.createdAt;
-            const daysOverdue = getDaysOverdue(dueStr, asOfDate);
-            const bal = inv.balance ?? (inv.totalAmountDue - inv.amountPaid);
+            const bal = item.balance;
+            const daysOverdue = item.daysOverdue;
 
-            // Categorize into dynamic buckets
+            // Categorize into dynamic buckets (Current vs Overdue Buckets)
             if (daysOverdue <= 0) {
                 map[custKey].current += bal;
             } else {
@@ -239,12 +388,19 @@ export const InvoiceAgingSummary: React.FC = () => {
                 }
             }
 
+            if (item.category === 'DEPOSIT') {
+                map[custKey].depositDue += bal;
+            }
+            if (item.type === 'INVOICE') {
+                map[custKey].invoiceTotal += bal;
+                map[custKey].invoiceCount += 1;
+                map[custKey].invoices.push({ ...item.rawItem, daysOverdue });
+            } else {
+                map[custKey].debitNoteCount += 1;
+                map[custKey].debitNotes.push({ ...item.rawItem, daysOverdue });
+            }
+
             map[custKey].total += bal;
-            map[custKey].invoiceCount += 1;
-            map[custKey].invoices.push({
-                ...inv,
-                daysOverdue
-            });
         });
 
         let list = Object.values(map);
@@ -285,7 +441,7 @@ export const InvoiceAgingSummary: React.FC = () => {
         });
 
         return list;
-    }, [invoices, customers, asOfDate, selectedCustomer, searchQuery, activeIntervals, sortField, sortOrder]);
+    }, [combinedReceivableItems, selectedCustomer, searchQuery, activeIntervals, sortField, sortOrder]);
 
     // Grand Totals
     const totals = useMemo(() => {
@@ -295,14 +451,18 @@ export const InvoiceAgingSummary: React.FC = () => {
         const result = {
             current: 0,
             buckets: initialBucketTotals,
+            depositDue: 0,
             total: 0,
-            invoices: 0
+            invoices: 0,
+            debitNotes: 0
         };
 
         agingData.forEach(curr => {
             result.current += curr.current;
+            result.depositDue += curr.depositDue;
             result.total += curr.total;
             result.invoices += curr.invoiceCount;
+            result.debitNotes += curr.debitNoteCount;
             activeIntervals.forEach(int => {
                 result.buckets[int.key] = (result.buckets[int.key] || 0) + (curr.buckets[int.key] || 0);
             });
@@ -311,31 +471,8 @@ export const InvoiceAgingSummary: React.FC = () => {
         return result;
     }, [agingData, activeIntervals]);
 
-    // KPI Metrics calculation matching exact dashboard spec
+    // KPI Metrics calculation matching exact dashboard spec (Combined Invoices + Debit Notes)
     const kpiMetrics = useMemo(() => {
-        const classifyInvoiceCategory = (inv: Invoice): 'DEPOSIT' | 'RENT' | 'OTHERS' => {
-            const typeStr = (inv.invoiceType || (inv as any).type || '').toUpperCase();
-            const notesStr = (inv.notes || '').toLowerCase();
-            const lineItemNames = (inv.lineItems || []).map(i => `${i.name || ''} ${i.description || ''}`.toLowerCase()).join(' ');
-
-            if (typeStr === 'DEPOSIT' || notesStr.includes('deposit') || notesStr.includes('fianza') || lineItemNames.includes('deposit') || lineItemNames.includes('fianza')) {
-                return 'DEPOSIT';
-            }
-            if (typeStr === 'RENTAL' || typeStr === 'RENT' || typeStr === 'VEHICLE_RENT' || notesStr.includes('rent') || notesStr.includes('alquiler') || notesStr.includes('cuota') || lineItemNames.includes('rent') || lineItemNames.includes('alquiler')) {
-                return 'RENT';
-            }
-            if (typeStr === 'WORKSHOP' || notesStr.includes('workshop') || notesStr.includes('maintenance') || lineItemNames.includes('workshop') || lineItemNames.includes('repair')) {
-                return 'OTHERS';
-            }
-            return 'RENT';
-        };
-
-        const activeInvoices = invoices.filter(inv => {
-            if (inv.status === 'CANCELLED') return false;
-            const bal = inv.balance ?? (inv.totalAmountDue - inv.amountPaid);
-            return bal > 0.001;
-        });
-
         const asOf = new Date(asOfDate);
         asOf.setHours(23, 59, 59, 999);
 
@@ -350,15 +487,11 @@ export const InvoiceAgingSummary: React.FC = () => {
 
         const customerMaxDays: Record<string, { maxDays: number; totalBal: number; isOverdue: boolean }> = {};
 
-        activeInvoices.forEach(inv => {
-            const bal = inv.balance ?? (inv.totalAmountDue - inv.amountPaid);
+        combinedReceivableItems.forEach(item => {
+            const bal = item.balance;
             totalOutstanding += bal;
 
-            const due = new Date(inv.dueDate || inv.generatedAt || inv.createdAt || Date.now());
-            due.setHours(0, 0, 0, 0);
-
-            const diffTime = asOf.getTime() - due.getTime();
-            const daysOverdue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const daysOverdue = item.daysOverdue;
 
             if (daysOverdue > 0) {
                 totalOverdueBalance += bal;
@@ -368,15 +501,11 @@ export const InvoiceAgingSummary: React.FC = () => {
                 }
             }
 
-            const cat = classifyInvoiceCategory(inv);
-            if (cat === 'DEPOSIT') depositDue += bal;
-            else if (cat === 'RENT') rentDue += bal;
+            if (item.category === 'DEPOSIT') depositDue += bal;
+            else if (item.category === 'RENT') rentDue += bal;
             else othersDue += bal;
 
-            let custKey = 'unassigned';
-            if (inv.customer && typeof inv.customer === 'object') custKey = inv.customer._id || inv.customer.customerId || 'unassigned';
-            else if (inv.driver && typeof inv.driver === 'object') custKey = inv.driver._id || inv.driver.driverId || 'unassigned';
-            else if (typeof inv.customer === 'string' && inv.customer) custKey = inv.customer;
+            const custKey = item.customerKey;
 
             if (!customerMaxDays[custKey]) {
                 customerMaxDays[custKey] = { maxDays: daysOverdue, totalBal: bal, isOverdue: daysOverdue > 0 };
@@ -426,7 +555,7 @@ export const InvoiceAgingSummary: React.FC = () => {
 
         return {
             totalOutstanding,
-            openLinesCount: activeInvoices.length,
+            openLinesCount: combinedReceivableItems.length,
             customersInArrearsCount,
             weightedAvgDaysOverdue,
             oldestDays,
@@ -443,7 +572,86 @@ export const InvoiceAgingSummary: React.FC = () => {
             reminderBucketDrivers,
             urgentBucketDrivers
         };
-    }, [invoices, asOfDate, agingData]);
+    }, [combinedReceivableItems, asOfDate, agingData]);
+
+    // Ageing Matrix Calculation (Balance Due & Item Count per bucket & category)
+    const ageingMatrix = useMemo(() => {
+        const rows = activeIntervals.map(int => ({
+            key: int.key,
+            label: int.label,
+            shortLabel: int.shortLabel,
+            depositBalance: 0,
+            rentBalance: 0,
+            othersBalance: 0,
+            totalBalance: 0,
+            pctShare: 0,
+            depositCount: 0,
+            rentCount: 0,
+            othersCount: 0,
+            totalCount: 0
+        }));
+
+        let grandTotal = 0;
+
+        combinedReceivableItems.forEach(item => {
+            const bal = item.balance;
+            const days = item.daysOverdue;
+            const cat = item.category; // 'DEPOSIT' | 'RENT' | 'OTHERS'
+
+            let bucketIndex = -1;
+            for (let i = 0; i < activeIntervals.length; i++) {
+                const int = activeIntervals[i];
+                if (i === 0) {
+                    if (int.maxDays !== null && days <= int.maxDays) {
+                        bucketIndex = i;
+                        break;
+                    }
+                } else if (int.maxDays !== null) {
+                    if (days >= int.minDays && days <= int.maxDays) {
+                        bucketIndex = i;
+                        break;
+                    }
+                } else {
+                    if (days >= int.minDays) {
+                        bucketIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            if (bucketIndex === -1 && activeIntervals.length > 0) {
+                bucketIndex = 0;
+            }
+
+            if (bucketIndex >= 0 && bucketIndex < rows.length) {
+                const r = rows[bucketIndex];
+                grandTotal += bal;
+                r.totalBalance += bal;
+                r.totalCount += 1;
+
+                if (cat === 'DEPOSIT') {
+                    r.depositBalance += bal;
+                    r.depositCount += 1;
+                } else if (cat === 'RENT') {
+                    r.rentBalance += bal;
+                    r.rentCount += 1;
+                } else {
+                    r.othersBalance += bal;
+                    r.othersCount += 1;
+                }
+            }
+        });
+
+        rows.forEach(r => {
+            r.pctShare = grandTotal > 0 ? (r.totalBalance / grandTotal) * 100 : 0;
+        });
+
+        return {
+            rows,
+            grandTotalBalance: grandTotal,
+            grandTotalCount: combinedReceivableItems.length
+        };
+    }, [combinedReceivableItems, activeIntervals]);
 
     // Handlers
     const handleSort = (field: keyof CustomerAgingSummary) => {
@@ -485,8 +693,10 @@ export const InvoiceAgingSummary: React.FC = () => {
                     rowObj[`${int.label} ($)`] = c.buckets[int.key] || 0;
                 });
 
+                rowObj['Deposit Due ($)'] = c.depositDue;
                 rowObj['Total Outstanding ($)'] = c.total;
                 rowObj['Unpaid Invoices'] = c.invoiceCount;
+                rowObj['Debit Notes'] = c.debitNoteCount;
                 return rowObj;
             });
 
@@ -502,8 +712,10 @@ export const InvoiceAgingSummary: React.FC = () => {
                 totalObj[`${int.label} ($)`] = totals.buckets[int.key] || 0;
             });
 
+            totalObj['Deposit Due ($)'] = totals.depositDue;
             totalObj['Total Outstanding ($)'] = totals.total;
             totalObj['Unpaid Invoices'] = totals.invoices;
+            totalObj['Debit Notes'] = totals.debitNotes;
 
             rows.push(totalObj);
 
@@ -541,6 +753,7 @@ export const InvoiceAgingSummary: React.FC = () => {
                     rowObj[`${int.label} ($)`] = c.buckets[int.key] || 0;
                 });
 
+                rowObj['Deposit Due ($)'] = c.depositDue;
                 rowObj['Total Outstanding ($)'] = c.total;
                 return rowObj;
             });
@@ -574,41 +787,184 @@ export const InvoiceAgingSummary: React.FC = () => {
         const toastId = toast.loading('Generating PDF report...');
         try {
             const doc = new jsPDF('landscape');
+            const pageWidth = doc.internal.pageSize.getWidth();
+
+            // Header Title
             doc.setFontSize(16);
-            doc.text('Accounts Receivable (AR) Aging Summary Report', 14, 18);
-            doc.setFontSize(9);
-            doc.text(`As of Date: ${asOfDate} | Aging Intervals: ${numIntervals} X ${intervalValue} ${intervalUnit}`, 14, 25);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(15, 23, 42); // slate-900
+            doc.text('Accounts Receivable (AR) Aging Summary Report', 14, 14);
+
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 116, 139); // slate-500
+            doc.text(`As of Date: ${asOfDate} | Aging Buckets: ${numIntervals} X ${intervalValue} ${intervalUnit} | Source: ${docTypeFilter}`, 14, 20);
+
+            let currentY = 24;
+
+            // 1. TOP KPIS SUMMARY TABLE
+            const kpiHead1 = ['TOTAL OUTSTANDING', 'CUSTOMERS IN ARREARS', 'WEIGHTED AVG OVERDUE', 'OLDEST OVERDUE'];
+            const kpiBody1 = [
+                `$${kpiMetrics.totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                `${kpiMetrics.customersInArrearsCount} drivers`,
+                `${kpiMetrics.weightedAvgDaysOverdue} days`,
+                `${kpiMetrics.oldestDays} days`
+            ];
+            const kpiHead2 = ['DEPOSIT DUE', 'RENT DUE', 'OTHERS DUE', 'AVG / CUSTOMER'];
+            const kpiBody2 = [
+                `$${kpiMetrics.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${kpiMetrics.depositPct}%)`,
+                `$${kpiMetrics.rentDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${kpiMetrics.rentPct}%)`,
+                `$${kpiMetrics.othersDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${kpiMetrics.othersPct}%)`,
+                `$${kpiMetrics.avgPerCustomer.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            ];
+
+            autoTable(doc, {
+                startY: currentY,
+                head: [kpiHead1],
+                body: [kpiBody1, kpiHead2, kpiBody2],
+                theme: 'grid',
+                headStyles: { fillColor: [13, 71, 161], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5, halign: 'center' },
+                bodyStyles: { fontSize: 7.5, fontStyle: 'bold', halign: 'center' },
+                styles: { cellPadding: 1.8 }
+            });
+
+            currentY = (doc as any).lastAutoTable.finalY + 5;
+
+            // 2. AGEING MATRIX SECTION (SIDE-BY-SIDE TABLES)
+            doc.setFontSize(9.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(13, 71, 161);
+            doc.text('AGEING MATRIX ANALYSIS', 14, currentY);
+            currentY += 3;
+
+            // Left Matrix Table: Balance Due
+            const matrixBalHead = [['Bucket', 'Deposit', 'Rent', 'Others', 'Total (USD)', '% Share']];
+            const matrixBalBody = ageingMatrix.rows.map(r => [
+                r.shortLabel || r.label,
+                r.depositBalance > 0 ? `$${r.depositBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—',
+                r.rentBalance > 0 ? `$${r.rentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—',
+                r.othersBalance > 0 ? `$${r.othersBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—',
+                `$${r.totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                `${r.pctShare.toFixed(1)}%`
+            ]);
+
+            autoTable(doc, {
+                startY: currentY,
+                tableWidth: 133,
+                margin: { left: 14 },
+                head: matrixBalHead,
+                body: matrixBalBody,
+                theme: 'striped',
+                headStyles: { fillColor: [21, 101, 192], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+                styles: { fontSize: 7, cellPadding: 1.6 },
+                columnStyles: {
+                    0: { fontStyle: 'bold' },
+                    1: { halign: 'right' },
+                    2: { halign: 'right' },
+                    3: { halign: 'right' },
+                    4: { halign: 'right', fontStyle: 'bold' },
+                    5: { halign: 'right' }
+                }
+            });
+            const leftFinalY = (doc as any).lastAutoTable.finalY;
+
+            // Right Matrix Table: Item Count
+            const matrixCntHead = [['Bucket', 'Deposit', 'Rent', 'Others', 'Total Items']];
+            const matrixCntBody = ageingMatrix.rows.map(r => [
+                r.shortLabel || r.label,
+                r.depositCount > 0 ? String(r.depositCount) : '—',
+                r.rentCount > 0 ? String(r.rentCount) : '—',
+                r.othersCount > 0 ? String(r.othersCount) : '—',
+                String(r.totalCount)
+            ]);
+
+            autoTable(doc, {
+                startY: currentY,
+                tableWidth: 133,
+                margin: { left: 150 },
+                head: matrixCntHead,
+                body: matrixCntBody,
+                theme: 'striped',
+                headStyles: { fillColor: [21, 101, 192], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+                styles: { fontSize: 7, cellPadding: 1.6 },
+                columnStyles: {
+                    0: { fontStyle: 'bold' },
+                    1: { halign: 'right' },
+                    2: { halign: 'right' },
+                    3: { halign: 'right' },
+                    4: { halign: 'right', fontStyle: 'bold' }
+                }
+            });
+            const rightFinalY = (doc as any).lastAutoTable.finalY;
+
+            currentY = Math.max(leftFinalY, rightFinalY) + 5;
+
+            // 3. DETAILED CUSTOMER AGING SUMMARY TABLE
+            doc.setFontSize(9.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(13, 71, 161);
+            doc.text('CUSTOMER AGING SUMMARY BREAKDOWN', 14, currentY);
+            currentY += 3;
 
             const head = [[
                 'Customer Code',
                 'Customer Name',
                 'Current',
                 ...activeIntervals.map(int => int.label),
+                'Deposit Due',
                 'Total Balance'
             ]];
 
             const body = agingData.map(c => [
                 c.customerId,
                 c.customerName,
-                `$${c.current.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                ...activeIntervals.map(int => `$${(c.buckets[int.key] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`),
-                `$${c.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                `$${c.current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                ...activeIntervals.map(int => `$${(c.buckets[int.key] || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`),
+                `$${c.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                `$${c.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             ]);
 
             const totalsRow = [
                 'TOTALS',
                 `Grand Total (${agingData.length} Customers)`,
-                `$${totals.current.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                ...activeIntervals.map(int => `$${(totals.buckets[int.key] || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`),
-                `$${totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                `$${totals.current.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                ...activeIntervals.map(int => `$${(totals.buckets[int.key] || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`),
+                `$${totals.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                `$${totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             ];
 
             autoTable(doc, {
-                startY: 30,
+                startY: currentY,
                 head,
                 body: [...body, totalsRow],
-                styles: { fontSize: 8 }
+                theme: 'striped',
+                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+                styles: { fontSize: 6.8, cellPadding: 1.5 },
+                columnStyles: {
+                    0: { fontStyle: 'bold' },
+                    2: { halign: 'right' },
+                    3: { halign: 'right' },
+                    4: { halign: 'right' },
+                    5: { halign: 'right' },
+                    6: { halign: 'right' },
+                    7: { halign: 'right', fontStyle: 'bold' }
+                }
             });
+
+            // Page numbers in footer
+            const pageCount = (doc as any).internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(7.5);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(148, 163, 184);
+                doc.text(
+                    `Page ${i} of ${pageCount} — AR Aging Summary Report — Generated on ${new Date().toLocaleString()}`,
+                    pageWidth / 2,
+                    doc.internal.pageSize.getHeight() - 6,
+                    { align: 'center' }
+                );
+            }
 
             doc.save(`AR_Aging_Summary_${asOfDate}.pdf`);
             toast.success('PDF exported successfully!', { id: toastId });
@@ -644,7 +1000,7 @@ export const InvoiceAgingSummary: React.FC = () => {
 
                 <div className="flex flex-wrap items-center gap-2">
                     <button
-                        onClick={() => navigate('/admin/financial-admin/invoices')}
+                        onClick={() => navigate(`${basePath}/invoices`)}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border active:scale-95 cursor-pointer"
                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     >
@@ -808,6 +1164,132 @@ export const InvoiceAgingSummary: React.FC = () => {
                 </div>
             </div>
 
+            {/* Ageing Matrix Section — Balance Due & Item Count side by side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Left Card: AGEING MATRIX — BALANCE DUE (USD) */}
+                <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="px-4 py-3 bg-gradient-to-r from-[#0D47A1] to-[#1565C0] text-white flex items-center justify-between">
+                        <div className="text-xs font-black uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-white/80 animate-pulse"></span>
+                            • AGEING MATRIX — BALANCE DUE (USD)
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                            <thead className="border-b uppercase font-bold text-[10px]" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
+                                <tr>
+                                    <th className="py-2.5 px-3">Bucket</th>
+                                    <th className="py-2.5 px-3 text-right">Deposit</th>
+                                    <th className="py-2.5 px-3 text-right">Rent</th>
+                                    <th className="py-2.5 px-3 text-right">Others</th>
+                                    <th className="py-2.5 px-3 text-right font-black">Total (USD)</th>
+                                    <th className="py-2.5 px-3 text-right">% Share</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y font-mono text-xs" style={{ borderColor: 'var(--border-main)' }}>
+                                {ageingMatrix.rows.map((r, idx) => {
+                                    const pillColors = [
+                                        'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                                        'bg-sky-500/10 text-sky-400 border-sky-500/20',
+                                        'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                                        'bg-orange-500/10 text-orange-400 border-orange-500/20',
+                                        'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                    ];
+                                    const pillColor = pillColors[idx % pillColors.length];
+
+                                    return (
+                                        <tr key={r.key} className="hover:bg-white/5 transition-colors">
+                                            <td className="py-2.5 px-3 font-sans">
+                                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${pillColor}`}>
+                                                    {r.shortLabel || r.label}
+                                                </span>
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-bold text-blue-400">
+                                                {r.depositBalance > 0 ? `$${r.depositBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-bold text-emerald-400">
+                                                {r.rentBalance > 0 ? `$${r.rentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-bold text-orange-400">
+                                                {r.othersBalance > 0 ? `$${r.othersBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-black text-white">
+                                                ${r.totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <div className="w-12 bg-white/10 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                                                        <div className="bg-blue-400 h-full rounded-full" style={{ width: `${Math.min(100, r.pctShare)}%` }}></div>
+                                                    </div>
+                                                    <span className="font-bold text-dim text-[11px]">{r.pctShare.toFixed(1)}%</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Right Card: AGEING MATRIX — ITEM COUNT */}
+                <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="px-4 py-3 bg-gradient-to-r from-[#0D47A1] to-[#1565C0] text-white flex items-center justify-between">
+                        <div className="text-xs font-black uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-white/80 animate-pulse"></span>
+                            • AGEING MATRIX — ITEM COUNT
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                            <thead className="border-b uppercase font-bold text-[10px]" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
+                                <tr>
+                                    <th className="py-2.5 px-3">Bucket</th>
+                                    <th className="py-2.5 px-3 text-right">Deposit</th>
+                                    <th className="py-2.5 px-3 text-right">Rent</th>
+                                    <th className="py-2.5 px-3 text-right">Others</th>
+                                    <th className="py-2.5 px-3 text-right font-black">Total Items</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y font-mono text-xs" style={{ borderColor: 'var(--border-main)' }}>
+                                {ageingMatrix.rows.map((r, idx) => {
+                                    const pillColors = [
+                                        'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                                        'bg-sky-500/10 text-sky-400 border-sky-500/20',
+                                        'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                                        'bg-orange-500/10 text-orange-400 border-orange-500/20',
+                                        'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                    ];
+                                    const pillColor = pillColors[idx % pillColors.length];
+
+                                    return (
+                                        <tr key={r.key} className="hover:bg-white/5 transition-colors">
+                                            <td className="py-2.5 px-3 font-sans">
+                                                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${pillColor}`}>
+                                                    {r.shortLabel || r.label}
+                                                </span>
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-bold text-blue-400">
+                                                {r.depositCount > 0 ? r.depositCount : '—'}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-bold text-emerald-400">
+                                                {r.rentCount > 0 ? r.rentCount : '—'}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-bold text-orange-400">
+                                                {r.othersCount > 0 ? r.othersCount : '—'}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-black text-white">
+                                                {r.totalCount}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             {/* Filter Bar */}
             <div className="p-4 rounded-2xl border flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                 <div className="flex flex-wrap items-center gap-3 flex-1">
@@ -822,6 +1304,22 @@ export const InvoiceAgingSummary: React.FC = () => {
                             className="bg-transparent border rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-[#C8E600]"
                             style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                         />
+                    </div>
+
+                    {/* Document Source Filter (Combined / Invoices / Debit Notes) */}
+                    <div className="flex items-center gap-2">
+                        <FileText size={15} className="text-amber-400" />
+                        <span className="text-xs font-bold text-dim">Source:</span>
+                        <select
+                            value={docTypeFilter}
+                            onChange={e => setDocTypeFilter(e.target.value as any)}
+                            className="bg-transparent border rounded-xl px-3 py-1.5 text-xs font-bold outline-none focus:border-[#C8E600] cursor-pointer"
+                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <option value="ALL">Combined (Invoices & Debit Notes)</option>
+                            <option value="INVOICES">Invoices Only</option>
+                            <option value="DEBIT_NOTES">Debit Notes Only</option>
+                        </select>
                     </div>
 
                     {/* Customer Filter Dropdown */}
@@ -897,25 +1395,32 @@ export const InvoiceAgingSummary: React.FC = () => {
                                         </div>
                                     </th>
                                 ))}
+                                <th className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('depositDue')}>
+                                    <div className="flex items-center justify-end gap-1 text-amber-400">
+                                        Deposit Due
+                                        <ArrowUpDown size={12} />
+                                    </div>
+                                </th>
                                 <th className="py-3 px-4 text-right cursor-pointer hover:text-white transition-colors" onClick={() => handleSort('total')}>
                                     <div className="flex items-center justify-end gap-1" style={{ color: 'var(--brand-lime)' }}>
                                         Total Balance
                                         <ArrowUpDown size={12} />
                                     </div>
                                 </th>
+                                <th className="py-3 px-4 text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y font-medium" style={{ borderColor: 'var(--border-main)' }}>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={4 + activeIntervals.length} className="py-12 text-center text-dim">
+                                    <td colSpan={6 + activeIntervals.length} className="py-12 text-center text-dim">
                                         <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-brand-lime" />
                                         Loading aging summary calculations...
                                     </td>
                                 </tr>
                             ) : agingData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4 + activeIntervals.length} className="py-12 text-center text-dim font-bold">
+                                    <td colSpan={6 + activeIntervals.length} className="py-12 text-center text-dim font-bold">
                                         No outstanding customer invoices found for the selected criteria.
                                     </td>
                                 </tr>
@@ -937,11 +1442,20 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                     )}
                                                 </td>
                                                 <td className="py-3.5 px-4">
-                                                    <div className="font-bold text-main" style={{ color: 'var(--text-main)' }}>
+                                                    <div
+                                                        className="font-bold text-main hover:text-brand-lime transition-colors cursor-pointer"
+                                                        style={{ color: 'var(--text-main)' }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (row.customerKey && row.customerKey !== 'unassigned') {
+                                                                navigate(`${basePath}/customers/${row.customerKey}?tab=invoices`);
+                                                            }
+                                                        }}
+                                                    >
                                                         {row.customerName}
                                                     </div>
                                                     <div className="text-[10px] font-mono text-dim">
-                                                        ID: {row.customerId} • {row.invoiceCount} unpaid invoice(s)
+                                                        ID: {row.customerId} • {row.invoiceCount} invoice(s) • {row.debitNoteCount} debit note(s)
                                                     </div>
                                                 </td>
                                                 <td className="py-3.5 px-4 text-right font-mono font-bold text-blue-400">
@@ -957,15 +1471,34 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                         </td>
                                                     );
                                                 })}
+                                                <td className="py-3.5 px-4 text-right font-mono font-bold text-amber-400">
+                                                    {row.depositDue > 0 ? `$${row.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                                </td>
                                                 <td className="py-3.5 px-4 text-right font-mono font-black text-sm" style={{ color: 'var(--brand-lime)' }}>
                                                     ${row.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </td>
+                                                <td className="py-3.5 px-4 text-center">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (row.customerKey && row.customerKey !== 'unassigned') {
+                                                                navigate(`${basePath}/customers/${row.customerKey}?tab=invoices`);
+                                                            } else {
+                                                                toast.error('Unassigned customer cannot be viewed');
+                                                            }
+                                                        }}
+                                                        className="p-1.5 rounded-lg hover:bg-white/10 text-brand-lime transition-all cursor-pointer inline-flex items-center justify-center"
+                                                        title="View Customer Invoices"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                </td>
                                             </tr>
 
-                                            {/* Expanded Detailed Invoice List */}
+                                            {/* Expanded Detailed Invoice & Debit Note List */}
                                             {isExpanded && (
                                                 <tr>
-                                                    <td colSpan={4 + activeIntervals.length} className="p-4 bg-black/20 border-y" style={{ borderColor: 'var(--border-main)' }}>
+                                                    <td colSpan={6 + activeIntervals.length} className="p-4 bg-black/20 border-y space-y-4" style={{ borderColor: 'var(--border-main)' }}>
                                                         <div className="space-y-3 pl-6 pr-2">
                                                             <div className="flex items-center justify-between">
                                                                 <h4 className="text-xs font-bold tracking-wide uppercase text-dim flex items-center gap-2">
@@ -993,57 +1526,140 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                                                                        {row.invoices.map(inv => (
-                                                                            <tr key={inv._id} className="hover:bg-white/5 transition-colors">
-                                                                                <td className="py-2 px-3 font-bold font-mono text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
-                                                                                    {inv.invoiceNumber}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 font-semibold uppercase text-[10px]">
-                                                                                    {inv.invoiceType}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-dim font-mono">
-                                                                                    {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : '—'}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-center font-bold">
-                                                                                    {inv.daysOverdue <= 0 ? (
-                                                                                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                                                                                            Not Due ({Math.abs(inv.daysOverdue)}d left)
-                                                                                        </span>
-                                                                                    ) : (
-                                                                                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                                                                                            +{inv.daysOverdue} Days Overdue
-                                                                                        </span>
-                                                                                    )}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-right font-mono">
-                                                                                    ${(inv.totalAmountDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-right font-mono text-emerald-400">
-                                                                                    ${(inv.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-right font-mono font-bold" style={{ color: 'var(--brand-lime)' }}>
-                                                                                    ${(inv.balance ?? (inv.totalAmountDue - inv.amountPaid)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-center">
-                                                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${inv.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
-                                                                                        {inv.status}
-                                                                                    </span>
-                                                                                </td>
-                                                                                <td className="py-2 px-3 text-right">
-                                                                                    <button
-                                                                                        onClick={(e) => { e.stopPropagation(); navigate(`/admin/financial-admin/invoices/${inv._id}`); }}
-                                                                                        className="p-1 rounded hover:bg-white/10 text-brand-lime transition-all"
-                                                                                        title="View Invoice Detail"
-                                                                                    >
-                                                                                        <Eye size={14} />
-                                                                                    </button>
-                                                                                </td>
+                                                                        {row.invoices.length === 0 ? (
+                                                                            <tr>
+                                                                                <td colSpan={9} className="py-4 text-center text-dim font-bold">No open invoices for this customer.</td>
                                                                             </tr>
-                                                                        ))}
+                                                                        ) : (
+                                                                            row.invoices.map(inv => (
+                                                                                <tr key={inv._id} className="hover:bg-white/5 transition-colors">
+                                                                                    <td
+                                                                                        className="py-2 px-3 font-bold font-mono text-brand-lime hover:underline cursor-pointer"
+                                                                                        style={{ color: 'var(--brand-lime)' }}
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(`${basePath}/invoices/${inv._id}`); }}
+                                                                                    >
+                                                                                        {inv.invoiceNumber}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 font-semibold uppercase text-[10px]">
+                                                                                        {inv.invoiceType}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-dim font-mono">
+                                                                                        {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : '—'}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-center font-bold">
+                                                                                        {inv.daysOverdue <= 0 ? (
+                                                                                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                                                                                Not Due ({Math.abs(inv.daysOverdue)}d left)
+                                                                                            </span>
+                                                                                        ) : (
+                                                                                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                                                                                                +{inv.daysOverdue} Days Overdue
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-mono">
+                                                                                        ${(inv.totalAmountDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-mono text-emerald-400">
+                                                                                        ${(inv.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-mono font-bold" style={{ color: 'var(--brand-lime)' }}>
+                                                                                        ${(inv.balance ?? (inv.totalAmountDue - inv.amountPaid)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-center">
+                                                                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${inv.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
+                                                                                            {inv.status}
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right">
+                                                                                        <button
+                                                                                            onClick={(e) => { e.stopPropagation(); navigate(`${basePath}/invoices/${inv._id}`); }}
+                                                                                            className="p-1 rounded hover:bg-white/10 text-brand-lime transition-all cursor-pointer"
+                                                                                            title="View Invoice Detail"
+                                                                                        >
+                                                                                            <Eye size={14} />
+                                                                                        </button>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            ))
+                                                                        )}
                                                                     </tbody>
                                                                 </table>
                                                             </div>
                                                         </div>
+
+                                                        {/* Debit Notes Deposit Breakdown */}
+                                                        {row.debitNotes && row.debitNotes.length > 0 && (
+                                                            <div className="space-y-3 pl-6 pr-2 pt-2">
+                                                                <div className="flex items-center justify-between">
+                                                                    <h4 className="text-xs font-bold tracking-wide uppercase text-dim flex items-center gap-2">
+                                                                        <FileText size={14} className="text-amber-400" />
+                                                                        Deposit Debit Notes Breakdown for {row.customerName}
+                                                                    </h4>
+                                                                    <span className="text-[11px] text-dim">
+                                                                        Showing {row.debitNotes.length} debit note(s)
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
+                                                                    <table className="w-full text-left text-xs">
+                                                                        <thead className="border-b uppercase font-bold text-[10px]" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
+                                                                            <tr>
+                                                                                <th className="py-2.5 px-3">DN Number</th>
+                                                                                <th className="py-2.5 px-3">Date</th>
+                                                                                <th className="py-2.5 px-3">Reason</th>
+                                                                                <th className="py-2.5 px-3 text-right">Amount ($)</th>
+                                                                                <th className="py-2.5 px-3 text-right">Paid ($)</th>
+                                                                                <th className="py-2.5 px-3 text-right">Deposit Balance ($)</th>
+                                                                                <th className="py-2.5 px-3 text-center">Status</th>
+                                                                                <th className="py-2.5 px-3 text-right">Action</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                                                            {row.debitNotes.map(dn => (
+                                                                                <tr key={dn._id} className="hover:bg-white/5 transition-colors">
+                                                                                    <td
+                                                                                        className="py-2 px-3 font-bold font-mono text-amber-400 hover:underline cursor-pointer"
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(`${basePath}/debit-notes/${dn._id}`); }}
+                                                                                    >
+                                                                                        {dn.debitNoteNumber}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-dim font-mono">
+                                                                                        {dn.debitNoteDate ? new Date(dn.debitNoteDate).toLocaleDateString() : '—'}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-dim font-medium">
+                                                                                        {dn.reason || 'Deposit Charge'}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-mono">
+                                                                                        ${(dn.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-mono text-emerald-400">
+                                                                                        ${(dn.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right font-mono font-bold text-amber-400">
+                                                                                        ${(dn.balance !== undefined ? dn.balance : (dn.amount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-center">
+                                                                                        <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                                                            {dn.status || 'OPEN'}
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right">
+                                                                                        <button
+                                                                                            onClick={(e) => { e.stopPropagation(); navigate(`${basePath}/debit-notes/${dn._id}`); }}
+                                                                                            className="p-1 rounded hover:bg-white/10 text-amber-400 transition-all cursor-pointer"
+                                                                                            title="View Debit Note Detail"
+                                                                                        >
+                                                                                            <Eye size={14} />
+                                                                                        </button>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             )}
@@ -1073,9 +1689,13 @@ export const InvoiceAgingSummary: React.FC = () => {
                                             </td>
                                         );
                                     })}
+                                    <td className="py-4 px-4 text-right text-amber-400 font-black">
+                                        ${totals.depositDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </td>
                                     <td className="py-4 px-4 text-right text-sm font-black" style={{ color: 'var(--brand-lime)' }}>
                                         ${totals.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
+                                    <td></td>
                                 </tr>
                             </tfoot>
                         )}

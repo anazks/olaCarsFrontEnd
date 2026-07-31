@@ -131,6 +131,7 @@ const VehicleDetail = () => {
 
     // Change Driver modal state
     const [isChangeDriverModalOpen, setIsChangeDriverModalOpen] = useState(false);
+    const [driverModalMode, setDriverModalMode] = useState<'CURRENT' | 'TEMP'>('CURRENT');
     const [unassignedDrivers, setUnassignedDrivers] = useState<Driver[]>([]);
     const [loadingUnassignedDrivers, setLoadingUnassignedDrivers] = useState(false);
     const [driverSearchQuery, setDriverSearchQuery] = useState('');
@@ -329,15 +330,18 @@ const VehicleDetail = () => {
     }, [id]);
 
     // ── Change Driver Handlers ────────────────────────────────────────────
-    const fetchUnassignedDrivers = useCallback(async (searchQuery = '') => {
+    const fetchUnassignedDrivers = useCallback(async (searchQuery = '', mode: 'CURRENT' | 'TEMP' = 'CURRENT') => {
         setLoadingUnassignedDrivers(true);
         try {
-            const res = await getAllDrivers({
+            const params: any = {
                 status: 'ACTIVE',
-                currentVehicle: 'null' as any,
                 search: searchQuery,
                 limit: 50
-            });
+            };
+            if (mode === 'CURRENT') {
+                params.currentVehicle = 'null';
+            }
+            const res = await getAllDrivers(params);
             setUnassignedDrivers(res.data || []);
         } catch (err) {
             console.error('Failed to fetch unassigned drivers:', err);
@@ -348,9 +352,9 @@ const VehicleDetail = () => {
 
     useEffect(() => {
         if (isChangeDriverModalOpen) {
-            fetchUnassignedDrivers(driverSearchQuery);
+            fetchUnassignedDrivers(driverSearchQuery, driverModalMode);
         }
-    }, [isChangeDriverModalOpen, driverSearchQuery, fetchUnassignedDrivers]);
+    }, [isChangeDriverModalOpen, driverSearchQuery, driverModalMode, fetchUnassignedDrivers]);
 
     const handleChangeDriver = async (newDriverId: string) => {
         if (!vehicle || !id) return;
@@ -400,6 +404,38 @@ const VehicleDetail = () => {
             fetchVehicle();
         } catch (err: any) {
             toast.error(err.response?.data?.message || err.message || 'Failed to unassign driver');
+        } finally {
+            setChangingDriver(false);
+        }
+    };
+
+    const handleChangeTempDriver = async (newDriverId: string) => {
+        if (!id) return;
+        setChangingDriver(true);
+        try {
+            await editVehicle(id, { tempDriver: newDriverId } as any);
+            toast.success('Temporary driver updated successfully');
+            setIsChangeDriverModalOpen(false);
+            setDriverSearchQuery('');
+            fetchVehicle();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || err.message || 'Failed to change temporary driver');
+        } finally {
+            setChangingDriver(false);
+        }
+    };
+
+    const handleUnassignTempDriver = async () => {
+        if (!id) return;
+        setChangingDriver(true);
+        try {
+            await editVehicle(id, { tempDriver: null as any });
+            toast.success('Temporary driver unassigned successfully');
+            setIsChangeDriverModalOpen(false);
+            setDriverSearchQuery('');
+            fetchVehicle();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || err.message || 'Failed to unassign temporary driver');
         } finally {
             setChangingDriver(false);
         }
@@ -632,6 +668,7 @@ const VehicleDetail = () => {
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
+                                                setDriverModalMode('CURRENT');
                                                 setIsChangeDriverModalOpen(true);
                                             }}
                                             className="text-[10px] font-bold underline underline-offset-2 decoration-dotted hover:text-[#C8E600] transition-colors cursor-pointer"
@@ -652,7 +689,10 @@ const VehicleDetail = () => {
                     )}
                     {!assignedDriver && (
                         <button
-                            onClick={() => setIsChangeDriverModalOpen(true)}
+                            onClick={() => {
+                                setDriverModalMode('CURRENT');
+                                setIsChangeDriverModalOpen(true);
+                            }}
                             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border cursor-pointer hover:border-[#C8E600] hover:bg-[#C8E600]/5 transition-all shrink-0"
                             style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}
                         >
@@ -711,6 +751,17 @@ const VehicleDetail = () => {
                                 <div className="text-left">
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] font-black uppercase tracking-widest opacity-60" style={{ color: 'var(--text-dim)' }}>Temporary Driver</span>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDriverModalMode('TEMP');
+                                                setIsChangeDriverModalOpen(true);
+                                            }}
+                                            className="text-[10px] font-bold underline underline-offset-2 decoration-dotted hover:text-amber-500 transition-colors cursor-pointer"
+                                            style={{ color: 'var(--text-dim)' }}
+                                        >
+                                            Change
+                                        </button>
                                     </div>
                                     <h4 className="text-sm font-bold mt-0.5 group-hover:text-amber-500 transition-colors" style={{ color: 'var(--text-main)' }}>
                                         {vehicle.tempAssignment.tempDriver.personalInfo?.fullName}
@@ -2129,16 +2180,18 @@ const VehicleDetail = () => {
                         {/* Header */}
                         <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--border-main)' }}>
                             <div className="flex items-center gap-2">
-                                <Users size={18} className="text-[#C8E600]" />
-                                <h2 className="text-sm font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>Change Driver</h2>
+                                <Users size={18} className={driverModalMode === 'TEMP' ? 'text-amber-500' : 'text-[#C8E600]'} />
+                                <h2 className="text-sm font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>
+                                    {driverModalMode === 'TEMP' ? 'Change Temporary Driver' : 'Change Driver'}
+                                </h2>
                             </div>
                             <button onClick={() => { setIsChangeDriverModalOpen(false); setDriverSearchQuery(''); }} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors" style={{ color: 'var(--text-dim)' }}>
                                 <X size={16} />
                             </button>
                         </div>
 
-                        {/* Current Driver Summary */}
-                        {assignedDriver && (
+                        {/* Currently Assigned Summary */}
+                        {driverModalMode === 'CURRENT' && assignedDriver && (
                             <div className="p-4 border-b" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -2154,7 +2207,32 @@ const VehicleDetail = () => {
                                     <button
                                         onClick={handleUnassignDriver}
                                         disabled={changingDriver}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20 transition-all hover:bg-red-500/20 active:scale-95 disabled:opacity-50"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20 transition-all hover:bg-red-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                                    >
+                                        <UserMinus size={12} />
+                                        Unassign
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {driverModalMode === 'TEMP' && vehicle?.tempAssignment?.tempDriver && (
+                            <div className="p-4 border-b" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs border border-amber-500/20">
+                                            {vehicle.tempAssignment.tempDriver.personalInfo?.fullName?.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Currently Assigned (Temporary)</p>
+                                            <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{vehicle.tempAssignment.tempDriver.personalInfo?.fullName}</p>
+                                            <p className="text-[10px] font-mono" style={{ color: 'var(--text-dim)' }}>{vehicle.tempAssignment.tempDriver.driverId || ''}</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleUnassignTempDriver}
+                                        disabled={changingDriver}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20 transition-all hover:bg-red-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
                                     >
                                         <UserMinus size={12} />
                                         Unassign
@@ -2190,7 +2268,9 @@ const VehicleDetail = () => {
                                     <Users size={28} className="opacity-20 mb-2" style={{ color: 'var(--text-dim)' }} />
                                     <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No Available Drivers</p>
                                     <p className="text-[10px] mt-1 max-w-xs" style={{ color: 'var(--text-dim)' }}>
-                                        No active drivers without a currently assigned vehicle were found.
+                                        {driverModalMode === 'TEMP'
+                                            ? 'No active drivers were found.'
+                                            : 'No active drivers without a currently assigned vehicle were found.'}
                                     </p>
                                 </div>
                             ) : (
@@ -2198,7 +2278,7 @@ const VehicleDetail = () => {
                                     {unassignedDrivers.map((driver) => (
                                         <button
                                             key={driver._id}
-                                            onClick={() => handleChangeDriver(driver._id)}
+                                            onClick={() => driverModalMode === 'TEMP' ? handleChangeTempDriver(driver._id) : handleChangeDriver(driver._id)}
                                             disabled={changingDriver}
                                             className="w-full flex items-center gap-3 p-4 text-left transition-all hover:bg-white/5 active:scale-[0.99] disabled:opacity-50"
                                         >
@@ -2213,7 +2293,7 @@ const VehicleDetail = () => {
                                                     {driver.driverId || ''} {driver.personalInfo?.phone ? `• ${driver.personalInfo.phone}` : ''}
                                                 </p>
                                             </div>
-                                            <div className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/20">
+                                            <div className={`shrink-0 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg border ${driverModalMode === 'TEMP' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-[#C8E600]/10 text-[#C8E600] border-[#C8E600]/20'}`}>
                                                 Select
                                             </div>
                                         </button>
@@ -2225,7 +2305,7 @@ const VehicleDetail = () => {
                         {/* Footer */}
                         <div className="p-4 border-t text-center" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
                             <p className="text-[10px] font-medium" style={{ color: 'var(--text-dim)' }}>
-                                Showing {unassignedDrivers.length} available driver{unassignedDrivers.length !== 1 ? 's' : ''} with no vehicle assigned
+                                Showing {unassignedDrivers.length} {driverModalMode === 'TEMP' ? 'active driver' : 'available driver'}{unassignedDrivers.length !== 1 ? 's' : ''}
                             </p>
                         </div>
                     </div>

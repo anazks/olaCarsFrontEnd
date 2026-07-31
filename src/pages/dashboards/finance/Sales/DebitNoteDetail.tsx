@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
     AlertCircle, X, ArrowLeft, 
     Edit3, FileCheck, Undo2, 
-    RefreshCw, CheckCircle2, User, Link, Download
+    RefreshCw, CheckCircle2, User, Link, Download,
+    FileText, ExternalLink, Eye, Image as ImageIcon
 } from 'lucide-react';
 import { 
     getDebitNoteById, 
@@ -41,6 +42,7 @@ const DebitNoteDetail = () => {
     const [note, setNote] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isPreviewImageModalOpen, setIsPreviewImageModalOpen] = useState(false);
 
     // Apply Modal
     const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
@@ -234,9 +236,12 @@ const DebitNoteDetail = () => {
                         </button>
                         <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>{note.debitNoteNumber}</h1>
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                            note.status === 'CLOSED' || note.status === 'APPLIED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                            note.status === 'OPEN' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                            'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                            note.status === 'CLOSED' || note.status === 'APPLIED' || note.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            note.status === 'PARTIAL' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                            note.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                            note.status === 'CANCELLED' || note.status === 'VOID' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' :
+                            note.status === 'DRAFT' ? 'bg-gray-500/10 text-gray-400 border border-gray-500/20' :
+                            'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                         }`}>
                             {note.status}
                         </span>
@@ -247,7 +252,7 @@ const DebitNoteDetail = () => {
                     <button onClick={handleDownloadPdf} className="flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold hover:bg-white/10 transition-all cursor-pointer" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                         <Download size={14} className="text-brand-lime" /> Download PDF
                     </button>
-                    {note.status === 'OPEN' && (
+                    {['OPEN', 'PENDING', 'DRAFT', 'OVERDUE'].includes(note.status) && (
                         <>
                             <button onClick={triggerEditModal} className="flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold hover:bg-white/10 transition-all cursor-pointer" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                                 <Edit3 size={14} /> Edit
@@ -257,7 +262,7 @@ const DebitNoteDetail = () => {
                             </button>
                         </>
                     )}
-                    {note.status !== 'VOID' && (
+                    {note.status !== 'VOID' && note.status !== 'CANCELLED' && (
                         <button onClick={handleVoidDebitNote} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-xs font-bold transition-all cursor-pointer">
                             <Undo2 size={14} /> Void Debit Note
                         </button>
@@ -271,18 +276,22 @@ const DebitNoteDetail = () => {
                 <div className="md:col-span-2 p-6 rounded-3xl border shadow-sm space-y-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <h3 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Debit Note Parameters</h3>
                     
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 rounded-2xl border" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-2xl border" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
                         <div>
-                            <span className="text-[10px] font-black uppercase text-dim block">Debited Amount</span>
-                            <span className="text-xl font-black text-amber-400">${(note.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                            <span className="text-[10px] font-black uppercase text-dim block">Total Amount</span>
+                            <span className="text-lg font-black text-amber-400">${(note.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-black uppercase text-dim block">Amount Paid / Applied</span>
+                            <span className="text-lg font-black text-emerald-400">${(note.amountPaid !== undefined ? note.amountPaid : (note.status === 'PAID' ? note.amount : 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-black uppercase text-dim block">Remaining Balance</span>
+                            <span className="text-lg font-black text-rose-400">${(note.balance !== undefined ? note.balance : (note.status === 'PAID' ? 0 : note.amount)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div>
                             <span className="text-[10px] font-black uppercase text-dim block">Issue Date</span>
-                            <span className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{note.debitNoteDate ? new Date(note.debitNoteDate).toLocaleDateString() : 'N/A'}</span>
-                        </div>
-                        <div>
-                            <span className="text-[10px] font-black uppercase text-dim block">Reason</span>
-                            <span className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{note.reason}</span>
+                            <span className="text-sm font-bold block mt-1" style={{ color: 'var(--text-main)' }}>{note.debitNoteDate ? new Date(note.debitNoteDate).toLocaleDateString() : 'N/A'}</span>
                         </div>
                     </div>
 
@@ -346,6 +355,130 @@ const DebitNoteDetail = () => {
                     )}
                 </div>
             </div>
+
+            {/* Uploaded Supporting Document & Image Display */}
+            {note.supportingDocument && (() => {
+                const docPath = typeof note.supportingDocument === 'string'
+                    ? note.supportingDocument
+                    : note.supportingDocument?.url;
+                const docName = typeof note.supportingDocument === 'object' && note.supportingDocument?.name
+                    ? note.supportingDocument.name
+                    : 'Supporting Document';
+                const uploadedAt = typeof note.supportingDocument === 'object' && note.supportingDocument?.uploadedAt
+                    ? new Date(note.supportingDocument.uploadedAt).toLocaleDateString()
+                    : null;
+
+                const fullDocUrl = docPath
+                    ? (docPath.startsWith('http') ? docPath : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${docPath.startsWith('/') ? '' : '/'}${docPath}`)
+                    : '';
+
+                const isImg = fullDocUrl && (
+                    /\.(jpg|jpeg|png|webp|gif|svg)(\?.*)?$/i.test(fullDocUrl) ||
+                    /\.(jpg|jpeg|png|webp|gif|svg)(\?.*)?$/i.test(docName) ||
+                    fullDocUrl.toLowerCase().includes('/debit-notes/') ||
+                    fullDocUrl.toLowerCase().includes('/uploads/')
+                );
+
+                return (
+                    <div className="p-6 rounded-3xl border shadow-sm space-y-4 animate-in fade-in" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <ImageIcon size={18} className="text-brand-lime" />
+                                <h3 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>
+                                    Uploaded Supporting Document / Image
+                                </h3>
+                            </div>
+                            {fullDocUrl && (
+                                <a
+                                    href={fullDocUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-bold hover:bg-white/10 transition-all text-brand-lime cursor-pointer"
+                                    style={{ borderColor: 'var(--border-main)' }}
+                                >
+                                    <ExternalLink size={12} />
+                                    <span>Open Full File</span>
+                                </a>
+                            )}
+                        </div>
+
+                        {isImg ? (
+                            <div className="space-y-3">
+                                <div 
+                                    onClick={() => setIsPreviewImageModalOpen(true)}
+                                    className="relative group rounded-2xl overflow-hidden border cursor-pointer max-h-96 flex items-center justify-center bg-black/40"
+                                    style={{ borderColor: 'var(--border-main)' }}
+                                >
+                                    <img
+                                        src={fullDocUrl}
+                                        alt={docName}
+                                        className="w-full h-auto max-h-96 object-contain rounded-2xl transition-transform duration-300 group-hover:scale-105"
+                                        onError={(e: any) => {
+                                            e.target.onerror = null;
+                                            e.target.src = 'https://via.placeholder.com/600x400?text=Attachment+Preview';
+                                        }}
+                                    />
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                        <span className="px-4 py-2 bg-brand-lime text-black font-extrabold text-xs rounded-xl shadow-lg flex items-center gap-1.5">
+                                            <Eye size={14} /> Click to Enlarge Image
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between text-xs font-semibold text-dim px-1">
+                                    <span className="font-bold" style={{ color: 'var(--text-main)' }}>📷 {docName}</span>
+                                    {uploadedAt && <span>Uploaded: {uploadedAt}</span>}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="p-4 rounded-2xl border flex items-center justify-between" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center gap-3">
+                                    <FileText size={24} className="text-brand-lime" />
+                                    <div>
+                                        <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{docName}</p>
+                                        {uploadedAt && <p className="text-[10px] text-dim font-medium">Uploaded: {uploadedAt}</p>}
+                                    </div>
+                                </div>
+                                {fullDocUrl && (
+                                    <a
+                                        href={fullDocUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-4 py-2 bg-brand-lime text-black rounded-xl text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-all cursor-pointer"
+                                    >
+                                        View Document
+                                    </a>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
+
+            {/* Image Full Screen Modal */}
+            {isPreviewImageModalOpen && note?.supportingDocument && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in cursor-pointer"
+                    onClick={() => setIsPreviewImageModalOpen(false)}
+                >
+                    <div className="relative max-w-5xl max-h-[90vh] flex flex-col items-center justify-center" onClick={e => e.stopPropagation()}>
+                        <button
+                            onClick={() => setIsPreviewImageModalOpen(false)}
+                            className="absolute -top-12 right-0 p-2 rounded-full bg-white/20 hover:bg-white/40 text-white cursor-pointer transition-all"
+                        >
+                            <X size={20} />
+                        </button>
+                        <img
+                            src={typeof note.supportingDocument === 'string'
+                                ? (note.supportingDocument.startsWith('http') ? note.supportingDocument : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${note.supportingDocument.startsWith('/') ? '' : '/'}${note.supportingDocument}`)
+                                : (note.supportingDocument.url.startsWith('http') ? note.supportingDocument.url : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${note.supportingDocument.url.startsWith('/') ? '' : '/'}${note.supportingDocument.url}`)
+                            }
+                            alt="Full Preview"
+                            className="max-w-full max-h-[85vh] object-contain rounded-2xl border shadow-2xl"
+                            style={{ borderColor: 'var(--border-main)' }}
+                        />
+                    </div>
+                </div>
+            )}
 
             {/* Apply Modal */}
             {isApplyModalOpen && (

@@ -51,10 +51,12 @@ const SupplierDetail = () => {
     const [bills, setBills] = useState<Bill[]>([]);
     const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
     const [payments, setPayments] = useState<RelatedPayment[]>([]);
+    const [debitNotes, setDebitNotes] = useState<any[]>([]);
+    const [creditNotes, setCreditNotes] = useState<any[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [activeTab, setActiveTab] = useState<'overview' | 'pos' | 'bills' | 'payments' | 'ledger'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'pos' | 'bills' | 'payments' | 'debit_notes' | 'credit_notes' | 'ledger'>('overview');
 
     // Edit Supplier Form State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -146,14 +148,32 @@ const SupplierDetail = () => {
         if (!id) return;
         setRefreshing(true);
         try {
-            const [supRes, billsRes, poRes, paymentsRes] = await Promise.all([
+            const [supRes, billsRes, poRes, paymentsRes, dnRes, cnRes] = await Promise.all([
                 getSupplierById(id),
                 getAllBills({ limit: 1000 }),
                 getAllPurchaseOrders({ limit: 1000 }),
-                api.get('/api/payments-made', { params: { limit: 1000 } })
+                api.get('/api/payments-made', { params: { limit: 1000 } }),
+                api.get('/api/debit-notes', { params: { supplierId: id, limit: 1000 }, headers: { 'X-Skip-Toast': 'true' } }),
+                api.get('/api/credit-notes', { params: { supplierId: id, limit: 1000 }, headers: { 'X-Skip-Toast': 'true' } })
             ]);
 
             setSupplier(supRes);
+
+            // Filter Debit Notes for this supplier
+            const dnList = dnRes.data?.data || dnRes.data || [];
+            const filteredDNs = dnList.filter((dn: any) => {
+                const sId = typeof dn.supplierId === 'object' ? dn.supplierId?._id : dn.supplierId;
+                return sId === id;
+            });
+            setDebitNotes(filteredDNs);
+
+            // Filter Credit Notes for this supplier
+            const cnList = cnRes.data?.data || cnRes.data || [];
+            const filteredCNs = cnList.filter((cn: any) => {
+                const sId = typeof cn.supplierId === 'object' ? cn.supplierId?._id : cn.supplierId;
+                return sId === id;
+            });
+            setCreditNotes(filteredCNs);
 
             // Filter Bills
             if (billsRes && billsRes.data) {
@@ -365,6 +385,8 @@ const SupplierDetail = () => {
                     { id: 'pos', label: 'Procurements (POs)', icon: <ShoppingBag size={14} /> },
                     { id: 'bills', label: 'Supplier Bills', icon: <FileText size={14} /> },
                     { id: 'payments', label: 'Payments & Prepayments', icon: <Coins size={14} /> },
+                    { id: 'debit_notes', label: 'Debit Notes', icon: <FileText size={14} /> },
+                    { id: 'credit_notes', label: 'Credit Notes', icon: <FileSpreadsheet size={14} /> },
                     { id: 'ledger', label: 'General Ledger View', icon: <FileSpreadsheet size={14} /> },
                 ].map((tab) => (
                     <button
@@ -743,6 +765,97 @@ const SupplierDetail = () => {
                                             );
                                         });
                                     })()}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Debit Notes Tab */}
+                {activeTab === 'debit_notes' && (
+                    <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-left border-collapse whitespace-nowrap">
+                                <thead>
+                                    <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Debit Note #</th>
+                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Date</th>
+                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Reason</th>
+                                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount ($)</th>
+                                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Paid ($)</th>
+                                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Balance ($)</th>
+                                        <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                    {debitNotes.length === 0 ? (
+                                        <tr><td colSpan={7} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No debit notes issued for this supplier.</td></tr>
+                                    ) : (
+                                        debitNotes.map((dn) => (
+                                            <tr key={dn._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
+                                                <td className="px-6 py-4 font-black text-xs text-brand-lime cursor-pointer hover:underline" onClick={() => navigate(`/admin/admin/sales/debit-notes/${dn._id}`)} style={{ color: 'var(--brand-lime)' }}>{dn.debitNoteNumber}</td>
+                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{dn.debitNoteDate ? new Date(dn.debitNoteDate).toLocaleDateString() : 'N/A'}</td>
+                                                <td className="px-6 py-4 text-xs font-bold italic truncate max-w-[200px]" style={{ color: 'var(--text-dim)' }}>{dn.reason}</td>
+                                                <td className="px-6 py-4 text-right text-xs font-black text-amber-400">${(dn.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                                <td className="px-6 py-4 text-right text-xs font-bold text-emerald-400">${(dn.amountPaid !== undefined ? dn.amountPaid : (dn.status === 'PAID' ? dn.amount : 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                                <td className="px-6 py-4 text-right text-xs font-black text-rose-400">${(dn.balance !== undefined ? dn.balance : (dn.status === 'PAID' ? 0 : dn.amount)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                                        dn.status === 'PAID' || dn.status === 'CLOSED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                                                        dn.status === 'PARTIAL' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                                        dn.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                                                        dn.status === 'CANCELLED' || dn.status === 'VOID' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' :
+                                                        dn.status === 'DRAFT' ? 'bg-gray-500/10 text-gray-400 border border-gray-500/20' :
+                                                        'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                                    }`}>
+                                                        {dn.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Credit Notes Tab */}
+                {activeTab === 'credit_notes' && (
+                    <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-left border-collapse whitespace-nowrap">
+                                <thead>
+                                    <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Note #</th>
+                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Date</th>
+                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Reason</th>
+                                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Amount</th>
+                                        <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                    {creditNotes.length === 0 ? (
+                                        <tr><td colSpan={5} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No credit notes issued for this supplier.</td></tr>
+                                    ) : (
+                                        creditNotes.map((cn) => (
+                                            <tr key={cn._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
+                                                <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{cn.creditNoteNumber}</td>
+                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(cn.creditNoteDate).toLocaleDateString()}</td>
+                                                <td className="px-6 py-4 text-xs font-bold italic truncate max-w-[200px]" style={{ color: 'var(--text-dim)' }}>{cn.reason}</td>
+                                                <td className="px-6 py-4 text-right text-xs font-black text-indigo-400">− ${cn.amount.toLocaleString()}</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
+                                                        cn.status === 'APPLIED' || cn.status === 'CLOSED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
+                                                        cn.status === 'OPEN' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 
+                                                        'bg-white/5 text-dim border-white/10'
+                                                    }`}>
+                                                        {cn.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
