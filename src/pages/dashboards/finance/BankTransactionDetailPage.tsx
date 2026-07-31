@@ -12,9 +12,7 @@ import {
     Hash,
     MapPin,
     AlertTriangle,
-    Layers,
-    Zap,
-    FileText
+    Layers
 } from 'lucide-react';
 import { getBankTransactionById } from '../../../services/bankAccountService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
