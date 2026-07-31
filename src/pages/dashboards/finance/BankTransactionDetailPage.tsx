@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, User, Tag, Building2, Info, Coins, CheckCircle, Hash, MapPin, AlertTriangle, Layers } from 'lucide-react';
+import { ArrowLeft, Clock, User, Tag, Building2, Info, Coins, CircleCheck, Hash, MapPin, TriangleAlert, Layers } from 'lucide-react';
 import { getBankTransactionById } from '../../../services/bankAccountService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -45,7 +45,7 @@ const BankTransactionDetailPage = () => {
     if (error || !transaction) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
-                <AlertTriangle size={48} className="text-red-500" />
+                <TriangleAlert size={48} className="text-red-500" />
                 <h2 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>Error Loading Transaction</h2>
                 <p style={{ color: 'var(--text-muted)' }}>{error || 'Transaction not found'}</p>
                 <button 
@@ -183,7 +183,7 @@ const BankTransactionDetailPage = () => {
                                 <div className="flex justify-between items-center">
                                     <span style={{ color: 'var(--text-muted)' }}>Status</span>
                                     <span className="inline-flex items-center gap-1 text-xs font-bold" style={{ color: '#22c55e' }}>
-                                        <CheckCircle size={12} /> {transaction.bankAccount.status || 'ACTIVE'}
+                                        <CircleCheck size={12} /> {transaction.bankAccount.status || 'ACTIVE'}
                                     </span>
                                 </div>
                             </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked, Eye, Trash2 } from 'lucide-react';
+import { FileText, RefreshCw, TriangleAlert, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked, Eye, Trash2 } from 'lucide-react';
 import { getLedgerEntries, deleteLedgerJournal } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
@@ -599,7 +599,7 @@ const GeneralLedger = () => {
             {/* Error */}
             {error && (
                 <div className="flex items-center gap-3 p-4 rounded-xl text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
-                    <AlertTriangle size={18} /> {error}
+                    <TriangleAlert size={18} /> {error}
                 </div>
             )}
 
