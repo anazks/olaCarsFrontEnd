@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, Search, AlertCircle, Zap } from 'lucide-react';
+import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, ChevronRight, Search, AlertCircle, Zap, ArrowLeft } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -215,6 +215,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
     const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
     const [allInvoices, setAllInvoices] = useState<Invoice[]>([]);
     const [existingTxIdsSet, setExistingTxIdsSet] = useState<Set<string>>(new Set());
+    const [expandedSetOffRows, setExpandedSetOffRows] = useState<Record<number, boolean>>({});
 
     // Fetch existing transaction IDs when selected bank account changes
     useEffect(() => {
@@ -1247,77 +1248,64 @@ interface SetOffPreview {
                                                                         <span className="truncate max-w-[120px]">{row.customer.name}</span>
                                                                     </div>
                                                                     {row["Transaction Type"] === 'DEBIT' && (
-                                                                        <div className="mt-0.5 flex items-center gap-1">
-                                                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                                                                                <Zap size={8} /> Auto Set-Off
-                                                                            </span>
+                                                                        <div className="mt-1 space-y-1">
                                                                             {(() => {
                                                                                 const preview = cumulativeSetOffPreviews.get(idx);
                                                                                 if (!preview) return null;
+                                                                                const isExpanded = expandedSetOffRows[idx] !== false; // default to expanded
+
                                                                                 return (
-                                                                                    <div className="relative group/info inline-block group-hover/info:z-50">
+                                                                                    <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 overflow-hidden transition-all max-w-[260px]">
+                                                                                        {/* Expandable/Collapsible Header Button */}
                                                                                         <button
                                                                                             type="button"
-                                                                                            className="w-4 h-4 rounded-full bg-violet-500/20 hover:bg-violet-500/40 text-violet-300 border border-violet-500/30 flex items-center justify-center text-[9px] font-black cursor-pointer transition-colors shadow-sm"
-                                                                                            title="Auto Set-Off Preview"
+                                                                                            onClick={() => setExpandedSetOffRows(prev => ({ ...prev, [idx]: !isExpanded }))}
+                                                                                            className="w-full flex items-center justify-between gap-1.5 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-violet-300 hover:bg-violet-500/10 transition-colors cursor-pointer border-none bg-transparent"
                                                                                         >
-                                                                                            i
+                                                                                            <span className="flex items-center gap-1">
+                                                                                                <Zap size={9} className="text-violet-400" /> Set-Off Preview ({preview.setOffDetails.length})
+                                                                                            </span>
+                                                                                            {isExpanded ? <ChevronDown size={12} className="text-violet-400" /> : <ChevronRight size={12} className="text-violet-400" />}
                                                                                         </button>
 
-                                                                                         {/* Hover Popover Tooltip */}
-                                                                                        <div className={`absolute left-0 ${idx < 2 ? 'top-full mt-1.5' : 'bottom-full mb-1.5'} hidden group-hover/info:block z-[100] w-72 p-3 rounded-xl bg-slate-900/95 border border-violet-500/40 text-white shadow-2xl backdrop-blur-md space-y-2 pointer-events-none transition-all`}>
-                                                                                            <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
-                                                                                                <span className="text-[10px] font-black uppercase tracking-widest text-violet-400 flex items-center gap-1">
-                                                                                                    <Zap size={10} /> Set-Off Invoice Preview
-                                                                                                </span>
-                                                                                                <span className="text-[10px] font-mono font-bold text-emerald-400">
-                                                                                                    Receipt: ${preview.receiptAmount.toFixed(2)}
-                                                                                                </span>
-                                                                                            </div>
-
-                                                                                            {preview.setOffDetails.length > 0 ? (
-                                                                                                <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1 custom-scrollbar">
-                                                                                                    <div className="text-[9px] uppercase tracking-wider font-bold text-white/50">
-                                                                                                        Invoices to be set off ({preview.setOffDetails.length}):
-                                                                                                    </div>
-                                                                                                    {preview.setOffDetails.map((detail: SetOffDetail, dIdx: number) => (
-                                                                                                        <div key={dIdx} className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] space-y-0.5">
-                                                                                                            <div className="flex justify-between items-center font-bold">
-                                                                                                                <span className="text-[#C8E600]">{detail.invoiceNumber}</span>
-                                                                                                                <span className={`px-1 py-0.5 rounded text-[8px] uppercase font-black ${
-                                                                                                                    detail.newStatus === 'PAID' 
-                                                                                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                                                                                                                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                                                                                                                }`}>
-                                                                                                                    {detail.newStatus}
-                                                                                                                </span>
-                                                                                                            </div>
-                                                                                                            <div className="flex justify-between text-[9px] text-white/70">
-                                                                                                                <span>Due: ${detail.dueBalance.toFixed(2)}</span>
-                                                                                                                <span className="font-bold text-emerald-400">+${detail.amountApplied.toFixed(2)}</span>
-                                                                                                                <span>Rem: ${detail.newBalance.toFixed(2)}</span>
-                                                                                                            </div>
+                                                                                        {/* Expandable Body */}
+                                                                                        {isExpanded && (
+                                                                                            <div className="p-2 pt-1 border-t border-violet-500/20 text-[10px] space-y-1 bg-black/20">
+                                                                                                {preview.setOffDetails.length > 0 ? (
+                                                                                                    <div className="space-y-1">
+                                                                                                        <div className="text-[9px] uppercase tracking-wider font-bold text-white/50 border-b border-violet-500/10 pb-0.5">
+                                                                                                            Invoices to set off ({preview.setOffDetails.length}):
                                                                                                         </div>
-                                                                                                    ))}
-                                                                                                </div>
-                                                                                            ) : (
-                                                                                                <div className="text-[10px] text-amber-300/90 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
-                                                                                                    No open invoices found for {preview.customerName}. Full amount will be recorded as advance.
-                                                                                                </div>
-                                                                                            )}
+                                                                                                        {preview.setOffDetails.map((detail: SetOffDetail, dIdx: number) => (
+                                                                                                            <div key={dIdx} className="flex justify-between items-center text-[9px] gap-1.5 p-1 rounded bg-white/5 border border-white/5">
+                                                                                                                <span className="font-bold text-[#C8E600] truncate max-w-[90px]">{detail.invoiceNumber}</span>
+                                                                                                                <div className="flex items-center gap-1 shrink-0 font-mono">
+                                                                                                                    <span className="text-emerald-400 font-bold">+${detail.amountApplied.toFixed(2)}</span>
+                                                                                                                    <span className={`px-1 py-0.2 rounded text-[7px] font-black uppercase ${
+                                                                                                                        detail.newStatus === 'PAID' 
+                                                                                                                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                                                                                                                            : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                                                                                                    }`}>
+                                                                                                                        {detail.newStatus}
+                                                                                                                    </span>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        ))}
+                                                                                                    </div>
+                                                                                                ) : (
+                                                                                                    <div className="text-[9px] text-amber-300 font-medium p-1">
+                                                                                                        No open invoices. Full amount recorded as advance.
+                                                                                                    </div>
+                                                                                                )}
 
-                                                                                            {preview.excessAmount > 0.01 && (
-                                                                                                <div className="p-1.5 rounded-lg bg-[#C8E600]/10 border border-[#C8E600]/30 text-[10px] space-y-0.5">
-                                                                                                    <div className="flex justify-between font-bold text-[#C8E600]">
+                                                                                                {preview.excessAmount > 0.01 && (
+                                                                                                    <div className="flex justify-between items-center text-[9px] font-bold text-[#C8E600] border-t border-violet-500/20 pt-1">
                                                                                                         <span>Advance (2.1.02)</span>
-                                                                                                        <span>${preview.excessAmount.toFixed(2)}</span>
+                                                                                                        <span className="font-mono">${preview.excessAmount.toFixed(2)}</span>
                                                                                                     </div>
-                                                                                                    <div className="text-[9px] text-white/60">
-                                                                                                        Routed to Advance Received From Customer
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            )}
-                                                                                        </div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        )}
                                                                                     </div>
                                                                                 );
                                                                             })()}
@@ -1545,25 +1533,38 @@ interface SetOffPreview {
     );
 
     return (
-        <div className={isAsPage ? "space-y-6" : "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"}>
+        <div className={isAsPage ? "container-responsive space-y-6 pb-20 animate-fade-in" : "fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"}>
             {isAsPage ? (
-                <div className="space-y-6 w-full animate-fade-in">
+                <div className="space-y-6 w-full">
                     {/* Breadcrumbs & Title */}
-                    <div className="flex flex-col gap-1">
-                        <Breadcrumbs items={[
-                            { label: 'Bulk Uploads Hub', path: '../bulk-uploads' },
-                            { label: 'Bank Transactions Upload' }
-                        ]} />
-                        <div className="flex justify-between items-center mt-2">
-                            <div>
-                                <h1 className="text-xl font-bold text-main" style={{ color: 'var(--text-main)' }}>Bulk Bank Transactions Upload</h1>
-                                <p className="text-xs text-dim mt-1" style={{ color: 'var(--text-dim)' }}>
-                                    Reset and re-import ledger transactions via Excel/CSV for specific bank accounts
-                                </p>
-                            </div>
-                            <button onClick={handleClose} className="px-4 py-2 rounded-xl text-xs font-bold transition-all border hover:bg-white/5 cursor-pointer bg-transparent" style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}>
-                                Back
+                    <Breadcrumbs items={selectedAccount ? [
+                        { label: 'Finance', path: '#' },
+                        { label: 'Bank Accounts', path: '../bank-accounts' },
+                        { label: `${selectedAccount.accountName || selectedAccount.bankName} Ledger`, path: `../bank-accounts/${selectedAccount._id}/ledger` },
+                        { label: 'Bulk Transactions Upload', active: true }
+                    ] : [
+                        { label: 'Finance', path: '#' },
+                        { label: 'Bulk Uploads Hub', path: '../bulk-uploads' },
+                        { label: 'Bulk Bank Transactions Upload', active: true }
+                    ]} />
+
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-6">
+                        <div>
+                            <button
+                                onClick={handleClose}
+                                className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted hover:text-brand-black dark:hover:text-lime transition-colors mb-3 group cursor-pointer bg-transparent border-none"
+                                style={{ color: 'var(--text-dim)' }}
+                            >
+                                <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                                {selectedAccount ? `Back to ${selectedAccount.accountName || selectedAccount.bankName}` : 'Back'}
                             </button>
+                            <h1 className="text-2xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+                                <Upload size={26} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
+                                Bulk Bank Transactions Upload
+                            </h1>
+                            <p className="text-xs text-dim mt-1" style={{ color: 'var(--text-dim)' }}>
+                                Import, validate, and set off bank transactions via Excel/CSV for {selectedAccount ? selectedAccount.accountName || selectedAccount.bankName : 'bank accounts'}.
+                            </p>
                         </div>
                     </div>
 

@@ -1811,13 +1811,19 @@ const BankAccountLedger = () => {
                         <FileText size={14} strokeWidth={3} /> {downloading ? 'Downloading...' : 'Download PDF'}
                     </button>
                     <button
-                        onClick={() => setIsBulkUploadOpen(true)}
+                        onClick={() => {
+                            const basePath = location.pathname.split('/bank-accounts/')[0];
+                            navigate(`${basePath}/bulk-bank-upload?accountId=${account._id}`);
+                        }}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 border border-amber-500/30 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
                     >
                         <FileSpreadsheet size={14} strokeWidth={3} /> Bulk Re-entry
                     </button>
                     <button
-                        onClick={() => setIsImportModalOpen(true)}
+                        onClick={() => {
+                            const basePath = location.pathname.split('/bank-accounts/')[0];
+                            navigate(`${basePath}/bulk-bank-upload?accountId=${account._id}`);
+                        }}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
                         style={{ backgroundColor: 'var(--brand-lime)' }}
                     >
@@ -2766,15 +2772,6 @@ const BankAccountLedger = () => {
                     </div>
                 </div>
             )}
-
-            <BulkLedgerUpload
-                isOpen={isBulkUploadOpen}
-                onClose={() => setIsBulkUploadOpen(false)}
-                onSuccess={() => {
-                    setIsBulkUploadOpen(false);
-                    fetchData();
-                }}
-            />
 
             {/* FLOATING ACTION BAR FOR SELECTED ITEMS */}
             {selectedIds.length > 0 && !isBulkEditing && (
