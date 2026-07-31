@@ -19,13 +19,10 @@ interface BulkInvoiceUploadProps {
 
 const CSV_COLUMNS = [
     'Invoice Date', 'Invoice ID', 'Invoice Number', 'Invoice Status', 'Customer ID',
-    'Customer Name', 'Customer Number', 'Company ID', 'Is Inclusive Tax', 'Due Date',
-    'Discount Type', 'SubTotal', 'Total', 'TotalRetentionAmountFCY', 'TotalRetentionAmountBCY',
-    'Balance', 'Adjustment', 'Notes', 'Terms & Conditions', 'Entity Discount Amount', 'Location ID',
-    'Item Name', 'Item Desc', 'Quantity', 'Discount', 'Discount Amount',
-    'Item Total', 'Item Price', 'Account', 'Account Code', 'Line Item Location Name',
-    'Invoice Shipment Status', 'Manually Shipped Quantity', 'Tax ID', 'Item Tax',
-    'Item Tax %', 'Item Tax Amount', 'Item Tax Type', 'Week Number'
+    'Customer Name', 'Customer Number', 'Is Inclusive Tax', 'Due Date', 'Total',
+    'Notes', 'Location ID', 'Item Name', 'Item Desc', 'Quantity',
+    'Discount', 'Discount Amount', 'Tax ID', 'Item Tax', 'Item Tax %',
+    'Item Tax Amount', 'Item Tax Type', 'Week Number'
 ];
 
 const SAMPLE_DATA = [
@@ -33,40 +30,24 @@ const SAMPLE_DATA = [
         'Invoice Date': '2026-06-01',
         'Invoice ID': 'INV-ZOHO-001',
         'Invoice Number': 'INV-000101',
-        'Invoice Status': 'Closed',
+        'Invoice Status': 'Overdue',
         'Customer ID': 'DRV001',
         'Customer Name': 'John Smith',
         'Customer Number': '+254700000001',
-        'Company ID': 'COMP01',
-        'Is Inclusive Tax': 'FALSE',
+        'Is Inclusive Tax': 'TRUE',
         'Due Date': '2026-06-15',
-        'Discount Type': 'Percentage',
-        'SubTotal': '180',
-        'Total': '208.8',
-        'TotalRetentionAmountFCY': '',
-        'TotalRetentionAmountBCY': '',
-        'Balance': '0',
-        'Adjustment': '',
+        'Total': '208.80',
         'Notes': 'Weekly lease payment',
-        'Terms & Conditions': 'Payment is due within 14 days',
-        'Entity Discount Amount': '0',
-        'Location ID': '',
+        'Location ID': 'LOC01',
         'Item Name': 'Weekly Rent',
         'Item Desc': 'Vehicle Rent charge for week 23',
         'Quantity': '1',
         'Discount': '0',
         'Discount Amount': '0',
-        'Item Total': '180',
-        'Item Price': '180',
-        'Account': 'Bank Transfer',
-        'Account Code': '1010',
-        'Line Item Location Name': '',
-        'Invoice Shipment Status': '',
-        'Manually Shipped Quantity': '',
         'Tax ID': 'TAX16',
         'Item Tax': 'VAT 16%',
         'Item Tax %': '16',
-        'Item Tax Amount': '28.8',
+        'Item Tax Amount': '28.80',
         'Item Tax Type': 'Taxable',
         'Week Number': '23'
     },
@@ -78,36 +59,20 @@ const SAMPLE_DATA = [
         'Customer ID': 'DRV002',
         'Customer Name': 'Maria Garcia',
         'Customer Number': '+254711223344',
-        'Company ID': 'COMP01',
-        'Is Inclusive Tax': 'FALSE',
+        'Is Inclusive Tax': 'TRUE',
         'Due Date': '2026-06-20',
-        'Discount Type': 'Percentage',
-        'SubTotal': '100',
-        'Total': '116.0',
-        'TotalRetentionAmountFCY': '',
-        'TotalRetentionAmountBCY': '',
-        'Balance': '116.0',
-        'Adjustment': '',
+        'Total': '116.00',
         'Notes': 'Scheduled oil change maintenance',
-        'Terms & Conditions': 'Warranty is 30 days',
-        'Entity Discount Amount': '0',
-        'Location ID': '',
+        'Location ID': 'LOC01',
         'Item Name': 'Oil Change Service',
         'Item Desc': 'Service & Filter replacement',
         'Quantity': '1',
         'Discount': '0',
         'Discount Amount': '0',
-        'Item Total': '100',
-        'Item Price': '100',
-        'Account': 'Cash',
-        'Account Code': '1020',
-        'Line Item Location Name': '',
-        'Invoice Shipment Status': '',
-        'Manually Shipped Quantity': '',
         'Tax ID': 'TAX16',
         'Item Tax': 'VAT 16%',
         'Item Tax %': '16',
-        'Item Tax Amount': '16.0',
+        'Item Tax Amount': '16.00',
         'Item Tax Type': 'Taxable',
         'Week Number': '24'
     }
@@ -401,6 +366,14 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
             const parsed = parseFlexibleDate(dueDate);
             if (!parsed) {
                 errors.push('Invalid Due Date (expected YYYY-MM-DD or DD-MM-YYYY)');
+            }
+        }
+
+        const statusVal = getRowVal(row, ['Invoice Status', 'status', 'invoice_status']);
+        if (statusVal !== undefined && statusVal !== null && String(statusVal).trim() !== '') {
+            const cleanStatus = String(statusVal).trim().toUpperCase();
+            if (cleanStatus !== 'PENDING' && cleanStatus !== 'OPEN' && cleanStatus !== 'OVERDUE') {
+                errors.push(`Invalid Invoice Status "${statusVal}". Only "Pending" or "Overdue" statuses are allowed.`);
             }
         }
 
