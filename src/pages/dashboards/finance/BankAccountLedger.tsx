@@ -16,7 +16,11 @@ import {
     ArrowUpDown,
     Search,
     ArrowDownRight,
-    ArrowUpRight
+    ArrowUpRight,
+    Eye,
+    DollarSign,
+    UserCheck,
+    Zap
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions, downloadBankAccountLedgerPdf } from '../../../services/bankAccountService';
@@ -78,6 +82,39 @@ const BankAccountLedger = () => {
     const [sidebarInvoices, setSidebarInvoices] = useState<Invoice[]>([]);
     const [sidebarLoadingInvoices, setSidebarLoadingInvoices] = useState(false);
     const [sidebarLoadingCustomers, setSidebarLoadingCustomers] = useState(false);
+
+    // Change Amount Modal States
+    const [changeAmountModalOpen, setChangeAmountModalOpen] = useState(false);
+    const [changeAmountEntryIdx, setChangeAmountEntryIdx] = useState<number | null>(null);
+    const [modalAmountVal, setModalAmountVal] = useState<number>(0);
+    const [modalTypeVal, setModalTypeVal] = useState<string>('DEBIT');
+
+    const openChangeAmountModal = (idx: number) => {
+        setChangeAmountEntryIdx(idx);
+        setModalAmountVal(editEntries[idx]?.amount || 0);
+        setModalTypeVal(editEntries[idx]?.type || 'DEBIT');
+        setChangeAmountModalOpen(true);
+    };
+
+    const closeChangeAmountModal = () => {
+        setChangeAmountModalOpen(false);
+        setChangeAmountEntryIdx(null);
+    };
+
+    const handleSaveAmountFromModal = () => {
+        if (changeAmountEntryIdx === null) return;
+        if (modalAmountVal <= 0) {
+            toast.error('Amount must be greater than zero');
+            return;
+        }
+        const updated = [...editEntries];
+        updated[changeAmountEntryIdx].amount = modalAmountVal;
+        updated[changeAmountEntryIdx].type = modalTypeVal;
+
+        setEditEntries(updated);
+        closeChangeAmountModal();
+        toast.success(`Updated amount to $${modalAmountVal.toFixed(2)}.`);
+    };
 
     useEffect(() => {
         setSelectedIds([]);
@@ -1018,7 +1055,7 @@ const BankAccountLedger = () => {
             });
 
             await bulkEditBankAccountTransactions(id, updatesPayload);
-            toast.success('Transactions updated and running balances recalculated successfully.');
+            toast.success('Entry updated and running balances recalculated successfully.');
             setIsBulkEditing(false);
             setSelectedIds([]);
             await fetchData();
@@ -1163,7 +1200,6 @@ const BankAccountLedger = () => {
             </div>
         );
     }
-
     if (isBulkEditing && account) {
         return (
             <div className="container-responsive space-y-6 pb-20 animate-fade-in" style={{ color: 'var(--text-main)' }}>
@@ -1172,39 +1208,48 @@ const BankAccountLedger = () => {
                         { label: 'Finance', path: '#' },
                         { label: 'Bank Accounts', path: '../bank-accounts' },
                         { label: `${account.accountName || account.bankName} Ledger`, path: `../bank-accounts/${id}/ledger` },
-                        { label: 'Bulk Edit Transactions', active: true }
+                        { label: 'Entry Edit', active: true }
                     ]}
                 />
 
+                {/* Page Title & Navigation Header */}
                 <div className="flex justify-between items-center border-b border-white/5 pb-6">
                     <div>
                         <h1 className="text-2xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                            Bulk Edit Transactions
+                            Entry Edit Engine
                         </h1>
                         <p className="text-sm" style={{ color: 'var(--text-dim)' }}>
-                            Editing {editEntries.length} selected transaction{editEntries.length > 1 ? 's' : ''}. Running balances will be recalculated sequentially upon saving.
+                            Edit transaction entry details. Use "Change Amount" or "Change Customer" actions to trigger automatic invoice set-offs and balance recalculations.
                         </p>
                     </div>
                 </div>
 
                 <form onSubmit={handleBulkEditSubmit} className="space-y-6">
-                    <div className="rounded-2xl border bg-card overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    {/* All Edit Fields Overview Table */}
+                    <div className="rounded-2xl border bg-card overflow-hidden shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="p-4 border-b bg-black/5 dark:bg-white/5 flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
+                            <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                                <FileText size={16} className="text-[#C8E600]" /> All Edit Fields Overview
+                            </h3>
+                            <span className="text-[11px] font-bold text-[#C8E600] px-3 py-1 rounded-full bg-[#C8E600]/10 border border-[#C8E600]/20">
+                                {editEntries.length} Transaction(s) Selected
+                            </span>
+                        </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Date & Time</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Description</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-40">Connected Account</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-52">Offset Account</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Connected Bank</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-64">Customer Set-off</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-36">Type</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-36 text-right">Amount ($)</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Type & Amount</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-64 text-center">Edit Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {editEntries.map((entry, idx) => (
-                                        <tr key={entry.id} className="border-b last:border-0 hover:bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
+                                        <tr key={entry.id || idx} className="border-b last:border-0 hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
                                             <td className="px-6 py-4">
                                                 <input
                                                     type="datetime-local"
@@ -1236,7 +1281,7 @@ const BankAccountLedger = () => {
                                             <td className="px-6 py-4">
                                                 <input
                                                     type="text"
-                                                    placeholder="Search Connected Account..."
+                                                    placeholder="Search Connected Bank..."
                                                     value={entry.tempBankName || ''}
                                                     list={`bank-list-${idx}`}
                                                     onChange={e => {
@@ -1244,7 +1289,6 @@ const BankAccountLedger = () => {
                                                         const updated = [...editEntries];
                                                         updated[idx].tempBankName = val;
                                                         updated[idx].bankName = val;
-                                                        // Look up matching bank ID
                                                         const match = allBankAccountsList.find(b =>
                                                             (b.accountName || '').toLowerCase().trim() === val.toLowerCase().trim() ||
                                                             (b.bankName || '').toLowerCase().trim() === val.toLowerCase().trim()
@@ -1266,130 +1310,65 @@ const BankAccountLedger = () => {
                                                     ))}
                                                 </datalist>
                                             </td>
-                                            {/* Offset Account: show "Null" for customer set-off, editable for others */}
                                             <td className="px-6 py-4">
-                                                {entry.customer || entry.invoice ? (
-                                                    <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold italic opacity-50" style={{ color: 'var(--text-dim)' }}>
-                                                        Null
-                                                    </span>
-                                                ) : (
-                                                    <>
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Search Offset Account..."
-                                                            value={entry.tempAccountingCodeName || ''}
-                                                            list={`accounting-name-list-${idx}`}
-                                                            onChange={e => {
-                                                                const val = e.target.value;
-                                                                const updated = [...editEntries];
-                                                                updated[idx].tempAccountingCodeName = val;
-                                                                updated[idx].accountingCode = val;
-
-                                                                const match = allAccountingCodes.find(c =>
-                                                                    (c.name || '').toLowerCase().trim() === val.toLowerCase().trim() ||
-                                                                    (c.code || '').toLowerCase().trim() === val.toLowerCase().trim() ||
-                                                                    `${c.code} - ${c.name}`.toLowerCase().trim() === val.toLowerCase().trim()
-                                                                );
-                                                                if (match) {
-                                                                    updated[idx].accountingCode = match._id;
-                                                                    updated[idx].tempAccountingCodeName = `${match.code} - ${match.name}`;
-                                                                }
-                                                                setEditEntries(updated);
-                                                            }}
-                                                            className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
-                                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                                            required
-                                                        />
-                                                        <datalist id={`accounting-name-list-${idx}`}>
-                                                            {allAccountingCodes.map(c => (
-                                                                <option key={c._id} value={`${c.code} - ${c.name}`}>
-                                                                    {c.category}
-                                                                </option>
-                                                            ))}
-                                                        </datalist>
-                                                    </>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col gap-2">
-                                                    {entry.customer || entry.customerName || entry.invoice ? (
-                                                        <>
-                                                            <div className="flex flex-col gap-1.5">
-                                                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 self-start">
-                                                                    Auto Set-off: {entry.customerName || 'Customer Assigned'}
-                                                                </span>
-                                                                {(entry as any).setOffSummary && (
-                                                                    <div className="text-[10px] space-y-0.5 opacity-90 pl-1">
-                                                                        {(entry as any).setOffSummary.invoices?.map((inv: any, iIdx: number) => (
-                                                                            <div key={iIdx} className="text-emerald-600 dark:text-emerald-400 font-bold">
-                                                                                ⚡ Set off: {inv.invoiceNumber} (${inv.amountApplied?.toFixed(2)})
-                                                                            </div>
-                                                                        ))}
-                                                                        {(entry as any).setOffSummary.excessAmount > 0 && (
-                                                                            <div className="text-[#C8E600] font-bold">
-                                                                                ⚡ Advance (2.1.02): ${(entry as any).setOffSummary.excessAmount?.toFixed(2)}
-                                                                            </div>
-                                                                        )}
+                                                {entry.customer || entry.customerName || entry.invoice ? (
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 self-start">
+                                                            👤 {entry.customerName || 'Customer Linked'}
+                                                        </span>
+                                                        {(entry as any).setOffSummary && (
+                                                            <div className="text-[10px] space-y-0.5 opacity-90 pl-1">
+                                                                {(entry as any).setOffSummary.invoices?.map((inv: any, iIdx: number) => (
+                                                                    <div key={iIdx} className="text-emerald-400 font-bold">
+                                                                        ⚡ Set off: {inv.invoiceNumber} (${inv.amountApplied?.toFixed(2)})
+                                                                    </div>
+                                                                ))}
+                                                                {(entry as any).setOffSummary.excessAmount > 0 && (
+                                                                    <div className="text-[#C8E600] font-bold">
+                                                                        ⚡ Advance: ${(entry as any).setOffSummary.excessAmount?.toFixed(2)}
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                            <div className="flex gap-2">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => openInvoiceSidebar(idx)}
-                                                                    className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-black/10 dark:bg-white/5 hover:bg-black/20 dark:hover:bg-white/10 border rounded-lg transition-colors cursor-pointer"
-                                                                    style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}
-                                                                >
-                                                                    Change Customer
-                                                                </button>
-                                                            </div>
-                                                        </>
-                                                    ) : (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold italic opacity-50" style={{ color: 'var(--text-dim)' }}>
-                                                                Null
-                                                            </span>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => openInvoiceSidebar(idx)}
-                                                                className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-[#C8E600]/10 hover:bg-[#C8E600]/25 text-[#C8E600] border border-[#C8E600]/20 rounded-lg transition-colors cursor-pointer"
-                                                            >
-                                                                Link Customer
-                                                            </button>
-                                                        </div>
-                                                    )}
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs opacity-50 italic">None</span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="space-y-1">
+                                                    <div className="text-xs font-black" style={{ color: 'var(--text-main)' }}>
+                                                        ${entry.amount?.toFixed(2)}
+                                                    </div>
+                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+                                                        entry.type === 'DEBIT'
+                                                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                                            : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                                                    }`}>
+                                                        {entry.type === 'DEBIT' ? 'DEBIT (Deposit)' : 'CREDIT (Withdrawal)'}
+                                                    </span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <select
-                                                    value={entry.type}
-                                                    onChange={e => {
-                                                        const updated = [...editEntries];
-                                                        updated[idx].type = e.target.value;
-                                                        setEditEntries(updated);
-                                                    }}
-                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600] cursor-pointer"
-                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                                >
-                                                    <option value="DEBIT" className="bg-[var(--bg-card)]">DEBIT (Deposit)</option>
-                                                    <option value="CREDIT" className="bg-[var(--bg-card)]">CREDIT (Withdrawal)</option>
-                                                </select>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0.01"
-                                                    value={entry.amount}
-                                                    onChange={e => {
-                                                        const updated = [...editEntries];
-                                                        updated[idx].amount = parseFloat(e.target.value) || 0;
-                                                        setEditEntries(updated);
-                                                    }}
-                                                    className="w-full text-right bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
-                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                                    required
-                                                />
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {/* Change Amount Button -> Opens Change Amount Modal */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openChangeAmountModal(idx)}
+                                                        className="px-3 py-2 text-xs font-bold uppercase tracking-wider bg-[#C8E600]/15 hover:bg-[#C8E600]/30 text-[#C8E600] border border-[#C8E600]/30 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                                                    >
+                                                        <DollarSign size={13} /> Change Amount
+                                                    </button>
+
+                                                    {/* Change Customer Button -> Opens Customer Sidebar Modal */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openInvoiceSidebar(idx)}
+                                                        className="px-3 py-2 text-xs font-bold uppercase tracking-wider bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                                                    >
+                                                        <UserCheck size={13} /> {entry.customer || entry.customerName ? 'Change Customer' : 'Link Customer'}
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -1398,7 +1377,7 @@ const BankAccountLedger = () => {
                         </div>
                     </div>
 
-                    <div className="flex gap-4 justify-end">
+                    <div className="flex gap-4 justify-end pt-4">
                         <button
                             type="button"
                             onClick={() => {
@@ -1418,11 +1397,133 @@ const BankAccountLedger = () => {
                             {saving ? (
                                 <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
                             ) : (
-                                <>Save All Changes</>
+                                <>Save & Recalculate Transaction</>
                             )}
                         </button>
                     </div>
                 </form>
+
+                {/* DEDICATED CHANGE AMOUNT MODAL */}
+                {changeAmountModalOpen && changeAmountEntryIdx !== null && (() => {
+                    const entry = editEntries[changeAmountEntryIdx];
+                    return (
+                        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+                            {/* Backdrop */}
+                            <div
+                                className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity"
+                                onClick={closeChangeAmountModal}
+                            />
+
+                            {/* Modal Box */}
+                            <div
+                                className="relative w-full max-w-lg bg-card border rounded-2xl p-6 shadow-2xl z-10 space-y-6 animate-scale-in"
+                                style={{
+                                    background: 'var(--bg-card)',
+                                    borderColor: 'var(--border-main)',
+                                    color: 'var(--text-main)'
+                                }}
+                            >
+                                <div className="flex justify-between items-center border-b pb-4" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="p-2 rounded-xl bg-[#C8E600]/10 text-[#C8E600]">
+                                            <DollarSign size={20} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-base font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>
+                                                Change Transaction Amount
+                                            </h3>
+                                            <p className="text-[11px] opacity-70">
+                                                Update amount & deposit type for Row #{changeAmountEntryIdx + 1}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={closeChangeAmountModal}
+                                        className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                                        style={{ color: 'var(--text-dim)' }}
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="p-3.5 rounded-xl border bg-black/5 dark:bg-white/5 text-xs space-y-1.5" style={{ borderColor: 'var(--border-main)' }}>
+                                        <div className="font-bold flex items-center gap-1.5 text-[#C8E600]">
+                                            <Zap size={14} /> Automatic Set-off Recalculation Engine
+                                        </div>
+                                        <p className="text-[11px] opacity-75 leading-relaxed">
+                                            Saving a new amount will restore previous invoice states, recalculate invoice set-offs with the new amount, and update running balances sequentially.
+                                        </p>
+                                    </div>
+
+                                    {entry?.customerName && (
+                                        <div className="p-3 rounded-xl border bg-emerald-500/10 border-emerald-500/20 text-xs text-emerald-400 flex items-center justify-between">
+                                            <span>👤 Linked Customer: <strong>{entry.customerName}</strong></span>
+                                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-500/20">Set-off Active</span>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-xs font-bold uppercase tracking-wider block mb-1.5" style={{ color: 'var(--text-main)' }}>
+                                                Transaction Type
+                                            </label>
+                                            <select
+                                                value={modalTypeVal}
+                                                onChange={e => setModalTypeVal(e.target.value)}
+                                                className="w-full bg-transparent border rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-[#C8E600] cursor-pointer"
+                                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                            >
+                                                <option value="DEBIT" className="bg-[var(--bg-card)]">DEBIT (Incoming Deposit)</option>
+                                                <option value="CREDIT" className="bg-[var(--bg-card)]">CREDIT (Outgoing Withdrawal)</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-xs font-bold uppercase tracking-wider block mb-1.5" style={{ color: 'var(--text-main)' }}>
+                                                New Amount ($)
+                                            </label>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0.01"
+                                                    value={modalAmountVal}
+                                                    onChange={e => setModalAmountVal(parseFloat(e.target.value) || 0)}
+                                                    className="w-full text-right bg-transparent border rounded-xl pl-8 pr-4 py-2.5 text-base font-black outline-none focus:border-[#C8E600]"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                    autoFocus
+                                                />
+                                                <DollarSign size={16} className="absolute left-3 top-3 text-[#C8E600]" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 justify-end pt-2 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                    <button
+                                        type="button"
+                                        onClick={closeChangeAmountModal}
+                                        className="px-5 py-2.5 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
+                                        style={{ color: 'var(--text-main)' }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleSaveAmountFromModal}
+                                        className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-[#C8E600] text-black hover:bg-[#b5cf00] transition-colors cursor-pointer"
+                                    >
+                                        Apply New Amount
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {/* CHANGE CUSTOMER SIDEBAR MODAL */}
 
                 {/* Change/Link Customer Sidebar */}
                 {invoiceSidebarOpen && (
@@ -1943,6 +2044,7 @@ const BankAccountLedger = () => {
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right">Deposits</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right">Withdrawals</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right">Running Balance</th>
+                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2033,6 +2135,19 @@ const BankAccountLedger = () => {
                                                             ? runningBalancesMap[entry._id].toLocaleString(undefined, { minimumFractionDigits: 2 })
                                                             : '-'}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedIds([entry._id]);
+                                                        setIsBulkEditing(true);
+                                                    }}
+                                                    className="p-2 rounded-xl bg-white/5 hover:bg-[#C8E600]/20 text-white/80 hover:text-[#C8E600] border border-white/10 hover:border-[#C8E600]/30 transition-all cursor-pointer inline-flex items-center justify-center"
+                                                    title="View / Edit Entry"
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
                                             </td>
                                         </tr>
                                     );
@@ -2673,14 +2788,6 @@ const BankAccountLedger = () => {
                         {selectedIds.length} transaction{selectedIds.length > 1 ? 's' : ''} selected
                     </span>
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => {
-                                setIsBulkEditing(true);
-                            }}
-                            className="px-4 py-2 text-xs font-black uppercase tracking-wider rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
-                        >
-                            Edit Selected
-                        </button>
                         <button
                             onClick={() => setShowDeleteConfirm(true)}
                             className="px-4 py-2 text-xs font-black uppercase tracking-wider rounded-xl bg-red-600 hover:bg-red-500 text-white transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"

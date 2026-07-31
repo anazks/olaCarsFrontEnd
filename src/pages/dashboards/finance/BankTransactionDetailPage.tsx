@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+<<<<<<< HEAD
 import { ArrowLeft, Clock, User, Tag, Building2, Info, Coins, CircleCheck, Hash, MapPin, TriangleAlert, Layers } from 'lucide-react';
+=======
+>>>>>>> 3c6def79721552e4de600b1c050b1ccdf8360340
 import { getBankTransactionById } from '../../../services/bankAccountService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -154,6 +157,163 @@ const BankTransactionDetailPage = () => {
                             )}
                         </div>
                     </div>
+
+                    {/* Connected Double-Entry Ledger Entries */}
+                    <div className="p-6 rounded-2xl border space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex justify-between items-center border-b pb-4" style={{ borderColor: 'var(--border-main)' }}>
+                            <div>
+                                <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                                    <Layers size={16} className="text-[#C8E600]" /> Connected Ledger Entries (Double-Entry Impact)
+                                </h3>
+                                <p className="text-xs opacity-70 mt-0.5">
+                                    Double-entry accounting journal lines generated for this bank transaction upload/edit.
+                                </p>
+                            </div>
+                            <span className="text-[11px] font-bold text-[#C8E600] px-3 py-1 rounded-full bg-[#C8E600]/10 border border-[#C8E600]/20">
+                                {transaction.connectedLedgerEntries?.length || 0} Line(s) Connected
+                            </span>
+                        </div>
+
+                        {transaction.connectedLedgerEntries && transaction.connectedLedgerEntries.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b text-[11px] font-semibold uppercase tracking-wider" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
+                                            <th className="px-4 py-3">Accounting Code</th>
+                                            <th className="px-4 py-3">Type</th>
+                                            <th className="px-4 py-3 text-right">Amount ($)</th>
+                                            <th className="px-4 py-3">Contact / Description</th>
+                                            <th className="px-4 py-3 text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {transaction.connectedLedgerEntries.map((lEntry: any) => (
+                                            <tr key={lEntry._id} className="border-b last:border-0 hover:bg-white/5 transition-colors text-xs" style={{ borderColor: 'var(--border-main)' }}>
+                                                <td className="px-4 py-3 font-medium">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono font-bold px-2 py-0.5 rounded bg-black/10 dark:bg-white/5 border border-white/10" style={{ color: 'var(--text-main)' }}>
+                                                            {lEntry.accountingCode?.code || 'N/A'}
+                                                        </span>
+                                                        <span className="opacity-90">{lEntry.accountingCode?.name || 'General Ledger'}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                                                        lEntry.type === 'DEBIT' 
+                                                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' 
+                                                            : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                                                    }`}>
+                                                        {lEntry.type}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-mono font-bold" style={{ color: 'var(--text-main)' }}>
+                                                    ${lEntry.amount?.toFixed(2)}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="space-y-0.5">
+                                                        {lEntry.contact && (
+                                                            <div className="font-bold text-emerald-400 flex items-center gap-1">
+                                                                👤 {lEntry.contact.name || lEntry.contact.customerId}
+                                                            </div>
+                                                        )}
+                                                        <div className="opacity-70 truncate max-w-xs">{lEntry.description}</div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => navigate(`../ledger-entries/${lEntry._id}`)}
+                                                        className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/10 border rounded-lg transition-colors cursor-pointer"
+                                                        style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}
+                                                    >
+                                                        View Detail
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <p className="text-xs opacity-60 italic py-4 text-center">No connected double-entry ledger lines found.</p>
+                        )}
+                    </div>
+
+                    {/* Invoice Set-off History Card (If present) */}
+                    {transaction.setOffHistory && (
+                        <div className="p-6 rounded-2xl border space-y-4 bg-emerald-500/5" style={{ borderColor: 'rgba(16, 185, 129, 0.2)' }}>
+                            <div className="flex justify-between items-center border-b border-emerald-500/20 pb-4">
+                                <div>
+                                    <h3 className="text-sm font-black uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                                        ⚡ Automated Invoice Set-off History
+                                    </h3>
+                                    <p className="text-xs opacity-75 mt-0.5" style={{ color: 'var(--text-main)' }}>
+                                        Before and After invoice state snapshots preserved for this transaction.
+                                    </p>
+                                </div>
+                                <span className="text-xs font-bold text-emerald-400 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+                                    Customer: {transaction.setOffHistory.customer?.name || 'Linked Customer'}
+                                </span>
+                            </div>
+
+                            <div className="space-y-3">
+                                {transaction.setOffHistory.invoiceSnapshots?.length > 0 && (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b text-[10px] font-bold uppercase tracking-wider text-emerald-400 border-emerald-500/20">
+                                                    <th className="px-3 py-2">Invoice #</th>
+                                                    <th className="px-3 py-2">Applied Amount</th>
+                                                    <th className="px-3 py-2">Before State</th>
+                                                    <th className="px-3 py-2">After State</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {transaction.setOffHistory.invoiceSnapshots.map((snap: any, sIdx: number) => (
+                                                    <tr key={sIdx} className="border-b last:border-0 border-emerald-500/10 text-xs">
+                                                        <td className="px-3 py-2.5 font-bold text-emerald-400">
+                                                            {snap.invoiceNumber}
+                                                        </td>
+                                                        <td className="px-3 py-2.5 font-mono font-bold" style={{ color: 'var(--text-main)' }}>
+                                                            ${snap.amountApplied?.toFixed(2)}
+                                                        </td>
+                                                        <td className="px-3 py-2.5">
+                                                            <div className="text-[11px] opacity-70">
+                                                                Paid: ${snap.before?.amountPaid?.toFixed(2)} | Bal: ${snap.before?.balance?.toFixed(2)}
+                                                                <span className="ml-2 px-1.5 py-0.5 rounded bg-black/20 text-[9px] font-bold">{snap.before?.status}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-3 py-2.5">
+                                                            <div className="text-[11px] font-semibold text-emerald-400">
+                                                                Paid: ${snap.after?.amountPaid?.toFixed(2)} | Bal: ${snap.after?.balance?.toFixed(2)}
+                                                                <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-bold">{snap.after?.status}</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+
+                                {transaction.setOffHistory.excessAmount > 0 && (
+                                    <div className="p-3 rounded-xl bg-[#C8E600]/10 border border-[#C8E600]/30 text-xs flex justify-between items-center">
+                                        <div>
+                                            <div className="font-black text-[#C8E600] flex items-center gap-1.5">
+                                                ⚡ Advance Received (Account 2.1.02)
+                                            </div>
+                                            <div className="text-[10px] opacity-70 mt-0.5" style={{ color: 'var(--text-main)' }}>
+                                                Excess payment unconsumed by open invoices routed to customer advance.
+                                            </div>
+                                        </div>
+                                        <div className="text-base font-black text-[#C8E600] font-mono">
+                                            ${transaction.setOffHistory.excessAmount?.toFixed(2)}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Sidebar Column */}

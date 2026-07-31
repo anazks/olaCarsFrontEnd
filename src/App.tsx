@@ -504,8 +504,12 @@ function App() {
               <Route path="payments-received" element={<PaymentsReceived />} />
               <Route path="credit-notes" element={<CreditNotes />} />
               <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
+              <Route path="sales/credit-notes" element={<CreditNotes />} />
+              <Route path="sales/credit-notes/:id" element={<CreditNoteDetail />} />
               <Route path="debit-notes" element={<DebitNotes />} />
               <Route path="debit-notes/:id" element={<DebitNoteDetail />} />
+              <Route path="sales/debit-notes" element={<DebitNotes />} />
+              <Route path="sales/debit-notes/:id" element={<DebitNoteDetail />} />
 
               {/* Purchases Routes */}
               <Route path="expenses" element={<Expenses />} />
@@ -1049,8 +1053,12 @@ function App() {
               <Route path="payments-received" element={<PaymentsReceived />} />
               <Route path="credit-notes" element={<CreditNotes />} />
               <Route path="credit-notes/:id" element={<CreditNoteDetail />} />
+              <Route path="sales/credit-notes" element={<CreditNotes />} />
+              <Route path="sales/credit-notes/:id" element={<CreditNoteDetail />} />
               <Route path="debit-notes" element={<DebitNotes />} />
               <Route path="debit-notes/:id" element={<DebitNoteDetail />} />
+              <Route path="sales/debit-notes" element={<DebitNotes />} />
+              <Route path="sales/debit-notes/:id" element={<DebitNoteDetail />} />
 
               {/* Purchases Routes */}
               <Route path="expenses" element={<Expenses />} />
