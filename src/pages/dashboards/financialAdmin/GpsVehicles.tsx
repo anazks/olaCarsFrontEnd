@@ -134,19 +134,66 @@ const GpsVehicles = () => {
             const [vehiclesData, locationsData, fleetRes, driversRes] = await Promise.all([
                 getGpsVehiclesList(),
                 getGpsLocationsList(),
-                getAllVehicles({ limit: 500 }).catch(() => ({ data: [] })),
+                getAllVehicles({ limit: 10000 }).catch(() => ({ data: [] })),
                 getAllDrivers({ limit: 1000 }).catch(() => ({ data: [] }))
             ]);
             const vList = Array.isArray(vehiclesData) ? vehiclesData : [];
-            setVehicles(vList);
+            const fleetList = (fleetRes as any).data || [];
+            const driverList = (driversRes as any).data || [];
+
+            // Map GPS vehicles to database counterparts to match plate numbers and drivers
+            const mappedVehicles = vList.map(gpsV => {
+                const gpsVin = gpsV.carFrame?.toUpperCase().trim();
+                const gpsPlate = gpsV.vehicleNumber?.toUpperCase().trim();
+
+                const fleetV = fleetList.find((fv: any) => {
+                    const fvVin = fv.basicDetails?.vin?.toUpperCase().trim();
+                    const fvPlate = fv.legalDocs?.registrationNumber?.toUpperCase().trim();
+                    const fvFleetNum = fv.basicDetails?.fleetNumber?.toUpperCase().trim();
+
+                    return (
+                        (gpsVin && fvVin && gpsVin === fvVin) ||
+                        (gpsPlate && fvPlate && gpsPlate === fvPlate) ||
+                        (gpsVin && fvPlate && gpsVin === fvPlate) ||
+                        (gpsPlate && fvVin && gpsPlate === fvVin) ||
+                        (gpsVin && fvFleetNum && gpsVin === fvFleetNum)
+                    );
+                });
+
+                let resolvedPlate = gpsV.vehicleNumber;
+                if (!resolvedPlate || resolvedPlate.trim() === '' || resolvedPlate === 'Pending') {
+                    if (fleetV && fleetV.legalDocs?.registrationNumber && fleetV.legalDocs.registrationNumber.trim() !== '') {
+                        resolvedPlate = fleetV.legalDocs.registrationNumber;
+                    }
+                }
+
+                let resolvedDriverName = gpsV.driverName;
+                if (fleetV) {
+                    const driver = driverList.find((d: any) => {
+                        const vId = typeof d.currentVehicle === 'object' ? (d.currentVehicle as any)?._id : d.currentVehicle;
+                        return vId && String(vId) === String(fleetV._id);
+                    });
+                    if (driver && driver.personalInfo?.fullName) {
+                        resolvedDriverName = driver.personalInfo.fullName;
+                    }
+                }
+
+                return {
+                    ...gpsV,
+                    vehicleNumber: resolvedPlate || 'Pending',
+                    driverName: resolvedDriverName || gpsV.driverName || 'Unassigned'
+                };
+            });
+
+            setVehicles(mappedVehicles);
             setLocations(Array.isArray(locationsData) ? locationsData : []);
-            setFleetVehicles((fleetRes as any).data || []);
-            setFleetDrivers((driversRes as any).data || []);
+            setFleetVehicles(fleetList);
+            setFleetDrivers(driverList);
 
             // Now fetch mileage for these devices
-            if (vList.length > 0) {
+            if (mappedVehicles.length > 0) {
                 try {
-                    const imeisString = vList.map(v => v.imei).join(',');
+                    const imeisString = mappedVehicles.map(v => v.imei).join(',');
                     const mileageList = await getGpsMileageList(imeisString);
                     const mileageMap: Record<string, GpsMileage> = {};
                     if (Array.isArray(mileageList)) {
