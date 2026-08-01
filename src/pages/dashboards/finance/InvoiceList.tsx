@@ -246,6 +246,8 @@ const InvoiceList = () => {
                 search: debouncedSearch.trim() || undefined,
                 status: statusFilter !== 'ALL' ? statusFilter : undefined,
                 branch: branchFilter !== 'ALL' ? branchFilter : undefined,
+                sortBy: sortBy || 'generatedAt',
+                sortOrder: sortOrder || 'desc',
             };
             if (filterYear === 'CUSTOM') {
                 filters.startDate = startDate || undefined;
@@ -281,7 +283,12 @@ const InvoiceList = () => {
         setDownloadingExcel(true);
         const toastId = toast.loading('Generating Invoice Registry Excel report...');
         try {
-            const filters: any = { limit: 2000, ignoreDefaultDates: 'true' };
+            const filters: any = {
+                limit: 2000,
+                ignoreDefaultDates: 'true',
+                sortBy: sortBy || 'generatedAt',
+                sortOrder: sortOrder || 'desc'
+            };
             if (debouncedSearch.trim()) filters.search = debouncedSearch.trim();
             if (filterYear === 'CUSTOM') {
                 if (startDate) filters.startDate = startDate;
@@ -300,7 +307,12 @@ const InvoiceList = () => {
                 ? await getInvoicesDateWise(filters)
                 : await getInvoicesRegistry(filters);
 
-            const exportInvoices = res?.data || invoices;
+            const rawInvoices = res?.data || invoices;
+            const exportInvoices = [...rawInvoices].sort((a: any, b: any) => {
+                const dateA = new Date(a.generatedAt || a.invoiceDate || a.createdAt || a.date || 0).getTime();
+                const dateB = new Date(b.generatedAt || b.invoiceDate || b.createdAt || b.date || 0).getTime();
+                return dateB - dateA; // Latest date first
+            });
 
             const excelRows = exportInvoices.map((inv: any) => {
                 const dateVal = inv.generatedAt || inv.entryDate || inv.date;
