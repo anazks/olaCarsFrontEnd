@@ -246,6 +246,39 @@ const FinancialAdminSidebar = ({
           label: t("sidebar.items.bulkLedgerUpload", "Bulk Ledger Upload"),
           path: "/admin/financial-admin/bulk-ledger-upload",
         },
+        {
+          label: t("sidebar.items.financialStatements"),
+          path: "/admin/financial-admin/financial-statements",
+        },
+        {
+          label: t("sidebar.items.manualJournals"),
+          path: "/admin/financial-admin/manual-journals",
+        },
+        {
+          label: t("sidebar.items.fixedAssets", {
+            defaultValue: "Fixed Assets",
+          }),
+          path: "/admin/financial-admin/fixed-assets",
+        },
+      ],
+    },
+    {
+      id: "accounting-settings",
+      label: t("sidebar.sections.accountingSettings", "Accounting Settings"),
+      icon: <Settings size={22} />,
+      subItems: [
+        {
+          label: t("sidebar.items.chartOfAccounts"),
+          path: "/admin/financial-admin/chart-of-accounts",
+        },
+        {
+          label: t("sidebar.items.taxManagement"),
+          path: "/admin/financial-admin/taxes",
+        },
+        {
+          label: t("sidebar.items.bankAccounts"),
+          path: "/admin/financial-admin/bank-accounts",
+        },
       ],
     },
     {
