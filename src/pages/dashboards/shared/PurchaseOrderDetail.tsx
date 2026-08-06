@@ -201,7 +201,7 @@ const PurchaseOrderDetail = () => {
 
     const handleCopyLink = () => {
         if (!po) return;
-        const shareableUrl = `${window.location.origin}/purchase-orders/${po._id || po.id}`;
+        const shareableUrl = `${window.location.origin}/purchase-orders/${po._id || (po as any).id}`;
         navigator.clipboard.writeText(shareableUrl);
         toast.success('Shareable PO link copied to clipboard!');
     };

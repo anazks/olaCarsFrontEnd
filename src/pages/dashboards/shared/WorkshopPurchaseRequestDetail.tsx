@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getWorkshopProcurementRequestById, financeApproveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
 import {
     ArrowLeft, Clock, CheckCircle, XCircle, FileText,
-    User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2, ExternalLink, Share2, Copy
+    User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2, ExternalLink, Share2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getUserRole, getDecodedToken } from '../../../utils/auth';
