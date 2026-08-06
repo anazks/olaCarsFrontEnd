@@ -10,8 +10,9 @@ import { getDecodedToken, ROLE_LEVELS, getUserRole } from '../../../utils/auth';
 import {
     ArrowLeft, Clock, CheckCircle, XCircle, FileText,
     User, Calendar, Landmark, UserCheck, History,
-    AlertCircle, Package, Receipt, Trash2, ExternalLink
+    AlertCircle, Package, Receipt, Trash2, ExternalLink, Share2
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import * as billService from '../../../services/billService';
 
 import ApproveRejectModal from './ApproveRejectModal';
@@ -198,6 +199,13 @@ const PurchaseOrderDetail = () => {
 
     const canPay = po.status === 'APPROVED' && !po.isBilled;
 
+    const handleCopyLink = () => {
+        if (!po) return;
+        const shareableUrl = `${window.location.origin}/purchase-orders/${po._id || po.id}`;
+        navigator.clipboard.writeText(shareableUrl);
+        toast.success('Shareable PO link copied to clipboard!');
+    };
+
     const statusColors: Record<POStatus, { bg: string; text: string; icon: React.ReactNode }> = {
         REQUESTED: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', icon: <Clock size={16} /> },
         MANAGER_APPROVED: { bg: 'rgba(245, 158, 11, 0.1)', text: '#f59e0b', icon: <Clock size={16} /> },
@@ -223,7 +231,7 @@ const PurchaseOrderDetail = () => {
                         <h1 className="text-lg font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
                             {po.purchaseOrderNumber}
                         </h1>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border"
                                 style={{ background: s.bg, color: s.text, borderColor: s.text + '33' }}>
                                 {s.icon} {po.status}
@@ -236,6 +244,13 @@ const PurchaseOrderDetail = () => {
                                     <ExternalLink size={12} /> View {po.linkedPR.requestNumber}
                                 </button>
                             )}
+                            <button
+                                onClick={handleCopyLink}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                                title="Copy canonical share link"
+                            >
+                                <Share2 size={12} className="text-[#C8E600]" /> Copy Link
+                            </button>
                             {po.isBilled && (
                                 <span className="text-[10px] px-3 py-1 rounded-full bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/20 font-black tracking-widest uppercase">BILLED</span>
                             )}

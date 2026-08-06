@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getWorkshopProcurementRequestById, financeApproveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
 import {
     ArrowLeft, Clock, CheckCircle, XCircle, FileText,
-    User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2, ExternalLink
+    User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2, ExternalLink, Share2, Copy
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getUserRole, getDecodedToken } from '../../../utils/auth';
@@ -170,6 +170,13 @@ const WorkshopPurchaseRequestDetail = () => {
 
 
 
+    const handleCopyLink = () => {
+        if (!request) return;
+        const shareableUrl = `${window.location.origin}/workshop-purchase-requests/${request._id}`;
+        navigator.clipboard.writeText(shareableUrl);
+        toast.success('Shareable PR link copied to clipboard!');
+    };
+
     return (
         <div className="space-y-6 pb-20">
             <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Purchase Requests', path: '..' }, { label: request.requestNumber, active: true }]} />
@@ -184,7 +191,7 @@ const WorkshopPurchaseRequestDetail = () => {
                         <h1 className="text-lg font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
                             Request {request.requestNumber}
                         </h1>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <StatusBadge status={request.status} />
                             {request.linkedPO && (
                                 <button
@@ -194,6 +201,13 @@ const WorkshopPurchaseRequestDetail = () => {
                                     <ExternalLink size={12} /> View {request.linkedPO.purchaseOrderNumber}
                                 </button>
                             )}
+                            <button
+                                onClick={handleCopyLink}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                                title="Copy canonical share link"
+                            >
+                                <Share2 size={12} className="text-[#C8E600]" /> Copy Link
+                            </button>
                         </div>
                     </div>
                 </div>

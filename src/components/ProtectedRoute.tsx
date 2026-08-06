@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { isTokenValid, getUserRole, hasPermission } from '../utils/auth';
 import { API_ROLE_TO_ROUTE } from '../services/authService';
 
@@ -10,11 +10,12 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ allowedRoles, requiredPermission }: ProtectedRouteProps) => {
     const isAuthenticated = isTokenValid();
     const userRole = getUserRole();
+    const location = useLocation();
 
-    // 1. Not logged in → go to login
+    // 1. Not logged in → go to login with target location preserved
     if (!isAuthenticated) {
         console.log('[ProtectedRoute] ❌ Not authenticated → redirecting to /admin/login');
-        return <Navigate to="/admin/login" replace />;
+        return <Navigate to="/admin/login" state={{ from: location }} replace />;
     }
 
     // 2. Check Permissions (Granular)

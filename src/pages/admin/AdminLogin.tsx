@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { loginByRole, API_ROLE_TO_ROUTE, UI_ROLE_TO_API_ROLE } from '../../services/authService';
@@ -19,6 +19,8 @@ const AdminLogin = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
+    const location = useLocation();
+    const fromLocation = (location.state as any)?.from;
 
     const ROLES = [
         { ui: 'admin', label: t('login.roleAdmin') },
@@ -66,15 +68,18 @@ const AdminLogin = () => {
             const decoded = getDecodedToken();
             const jwtRole = decoded?.role ? decoded.role.toLowerCase() : null;
 
-            // Navigate to the dashboard that matches the JWT role,
-            // fallback to the UI-selected role route
-            const destination =
+            // Navigate to the shared link destination if present, otherwise default role dashboard
+            let destination =
                 (jwtRole && API_ROLE_TO_ROUTE[jwtRole]) ||
                 API_ROLE_TO_ROUTE[role.replace(/-/g, '')] ||
                 `/admin/${role}`;
 
+            if (fromLocation && fromLocation.pathname) {
+                destination = fromLocation.pathname + (fromLocation.search || '');
+            }
+
             console.log('[login] navigating to:', destination);
-            navigate(destination);
+            navigate(destination, { replace: true });
         } catch (err: any) {
             console.error('Login error:', err);
             const message =
