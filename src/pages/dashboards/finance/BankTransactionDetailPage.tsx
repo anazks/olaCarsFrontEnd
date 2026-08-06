@@ -249,24 +249,28 @@ const BankTransactionDetailPage = () => {
                         )}
                     </div>
 
-                    {/* Invoice Set-off History Card (If present) */}
+                    {/* Invoice & Bill Set-off History Card (If present) */}
                     {transaction.setOffHistory && (
                         <div className="p-6 rounded-2xl border space-y-4 bg-emerald-500/5" style={{ borderColor: 'rgba(16, 185, 129, 0.2)' }}>
                             <div className="flex justify-between items-center border-b border-emerald-500/20 pb-4">
                                 <div>
                                     <h3 className="text-sm font-black uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-                                        ⚡ Automated Invoice Set-off History
+                                        ⚡ Automated {transaction.setOffHistory.targetType === 'SUPPLIER' ? 'Bill Set-off' : 'Invoice Set-off'} History
                                     </h3>
                                     <p className="text-xs opacity-75 mt-0.5" style={{ color: 'var(--text-main)' }}>
-                                        Before and After invoice state snapshots preserved for this transaction.
+                                        Before and After state snapshots preserved for this bank transaction.
                                     </p>
                                 </div>
                                 <span className="text-xs font-bold text-emerald-400 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30">
-                                    Customer: {transaction.setOffHistory.customer?.name || 'Linked Customer'}
+                                    {transaction.setOffHistory.targetType === 'SUPPLIER'
+                                        ? `Vendor: ${transaction.setOffHistory.supplier?.name || transaction.setOffHistory.supplier?.companyName || 'Linked Vendor'}`
+                                        : `Customer: ${transaction.setOffHistory.customer?.name || 'Linked Customer'}`
+                                    }
                                 </span>
                             </div>
 
                             <div className="space-y-3">
+                                {/* Customer Invoice Snapshots */}
                                 {transaction.setOffHistory.invoiceSnapshots?.length > 0 && (
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left border-collapse">
@@ -306,14 +310,57 @@ const BankTransactionDetailPage = () => {
                                     </div>
                                 )}
 
+                                {/* Supplier Bill Snapshots */}
+                                {transaction.setOffHistory.billSnapshots?.length > 0 && (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b text-[10px] font-bold uppercase tracking-wider text-emerald-400 border-emerald-500/20">
+                                                    <th className="px-3 py-2">Bill #</th>
+                                                    <th className="px-3 py-2">Applied Amount</th>
+                                                    <th className="px-3 py-2">Before State</th>
+                                                    <th className="px-3 py-2">After State</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {transaction.setOffHistory.billSnapshots.map((snap: any, sIdx: number) => (
+                                                    <tr key={sIdx} className="border-b last:border-0 border-emerald-500/10 text-xs">
+                                                        <td className="px-3 py-2.5 font-bold text-emerald-400">
+                                                            {snap.billNumber}
+                                                        </td>
+                                                        <td className="px-3 py-2.5 font-mono font-bold" style={{ color: 'var(--text-main)' }}>
+                                                            ${snap.amountApplied?.toFixed(2)}
+                                                        </td>
+                                                        <td className="px-3 py-2.5">
+                                                            <div className="text-[11px] opacity-70">
+                                                                Paid: ${snap.before?.amountPaid?.toFixed(2)} | Bal: ${snap.before?.balance?.toFixed(2)}
+                                                                <span className="ml-2 px-1.5 py-0.5 rounded bg-black/20 text-[9px] font-bold">{snap.before?.status}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-3 py-2.5">
+                                                            <div className="text-[11px] font-semibold text-emerald-400">
+                                                                Paid: ${snap.after?.amountPaid?.toFixed(2)} | Bal: ${snap.after?.balance?.toFixed(2)}
+                                                                <span className="ml-2 px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-bold">{snap.after?.status}</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+
                                 {transaction.setOffHistory.excessAmount > 0 && (
                                     <div className="p-3 rounded-xl bg-[#C8E600]/10 border border-[#C8E600]/30 text-xs flex justify-between items-center">
                                         <div>
                                             <div className="font-black text-[#C8E600] flex items-center gap-1.5">
-                                                ⚡ Advance Received (Account 2.1.02)
+                                                ⚡ {transaction.setOffHistory.targetType === 'SUPPLIER' ? 'Vendor Advance / Prepayment' : 'Advance Received (Account 2.1.02)'}
                                             </div>
                                             <div className="text-[10px] opacity-70 mt-0.5" style={{ color: 'var(--text-main)' }}>
-                                                Excess payment unconsumed by open invoices routed to customer advance.
+                                                {transaction.setOffHistory.targetType === 'SUPPLIER'
+                                                    ? 'Excess payment unconsumed by open vendor bills routed to vendor advance.'
+                                                    : 'Excess payment unconsumed by open invoices routed to customer advance.'
+                                                }
                                             </div>
                                         </div>
                                         <div className="text-base font-black text-[#C8E600] font-mono">

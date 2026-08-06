@@ -9,6 +9,7 @@ import { getAllAccountingCodes, type AccountingCode } from '../../../services/ac
 import { getAllCustomers, type Customer } from '../../../services/customerService';
 import { getAllSuppliers, type Supplier } from '../../../services/supplierService';
 import { getInvoices, type Invoice } from '../../../services/invoiceService';
+import { getAllBills, type Bill } from '../../../services/billService';
 
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -214,6 +215,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
     const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
     const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
     const [allInvoices, setAllInvoices] = useState<Invoice[]>([]);
+    const [allBills, setAllBills] = useState<Bill[]>([]);
     const [existingTxIdsSet, setExistingTxIdsSet] = useState<Set<string>>(new Set());
     const [expandedSetOffRows, setExpandedSetOffRows] = useState<Record<number, boolean>>({});
 
@@ -236,19 +238,20 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
         fetchTxIds();
     }, [selectedAccountId]);
 
-    // Load bank accounts, branches, customers, suppliers and open invoices on mount
+    // Load bank accounts, branches, customers, suppliers, invoices and supplier bills on mount
     useEffect(() => {
         if (isOpen || isAsPage) {
             const fetchData = async () => {
                 setLoadingData(true);
                 try {
-                    const [accountsRes, branchesRes, codesRes, customersRes, suppliersRes, invoicesRes] = await Promise.all([
+                    const [accountsRes, branchesRes, codesRes, customersRes, suppliersRes, invoicesRes, billsRes] = await Promise.all([
                         getAllBankAccounts({ limit: 100 }),
                         getAllBranches({ limit: 100 }),
                         getAllAccountingCodes({ limit: 1000 }),
-                        getAllCustomers({ limit: 1000 }),
-                        getAllSuppliers({ limit: 1000 }),
-                        getInvoices({ limit: 10000, status: 'PENDING,PARTIAL,OVERDUE', ignoreDefaultDates: true })
+                        getAllCustomers({ limit: 10000, branch: 'ALL' }),
+                        getAllSuppliers({ limit: 10000, branch: 'ALL' }),
+                        getInvoices({ limit: 10000, status: 'PENDING,PARTIAL,OVERDUE', ignoreDefaultDates: true }),
+                        getAllBills({ limit: 10000, status: 'OPEN,PARTIALLY_PAID,DRAFT', ignoreDefaultDates: true }).catch(() => ({ data: [] }))
                     ]);
 
                     const accountsList = accountsRes.data || accountsRes || [];
@@ -257,6 +260,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
                     const customersList = customersRes.data || customersRes || [];
                     const suppliersList = suppliersRes.data || suppliersRes || [];
                     const invoiceList = invoicesRes.data || (invoicesRes as any).invoices || [];
+                    const billList = (billsRes as any).data || billsRes || [];
 
                     const activeAccounts = accountsList.filter((a: BankAccount) => a.status === 'ACTIVE');
                     setAccounts(activeAccounts);
@@ -265,6 +269,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
                     setAllCustomers(customersList);
                     setAllSuppliers(suppliersList);
                     setAllInvoices(invoiceList);
+                    setAllBills(Array.isArray(billList) ? billList : []);
 
                     // Auto-select query accountId if present, otherwise Banco General AH 1601 or first account
                     if (queryAccountId && activeAccounts.some((a: BankAccount) => a._id === queryAccountId)) {
@@ -306,6 +311,7 @@ interface SetOffPreview {
     totalSetOff: number;
     excessAmount: number;
     setOffDetails: SetOffDetail[];
+    targetType?: 'CUSTOMER' | 'SUPPLIER';
 }
 
     const cumulativeSetOffPreviews = useMemo<Map<number, SetOffPreview | null>>(() => {
@@ -315,6 +321,9 @@ interface SetOffPreview {
 
         const runningBalanceMap: Record<string, number> = {};
         const isOverdueMap: Record<string, boolean> = {};
+
+        const runningBillBalanceMap: Record<string, number> = {};
+        const isBillOverdueMap: Record<string, boolean> = {};
 
         const checkOverdue = (inv: any) => {
             const st = String(inv.status || '').toUpperCase();
@@ -344,97 +353,205 @@ interface SetOffPreview {
             return '';
         };
 
+        const getBillSupplierId = (b: any): string => {
+            if (!b) return '';
+            if (b.supplier) {
+                if (typeof b.supplier === 'object') return String(b.supplier._id || b.supplier.id || '');
+                return String(b.supplier);
+            }
+            if (b.supplierId) {
+                if (typeof b.supplierId === 'object') return String(b.supplierId._id || b.supplierId.id || '');
+                return String(b.supplierId);
+            }
+            if (b.vendor) {
+                if (typeof b.vendor === 'object') return String(b.vendor._id || b.vendor.id || '');
+                return String(b.vendor);
+            }
+            return '';
+        };
+
         allInvoices.forEach(inv => {
             const bal = inv.balance ?? (inv.totalAmountDue - (inv.amountPaid || 0));
             runningBalanceMap[inv._id] = bal;
             isOverdueMap[inv._id] = checkOverdue(inv);
         });
 
+        allBills.forEach(b => {
+            const bal = b.balanceDue ?? (b.totalAmount - (b.amountPaid || 0));
+            runningBillBalanceMap[b._id] = bal;
+            isBillOverdueMap[b._id] = b.dueDate ? (new Date(b.dueDate).getTime() < Date.now()) : false;
+        });
+
         const previewsMap = new Map<number, SetOffPreview | null>();
 
         rows.forEach((row, rowIndex) => {
-            if (!row.customer || (row["Transaction Type"] !== 'DEBIT' && (row.Debit || 0) <= 0)) {
-                previewsMap.set(rowIndex, null);
+            // Customer Receipt set-off
+            if (row.customer && (row["Transaction Type"] === 'DEBIT' || (row.Debit || 0) > 0)) {
+                const customerId = String(row.customer._id || (row.customer as any).id || '');
+                const amount = row.Amount || row.Debit || 0;
+
+                const openInvoices = allInvoices.filter(inv => {
+                    const invCustId = getInvoiceCustomerId(inv);
+                    const currentBal = runningBalanceMap[inv._id] ?? 0;
+                    const statusStr = String(inv.status || '').toUpperCase();
+                    return invCustId === customerId &&
+                        ['PENDING', 'PARTIAL', 'OVERDUE'].includes(statusStr) &&
+                        currentBal > 0;
+                });
+
+                const overdueInvoices = openInvoices
+                    .filter(inv => isOverdueMap[inv._id])
+                    .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+                const nonOverduePartialInvoices = openInvoices
+                    .filter(inv => !isOverdueMap[inv._id] && String(inv.status).toUpperCase() === 'PARTIAL')
+                    .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+                const nonOverduePendingInvoices = openInvoices
+                    .filter(inv => !isOverdueMap[inv._id] && String(inv.status).toUpperCase() !== 'PARTIAL')
+                    .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+                const sortedInvoices = [...overdueInvoices, ...nonOverduePartialInvoices, ...nonOverduePendingInvoices];
+
+                let remaining = amount;
+                const setOffDetails: Array<{
+                    invoiceNumber: string;
+                    amountApplied: number;
+                    dueBalance: number;
+                    newBalance: number;
+                    newStatus: string;
+                    dueDate?: string;
+                }> = [];
+
+                let totalSetOff = 0;
+
+                for (const inv of sortedInvoices) {
+                    if (remaining <= 0.01) break;
+                    const currentInvBal = runningBalanceMap[inv._id] ?? 0;
+                    if (currentInvBal <= 0) continue;
+
+                    const amountToApply = Math.min(remaining, currentInvBal);
+                    const newBal = Math.max(0, currentInvBal - amountToApply);
+
+                    runningBalanceMap[inv._id] = newBal;
+
+                    const isInvOverdue = isOverdueMap[inv._id];
+                    const newStatus = newBal <= 0 ? 'PAID' : (isInvOverdue ? 'OVERDUE' : 'PARTIAL');
+
+                    setOffDetails.push({
+                        invoiceNumber: inv.invoiceNumber,
+                        amountApplied: amountToApply,
+                        dueBalance: currentInvBal,
+                        newBalance: newBal,
+                        newStatus,
+                        dueDate: inv.dueDate
+                    });
+
+                    totalSetOff += amountToApply;
+                    remaining -= amountToApply;
+                }
+
+                const excessAmount = Math.max(0, amount - totalSetOff);
+
+                previewsMap.set(rowIndex, {
+                    customerName: row.customer.name,
+                    receiptAmount: amount,
+                    totalSetOff,
+                    excessAmount,
+                    setOffDetails,
+                    targetType: 'CUSTOMER'
+                });
                 return;
             }
 
-            const customerId = String(row.customer._id || (row.customer as any).id || '');
-            const amount = row.Amount || row.Debit || 0;
+            // Supplier Payment set-off
+            if (row.supplier && (row["Transaction Type"] === 'CREDIT' || (row.Credit || 0) > 0 || (row.Payment || 0) > 0)) {
+                const supplierId = String(row.supplier._id || (row.supplier as any).id || '');
+                const rowSupName = String(row.supplier.name || (row.supplier as any).companyName || '').toLowerCase().trim();
+                const amount = row.Amount || row.Credit || row.Payment || 0;
 
-            const openInvoices = allInvoices.filter(inv => {
-                const invCustId = getInvoiceCustomerId(inv);
-                const currentBal = runningBalanceMap[inv._id] ?? 0;
-                const statusStr = String(inv.status || '').toUpperCase();
-                return invCustId === customerId &&
-                    ['PENDING', 'PARTIAL', 'OVERDUE'].includes(statusStr) &&
-                    currentBal > 0;
-            });
+                const openBills = allBills.filter(b => {
+                    const bSupId = getBillSupplierId(b);
+                    const bSupName = typeof b.supplier === 'object' ? String(b.supplier?.name || b.supplier?.companyName || '').toLowerCase().trim() : '';
+                    const isSupplierMatch = (bSupId && supplierId && bSupId === supplierId) || (rowSupName && bSupName && rowSupName === bSupName);
 
-            const overdueInvoices = openInvoices
-                .filter(inv => isOverdueMap[inv._id])
-                .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
-
-            const nonOverduePartialInvoices = openInvoices
-                .filter(inv => !isOverdueMap[inv._id] && String(inv.status).toUpperCase() === 'PARTIAL')
-                .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
-
-            const nonOverduePendingInvoices = openInvoices
-                .filter(inv => !isOverdueMap[inv._id] && String(inv.status).toUpperCase() !== 'PARTIAL')
-                .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
-
-            const sortedInvoices = [...overdueInvoices, ...nonOverduePartialInvoices, ...nonOverduePendingInvoices];
-
-            let remaining = amount;
-            const setOffDetails: Array<{
-                invoiceNumber: string;
-                amountApplied: number;
-                dueBalance: number;
-                newBalance: number;
-                newStatus: string;
-                dueDate?: string;
-            }> = [];
-
-            let totalSetOff = 0;
-
-            for (const inv of sortedInvoices) {
-                if (remaining <= 0.01) break;
-                const currentInvBal = runningBalanceMap[inv._id] ?? 0;
-                if (currentInvBal <= 0) continue;
-
-                const amountToApply = Math.min(remaining, currentInvBal);
-                const newBal = Math.max(0, currentInvBal - amountToApply);
-
-                runningBalanceMap[inv._id] = newBal;
-
-                const isInvOverdue = isOverdueMap[inv._id];
-                const newStatus = newBal <= 0 ? 'PAID' : (isInvOverdue ? 'OVERDUE' : 'PARTIAL');
-
-                setOffDetails.push({
-                    invoiceNumber: inv.invoiceNumber,
-                    amountApplied: amountToApply,
-                    dueBalance: currentInvBal,
-                    newBalance: newBal,
-                    newStatus,
-                    dueDate: inv.dueDate
+                    const currentBal = runningBillBalanceMap[b._id] ?? 0;
+                    const statusStr = String(b.status || '').toUpperCase();
+                    return isSupplierMatch &&
+                        ['OPEN', 'PARTIALLY_PAID', 'DRAFT', 'PARTIAL', 'PENDING'].includes(statusStr) &&
+                        currentBal > 0;
                 });
 
-                totalSetOff += amountToApply;
-                remaining -= amountToApply;
+                const overdueBills = openBills
+                    .filter(b => isBillOverdueMap[b._id])
+                    .sort((x, y) => new Date(x.dueDate || 0).getTime() - new Date(y.dueDate || y.billDate || 0).getTime());
+
+                const nonOverduePartialBills = openBills
+                    .filter(b => !isBillOverdueMap[b._id] && String(b.status).toUpperCase().includes('PARTIAL'))
+                    .sort((x, y) => new Date(x.dueDate || 0).getTime() - new Date(y.dueDate || y.billDate || 0).getTime());
+
+                const nonOverdueOpenBills = openBills
+                    .filter(b => !isBillOverdueMap[b._id] && !String(b.status).toUpperCase().includes('PARTIAL'))
+                    .sort((x, y) => new Date(x.dueDate || 0).getTime() - new Date(y.dueDate || y.billDate || 0).getTime());
+
+                const sortedBills = [...overdueBills, ...nonOverduePartialBills, ...nonOverdueOpenBills];
+
+                let remaining = amount;
+                const setOffDetails: Array<{
+                    invoiceNumber: string;
+                    amountApplied: number;
+                    dueBalance: number;
+                    newBalance: number;
+                    newStatus: string;
+                    dueDate?: string;
+                }> = [];
+
+                let totalSetOff = 0;
+
+                for (const b of sortedBills) {
+                    if (remaining <= 0.01) break;
+                    const currentBal = runningBillBalanceMap[b._id] ?? 0;
+                    if (currentBal <= 0) continue;
+
+                    const amountToApply = Math.min(remaining, currentBal);
+                    const newBal = Math.max(0, currentBal - amountToApply);
+
+                    runningBillBalanceMap[b._id] = newBal;
+
+                    const isBOverdue = isBillOverdueMap[b._id];
+                    const newStatus = newBal <= 0 ? 'PAID' : (isBOverdue ? 'OVERDUE' : 'PARTIALLY_PAID');
+
+                    setOffDetails.push({
+                        invoiceNumber: b.billNumber,
+                        amountApplied: amountToApply,
+                        dueBalance: currentBal,
+                        newBalance: newBal,
+                        newStatus,
+                        dueDate: b.dueDate
+                    });
+
+                    totalSetOff += amountToApply;
+                    remaining -= amountToApply;
+                }
+
+                const excessAmount = Math.max(0, amount - totalSetOff);
+
+                previewsMap.set(rowIndex, {
+                    customerName: row.supplier.name || (row.supplier as any).companyName || 'Supplier',
+                    receiptAmount: amount,
+                    totalSetOff,
+                    excessAmount,
+                    setOffDetails,
+                    targetType: 'SUPPLIER'
+                });
+                return;
             }
 
-            const excessAmount = Math.max(0, amount - totalSetOff);
-
-            previewsMap.set(rowIndex, {
-                customerName: row.customer.name,
-                receiptAmount: amount,
-                totalSetOff,
-                excessAmount,
-                setOffDetails
-            });
+            previewsMap.set(rowIndex, null);
         });
 
         return previewsMap;
-    }, [rows, allInvoices]);
+    }, [rows, allInvoices, allBills]);
 
     const parseDateFlexible = (val: any): Date | null => {
         if (val === undefined || val === null) return null;
@@ -636,6 +753,118 @@ interface SetOffPreview {
         return errors;
     }, [selectedAccount, branches, allAccountingCodes, existingTxIdsSet]);
 
+    const matchCustomerHelper = useCallback((customerNameVal: string | undefined, customersList: Customer[]): Customer | undefined => {
+        if (!customerNameVal || !String(customerNameVal).trim()) return undefined;
+        const rawClean = String(customerNameVal).trim().toLowerCase();
+        const strippedClean = rawClean.replace(/[,.-]/g, ' ').replace(/\s+/g, ' ').trim();
+
+        // 1. Primary: Exact case-insensitive match
+        let found = customersList.find(c => {
+            const name = (c.name || '').toLowerCase().trim();
+            const companyName = ((c as any).companyName || '').toLowerCase().trim();
+            const displayName = ((c as any).displayName || '').toLowerCase().trim();
+            const custNum = ((c as any).customerNumber || c.customerId || '').toLowerCase().trim();
+            return (name === rawClean || companyName === rawClean || displayName === rawClean || custNum === rawClean);
+        });
+        if (found) return found;
+
+        // 2. Secondary: Substring match
+        found = customersList.find(c => {
+            const name = (c.name || '').toLowerCase().trim();
+            const companyName = ((c as any).companyName || '').toLowerCase().trim();
+            const displayName = ((c as any).displayName || '').toLowerCase().trim();
+            return (
+                (name && (name.includes(rawClean) || rawClean.includes(name))) ||
+                (companyName && (companyName.includes(rawClean) || rawClean.includes(companyName))) ||
+                (displayName && (displayName.includes(rawClean) || rawClean.includes(displayName)))
+            );
+        });
+        if (found) return found;
+
+        // 3. Tertiary: Punctuation & normalized whitespace match
+        if (strippedClean) {
+            found = customersList.find(c => {
+                const cleanCName = (c.name || '').toLowerCase().replace(/[,.-]/g, ' ').replace(/\s+/g, ' ').trim();
+                const cleanCComp = ((c as any).companyName || '').toLowerCase().replace(/[,.-]/g, ' ').replace(/\s+/g, ' ').trim();
+                const cleanCDisp = ((c as any).displayName || '').toLowerCase().replace(/[,.-]/g, ' ').replace(/\s+/g, ' ').trim();
+                return (
+                    (cleanCName && (cleanCName === strippedClean || cleanCName.includes(strippedClean) || strippedClean.includes(cleanCName))) ||
+                    (cleanCComp && (cleanCComp === strippedClean || cleanCComp.includes(strippedClean) || strippedClean.includes(cleanCComp))) ||
+                    (cleanCDisp && (cleanCDisp === strippedClean || cleanCDisp.includes(strippedClean) || strippedClean.includes(cleanCDisp)))
+                );
+            });
+            if (found) return found;
+        }
+
+        // 4. Token Word Overlap (e.g. "ARRENDADORA OLA CARS" matches "ARRENDADORA OLA CARS, S.A.")
+        const tokens = strippedClean.split(' ').filter(t => t.length > 2 && t !== 's.a' && t !== 'sa' && t !== 'inc' && t !== 'corp');
+        if (tokens.length > 0) {
+            found = customersList.find(c => {
+                const targetStr = `${c.name || ''} ${(c as any).companyName || ''} ${(c as any).displayName || ''}`.toLowerCase();
+                return tokens.every(token => targetStr.includes(token));
+            });
+            if (found) return found;
+        }
+
+        return undefined;
+    }, []);
+
+    const matchSupplierHelper = useCallback((supplierNameVal: string | undefined, suppliersList: Supplier[]): Supplier | undefined => {
+        if (!supplierNameVal || !String(supplierNameVal).trim()) return undefined;
+        const rawCleanSup = String(supplierNameVal).trim().toLowerCase();
+        const strippedCleanSup = rawCleanSup.replace(/[,.-]/g, ' ').replace(/\s+/g, ' ').trim();
+
+        let found = suppliersList.find(s => {
+            const name = (s.name || '').toLowerCase().trim();
+            const companyName = ((s as any).companyName || '').toLowerCase().trim();
+            const displayName = ((s as any).displayName || '').toLowerCase().trim();
+            const vendorNum = ((s as any).vendorNumber || '').toLowerCase().trim();
+            const supCode = ((s as any).supplierCode || '').toLowerCase().trim();
+
+            return (
+                name === rawCleanSup ||
+                companyName === rawCleanSup ||
+                displayName === rawCleanSup ||
+                vendorNum === rawCleanSup ||
+                supCode === rawCleanSup
+            );
+        });
+        if (found) return found;
+
+        found = suppliersList.find(s => {
+            const name = (s.name || '').toLowerCase().trim();
+            const companyName = ((s as any).companyName || '').toLowerCase().trim();
+            return (
+                (name && (name.includes(rawCleanSup) || rawCleanSup.includes(name))) ||
+                (companyName && (companyName.includes(rawCleanSup) || rawCleanSup.includes(companyName)))
+            );
+        });
+        if (found) return found;
+
+        if (strippedCleanSup) {
+            found = suppliersList.find(s => {
+                const cleanSName = (s.name || '').toLowerCase().replace(/[,.-]/g, ' ').replace(/\s+/g, ' ').trim();
+                const cleanSComp = ((s as any).companyName || '').toLowerCase().replace(/[,.-]/g, ' ').replace(/\s+/g, ' ').trim();
+                return (
+                    (cleanSName && (cleanSName === strippedCleanSup || cleanSName.includes(strippedCleanSup) || strippedCleanSup.includes(cleanSName))) ||
+                    (cleanSComp && (cleanSComp === strippedCleanSup || cleanSComp.includes(strippedCleanSup) || strippedCleanSup.includes(cleanSComp)))
+                );
+            });
+            if (found) return found;
+        }
+
+        const tokens = strippedCleanSup.split(' ').filter(t => t.length > 2 && t !== 's.a' && t !== 'sa' && t !== 'inc' && t !== 'corp');
+        if (tokens.length > 0) {
+            found = suppliersList.find(s => {
+                const targetStr = `${s.name || ''} ${(s as any).companyName || ''} ${(s as any).displayName || ''}`.toLowerCase();
+                return tokens.every(token => targetStr.includes(token));
+            });
+            if (found) return found;
+        }
+
+        return undefined;
+    }, []);
+
     const revalidateAndRecalculateRows = useCallback((currentRows: ParsedTransaction[], targetAccount: BankAccount | undefined) => {
         if (!currentRows || currentRows.length === 0) return [];
 
@@ -667,15 +896,25 @@ interface SetOffPreview {
             const accountsNameStr = String(accountsNameVal || '').trim();
             const matchedAccount = findAccountingCode(accountsNameStr, allAccountingCodes);
 
+            const customerNameVal = getRowVal(raw, ['customer name', 'customer_name', 'Customer Name', 'CUSTOMER NAME']);
+            const supplierNameVal = getRowVal(raw, ['supplier name', 'supplier_name', 'Supplier Name', 'SUPPLIER NAME']);
+
+            const matchedCustomer = row.customer || matchCustomerHelper(customerNameVal ? String(customerNameVal) : undefined, allCustomers);
+            const matchedSupplier = row.supplier || matchSupplierHelper(supplierNameVal ? String(supplierNameVal) : undefined, allSuppliers);
+
             return {
                 ...row,
                 "Running Balance": balanceAccum,
                 accountsName: accountsNameStr || undefined,
                 matchedAccount,
+                customer: matchedCustomer,
+                customerName: customerNameVal ? String(customerNameVal).trim() : undefined,
+                supplier: matchedSupplier,
+                supplierName: supplierNameVal ? String(supplierNameVal).trim() : undefined,
                 _rowErrors: errors
             };
         });
-    }, [validateRow, allAccountingCodes]);
+    }, [validateRow, allAccountingCodes, allCustomers, allSuppliers, matchCustomerHelper, matchSupplierHelper]);
 
     useEffect(() => {
         if (rows.length > 0 && selectedAccountId) {
@@ -683,6 +922,34 @@ interface SetOffPreview {
             setRows(prev => revalidateAndRecalculateRows(prev, targetAccount));
         }
     }, [selectedAccountId, accounts, revalidateAndRecalculateRows]);
+
+    // Targeted async API search fallback for unmatched customer names in uploaded sheet
+    useEffect(() => {
+        if (rows.length > 0) {
+            const unmatched = rows
+                .filter(r => r.customerName && !r.customer)
+                .map(r => r.customerName as string);
+
+            const uniqueUnmatched = Array.from(new Set(unmatched));
+            if (uniqueUnmatched.length > 0) {
+                uniqueUnmatched.forEach(async (nameStr) => {
+                    try {
+                        const res = await getAllCustomers({ search: nameStr, limit: 20, branch: 'ALL' });
+                        const fetched = res.data || res || [];
+                        if (Array.isArray(fetched) && fetched.length > 0) {
+                            setAllCustomers(prev => {
+                                const newMap = new Map(prev.map(c => [c._id, c]));
+                                fetched.forEach(c => newMap.set(c._id, c));
+                                return Array.from(newMap.values());
+                            });
+                        }
+                    } catch (e) {
+                        console.error("Async customer lookup failed:", e);
+                    }
+                });
+            }
+        }
+    }, [rows]);
 
     const downloadFailedRowsCSV = (failed: ParsedTransaction[], nameOfFile: string) => {
         if (!failed || failed.length === 0) return;
@@ -774,21 +1041,8 @@ interface SetOffPreview {
                     ? `${String(prefixVal).trim()}${String(numberVal).trim()}`
                     : '';
 
-                let matchedCustomer: Customer | undefined = undefined;
-                if (customerNameVal && String(customerNameVal).trim()) {
-                    const cleanName = String(customerNameVal).trim().toLowerCase();
-                    matchedCustomer = allCustomers.find(c => c.name?.toLowerCase().trim() === cleanName);
-                }
-
-                let matchedSupplier: Supplier | undefined = undefined;
-                if (supplierNameVal && String(supplierNameVal).trim()) {
-                    const cleanSupName = String(supplierNameVal).trim().toLowerCase();
-                    matchedSupplier = allSuppliers.find(s =>
-                        s.name?.toLowerCase().trim() === cleanSupName ||
-                        (s as any).companyName?.toLowerCase().trim() === cleanSupName ||
-                        (s as any).supplierCode?.toLowerCase().trim() === cleanSupName
-                    );
-                }
+                const matchedCustomer = matchCustomerHelper(customerNameVal ? String(customerNameVal) : undefined, allCustomers);
+                const matchedSupplier = matchSupplierHelper(supplierNameVal ? String(supplierNameVal) : undefined, allSuppliers);
 
                 const accountsNameVal = getRowVal(row, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
                 const accountsNameStr = String(accountsNameVal || '').trim();
@@ -1318,16 +1572,114 @@ interface SetOffPreview {
                                                                         <span>🏢</span>
                                                                         <span className="truncate max-w-[120px]">{row.supplier.name || (row.supplier as any).companyName}</span>
                                                                     </div>
+                                                                    {(row["Transaction Type"] === 'CREDIT' || (row.Credit || 0) > 0) && (
+                                                                        <div className="mt-1 space-y-1">
+                                                                            {(() => {
+                                                                                const preview = cumulativeSetOffPreviews.get(idx);
+                                                                                if (!preview) return null;
+                                                                                const isExpanded = expandedSetOffRows[idx] !== false; // default to expanded
+
+                                                                                return (
+                                                                                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 overflow-hidden transition-all max-w-[260px]">
+                                                                                        {/* Expandable/Collapsible Header Button */}
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => setExpandedSetOffRows(prev => ({ ...prev, [idx]: !isExpanded }))}
+                                                                                            className="w-full flex items-center justify-between gap-1.5 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-amber-300 hover:bg-amber-500/10 transition-colors cursor-pointer border-none bg-transparent"
+                                                                                        >
+                                                                                            <span className="flex items-center gap-1">
+                                                                                                <Zap size={9} className="text-amber-400" /> Bill Set-Off Preview ({preview.setOffDetails.length})
+                                                                                            </span>
+                                                                                            {isExpanded ? <ChevronDown size={12} className="text-amber-400" /> : <ChevronRight size={12} className="text-amber-400" />}
+                                                                                        </button>
+
+                                                                                        {/* Expandable Body */}
+                                                                                        {isExpanded && (
+                                                                                            <div className="p-2 pt-1 border-t border-amber-500/20 text-[10px] space-y-1 bg-black/20">
+                                                                                                {preview.setOffDetails.length > 0 ? (
+                                                                                                    <div className="space-y-1">
+                                                                                                        <div className="text-[9px] uppercase tracking-wider font-bold text-white/50 border-b border-amber-500/10 pb-0.5">
+                                                                                                            Bills to set off ({preview.setOffDetails.length}):
+                                                                                                        </div>
+                                                                                                        {preview.setOffDetails.map((detail: SetOffDetail, dIdx: number) => (
+                                                                                                            <div key={dIdx} className="flex justify-between items-center text-[9px] gap-1.5 p-1 rounded bg-white/5 border border-white/5">
+                                                                                                                <span className="font-bold text-amber-300 truncate max-w-[90px]">{detail.invoiceNumber}</span>
+                                                                                                                <div className="flex items-center gap-1 shrink-0 font-mono">
+                                                                                                                    <span className="text-emerald-400 font-bold">+${detail.amountApplied.toFixed(2)}</span>
+                                                                                                                    <span className={`px-1 py-0.2 rounded text-[7px] font-black uppercase ${
+                                                                                                                        detail.newStatus === 'PAID' 
+                                                                                                                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                                                                                                                            : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                                                                                                    }`}>
+                                                                                                                        {detail.newStatus}
+                                                                                                                    </span>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        ))}
+                                                                                                    </div>
+                                                                                                ) : (
+                                                                                                    <div className="text-[9px] text-amber-300 font-medium p-1">
+                                                                                                        No open vendor bills. Full payment recorded as advance.
+                                                                                                    </div>
+                                                                                                )}
+
+                                                                                                {preview.excessAmount > 0.01 && (
+                                                                                                    <div className="flex justify-between items-center text-[9px] font-bold text-[#C8E600] border-t border-amber-500/20 pt-1">
+                                                                                                        <span>Vendor Advance</span>
+                                                                                                        <span className="font-mono">${preview.excessAmount.toFixed(2)}</span>
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                );
+                                                                            })()}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             ) : row.customerName ? (
-                                                                <div className="flex items-center gap-1 text-[9px] text-rose-400/80 mt-0.5">
-                                                                    <AlertCircle size={10} />
-                                                                    <span className="truncate max-w-[120px]" title={`Customer "${row.customerName}" not found`}>{row.customerName}</span>
+                                                                <div className="flex flex-col gap-1 mt-1">
+                                                                    <div className="flex items-center gap-1 text-[9px] text-amber-400 font-bold" title={`Unmatched in preview: "${row.customerName}". Backend will auto-resolve on upload or select manually below.`}>
+                                                                        <AlertCircle size={10} />
+                                                                        <span className="truncate max-w-[120px]">{row.customerName}</span>
+                                                                    </div>
+                                                                    <select
+                                                                        className="text-[10px] py-0.5 px-1 rounded bg-black/40 border border-white/10 text-white max-w-[140px] cursor-pointer"
+                                                                        value={row.customer?._id || ''}
+                                                                        onChange={(e) => {
+                                                                            const selectedCust = allCustomers.find(c => c._id === e.target.value);
+                                                                            setRows(prev => prev.map((r, i) => i === idx ? { ...r, customer: selectedCust } : r));
+                                                                        }}
+                                                                    >
+                                                                        <option value="">-- Match Customer --</option>
+                                                                        {allCustomers.map(c => (
+                                                                            <option key={c._id} value={c._id}>
+                                                                                {c.name} { (c as any).companyName ? `(${(c as any).companyName})` : '' }
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
                                                                 </div>
                                                             ) : row.supplierName ? (
-                                                                <div className="flex items-center gap-1 text-[9px] text-rose-400/80 mt-0.5">
-                                                                    <AlertCircle size={10} />
-                                                                    <span className="truncate max-w-[120px]" title={`Supplier "${row.supplierName}" not found`}>{row.supplierName}</span>
+                                                                <div className="flex flex-col gap-1 mt-1">
+                                                                    <div className="flex items-center gap-1 text-[9px] text-amber-400 font-bold" title={`Unmatched in preview: "${row.supplierName}". Backend will auto-resolve on upload or select manually below.`}>
+                                                                        <AlertCircle size={10} />
+                                                                        <span className="truncate max-w-[120px]">{row.supplierName}</span>
+                                                                    </div>
+                                                                    <select
+                                                                        className="text-[10px] py-0.5 px-1 rounded bg-black/40 border border-white/10 text-white max-w-[140px] cursor-pointer"
+                                                                        value={row.supplier?._id || ''}
+                                                                        onChange={(e) => {
+                                                                            const selectedSup = allSuppliers.find(s => s._id === e.target.value);
+                                                                            setRows(prev => prev.map((r, i) => i === idx ? { ...r, supplier: selectedSup } : r));
+                                                                        }}
+                                                                    >
+                                                                        <option value="">-- Match Supplier --</option>
+                                                                        {allSuppliers.map(s => (
+                                                                            <option key={s._id} value={s._id}>
+                                                                                {s.name || (s as any).companyName}
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
                                                                 </div>
                                                             ) : null}
                                                         </div>

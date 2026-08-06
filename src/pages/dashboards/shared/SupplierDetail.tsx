@@ -4,7 +4,8 @@ import {
     Users, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
     RefreshCw, FileSpreadsheet,
     Download, CheckCircle2, AlertCircle, 
-    ArrowLeft, Edit2, Zap, Briefcase, Tag, ShoppingBag, Coins, X
+    ArrowLeft, Edit2, Zap, Briefcase, Tag, ShoppingBag, Coins, X,
+    Scale, Eye
 } from 'lucide-react';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -53,10 +54,11 @@ const SupplierDetail = () => {
     const [payments, setPayments] = useState<RelatedPayment[]>([]);
     const [debitNotes, setDebitNotes] = useState<any[]>([]);
     const [creditNotes, setCreditNotes] = useState<any[]>([]);
+    const [backendLedgerEntries, setBackendLedgerEntries] = useState<any[]>([]);
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [activeTab, setActiveTab] = useState<'overview' | 'pos' | 'bills' | 'payments' | 'debit_notes' | 'credit_notes' | 'ledger'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'reconciliation' | 'pos' | 'bills' | 'payments' | 'debit_notes' | 'credit_notes' | 'ledger'>('overview');
 
     // Edit Supplier Form State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -148,22 +150,24 @@ const SupplierDetail = () => {
         if (!id) return;
         setRefreshing(true);
         try {
-            const [supRes, billsRes, poRes, paymentsRes, dnRes, cnRes] = await Promise.all([
-                getSupplierById(id),
-                getAllBills({ limit: 1000 }),
-                getAllPurchaseOrders({ limit: 1000 }),
-                api.get('/api/payments-made', { params: { limit: 1000 } }),
-                api.get('/api/debit-notes', { params: { supplierId: id, limit: 1000 }, headers: { 'X-Skip-Toast': 'true' } }),
-                api.get('/api/credit-notes', { params: { supplierId: id, limit: 1000 }, headers: { 'X-Skip-Toast': 'true' } })
-            ]);
-
+            const supRes = await getSupplierById(id);
             setSupplier(supRes);
+
+            const [billsRes, poRes, paymentsRes, dnRes, cnRes, ledgerResSearch, ledgerResAll] = await Promise.all([
+                getAllBills({ limit: 1000 }).catch(() => ({ data: [] })),
+                getAllPurchaseOrders({ limit: 1000 }).catch(() => ({ data: [] })),
+                api.get('/api/payments-made', { params: { limit: 1000 } }).catch(() => ({ data: [] })),
+                api.get('/api/debit-notes', { params: { supplierId: id, limit: 1000 }, headers: { 'X-Skip-Toast': 'true' } }).catch(() => ({ data: [] })),
+                api.get('/api/credit-notes', { params: { supplierId: id, limit: 1000 }, headers: { 'X-Skip-Toast': 'true' } }).catch(() => ({ data: [] })),
+                api.get('/api/ledger', { params: { search: supRes?.name, limit: 1000 }, headers: { 'X-Skip-Toast': 'true' } }).catch(() => ({ data: [] })),
+                api.get('/api/ledger', { params: { limit: 1000 }, headers: { 'X-Skip-Toast': 'true' } }).catch(() => ({ data: [] }))
+            ]);
 
             // Filter Debit Notes for this supplier
             const dnList = dnRes.data?.data || dnRes.data || [];
             const filteredDNs = dnList.filter((dn: any) => {
                 const sId = typeof dn.supplierId === 'object' ? dn.supplierId?._id : dn.supplierId;
-                return sId === id;
+                return sId === id || dn.supplierName === supRes?.name;
             });
             setDebitNotes(filteredDNs);
 
@@ -171,7 +175,7 @@ const SupplierDetail = () => {
             const cnList = cnRes.data?.data || cnRes.data || [];
             const filteredCNs = cnList.filter((cn: any) => {
                 const sId = typeof cn.supplierId === 'object' ? cn.supplierId?._id : cn.supplierId;
-                return sId === id;
+                return sId === id || cn.supplierName === supRes?.name;
             });
             setCreditNotes(filteredCNs);
 
@@ -200,6 +204,34 @@ const SupplierDetail = () => {
                 return supId === id;
             });
             setPayments(filteredPayments);
+
+            // Filter & Deduplicate Ledger Entries for this supplier
+            const list1 = ledgerResSearch.data?.data || ledgerResSearch.data || [];
+            const list2 = ledgerResAll.data?.data || ledgerResAll.data || [];
+            const combinedLedger = [...list1, ...list2];
+
+            const map = new Map();
+            const supNameLower = (supRes?.name || '').toLowerCase();
+            const supVendorNumLower = (supRes?.vendorNumber || '').toLowerCase();
+
+            combinedLedger.forEach((l: any) => {
+                if (!l || !l._id) return;
+                const desc = (l.description || '').toLowerCase();
+                const contactName = (l.contact?.name || l.contact || '').toLowerCase();
+                const txId = (l.transactionId || '').toLowerCase();
+
+                const isMatch = (
+                    (supNameLower && (desc.includes(supNameLower) || contactName.includes(supNameLower) || txId.includes(supNameLower))) ||
+                    (supVendorNumLower && (desc.includes(supVendorNumLower) || txId.includes(supVendorNumLower))) ||
+                    (l.contact && (l.contact === id || l.contact?._id === id))
+                );
+
+                if (isMatch) {
+                    map.set(l._id, l);
+                }
+            });
+
+            setBackendLedgerEntries(Array.from(map.values()));
 
         } catch (err: any) {
             console.error('Error fetching supplier details:', err);
@@ -281,6 +313,9 @@ const SupplierDetail = () => {
         return sum + applied;
     }, 0);
 
+    const totalDebitNotesAmount = debitNotes.reduce((sum, dn) => sum + (dn.amount || 0), 0);
+    const totalCreditNotesAmount = creditNotes.reduce((sum, cn) => sum + (cn.amount || 0), 0);
+
     const outstandingLiability = bills.reduce((sum, b) => sum + (b.balanceDue || 0), 0);
     const supplierAdvanceBalance = Math.max(0, totalPaidAmount - totalAppliedToBills);
 
@@ -301,7 +336,7 @@ const SupplierDetail = () => {
                 ]} 
             />
 
-            {/* Header Section (Aligned with CustomerDetail style) */}
+            {/* Header Section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-4">
                     <button 
@@ -352,7 +387,7 @@ const SupplierDetail = () => {
                 </div>
             </div>
 
-            {/* Quick Stats Grid (4 cards aligned with CustomerDetail style) */}
+            {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <QuickStatCard 
                     label="Account Status" 
@@ -378,10 +413,11 @@ const SupplierDetail = () => {
                 />
             </div>
 
-            {/* Tab Navigation (Aligned with CustomerDetail style) */}
+            {/* Tab Navigation */}
             <div className="flex items-center gap-1 p-1.5 rounded-2xl border bg-black/20 overflow-x-auto no-scrollbar" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
                 {[
                     { id: 'overview', label: 'Overview', icon: <Users size={14} /> },
+                    { id: 'reconciliation', label: 'Balance Reconciliation', icon: <Scale size={14} /> },
                     { id: 'pos', label: 'Procurements (POs)', icon: <ShoppingBag size={14} /> },
                     { id: 'bills', label: 'Supplier Bills', icon: <FileText size={14} /> },
                     { id: 'payments', label: 'Payments & Prepayments', icon: <Coins size={14} /> },
@@ -406,6 +442,16 @@ const SupplierDetail = () => {
                                 {bills.length}
                             </span>
                         )}
+                        {tab.id === 'debit_notes' && debitNotes.length > 0 && (
+                            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/20 text-[8px]">
+                                {debitNotes.length}
+                            </span>
+                        )}
+                        {tab.id === 'credit_notes' && creditNotes.length > 0 && (
+                            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 text-[8px]">
+                                {creditNotes.length}
+                            </span>
+                        )}
                         {tab.id === 'pos' && purchaseOrders.length > 0 && (
                             <span className="ml-1 px-1.5 py-0.5 rounded-full bg-white/10 text-white/70 border border-white/10 text-[8px]">
                                 {purchaseOrders.length}
@@ -417,6 +463,7 @@ const SupplierDetail = () => {
 
             {/* Tab Content Section */}
             <div className="min-h-[400px]">
+                {/* 1. OVERVIEW TAB */}
                 {activeTab === 'overview' && (
                     <div className="space-y-6">
                         {/* Overview Tab Grid Row 1 */}
@@ -467,18 +514,27 @@ const SupplierDetail = () => {
                                 </div>
                             </SectionCard>
 
-                            {/* Balance Reconciliation */}
-                            <SectionCard title="Balance Reconciliation" icon={<DollarSign size={18} />}>
+                            {/* Balance Reconciliation Summary */}
+                            <SectionCard title="Balance Reconciliation" icon={<Scale size={18} />}>
                                 <div className="space-y-4 pt-2">
                                     <InfoRow label="Total Billed" value={`$${totalBilledAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
-                                    <InfoRow label="Total Settled" value={`$${totalAppliedToBills.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                                    <InfoRow label="Total Disbursed" value={`$${totalPaidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                                    <InfoRow label="Settled Amount" value={`$${totalAppliedToBills.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                                    <InfoRow label="Debit Notes Issued" value={`$${totalDebitNotesAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                                    <InfoRow label="Credit Notes Applied" value={`$${totalCreditNotesAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
                                     <InfoRow label="Outstanding Liability" value={`$${outstandingLiability.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
                                     <div className="pt-4 flex items-center justify-between border-t" style={{ borderColor: 'var(--border-main)' }}>
-                                        <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Advance Balance</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-dim" style={{ color: 'var(--text-dim)' }}>Advance Credit Balance</span>
                                         <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${supplierAdvanceBalance > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-white/5 text-dim border-white/10'}`}>
                                             ${supplierAdvanceBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                         </span>
                                     </div>
+                                    <button
+                                        onClick={() => setActiveTab('reconciliation')}
+                                        className="w-full mt-2 py-2 px-3 rounded-xl bg-brand-lime/10 text-brand-lime hover:bg-brand-lime/20 border border-brand-lime/20 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all cursor-pointer"
+                                    >
+                                        <Scale size={14} /> View Full Balance Reconciliation
+                                    </button>
                                 </div>
                             </SectionCard>
                         </div>
@@ -515,7 +571,7 @@ const SupplierDetail = () => {
                                 </div>
                             </SectionCard>
 
-                            {/* Custom Fields (Zoho / Fleet Integration) */}
+                            {/* Custom Fields */}
                             <SectionCard title="Custom Fields" icon={<Tag size={18} />}>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                                     <InfoRow label="CF.FLEET NO" value={supplier.cfFleetNo} />
@@ -544,7 +600,7 @@ const SupplierDetail = () => {
                             </div>
                         )}
 
-                        {/* Extra Payment Tally Alert */}
+                        {/* Prepayment Alert */}
                         {supplierAdvanceBalance > 0 ? (
                             <div className="p-5 rounded-[2rem] border flex items-start gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ background: 'rgba(200, 230, 0, 0.04)', borderColor: 'rgba(200, 230, 0, 0.2)' }}>
                                 <div className="w-10 h-10 rounded-xl bg-brand-lime/10 flex items-center justify-center shrink-0 border border-brand-lime/20">
@@ -567,7 +623,177 @@ const SupplierDetail = () => {
                     </div>
                 )}
 
-                {/* Procurements Tab */}
+                {/* 2. BALANCE RECONCILIATION TAB */}
+                {activeTab === 'reconciliation' && (
+                    <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+                        {/* Reconciliation Header Metrics */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="p-5 rounded-2xl border bg-black/20" style={{ borderColor: 'var(--border-main)' }}>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-dim block mb-1" style={{ color: 'var(--text-dim)' }}>Gross Invoiced Bills</span>
+                                <p className="text-xl font-black text-white">${fmt(totalBilledAmount)}</p>
+                                <span className="text-[9px] text-dim block mt-1" style={{ color: 'var(--text-dim)' }}>From {bills.length} vendor bills</span>
+                            </div>
+                            <div className="p-5 rounded-2xl border bg-emerald-500/5" style={{ borderColor: 'rgba(34,197,94,0.2)' }}>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 block mb-1">Total Settled Payments</span>
+                                <p className="text-xl font-black text-emerald-400">${fmt(totalAppliedToBills)}</p>
+                                <span className="text-[9px] text-emerald-500/70 block mt-1">Applied to cleared bills</span>
+                            </div>
+                            <div className="p-5 rounded-2xl border bg-amber-500/5" style={{ borderColor: 'rgba(245,158,11,0.2)' }}>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block mb-1">Debit & Credit Adjustments</span>
+                                <p className="text-xl font-black text-amber-400">${fmt(totalDebitNotesAmount + totalCreditNotesAmount)}</p>
+                                <span className="text-[9px] text-amber-500/70 block mt-1">{debitNotes.length} Debit / {creditNotes.length} Credit Notes</span>
+                            </div>
+                            <div className="p-5 rounded-2xl border bg-rose-500/5" style={{ borderColor: 'rgba(244,63,94,0.2)' }}>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-rose-400 block mb-1">Net Outstanding Liability</span>
+                                <p className="text-xl font-black text-rose-400">${fmt(outstandingLiability)}</p>
+                                <span className="text-[9px] text-rose-500/70 block mt-1">Accounts Payable Balance</span>
+                            </div>
+                        </div>
+
+                        {/* Statement Line-by-Line Reconciliation Table */}
+                        <div className="rounded-[2rem] border overflow-hidden shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
+                                <div className="flex items-center gap-2">
+                                    <Scale size={18} className="text-brand-lime" />
+                                    <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Vendor Statement Reconciliation Audit</h3>
+                                </div>
+                                <span className="text-[10px] font-bold text-dim" style={{ color: 'var(--text-dim)' }}>
+                                    Chronological Statement Log
+                                </span>
+                            </div>
+                            <div className="overflow-x-auto custom-scrollbar">
+                                <table className="w-full text-left border-collapse whitespace-nowrap">
+                                    <thead>
+                                        <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Date</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Document / Reference</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Document Type</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Billed Liability (+)</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Payments & Credits (-)</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Running Net Balance</th>
+                                            <th className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                        {(() => {
+                                            const reconEntries: Array<{
+                                                id: string;
+                                                date: Date;
+                                                refNumber: string;
+                                                type: 'BILL' | 'PAYMENT' | 'DEBIT_NOTE' | 'CREDIT_NOTE';
+                                                billedAmount: number;
+                                                paidAmount: number;
+                                                linkPath: string;
+                                            }> = [];
+
+                                            bills.forEach(b => {
+                                                reconEntries.push({
+                                                    id: b._id,
+                                                    date: new Date(b.billDate),
+                                                    refNumber: b.billNumber,
+                                                    type: 'BILL',
+                                                    billedAmount: b.totalAmount,
+                                                    paidAmount: 0,
+                                                    linkPath: `/admin/financial-admin/bills/${b._id}`
+                                                });
+                                            });
+
+                                            payments.forEach(p => {
+                                                reconEntries.push({
+                                                    id: p._id,
+                                                    date: new Date(p.paymentDate),
+                                                    refNumber: p.paymentCode,
+                                                    type: 'PAYMENT',
+                                                    billedAmount: 0,
+                                                    paidAmount: p.amount,
+                                                    linkPath: '#'
+                                                });
+                                            });
+
+                                            debitNotes.forEach(dn => {
+                                                reconEntries.push({
+                                                    id: dn._id,
+                                                    date: new Date(dn.debitNoteDate || dn.createdAt),
+                                                    refNumber: dn.debitNoteNumber,
+                                                    type: 'DEBIT_NOTE',
+                                                    billedAmount: 0,
+                                                    paidAmount: dn.amount || 0,
+                                                    linkPath: `/admin/admin/sales/debit-notes/${dn._id}`
+                                                });
+                                            });
+
+                                            creditNotes.forEach(cn => {
+                                                reconEntries.push({
+                                                    id: cn._id,
+                                                    date: new Date(cn.creditNoteDate || cn.createdAt),
+                                                    refNumber: cn.creditNoteNumber,
+                                                    type: 'CREDIT_NOTE',
+                                                    billedAmount: 0,
+                                                    paidAmount: cn.amount || 0,
+                                                    linkPath: '#'
+                                                });
+                                            });
+
+                                            reconEntries.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+                                            let runningBalance = 0;
+
+                                            if (reconEntries.length === 0) {
+                                                return <tr><td colSpan={7} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No transaction entries available for reconciliation.</td></tr>;
+                                            }
+
+                                            return reconEntries.map((item, idx) => {
+                                                runningBalance = runningBalance + item.billedAmount - item.paidAmount;
+                                                return (
+                                                    <tr key={idx} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
+                                                        <td className="px-6 py-4 text-xs font-medium text-dim" style={{ color: 'var(--text-dim)' }}>
+                                                            {item.date.toLocaleDateString()}
+                                                        </td>
+                                                        <td className="px-6 py-4 font-black text-xs text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                                                            {item.refNumber}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
+                                                                item.type === 'BILL' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                                                                item.type === 'PAYMENT' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                                                item.type === 'DEBIT_NOTE' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                                                'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                                                            }`}>
+                                                                {item.type.replace('_', ' ')}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right text-xs font-bold text-rose-400">
+                                                            {item.billedAmount > 0 ? `$${fmt(item.billedAmount)}` : '—'}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right text-xs font-bold text-emerald-400">
+                                                            {item.paidAmount > 0 ? `$${fmt(item.paidAmount)}` : '—'}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right text-xs font-black text-white">
+                                                            ${fmt(runningBalance)}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            {item.linkPath !== '#' ? (
+                                                                <button
+                                                                    onClick={() => navigate(item.linkPath)}
+                                                                    className="p-1.5 rounded-lg hover:bg-white/10 text-brand-lime transition-all cursor-pointer border-none bg-transparent"
+                                                                    title="View Detail"
+                                                                >
+                                                                    <Eye size={14} />
+                                                                </button>
+                                                            ) : '—'}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            });
+                                        })()}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 3. PROCUREMENTS TAB */}
                 {activeTab === 'pos' && (
                     <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="overflow-x-auto custom-scrollbar">
@@ -590,7 +816,7 @@ const SupplierDetail = () => {
                                                 key={po._id} 
                                                 className="hover:bg-white/[0.02] transition-all cursor-pointer" 
                                                 style={{ borderBottom: '1px solid var(--border-main)' }}
-                                                onClick={() => navigate(`/admin/financial-admin/purchase-orders/${po._id}`)}
+                                                onClick={() => navigate(`/purchase-orders/${po._id}`)}
                                             >
                                                 <td className="px-6 py-4 font-black text-xs text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{po.purchaseOrderNumber}</td>
                                                 <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(po.purchaseOrderDate).toLocaleDateString()}</td>
@@ -614,7 +840,7 @@ const SupplierDetail = () => {
                     </div>
                 )}
 
-                {/* Bills Tab */}
+                {/* 4. SUPPLIER BILLS TAB */}
                 {activeTab === 'bills' && (
                     <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="overflow-x-auto custom-scrollbar">
@@ -663,7 +889,7 @@ const SupplierDetail = () => {
                     </div>
                 )}
 
-                {/* Payments Tab */}
+                {/* 5. PAYMENTS TAB */}
                 {activeTab === 'payments' && (
                     <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="overflow-x-auto custom-scrollbar">
@@ -697,81 +923,7 @@ const SupplierDetail = () => {
                     </div>
                 )}
 
-                {/* Ledger View Tab */}
-                {activeTab === 'ledger' && (
-                    <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="overflow-x-auto custom-scrollbar">
-                            <table className="w-full text-left border-collapse whitespace-nowrap">
-                                <thead>
-                                    <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
-                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Transaction / Voucher</th>
-                                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Date</th>
-                                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Debit (Disbursed)</th>
-                                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Credit (Liability Billed)</th>
-                                        <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Running Liability Balance</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                                    {(() => {
-                                        const entries: Array<{
-                                            label: string;
-                                            date: Date;
-                                            debit: number;
-                                            credit: number;
-                                        }> = [];
-
-                                        bills.forEach(b => {
-                                            entries.push({
-                                                label: `Bill ${b.billNumber}`,
-                                                date: new Date(b.billDate),
-                                                debit: 0,
-                                                credit: b.totalAmount
-                                            });
-                                        });
-
-                                        payments.forEach(p => {
-                                            entries.push({
-                                                label: `Payment Made ${p.paymentCode}`,
-                                                date: new Date(p.paymentDate),
-                                                debit: p.amount,
-                                                credit: 0
-                                            });
-                                        });
-
-                                        entries.sort((a, b) => a.date.getTime() - b.date.getTime());
-
-                                        let runningBalance = 0;
-
-                                        if (entries.length === 0) {
-                                            return <tr><td colSpan={5} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No double-entry ledger bookings for this vendor.</td></tr>;
-                                        }
-
-                                        return entries.map((ent, idx) => {
-                                            runningBalance = runningBalance + ent.credit - ent.debit;
-                                            return (
-                                                <tr key={idx} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
-                                                    <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{ent.label}</td>
-                                                    <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{ent.date.toLocaleDateString()}</td>
-                                                    <td className="px-6 py-4 text-right text-xs font-bold text-emerald-400">
-                                                        {ent.debit > 0 ? `$${ent.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right text-xs font-bold text-rose-400">
-                                                        {ent.credit > 0 ? `$${ent.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right text-xs font-black text-orange-400">
-                                                        ${runningBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        });
-                                    })()}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-
-                {/* Debit Notes Tab */}
+                {/* 6. DEBIT NOTES TAB */}
                 {activeTab === 'debit_notes' && (
                     <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="overflow-x-auto custom-scrollbar">
@@ -820,7 +972,7 @@ const SupplierDetail = () => {
                     </div>
                 )}
 
-                {/* Credit Notes Tab */}
+                {/* 7. CREDIT NOTES TAB */}
                 {activeTab === 'credit_notes' && (
                     <div className="rounded-[2rem] border overflow-hidden animate-in slide-in-from-bottom-2 duration-300 shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="overflow-x-auto custom-scrollbar">
@@ -858,6 +1010,190 @@ const SupplierDetail = () => {
                                     )}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* 8. GENERAL LEDGER VIEW TAB */}
+                {activeTab === 'ledger' && (
+                    <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+                        {/* Ledger Header Summary Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="p-5 rounded-2xl border bg-black/20" style={{ borderColor: 'var(--border-main)' }}>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-dim block mb-1">Accounts Payable Code</span>
+                                <p className="text-base font-black text-brand-lime">2.1.01 (Accounts Payable)</p>
+                                <span className="text-[9px] text-dim block mt-1">Primary Vendor Liability Ledger</span>
+                            </div>
+                            <div className="p-5 rounded-2xl border bg-emerald-500/5" style={{ borderColor: 'rgba(34,197,94,0.2)' }}>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 block mb-1">Total Debits (Disbursed)</span>
+                                <p className="text-xl font-black text-emerald-400">${fmt(totalPaidAmount + totalDebitNotesAmount)}</p>
+                                <span className="text-[9px] text-emerald-500/70 block mt-1">Payments & Debit Adjustments</span>
+                            </div>
+                            <div className="p-5 rounded-2xl border bg-rose-500/5" style={{ borderColor: 'rgba(244,63,94,0.2)' }}>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-rose-400 block mb-1">Total Credits (Liability Billed)</span>
+                                <p className="text-xl font-black text-rose-400">${fmt(totalBilledAmount + totalCreditNotesAmount)}</p>
+                                <span className="text-[9px] text-rose-500/70 block mt-1">Invoiced Bills & Credit Notes</span>
+                            </div>
+                        </div>
+
+                        {/* Ledger Journal Table */}
+                        <div className="rounded-[2rem] border overflow-hidden shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
+                                <div className="flex items-center gap-2">
+                                    <FileSpreadsheet size={18} className="text-brand-lime" />
+                                    <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Vendor General Ledger Journal Entries</h3>
+                                </div>
+                                <span className="text-[10px] font-bold text-dim" style={{ color: 'var(--text-dim)' }}>
+                                    Double-Entry Transaction History
+                                </span>
+                            </div>
+                            <div className="overflow-x-auto custom-scrollbar">
+                                <table className="w-full text-left border-collapse whitespace-nowrap">
+                                    <thead>
+                                        <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Date</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Reference / Voucher</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Account Code & Name</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Type</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Description / Details</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Debit ($)</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Credit ($)</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Running Balance ($)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                        {(() => {
+                                            const entries: Array<{
+                                                id: string;
+                                                ref: string;
+                                                date: Date;
+                                                account: string;
+                                                type: 'DEBIT' | 'CREDIT';
+                                                description: string;
+                                                debit: number;
+                                                credit: number;
+                                            }> = [];
+
+                                            // 1. Bills
+                                            bills.forEach(b => {
+                                                entries.push({
+                                                    id: `bill-${b._id}`,
+                                                    ref: b.billNumber,
+                                                    date: new Date(b.billDate),
+                                                    account: '2.1.01 Accounts Payable',
+                                                    type: 'CREDIT',
+                                                    description: `Supplier Bill Invoiced (${b.items?.length || 0} line items)`,
+                                                    debit: 0,
+                                                    credit: b.totalAmount
+                                                });
+                                            });
+
+                                            // 2. Payments
+                                            payments.forEach(p => {
+                                                entries.push({
+                                                    id: `pmt-${p._id}`,
+                                                    ref: p.paymentCode,
+                                                    date: new Date(p.paymentDate),
+                                                    account: '1.1.02 Bank / Cash',
+                                                    type: 'DEBIT',
+                                                    description: `Payment Disbursed (${p.paymentMethod}) ${p.referenceNumber ? `Ref: ${p.referenceNumber}` : ''}`,
+                                                    debit: p.amount,
+                                                    credit: 0
+                                                });
+                                            });
+
+                                            // 3. Debit Notes
+                                            debitNotes.forEach(dn => {
+                                                entries.push({
+                                                    id: `dn-${dn._id}`,
+                                                    ref: dn.debitNoteNumber,
+                                                    date: new Date(dn.debitNoteDate || dn.createdAt),
+                                                    account: '2.1.01 Accounts Payable',
+                                                    type: 'DEBIT',
+                                                    description: `Debit Note Adjustment: ${dn.reason || 'Vendor Debit'}`,
+                                                    debit: dn.amount || 0,
+                                                    credit: 0
+                                                });
+                                            });
+
+                                            // 4. Credit Notes
+                                            creditNotes.forEach(cn => {
+                                                entries.push({
+                                                    id: `cn-${cn._id}`,
+                                                    ref: cn.creditNoteNumber,
+                                                    date: new Date(cn.creditNoteDate || cn.createdAt),
+                                                    account: '2.1.01 Accounts Payable',
+                                                    type: 'CREDIT',
+                                                    description: `Credit Note Adjustment: ${cn.reason || 'Vendor Credit'}`,
+                                                    debit: 0,
+                                                    credit: cn.amount || 0
+                                                });
+                                            });
+
+                                            // 5. Backend Ledger Entries
+                                            backendLedgerEntries.forEach(bl => {
+                                                const accCode = bl.accountingCode 
+                                                    ? `${bl.accountingCode.code || ''} ${bl.accountingCode.name || ''}` 
+                                                    : 'General Ledger';
+                                                entries.push({
+                                                    id: bl._id,
+                                                    ref: bl.transactionId || bl.voucher?.voucherNumber || 'GL-ENTRY',
+                                                    date: new Date(bl.entryDate || bl.createdAt),
+                                                    account: accCode,
+                                                    type: bl.type as 'DEBIT' | 'CREDIT',
+                                                    description: bl.description || 'System Ledger Journal Entry',
+                                                    debit: bl.type === 'DEBIT' ? (bl.amount || 0) : 0,
+                                                    credit: bl.type === 'CREDIT' ? (bl.amount || 0) : 0
+                                                });
+                                            });
+
+                                            entries.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+                                            let runningBalance = 0;
+
+                                            if (entries.length === 0) {
+                                                return <tr><td colSpan={8} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No ledger journal entries found for this vendor.</td></tr>;
+                                            }
+
+                                            return entries.map((ent, idx) => {
+                                                runningBalance = runningBalance + ent.credit - ent.debit;
+                                                return (
+                                                    <tr key={idx} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
+                                                        <td className="px-6 py-4 text-xs font-medium text-dim" style={{ color: 'var(--text-dim)' }}>
+                                                            {ent.date.toLocaleDateString()}
+                                                        </td>
+                                                        <td className="px-6 py-4 font-black text-xs text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                                                            {ent.ref}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-xs font-bold text-white">
+                                                            {ent.account}
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
+                                                                ent.type === 'DEBIT' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                                            }`}>
+                                                                {ent.type}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-xs text-dim truncate max-w-[250px]" style={{ color: 'var(--text-dim)' }}>
+                                                            {ent.description}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right text-xs font-bold text-emerald-400">
+                                                            {ent.debit > 0 ? `$${fmt(ent.debit)}` : '—'}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right text-xs font-bold text-rose-400">
+                                                            {ent.credit > 0 ? `$${fmt(ent.credit)}` : '—'}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right text-xs font-black text-orange-400">
+                                                            ${fmt(runningBalance)}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            });
+                                        })()}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -992,7 +1328,7 @@ const SupplierDetail = () => {
                                     </select>
                                 </div>
 
-                                {/* Custom Category (Conditional) */}
+                                {/* Custom Category */}
                                 {formData.category === 'Other' && (
                                     <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
                                         <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
