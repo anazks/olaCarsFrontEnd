@@ -14,6 +14,15 @@ export interface BillItem {
     description?: string;
 }
 
+export interface BillPayment {
+    _id?: string;
+    amount: number;
+    paidAt: string;
+    paymentMethod: string;
+    transactionId?: string;
+    note?: string;
+}
+
 export interface Bill {
     _id: string;
     billNumber: string;
@@ -22,11 +31,13 @@ export interface Bill {
     branch: string | Branch;
     billDate: string;
     dueDate: string;
+    paidAt?: string;
     items: BillItem[];
     totalAmount: number;
     amountPaid: number;
     balanceDue: number;
     status: BillStatus;
+    payments?: BillPayment[];
     isInclusiveTax?: boolean;
     taxId?: any;
     taxPercentage?: number;

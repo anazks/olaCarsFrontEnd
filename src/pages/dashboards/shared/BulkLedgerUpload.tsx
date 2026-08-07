@@ -249,7 +249,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
                         getAllBranches({ limit: 100 }),
                         getAllAccountingCodes({ limit: 1000 }),
                         getAllCustomers({ limit: 10000, branch: 'ALL' }),
-                        getAllSuppliers({ limit: 10000, branch: 'ALL' }),
+                        (getAllSuppliers as any)({ limit: 10000, branch: 'ALL' }),
                         getInvoices({ limit: 10000, status: 'PENDING,PARTIAL,OVERDUE', ignoreDefaultDates: true }),
                         getAllBills({ limit: 10000, status: 'OPEN,PARTIALLY_PAID,DRAFT', ignoreDefaultDates: true }).catch(() => ({ data: [] }))
                     ]);
@@ -1645,7 +1645,7 @@ interface SetOffPreview {
                                                                     </div>
                                                                     <select
                                                                         className="text-[10px] py-0.5 px-1 rounded bg-black/40 border border-white/10 text-white max-w-[140px] cursor-pointer"
-                                                                        value={row.customer?._id || ''}
+                                                                        value={(row.customer as any)?._id || ''}
                                                                         onChange={(e) => {
                                                                             const selectedCust = allCustomers.find(c => c._id === e.target.value);
                                                                             setRows(prev => prev.map((r, i) => i === idx ? { ...r, customer: selectedCust } : r));
@@ -1667,7 +1667,7 @@ interface SetOffPreview {
                                                                     </div>
                                                                     <select
                                                                         className="text-[10px] py-0.5 px-1 rounded bg-black/40 border border-white/10 text-white max-w-[140px] cursor-pointer"
-                                                                        value={row.supplier?._id || ''}
+                                                                        value={(row.supplier as any)?._id || ''}
                                                                         onChange={(e) => {
                                                                             const selectedSup = allSuppliers.find(s => s._id === e.target.value);
                                                                             setRows(prev => prev.map((r, i) => i === idx ? { ...r, supplier: selectedSup } : r));
@@ -1835,37 +1835,59 @@ interface SetOffPreview {
                             {result.setOffResults && result.setOffResults.length > 0 && (
                                 <div className="space-y-2 mt-2">
                                     <h4 className="text-[10px] uppercase tracking-widest font-black text-violet-400 flex items-center gap-1.5 px-1">
-                                        <Zap size={12} /> Auto Set-Off Summary
+                                        <Zap size={12} /> Auto Set-Off Summary ({result.setOffResults.length})
                                     </h4>
                                     <div className="border rounded-2xl overflow-hidden divide-y" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
-                                        {result.setOffResults.map((so: any, idx: number) => (
-                                            <div key={idx} className="p-3 space-y-1.5">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-xs font-bold text-main">👤 {so.customerName}</span>
-                                                    <span className="text-xs font-mono font-bold text-emerald-400">Receipt: ${so.amount?.toFixed(2)}</span>
-                                                </div>
-                                                {so.invoicesSetOff?.length > 0 ? (
-                                                    <div className="space-y-1">
-                                                        {so.invoicesSetOff.map((inv: any, invIdx: number) => (
-                                                            <div key={invIdx} className="flex justify-between items-center text-[10px] pl-4">
-                                                                <span className="text-violet-300 font-bold">{inv.invoiceNumber}</span>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-mono text-white/60">${inv.amountApplied?.toFixed(2)}</span>
-                                                                    <span className={`px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${inv.newStatus === 'PAID' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
-                                                                        {inv.newStatus}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        ))}
+                                        {result.setOffResults.map((so: any, idx: number) => {
+                                            const partyName = so.supplierName || so.customerName || 'Connected Party';
+                                            const isSupplier = Boolean(so.supplierName);
+                                            const items = isSupplier ? (so.billsSetOff || []) : (so.invoicesSetOff || []);
+
+                                            return (
+                                                <div key={idx} className="p-3.5 space-y-2">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-xs font-bold text-main flex items-center gap-1.5">
+                                                            {isSupplier ? '🏢' : '👤'} {partyName}
+                                                        </span>
+                                                        <span className={`text-xs font-mono font-bold ${isSupplier ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                                            {isSupplier ? `Vendor Payment: $${Number(so.amount || 0).toFixed(2)}` : `Customer Receipt: $${Number(so.amount || 0).toFixed(2)}`}
+                                                        </span>
                                                     </div>
-                                                ) : (
-                                                    <p className="text-[10px] text-white/40 pl-4">No unpaid invoices to set off</p>
-                                                )}
-                                                {so.excessAmount > 0.01 && (
-                                                    <p className="text-[10px] text-amber-400 pl-4">⚠️ Excess amount: ${so.excessAmount.toFixed(2)} (recorded as advance)</p>
-                                                )}
-                                            </div>
-                                        ))}
+
+                                                    {items.length > 0 ? (
+                                                        <div className="space-y-1.5 bg-black/10 dark:bg-white/5 p-2.5 rounded-xl border border-white/5">
+                                                            {items.map((item: any, itemIdx: number) => {
+                                                                const docNum = item.billNumber || item.invoiceNumber;
+                                                                const status = item.newStatus || 'PAID';
+                                                                return (
+                                                                    <div key={itemIdx} className="flex justify-between items-center text-[11px]">
+                                                                        <span className={`font-bold flex items-center gap-1 ${isSupplier ? 'text-amber-300' : 'text-violet-300'}`}>
+                                                                            {isSupplier ? '📄' : '🧾'} {docNum}
+                                                                        </span>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="font-mono text-white/70">${Number(item.amountApplied || 0).toFixed(2)}</span>
+                                                                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                                                                                {status}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-[10px] text-white/40 pl-2">
+                                                            {isSupplier ? 'No unpaid bills to set off' : 'No unpaid invoices to set off'}
+                                                        </p>
+                                                    )}
+
+                                                    {so.excessAmount > 0.01 && (
+                                                        <p className="text-[10px] text-amber-400 pl-2 flex items-center gap-1 font-medium">
+                                                            ⚠️ Excess amount: ${Number(so.excessAmount).toFixed(2)} {isSupplier ? '(recorded as advance paid to vendor)' : '(recorded as advance received from customer)'}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}

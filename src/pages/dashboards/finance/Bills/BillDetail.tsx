@@ -272,6 +272,40 @@ const BillDetail = () => {
                                 <span className="text-2xl font-black text-[#C8E600]">${bill.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>
+
+                        {/* Payment History List */}
+                        {bill.payments && bill.payments.length > 0 && (
+                            <div className="pt-6 border-t space-y-3" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-green-400">
+                                    <CreditCard size={14} /> Payment History ({bill.payments.length})
+                                </div>
+                                <div className="space-y-2.5">
+                                    {bill.payments.map((p: any, idx: number) => (
+                                        <div key={p._id || idx} className="p-3 rounded-2xl border bg-white/5 flex flex-col gap-1 text-xs" style={{ borderColor: 'var(--border-main)' }}>
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-bold text-sm text-green-400">
+                                                    +${Number(p.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                                <span className="text-[10px] opacity-70" style={{ color: 'var(--text-dim)' }}>
+                                                    {p.paidAt ? new Date(p.paidAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : ''}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-[11px]" style={{ color: 'var(--text-dim)' }}>
+                                                <span>Method: <strong className="text-white">{p.paymentMethod || 'Bank Transfer'}</strong></span>
+                                                {p.transactionId && (
+                                                    <span>Ref: <strong className="text-[#C8E600] font-mono">{p.transactionId}</strong></span>
+                                                )}
+                                            </div>
+                                            {p.note && (
+                                                <p className="text-[10px] italic mt-0.5 opacity-80" style={{ color: 'var(--text-dim)' }}>
+                                                    "{p.note}"
+                                                </p>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Quick Info */}

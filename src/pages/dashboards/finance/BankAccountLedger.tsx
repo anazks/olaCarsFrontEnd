@@ -27,7 +27,9 @@ import { getBankAccountById, type BankAccount, uploadBankStatement, recordManual
 import { type LedgerEntry } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
+import { getAllSuppliers, type Supplier } from '../../../services/supplierService';
 import { getInvoicesByCustomer, getInvoices, type Invoice } from '../../../services/invoiceService';
+import { getAllBills, type Bill } from '../../../services/billService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import * as XLSX from 'xlsx';
@@ -76,12 +78,21 @@ const BankAccountLedger = () => {
     // Change Invoice Sidebar States
     const [invoiceSidebarOpen, setInvoiceSidebarOpen] = useState(false);
     const [invoiceSidebarEntryIdx, setInvoiceSidebarEntryIdx] = useState<number | null>(null);
+    const [sidebarMode, setSidebarMode] = useState<'CUSTOMER' | 'VENDOR'>('CUSTOMER');
     const [sidebarCustomers, setSidebarCustomers] = useState<Customer[]>([]);
     const [sidebarCustomerSearch, setSidebarCustomerSearch] = useState('');
     const [sidebarSelectedCustomer, setSidebarSelectedCustomer] = useState<Customer | null>(null);
     const [sidebarInvoices, setSidebarInvoices] = useState<Invoice[]>([]);
     const [sidebarLoadingInvoices, setSidebarLoadingInvoices] = useState(false);
     const [sidebarLoadingCustomers, setSidebarLoadingCustomers] = useState(false);
+
+    // Supplier / Vendor Sidebar States
+    const [sidebarSuppliers, setSidebarSuppliers] = useState<Supplier[]>([]);
+    const [sidebarSupplierSearch, setSidebarSupplierSearch] = useState('');
+    const [sidebarSelectedSupplier, setSidebarSelectedSupplier] = useState<Supplier | null>(null);
+    const [sidebarBills, setSidebarBills] = useState<Bill[]>([]);
+    const [sidebarLoadingSuppliers, setSidebarLoadingSuppliers] = useState(false);
+    const [sidebarLoadingBills, setSidebarLoadingBills] = useState(false);
 
     // Change Amount Modal States
     const [changeAmountModalOpen, setChangeAmountModalOpen] = useState(false);
@@ -192,7 +203,14 @@ const BankAccountLedger = () => {
                             tempBankName: bank ? (bank.accountName || bank.bankName) : '',
                             invoice: matchedInvoice ? matchedInvoice._id : '',
                             originalInvoice: matchedInvoice ? matchedInvoice._id : '',
-                            customer: resolvedCustomerId
+                            customer: resolvedCustomerId || (e as any).customer,
+                            customerName: (e as any).customerName || (typeof (e as any).customer === 'object' ? (e as any).customer?.name : ''),
+                            supplier: (e as any).supplier,
+                            supplierName: (e as any).supplierName || (typeof (e as any).supplier === 'object' ? ((e as any).supplier?.name || (e as any).supplier?.companyName) : ''),
+                            contact: (e as any).contact,
+                            contactModel: (e as any).contactModel,
+                            contactName: (e as any).contactName || (typeof (e as any).contact === 'object' ? ((e as any).contact?.name || (e as any).contact?.companyName) : ''),
+                            setOffSummary: (e as any).setOffSummary
                         };
                     });
                     setEditEntries(selected);
@@ -817,22 +835,46 @@ const BankAccountLedger = () => {
         return <div className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>{description}</div>;
     };
 
-    // === Change / Link Customer Sidebar Handlers (Auto Set-off) ===
+    // === Change / Link Customer / Vendor Sidebar Handlers (Auto Set-off) ===
     const openInvoiceSidebar = async (entryIdx: number) => {
         setInvoiceSidebarEntryIdx(entryIdx);
         setInvoiceSidebarOpen(true);
         setSidebarCustomerSearch('');
+        setSidebarSupplierSearch('');
         setSidebarSelectedCustomer(null);
+        setSidebarSelectedSupplier(null);
         setSidebarInvoices([]);
-        setSidebarLoadingCustomers(true);
-        try {
-            const res = await getAllCustomers({ status: 'ACTIVE', limit: 500 });
-            setSidebarCustomers(res.data || (res as any).customers || []);
-        } catch (err) {
-            console.error('Failed to fetch customers for sidebar', err);
-            toast.error('Failed to load customers');
-        } finally {
-            setSidebarLoadingCustomers(false);
+        setSidebarBills([]);
+
+        const entry = editEntries[entryIdx];
+        const isVendor = entry.contactModel === 'Supplier' ||
+            entry.type === 'CREDIT' ||
+            Boolean(entry.supplier || entry.supplierName || (entry.setOffSummary && (entry.setOffSummary as any).bills?.length));
+
+        if (isVendor) {
+            setSidebarMode('VENDOR');
+            setSidebarLoadingSuppliers(true);
+            try {
+                const res = await getAllSuppliers({ limit: 500 });
+                setSidebarSuppliers(res.data || (res as any).suppliers || []);
+            } catch (err) {
+                console.error('Failed to fetch suppliers for sidebar', err);
+                toast.error('Failed to load suppliers');
+            } finally {
+                setSidebarLoadingSuppliers(false);
+            }
+        } else {
+            setSidebarMode('CUSTOMER');
+            setSidebarLoadingCustomers(true);
+            try {
+                const res = await getAllCustomers({ status: 'ACTIVE', limit: 500 });
+                setSidebarCustomers(res.data || (res as any).customers || []);
+            } catch (err) {
+                console.error('Failed to fetch customers for sidebar', err);
+                toast.error('Failed to load customers');
+            } finally {
+                setSidebarLoadingCustomers(false);
+            }
         }
     };
 
@@ -840,8 +882,11 @@ const BankAccountLedger = () => {
         setInvoiceSidebarOpen(false);
         setInvoiceSidebarEntryIdx(null);
         setSidebarCustomerSearch('');
+        setSidebarSupplierSearch('');
         setSidebarSelectedCustomer(null);
+        setSidebarSelectedSupplier(null);
         setSidebarInvoices([]);
+        setSidebarBills([]);
     };
 
     const handleCustomerClickForPreview = async (customer: Customer) => {
@@ -859,10 +904,97 @@ const BankAccountLedger = () => {
         }
     };
 
+    const handleSupplierClickForPreview = async (supplier: Supplier) => {
+        setSidebarSelectedSupplier(supplier);
+        setSidebarLoadingBills(true);
+        try {
+            const billsRes = await getAllBills({ supplier: supplier._id, limit: 100 });
+            const billsList = billsRes.data || (billsRes as any).bills || [];
+            const openBills = billsList.filter((b: Bill) =>
+                b.status === 'OPEN' || b.status === 'PARTIALLY_PAID' || b.status === 'DRAFT'
+            );
+            setSidebarBills(openBills);
+        } catch (err) {
+            console.error('Failed to fetch supplier bills for set-off preview', err);
+            setSidebarBills([]);
+        } finally {
+            setSidebarLoadingBills(false);
+        }
+    };
+
     const calculateSetOffSimulation = () => {
-        if (invoiceSidebarEntryIdx === null || !sidebarSelectedCustomer) return null;
+        if (invoiceSidebarEntryIdx === null) return null;
         const entry = editEntries[invoiceSidebarEntryIdx];
         const amount = entry?.amount || 0;
+
+        if (sidebarMode === 'VENDOR') {
+            if (!sidebarSelectedSupplier) return null;
+
+            const isOverdue = (bill: Bill) => {
+                if (bill.dueDate) {
+                    return new Date(bill.dueDate).getTime() < Date.now();
+                }
+                return false;
+            };
+
+            const overdueBills = sidebarBills
+                .filter(b => isOverdue(b))
+                .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+            const partialBills = sidebarBills
+                .filter(b => !isOverdue(b) && String(b.status).toUpperCase() === 'PARTIALLY_PAID')
+                .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+            const openBills = sidebarBills
+                .filter(b => !isOverdue(b) && String(b.status).toUpperCase() !== 'PARTIALLY_PAID')
+                .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+            const sortedBills = [...overdueBills, ...partialBills, ...openBills];
+
+            let remaining = amount;
+            const setOffDetails: Array<{
+                bill: Bill;
+                amountApplied: number;
+                newBalance: number;
+                newStatus: string;
+            }> = [];
+
+            let totalSetOff = 0;
+
+            for (const bill of sortedBills) {
+                if (remaining <= 0.01) break;
+                const billBalance = bill.balanceDue !== undefined ? bill.balanceDue : (bill.totalAmount - (bill.amountPaid || 0));
+                if (billBalance <= 0) continue;
+
+                const amountToApply = Math.min(remaining, billBalance);
+                const newBal = Math.max(0, billBalance - amountToApply);
+                const newStatus = newBal <= 0 ? 'PAID' : 'PARTIALLY_PAID';
+
+                setOffDetails.push({
+                    bill,
+                    amountApplied: amountToApply,
+                    newBalance: newBal,
+                    newStatus
+                });
+
+                totalSetOff += amountToApply;
+                remaining -= amountToApply;
+            }
+
+            const excessAmount = Math.max(0, amount - totalSetOff);
+
+            return {
+                type: 'VENDOR' as const,
+                amount,
+                totalSetOff,
+                excessAmount,
+                setOffDetails,
+                supplier: sidebarSelectedSupplier
+            };
+        }
+
+        // CUSTOMER Mode
+        if (!sidebarSelectedCustomer) return null;
 
         const isOverdue = (inv: any) => {
             const st = String(inv.status || '').toUpperCase();
@@ -921,6 +1053,7 @@ const BankAccountLedger = () => {
         const excessAmount = Math.max(0, amount - totalSetOff);
 
         return {
+            type: 'CUSTOMER' as const,
             amount,
             totalSetOff,
             excessAmount,
@@ -938,10 +1071,14 @@ const BankAccountLedger = () => {
         // Assign Customer for Auto Set-off
         entry.customer = customer._id;
         entry.customerName = customer.name;
-        entry.invoice = undefined; // backend will auto-assign set-off invoices
+        entry.contactModel = 'Customer';
+        entry.contactName = customer.name;
+        entry.supplier = undefined;
+        entry.supplierName = undefined;
+        entry.invoice = undefined;
 
         const simulation = calculateSetOffSimulation();
-        if (simulation) {
+        if (simulation && simulation.type === 'CUSTOMER') {
             (entry as any).setOffSummary = {
                 totalSetOff: simulation.totalSetOff,
                 invoiceCount: simulation.setOffDetails.length,
@@ -970,38 +1107,75 @@ const BankAccountLedger = () => {
         closeInvoiceSidebar();
     };
 
+    const handleSidebarSupplierSelect = (supplier: Supplier) => {
+        if (invoiceSidebarEntryIdx === null) return;
+
+        const updated = [...editEntries];
+        const entry = updated[invoiceSidebarEntryIdx];
+
+        const supplierName = supplier.name || supplier.companyName || 'Supplier';
+
+        // Assign Supplier for Auto Set-off
+        entry.supplier = supplier._id;
+        entry.supplierName = supplierName;
+        entry.contactModel = 'Supplier';
+        entry.contactName = supplierName;
+        entry.customer = undefined;
+        entry.customerName = undefined;
+        entry.invoice = undefined;
+
+        const simulation = calculateSetOffSimulation();
+        if (simulation && simulation.type === 'VENDOR') {
+            (entry as any).setOffSummary = {
+                totalSetOff: simulation.totalSetOff,
+                billCount: simulation.setOffDetails.length,
+                excessAmount: simulation.excessAmount,
+                bills: simulation.setOffDetails.map(d => ({
+                    billNumber: d.bill.billNumber,
+                    amountApplied: d.amountApplied
+                }))
+            };
+        }
+
+        // Auto-resolve offset account to Accounts Payable (code 2.1.01)
+        const apCode = allAccountingCodes.find((c: any) => {
+            const code = String(c.code || '').trim();
+            const name = String(c.name || '').toLowerCase();
+            const type = String(c.type || c.accountType || '').toLowerCase();
+            return code === '2.1.01' || type.includes('payable') || name.includes('accounts payable');
+        });
+        if (apCode) {
+            entry.accountingCode = apCode._id;
+            entry.tempAccountingCodeName = `${apCode.code} - ${apCode.name}`;
+        }
+
+        setEditEntries(updated);
+        toast.success(`Assigned ${supplierName} for automatic bill set-off`);
+        closeInvoiceSidebar();
+    };
+
     const handleUnlinkInvoice = (entryIdx: number) => {
         void handleUnlinkInvoice;
         const updated = [...editEntries];
         updated[entryIdx].invoice = undefined;
+        updated[entryIdx].bill = undefined;
         updated[entryIdx].customer = undefined;
         updated[entryIdx].customerName = undefined;
+        updated[entryIdx].supplier = undefined;
+        updated[entryIdx].supplierName = undefined;
+        updated[entryIdx].contactName = undefined;
+        updated[entryIdx].contactModel = undefined;
         (updated[entryIdx] as any).setOffSummary = undefined;
 
-        // Clear the auto-set AR code so user can pick an offset account
+        // Clear the auto-set code so user can pick an offset account
         updated[entryIdx].accountingCode = '';
         updated[entryIdx].tempAccountingCodeName = '';
 
-        // Remove invoice number from description text if present
-        const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*)/i;
-        const matchInvoice = updated[entryIdx].description.match(invoiceRegex);
-        if (matchInvoice) {
-            updated[entryIdx].description = updated[entryIdx].description.replace(matchInvoice[0], '').trim();
-            updated[entryIdx].description = updated[entryIdx].description
-                .replace(/\s*-\s*$/, '')
-                .replace(/^\s*-\s*/, '')
-                .replace(/\s{2,}/g, ' ')
-                .trim();
-        }
-
         setEditEntries(updated);
-        toast.success('Customer unlinked from transaction');
+        toast.success('Contact unlinked from transaction');
     };
 
-    const filteredSidebarCustomers = sidebarCustomers.filter(c =>
-        c.name?.toLowerCase().includes(sidebarCustomerSearch.toLowerCase()) ||
-        c.customerId?.toLowerCase().includes(sidebarCustomerSearch.toLowerCase())
-    );
+
 
     const handleBulkEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -1018,8 +1192,8 @@ const BankAccountLedger = () => {
                 return;
             }
 
-            // Skip offset account validation for invoice-connected entries (they show "Null")
-            if (!entry.invoice) {
+            // Skip offset account validation for invoice/supplier connected entries
+            if (!entry.invoice && !entry.customer && !entry.supplier && !(entry as any).bill) {
                 const hasMatchedCode = allAccountingCodes.some(c =>
                     String(c._id) === String(entry.accountingCode) ||
                     (c.name || '').toLowerCase().trim() === String(entry.accountingCode || '').toLowerCase().trim() ||
@@ -1047,14 +1221,16 @@ const BankAccountLedger = () => {
 
                 return {
                     id: entry.id,
-                    entryDate: new Date().toISOString(),
+                    entryDate: entry.entryDate ? new Date(entry.entryDate).toISOString() : new Date().toISOString(),
                     description: entry.description,
                     type: entry.type,
                     amount: entry.amount,
                     bankAccountId: entry.bankAccountId,
                     accountingCode: resolvedCodeObj ? resolvedCodeObj._id : entry.accountingCode,
                     customer: entry.customer || undefined,
-                    invoice: entry.invoice || undefined
+                    supplier: entry.supplier || undefined,
+                    invoice: entry.invoice || undefined,
+                    bill: (entry as any).bill || undefined
                 };
             });
 
@@ -1246,7 +1422,7 @@ const BankAccountLedger = () => {
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Date & Time</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider">Description</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Connected Bank</th>
-                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-64">Customer Set-off</th>
+                                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-64">Customer / Vendor</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-44">Type & Amount</th>
                                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider w-64 text-center">Edit Actions</th>
                                     </tr>
@@ -1255,19 +1431,17 @@ const BankAccountLedger = () => {
                                     {editEntries.map((entry, idx) => (
                                         <tr key={entry.id || idx} className="border-b last:border-0 hover:bg-white/5 transition-colors" style={{ borderColor: 'var(--border-main)' }}>
                                             <td className="px-6 py-4">
-                                                <div className="space-y-1">
-                                                    <input
-                                                        type="datetime-local"
-                                                        value={entry.entryDate}
-                                                        disabled
-                                                        readOnly
-                                                        className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none opacity-60 cursor-not-allowed"
-                                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                                    />
-                                                    <div className="text-[9px] font-bold text-amber-400/90 flex items-center gap-1">
-                                                        ⚡ Auto-refreshed on save
-                                                    </div>
-                                                </div>
+                                                <input
+                                                    type="datetime-local"
+                                                    value={entry.entryDate}
+                                                    onChange={e => {
+                                                        const updated = [...editEntries];
+                                                        updated[idx].entryDate = e.target.value;
+                                                        setEditEntries(updated);
+                                                    }}
+                                                    className="w-full bg-transparent border rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#C8E600]"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                />
                                             </td>
                                             <td className="px-6 py-4">
                                                 <input
@@ -1316,29 +1490,51 @@ const BankAccountLedger = () => {
                                                 </datalist>
                                             </td>
                                             <td className="px-6 py-4">
-                                                {entry.customer || entry.customerName || entry.invoice ? (
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 self-start">
-                                                            👤 {entry.customerName || 'Customer Linked'}
-                                                        </span>
-                                                        {(entry as any).setOffSummary && (
-                                                            <div className="text-[10px] space-y-0.5 opacity-90 pl-1">
-                                                                {(entry as any).setOffSummary.invoices?.map((inv: any, iIdx: number) => (
-                                                                    <div key={iIdx} className="text-emerald-400 font-bold">
-                                                                        ⚡ Set off: {inv.invoiceNumber} (${inv.amountApplied?.toFixed(2)})
-                                                                    </div>
-                                                                ))}
-                                                                {(entry as any).setOffSummary.excessAmount > 0 && (
-                                                                    <div className="text-[#C8E600] font-bold">
-                                                                        ⚡ Advance: ${(entry as any).setOffSummary.excessAmount?.toFixed(2)}
+                                                {(() => {
+                                                    const contactName = entry.contactName ||
+                                                        entry.customerName ||
+                                                        entry.supplierName ||
+                                                        entry.vendorName ||
+                                                        (typeof entry.contact === 'object' && entry.contact ? (entry.contact.name || entry.contact.companyName) : '') ||
+                                                        (typeof entry.customer === 'object' && entry.customer ? (entry.customer.name || entry.customer.companyName) : '') ||
+                                                        (typeof entry.supplier === 'object' && entry.supplier ? (entry.supplier.name || entry.supplier.companyName) : '');
+
+                                                    const isVendor = entry.contactModel === 'Supplier' || Boolean(entry.supplier || entry.supplierName || (entry.setOffSummary && entry.setOffSummary.bills?.length));
+
+                                                    if (contactName || entry.customer || entry.supplier || entry.invoice || entry.bills || entry.setOffSummary) {
+                                                        return (
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className={`px-2.5 py-1 rounded-lg text-xs font-bold self-start ${
+                                                                    isVendor
+                                                                        ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400'
+                                                                        : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                                                                }`}>
+                                                                    {isVendor ? `🏬 ${contactName || 'Vendor Linked'}` : `👤 ${contactName || 'Customer Linked'}`}
+                                                                </span>
+                                                                {(entry as any).setOffSummary && (
+                                                                    <div className="text-[10px] space-y-0.5 opacity-90 pl-1">
+                                                                        {(entry as any).setOffSummary.invoices?.map((inv: any, iIdx: number) => (
+                                                                            <div key={iIdx} className="text-emerald-400 font-bold">
+                                                                                ⚡ Set off: {inv.invoiceNumber} (${inv.amountApplied?.toFixed(2)})
+                                                                            </div>
+                                                                        ))}
+                                                                        {(entry as any).setOffSummary.bills?.map((b: any, bIdx: number) => (
+                                                                            <div key={bIdx} className="text-amber-400 font-bold">
+                                                                                ⚡ Set off: {b.billNumber} (${b.amountApplied?.toFixed(2)})
+                                                                            </div>
+                                                                        ))}
+                                                                        {(entry as any).setOffSummary.excessAmount > 0 && (
+                                                                            <div className="text-[#C8E600] font-bold">
+                                                                                ⚡ Advance: ${(entry as any).setOffSummary.excessAmount?.toFixed(2)}
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-xs opacity-50 italic">None</span>
-                                                )}
+                                                        );
+                                                    }
+                                                    return <span className="text-xs opacity-50 italic">None</span>;
+                                                })()}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="space-y-1">
@@ -1365,14 +1561,29 @@ const BankAccountLedger = () => {
                                                         <DollarSign size={13} /> Change Amount
                                                     </button>
 
-                                                    {/* Change Customer Button -> Opens Customer Sidebar Modal */}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openInvoiceSidebar(idx)}
-                                                        className="px-3 py-2 text-xs font-bold uppercase tracking-wider bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
-                                                    >
-                                                        <UserCheck size={13} /> {entry.customer || entry.customerName ? 'Change Customer' : 'Link Customer'}
-                                                    </button>
+                                                    {/* Change Customer / Change Vendor Button -> Opens Sidebar Modal */}
+                                                    {(() => {
+                                                        const isVendor = entry.contactModel === 'Supplier' || entry.type === 'CREDIT' || Boolean(entry.supplier || entry.supplierName || (entry.setOffSummary && (entry.setOffSummary as any).bills?.length));
+                                                        const isLinked = isVendor ? Boolean(entry.supplier || entry.supplierName) : Boolean(entry.customer || entry.customerName);
+
+                                                        return (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openInvoiceSidebar(idx)}
+                                                                className={`px-3 py-2 text-xs font-bold uppercase tracking-wider border rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm ${
+                                                                    isVendor
+                                                                        ? 'bg-amber-500/15 hover:bg-amber-500/30 text-amber-400 border-amber-500/30'
+                                                                        : 'bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-400 border-emerald-500/30'
+                                                                }`}
+                                                            >
+                                                                <UserCheck size={13} />
+                                                                {isLinked
+                                                                    ? (isVendor ? 'Change Vendor' : 'Change Customer')
+                                                                    : (isVendor ? 'Link Vendor' : 'Link Customer')
+                                                                }
+                                                            </button>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </td>
                                         </tr>
@@ -1531,13 +1742,70 @@ const BankAccountLedger = () => {
                 {/* CHANGE CUSTOMER SIDEBAR MODAL */}
 
                 {/* Change/Link Customer Sidebar */}
-                {invoiceSidebarOpen && (
-                    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
-                        {/* Backdrop */}
-                        <div 
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-                            onClick={closeInvoiceSidebar}
-                        />
+                {invoiceSidebarOpen && (() => {
+                    const currentActiveSidebarEntry = invoiceSidebarEntryIdx !== null ? editEntries[invoiceSidebarEntryIdx] : null;
+
+                    const currentConnectedSupplierId = currentActiveSidebarEntry ? (
+                        (typeof currentActiveSidebarEntry.supplier === 'object' && currentActiveSidebarEntry.supplier ? (currentActiveSidebarEntry.supplier as any)._id : currentActiveSidebarEntry.supplier) ||
+                        (currentActiveSidebarEntry.contactModel === 'Supplier' ? (typeof currentActiveSidebarEntry.contact === 'object' && currentActiveSidebarEntry.contact ? (currentActiveSidebarEntry.contact as any)._id : currentActiveSidebarEntry.contact) : null)
+                    ) : null;
+
+                    const currentConnectedSupplierName = currentActiveSidebarEntry ? (
+                        currentActiveSidebarEntry.supplierName ||
+                        (typeof currentActiveSidebarEntry.supplier === 'object' ? ((currentActiveSidebarEntry.supplier as any)?.name || (currentActiveSidebarEntry.supplier as any)?.companyName) : null) ||
+                        (currentActiveSidebarEntry.contactModel === 'Supplier' ? (currentActiveSidebarEntry.contactName || (typeof currentActiveSidebarEntry.contact === 'object' ? ((currentActiveSidebarEntry.contact as any)?.name || (currentActiveSidebarEntry.contact as any)?.companyName) : null)) : null)
+                    ) : null;
+
+                    const currentConnectedCustomerId = currentActiveSidebarEntry ? (
+                        (typeof currentActiveSidebarEntry.customer === 'object' && currentActiveSidebarEntry.customer ? (currentActiveSidebarEntry.customer as any)._id : currentActiveSidebarEntry.customer) ||
+                        (currentActiveSidebarEntry.contactModel === 'Customer' || !currentActiveSidebarEntry.contactModel ? (typeof currentActiveSidebarEntry.contact === 'object' && currentActiveSidebarEntry.contact ? (currentActiveSidebarEntry.contact as any)._id : currentActiveSidebarEntry.contact) : null)
+                    ) : null;
+
+                    const currentConnectedCustomerName = currentActiveSidebarEntry ? (
+                        currentActiveSidebarEntry.customerName ||
+                        (typeof currentActiveSidebarEntry.customer === 'object' ? (currentActiveSidebarEntry.customer as any)?.name : null) ||
+                        (currentActiveSidebarEntry.contactModel === 'Customer' || !currentActiveSidebarEntry.contactModel ? (currentActiveSidebarEntry.contactName || (typeof currentActiveSidebarEntry.contact === 'object' ? (currentActiveSidebarEntry.contact as any)?.name : null)) : null)
+                    ) : null;
+
+                    const filteredSidebarSuppliers = sidebarSuppliers.filter(sup => {
+                        if (currentConnectedSupplierId && String(sup._id) === String(currentConnectedSupplierId)) {
+                            return false;
+                        }
+                        if (currentConnectedSupplierName && (
+                            (sup.name || '').trim().toLowerCase() === currentConnectedSupplierName.trim().toLowerCase() ||
+                            (sup.companyName || '').trim().toLowerCase() === currentConnectedSupplierName.trim().toLowerCase()
+                        )) {
+                            return false;
+                        }
+
+                        if (!sidebarSupplierSearch.trim()) return true;
+                        const q = sidebarSupplierSearch.toLowerCase();
+                        return (sup.name || '').toLowerCase().includes(q) ||
+                            (sup.companyName || '').toLowerCase().includes(q) ||
+                            (sup.vendorNumber || '').toLowerCase().includes(q);
+                    });
+
+                    const filteredSidebarCustomers = sidebarCustomers.filter(cust => {
+                        if (currentConnectedCustomerId && String(cust._id) === String(currentConnectedCustomerId)) {
+                            return false;
+                        }
+                        if (currentConnectedCustomerName && (cust.name || '').trim().toLowerCase() === currentConnectedCustomerName.trim().toLowerCase()) {
+                            return false;
+                        }
+
+                        if (!sidebarCustomerSearch.trim()) return true;
+                        const q = sidebarCustomerSearch.toLowerCase();
+                        return (cust.name || '').toLowerCase().includes(q) ||
+                            (cust.customerId || '').toLowerCase().includes(q);
+                    });
+
+                    return (
+                        <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
+                            {/* Backdrop */}
+                            <div 
+                                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                                onClick={closeInvoiceSidebar}
+                            />
 
                         {/* Sidebar content */}
                         <div 
@@ -1559,8 +1827,8 @@ const BankAccountLedger = () => {
                             {/* Header */}
                             <div className="p-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="flex justify-between items-center">
-                                    <h3 className="text-lg font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>
-                                        Link Customer (Auto Set-off)
+                                    <h3 className="text-lg font-black uppercase tracking-wider flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                                        {sidebarMode === 'VENDOR' ? '🏬 Link Vendor (Auto Set-off)' : '👤 Link Customer (Auto Set-off)'}
                                     </h3>
                                     <button 
                                         type="button"
@@ -1590,175 +1858,346 @@ const BankAccountLedger = () => {
 
                             {/* Main Body */}
                             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                                {sidebarSelectedCustomer ? (
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between p-3 rounded-xl border bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
-                                            <div>
-                                                <div className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{sidebarSelectedCustomer.name}</div>
-                                                <div className="text-[10px] opacity-60 mt-0.5">{sidebarSelectedCustomer.customerId || 'No ID'}</div>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setSidebarSelectedCustomer(null)}
-                                                className="text-[10px] font-bold uppercase tracking-wider text-[#C8E600] hover:underline"
-                                            >
-                                                Change Customer
-                                            </button>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between items-center text-xs font-bold">
-                                                <span className="uppercase tracking-widest text-[10px]" style={{ color: 'var(--text-dim)' }}>
-                                                    Automated Set-Off Simulation
-                                                </span>
-                                                {invoiceSidebarEntryIdx !== null && (
-                                                    <span className="text-[#C8E600] font-black">
-                                                        Receipt: ${editEntries[invoiceSidebarEntryIdx]?.amount?.toFixed(2)}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {sidebarLoadingInvoices ? (
-                                                <div className="text-xs font-bold py-6 text-center" style={{ color: 'var(--text-dim)' }}>
-                                                    Loading customer invoices & calculating set-off...
+                                {sidebarMode === 'VENDOR' ? (
+                                    /* VENDOR MODE */
+                                    sidebarSelectedSupplier ? (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between p-3 rounded-xl border bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
+                                                <div>
+                                                    <div className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{sidebarSelectedSupplier.name || sidebarSelectedSupplier.companyName}</div>
+                                                    <div className="text-[10px] opacity-60 mt-0.5">{sidebarSelectedSupplier.vendorNumber || 'No ID'}</div>
                                                 </div>
-                                            ) : (() => {
-                                                const sim = calculateSetOffSimulation();
-                                                if (!sim) return null;
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSidebarSelectedSupplier(null)}
+                                                    className="text-[10px] font-bold uppercase tracking-wider text-[#C8E600] hover:underline"
+                                                >
+                                                    Change Vendor
+                                                </button>
+                                            </div>
 
-                                                return (
-                                                    <div className="space-y-3">
-                                                        {sim.setOffDetails.length > 0 ? (
-                                                            <div className="border rounded-xl p-3 space-y-2.5 bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
-                                                                <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex justify-between">
-                                                                    <span>Invoices to be Set Off ({sim.setOffDetails.length})</span>
-                                                                    <span>Applied: ${sim.totalSetOff.toFixed(2)}</span>
-                                                                </div>
-                                                                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                                                                    {sim.setOffDetails.map((detail, dIdx) => (
-                                                                        <div key={dIdx} className="p-2.5 rounded-lg border bg-black/10 dark:bg-white/5 border-white/10 text-xs space-y-1">
-                                                                            <div className="flex justify-between items-center">
-                                                                                <span className="font-bold text-[#C8E600]">{detail.invoice.invoiceNumber}</span>
-                                                                                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                                                                                    detail.newStatus === 'PAID' 
-                                                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                                                                                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                                                                                }`}>
-                                                                                    {detail.newStatus}
-                                                                                </span>
-                                                                            </div>
-                                                                            <div className="flex justify-between text-[11px] opacity-70">
-                                                                                <span>Due: ${detail.invoice.balance ?? (detail.invoice.totalAmountDue - (detail.invoice.amountPaid || 0))}</span>
-                                                                                <span className="font-semibold text-emerald-400">+${detail.amountApplied.toFixed(2)}</span>
-                                                                            </div>
-                                                                            {detail.newBalance > 0 && (
-                                                                                <div className="text-[10px] opacity-50 text-right">
-                                                                                    New Balance: ${detail.newBalance.toFixed(2)}
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between items-center text-xs font-bold">
+                                                    <span className="uppercase tracking-widest text-[10px]" style={{ color: 'var(--text-dim)' }}>
+                                                        Automated Bill Set-Off Simulation
+                                                    </span>
+                                                    {invoiceSidebarEntryIdx !== null && (
+                                                        <span className="text-[#C8E600] font-black">
+                                                            Payment: ${editEntries[invoiceSidebarEntryIdx]?.amount?.toFixed(2)}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {sidebarLoadingBills ? (
+                                                    <div className="text-xs font-bold py-6 text-center" style={{ color: 'var(--text-dim)' }}>
+                                                        Loading supplier bills & calculating set-off...
+                                                    </div>
+                                                ) : (() => {
+                                                    const sim = calculateSetOffSimulation();
+                                                    if (!sim || sim.type !== 'VENDOR') return null;
+
+                                                    return (
+                                                        <div className="space-y-3">
+                                                            {sim.setOffDetails.length > 0 ? (
+                                                                <div className="border rounded-xl p-3 space-y-2.5 bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
+                                                                    <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex justify-between">
+                                                                        <span>Bills to be Set Off ({sim.setOffDetails.length})</span>
+                                                                        <span>Applied: ${sim.totalSetOff.toFixed(2)}</span>
+                                                                    </div>
+                                                                    <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                                                                        {sim.setOffDetails.map((detail, dIdx) => (
+                                                                            <div key={dIdx} className="p-2.5 rounded-lg border bg-black/10 dark:bg-white/5 border-white/10 text-xs space-y-1">
+                                                                                <div className="flex justify-between items-center">
+                                                                                    <span className="font-bold text-[#C8E600]">{detail.bill.billNumber}</span>
+                                                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+                                                                                        detail.newStatus === 'PAID'
+                                                                                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                                                                            : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                                                                    }`}>
+                                                                                        {detail.newStatus}
+                                                                                    </span>
                                                                                 </div>
-                                                                            )}
-                                                                        </div>
-                                                                    ))}
+                                                                                <div className="flex justify-between text-[11px] opacity-70">
+                                                                                    <span>Due: ${detail.bill.balanceDue ?? (detail.bill.totalAmount - (detail.bill.amountPaid || 0))}</span>
+                                                                                    <span className="font-semibold text-amber-400">+${detail.amountApplied.toFixed(2)}</span>
+                                                                                </div>
+                                                                                {detail.newBalance > 0 && (
+                                                                                    <div className="text-[10px] opacity-50 text-right">
+                                                                                        New Balance: ${detail.newBalance.toFixed(2)}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/10 text-xs text-amber-300 space-y-1">
-                                                                <div className="font-bold flex items-center gap-1.5">
-                                                                    <Info size={14} /> No Open Invoices Found
+                                                            ) : (
+                                                                <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/10 text-xs text-amber-300 space-y-1">
+                                                                    <div className="font-bold flex items-center gap-1.5">
+                                                                        <Info size={14} /> No Open Bills Found
+                                                                    </div>
+                                                                    <p className="text-[11px] opacity-80">
+                                                                        Supplier has no open bills. The full amount will be registered as an advance payment.
+                                                                    </p>
                                                                 </div>
-                                                                <p className="text-[11px] opacity-80">
-                                                                    Customer has no open invoices. The full amount will be registered as an advance.
-                                                                </p>
-                                                            </div>
-                                                        )}
+                                                            )}
 
-                                                        {sim.excessAmount > 0 && (
-                                                            <div className="p-3 rounded-xl border border-[#C8E600]/30 bg-[#C8E600]/10 text-xs space-y-1">
-                                                                <div className="font-bold flex justify-between items-center text-[#C8E600]">
-                                                                    <span>Advance Received (2.1.02)</span>
-                                                                    <span className="text-sm font-black">${sim.excessAmount.toFixed(2)}</span>
+                                                            {sim.excessAmount > 0 && (
+                                                                <div className="p-3 rounded-xl border border-[#C8E600]/30 bg-[#C8E600]/10 text-xs space-y-1">
+                                                                    <div className="font-bold flex justify-between items-center text-[#C8E600]">
+                                                                        <span>Advance Paid (1.1.05)</span>
+                                                                        <span className="text-sm font-black">${sim.excessAmount.toFixed(2)}</span>
+                                                                    </div>
+                                                                    <p className="text-[10px] opacity-70" style={{ color: 'var(--text-main)' }}>
+                                                                        Will be routed to Account 1.1.05 Advance Paid To Supplier
+                                                                    </p>
                                                                 </div>
-                                                                <p className="text-[10px] opacity-70" style={{ color: 'var(--text-main)' }}>
-                                                                    Will be routed to Account 2.1.02 Advance Received From Customer
-                                                                </p>
-                                                            </div>
-                                                        )}
+                                                            )}
 
-                                                        <div className="pt-2 flex gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleSidebarCustomerSelect(sidebarSelectedCustomer)}
-                                                                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-[#C8E600] text-black hover:bg-[#b5cf00] transition-colors cursor-pointer text-center"
-                                                            >
-                                                                Confirm & Apply Customer Set-off
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setSidebarSelectedCustomer(null)}
-                                                                className="py-2.5 px-3 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
-                                                                style={{ color: 'var(--text-main)' }}
-                                                            >
-                                                                Back
-                                                            </button>
+                                                            <div className="pt-2 flex gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleSidebarSupplierSelect(sidebarSelectedSupplier)}
+                                                                    className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-[#C8E600] text-black hover:bg-[#b5cf00] transition-colors cursor-pointer text-center"
+                                                                >
+                                                                    Confirm & Apply Vendor Set-off
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSidebarSelectedSupplier(null)}
+                                                                    className="py-2.5 px-3 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
+                                                                    style={{ color: 'var(--text-main)' }}
+                                                                >
+                                                                    Back
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                );
-                                            })()}
+                                                    );
+                                                })()}
+                                            </div>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
-                                            Select Customer for Automated Set-off Preview
-                                        </label>
-                                        <div className="relative">
-                                            <input 
-                                                type="text"
-                                                placeholder="Search customer by name or ID..."
-                                                value={sidebarCustomerSearch}
-                                                onChange={(e) => setSidebarCustomerSearch(e.target.value)}
-                                                className="w-full bg-transparent border rounded-xl pl-10 pr-4 py-2.5 text-xs outline-none focus:border-[#C8E600]"
-                                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                            />
-                                            <Search className="absolute left-3.5 top-3 text-muted" size={14} style={{ color: 'var(--text-dim)' }} />
-                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                                Select Vendor for Automated Set-off Preview
+                                            </label>
+                                            <div className="relative">
+                                                <input 
+                                                    type="text"
+                                                    placeholder="Search vendor by name or ID..."
+                                                    value={sidebarSupplierSearch}
+                                                    onChange={(e) => setSidebarSupplierSearch(e.target.value)}
+                                                    className="w-full bg-transparent border rounded-xl pl-10 pr-4 py-2.5 text-xs outline-none focus:border-[#C8E600]"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                                <Search className="absolute left-3.5 top-3 text-muted" size={14} style={{ color: 'var(--text-dim)' }} />
+                                            </div>
 
-                                        {sidebarLoadingCustomers ? (
-                                            <div className="text-xs font-bold py-4 text-center" style={{ color: 'var(--text-dim)' }}>
-                                                Loading customers...
+                                            {sidebarLoadingSuppliers ? (
+                                                <div className="text-xs font-bold py-4 text-center" style={{ color: 'var(--text-dim)' }}>
+                                                    Loading vendors...
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
+                                                    {filteredSidebarSuppliers.length === 0 ? (
+                                                        <div className="text-xs py-4 text-center text-amber-500 font-medium">
+                                                            No active vendors found
+                                                        </div>
+                                                    ) : (
+                                                        filteredSidebarSuppliers.map(sup => (
+                                                            <button
+                                                                key={sup._id}
+                                                                type="button"
+                                                                onClick={() => handleSupplierClickForPreview(sup)}
+                                                                className="w-full text-left p-3 rounded-xl border bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all flex justify-between items-center cursor-pointer group"
+                                                                style={{ borderColor: 'var(--border-main)' }}
+                                                            >
+                                                                <div>
+                                                                    <div className="text-xs font-bold group-hover:text-[#C8E600] transition-colors" style={{ color: 'var(--text-main)' }}>{sup.name || sup.companyName}</div>
+                                                                    <div className="text-[10px] opacity-60 mt-0.5">{sup.vendorNumber || 'No ID'}</div>
+                                                                </div>
+                                                                <span className="text-[10px] font-bold text-[#C8E600] opacity-80 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                                                    Preview Set-off <ArrowDownRight size={13} />
+                                                                </span>
+                                                            </button>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                ) : (
+                                    /* CUSTOMER MODE */
+                                    sidebarSelectedCustomer ? (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between p-3 rounded-xl border bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
+                                                <div>
+                                                    <div className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{sidebarSelectedCustomer.name}</div>
+                                                    <div className="text-[10px] opacity-60 mt-0.5">{sidebarSelectedCustomer.customerId || 'No ID'}</div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSidebarSelectedCustomer(null)}
+                                                    className="text-[10px] font-bold uppercase tracking-wider text-[#C8E600] hover:underline"
+                                                >
+                                                    Change Customer
+                                                </button>
                                             </div>
-                                        ) : (
-                                            <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
-                                                {filteredSidebarCustomers.length === 0 ? (
-                                                    <div className="text-xs py-4 text-center text-amber-500 font-medium">
-                                                        No active customers found
+
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between items-center text-xs font-bold">
+                                                    <span className="uppercase tracking-widest text-[10px]" style={{ color: 'var(--text-dim)' }}>
+                                                        Automated Set-Off Simulation
+                                                    </span>
+                                                    {invoiceSidebarEntryIdx !== null && (
+                                                        <span className="text-[#C8E600] font-black">
+                                                            Receipt: ${editEntries[invoiceSidebarEntryIdx]?.amount?.toFixed(2)}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {sidebarLoadingInvoices ? (
+                                                    <div className="text-xs font-bold py-6 text-center" style={{ color: 'var(--text-dim)' }}>
+                                                        Loading customer invoices & calculating set-off...
                                                     </div>
-                                                ) : (
-                                                    filteredSidebarCustomers.map(cust => (
-                                                        <button
-                                                            key={cust._id}
-                                                            type="button"
-                                                            onClick={() => handleCustomerClickForPreview(cust)}
-                                                            className="w-full text-left p-3 rounded-xl border bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all flex justify-between items-center cursor-pointer group"
-                                                            style={{ borderColor: 'var(--border-main)' }}
-                                                        >
-                                                            <div>
-                                                                <div className="text-xs font-bold group-hover:text-[#C8E600] transition-colors" style={{ color: 'var(--text-main)' }}>{cust.name}</div>
-                                                                <div className="text-[10px] opacity-60 mt-0.5">{cust.customerId || 'No ID'}</div>
+                                                ) : (() => {
+                                                    const sim = calculateSetOffSimulation();
+                                                    if (!sim || sim.type !== 'CUSTOMER') return null;
+
+                                                    return (
+                                                        <div className="space-y-3">
+                                                            {sim.setOffDetails.length > 0 ? (
+                                                                <div className="border rounded-xl p-3 space-y-2.5 bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
+                                                                    <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex justify-between">
+                                                                        <span>Invoices to be Set Off ({sim.setOffDetails.length})</span>
+                                                                        <span>Applied: ${sim.totalSetOff.toFixed(2)}</span>
+                                                                    </div>
+                                                                    <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                                                                        {sim.setOffDetails.map((detail, dIdx) => (
+                                                                            <div key={dIdx} className="p-2.5 rounded-lg border bg-black/10 dark:bg-white/5 border-white/10 text-xs space-y-1">
+                                                                                <div className="flex justify-between items-center">
+                                                                                    <span className="font-bold text-[#C8E600]">{detail.invoice.invoiceNumber}</span>
+                                                                                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+                                                                                        detail.newStatus === 'PAID' 
+                                                                                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                                                                                            : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                                                                    }`}>
+                                                                                        {detail.newStatus}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div className="flex justify-between text-[11px] opacity-70">
+                                                                                    <span>Due: ${detail.invoice.balance ?? (detail.invoice.totalAmountDue - (detail.invoice.amountPaid || 0))}</span>
+                                                                                    <span className="font-semibold text-emerald-400">+${detail.amountApplied.toFixed(2)}</span>
+                                                                                </div>
+                                                                                {detail.newBalance > 0 && (
+                                                                                    <div className="text-[10px] opacity-50 text-right">
+                                                                                        New Balance: ${detail.newBalance.toFixed(2)}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/10 text-xs text-amber-300 space-y-1">
+                                                                    <div className="font-bold flex items-center gap-1.5">
+                                                                        <Info size={14} /> No Open Invoices Found
+                                                                    </div>
+                                                                    <p className="text-[11px] opacity-80">
+                                                                        Customer has no open invoices. The full amount will be registered as an advance.
+                                                                    </p>
+                                                                </div>
+                                                            )}
+
+                                                            {sim.excessAmount > 0 && (
+                                                                <div className="p-3 rounded-xl border border-[#C8E600]/30 bg-[#C8E600]/10 text-xs space-y-1">
+                                                                    <div className="font-bold flex justify-between items-center text-[#C8E600]">
+                                                                        <span>Advance Received (2.1.02)</span>
+                                                                        <span className="text-sm font-black">${sim.excessAmount.toFixed(2)}</span>
+                                                                    </div>
+                                                                    <p className="text-[10px] opacity-70" style={{ color: 'var(--text-main)' }}>
+                                                                        Will be routed to Account 2.1.02 Advance Received From Customer
+                                                                    </p>
+                                                                </div>
+                                                            )}
+
+                                                            <div className="pt-2 flex gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleSidebarCustomerSelect(sidebarSelectedCustomer)}
+                                                                    className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-[#C8E600] text-black hover:bg-[#b5cf00] transition-colors cursor-pointer text-center"
+                                                                >
+                                                                    Confirm & Apply Customer Set-off
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSidebarSelectedCustomer(null)}
+                                                                    className="py-2.5 px-3 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
+                                                                    style={{ color: 'var(--text-main)' }}
+                                                                >
+                                                                    Back
+                                                                </button>
                                                             </div>
-                                                            <span className="text-[10px] font-bold text-[#C8E600] opacity-80 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                                                                Preview Set-off <ArrowDownRight size={13} />
-                                                            </span>
-                                                        </button>
-                                                    ))
-                                                )}
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
-                                        )}
-                                    </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                                Select Customer for Automated Set-off Preview
+                                            </label>
+                                            <div className="relative">
+                                                <input 
+                                                    type="text"
+                                                    placeholder="Search customer by name or ID..."
+                                                    value={sidebarCustomerSearch}
+                                                    onChange={(e) => setSidebarCustomerSearch(e.target.value)}
+                                                    className="w-full bg-transparent border rounded-xl pl-10 pr-4 py-2.5 text-xs outline-none focus:border-[#C8E600]"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                                <Search className="absolute left-3.5 top-3 text-muted" size={14} style={{ color: 'var(--text-dim)' }} />
+                                            </div>
+
+                                            {sidebarLoadingCustomers ? (
+                                                <div className="text-xs font-bold py-4 text-center" style={{ color: 'var(--text-dim)' }}>
+                                                    Loading customers...
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
+                                                    {filteredSidebarCustomers.length === 0 ? (
+                                                        <div className="text-xs py-4 text-center text-amber-500 font-medium">
+                                                            No active customers found
+                                                        </div>
+                                                    ) : (
+                                                        filteredSidebarCustomers.map(cust => (
+                                                            <button
+                                                                key={cust._id}
+                                                                type="button"
+                                                                onClick={() => handleCustomerClickForPreview(cust)}
+                                                                className="w-full text-left p-3 rounded-xl border bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all flex justify-between items-center cursor-pointer group"
+                                                                style={{ borderColor: 'var(--border-main)' }}
+                                                            >
+                                                                <div>
+                                                                    <div className="text-xs font-bold group-hover:text-[#C8E600] transition-colors" style={{ color: 'var(--text-main)' }}>{cust.name}</div>
+                                                                    <div className="text-[10px] opacity-60 mt-0.5">{cust.customerId || 'No ID'}</div>
+                                                                </div>
+                                                                <span className="text-[10px] font-bold text-[#C8E600] opacity-80 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                                                                    Preview Set-off <ArrowDownRight size={13} />
+                                                                </span>
+                                                            </button>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
                                 )}
                             </div>
                         </div>
                     </div>
-                )}
+                );
+            })()}
             </div>
         );
     }
