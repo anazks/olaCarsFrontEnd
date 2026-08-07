@@ -2531,7 +2531,6 @@ const BankAccountLedger = () => {
                                         : (entry.credit || 0);
 
                                     const isSelected = selectedIds.includes(entry._id);
-                                    const isConnectedWithInvoice = isEntryConnectedWithInvoice(entry);
 
                                     return (
                                         <tr

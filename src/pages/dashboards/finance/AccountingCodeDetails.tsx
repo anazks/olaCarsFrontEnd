@@ -10,7 +10,6 @@ import {
     User,
     FileSpreadsheet,
     Info,
-    Trash2,
     Download
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -94,41 +93,6 @@ const AccountingCodeDetails = () => {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [importFile, setImportFile] = useState<File | null>(null);
     const [importing, setImporting] = useState(false);
-    const [clearing, setClearing] = useState(false);
-
-    const handleClearLedger = async () => {
-        if (!id) return;
-
-        const isBankAccount = window.location.pathname.includes('/bank-accounts/');
-        let confirmMsg = isBankAccount
-            ? `Are you sure you want to delete ALL ledger transactions for this bank account (${code?.name || 'this bank account'})?\n\nThis will permanently delete all records for this specific bank account and cannot be undone.`
-            : `Are you sure you want to delete ALL ledger transactions for this account (${code?.name || 'this account'})?\n\nThis will permanently delete all records for this specific account code and cannot be undone.`;
-
-        if (startDate || endDate) {
-            confirmMsg = isBankAccount
-                ? `Are you sure you want to delete ledger transactions for this bank account (${code?.name || 'this bank account'}) within the selected date range:\nFrom: ${startDate || 'inception'} To: ${endDate || 'present'}?\n\nThis will permanently delete only the bank entries within this period.`
-                : `Are you sure you want to delete ledger transactions for this account (${code?.name || 'this account'}) within the selected date range:\nFrom: ${startDate || 'inception'} To: ${endDate || 'present'}?\n\nThis will permanently delete only the transactions within this period.`;
-        }
-
-        const confirmDelete = window.confirm(confirmMsg);
-        if (!confirmDelete) return;
-
-        setClearing(true);
-        try {
-            const res = await clearLedgerEntriesByCode(id, startDate || undefined, endDate || undefined);
-            if (res.success) {
-                toast.success(res.message || `Successfully cleared ${res.deletedCount} entries.`);
-                setPage(1);
-                fetchData();
-            } else {
-                toast.error(res.message || 'Failed to clear ledger entries.');
-            }
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || err.message || 'Error clearing ledger entries');
-        } finally {
-            setClearing(false);
-        }
-    };
 
     const handleDownloadFilteredData = async () => {
         if (!id) return;

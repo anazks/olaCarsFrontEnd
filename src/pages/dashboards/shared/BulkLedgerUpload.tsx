@@ -150,7 +150,8 @@ const normalizeStr = (str: string) => {
 
 const findAccountingCode = (
     queryStr: string,
-    codes: AccountingCode[]
+    codes: AccountingCode[],
+    bankAccounts?: BankAccount[]
 ): AccountingCode | undefined => {
     if (!queryStr) return undefined;
     const trimmedRaw = queryStr.trim();
@@ -195,8 +196,8 @@ const findAccountingCode = (
         });
         if (match) return match;
 
-        if (accounts && accounts.length > 0) {
-            const bankMatch = accounts.find(a => {
+        if (bankAccounts && bankAccounts.length > 0) {
+            const bankMatch = bankAccounts.find((a: BankAccount) => {
                 const combined = normalizeStr(`${a.bankName || ''} ${a.accountName || ''}`);
                 return queryTokens.every(token => combined.includes(token));
             });
