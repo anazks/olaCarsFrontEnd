@@ -1319,19 +1319,6 @@ const BankAccountLedger = () => {
         });
     }, [entries, sortDirection]);
 
-    const isEntryConnectedWithInvoice = React.useCallback((entry: any): boolean => {
-        if (!entry) return false;
-        if (entry.invoice || entry.invoiceId || entry.invoiceNumber) return true;
-        if (Array.isArray(entry.invoices) && entry.invoices.length > 0) return true;
-        if (entry.setOffSummary && Array.isArray(entry.setOffSummary.invoices) && entry.setOffSummary.invoices.length > 0) return true;
-
-        if (entry.description) {
-            const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*|\b(?:invoice|inv\s*#|factura)\b)/i;
-            if (invoiceRegex.test(entry.description)) return true;
-        }
-        return false;
-    }, []);
-
     const selectableEntries = React.useMemo(() => {
         return sortedEntries;
     }, [sortedEntries]);

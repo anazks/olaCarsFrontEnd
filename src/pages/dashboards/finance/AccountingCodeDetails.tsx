@@ -15,7 +15,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
-import { getLedgerEntries, clearLedgerEntriesByCode } from '../../../services/ledgerService';
+import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
