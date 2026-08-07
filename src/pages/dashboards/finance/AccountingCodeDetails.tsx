@@ -430,23 +430,6 @@ const AccountingCodeDetails = () => {
                     </div>
                     <p className="text-sm font-mono text-white/50">Code: {code.code}</p>
                 </div>
-
-                <button
-                    onClick={handleClearLedger}
-                    disabled={clearing}
-                    className="flex items-center gap-2 px-5 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-xs font-bold uppercase tracking-wider shadow-lg hover:shadow-red-500/10 cursor-pointer"
-                >
-                    <Trash2 size={14} />
-                    {clearing 
-                        ? 'Clearing...' 
-                        : window.location.pathname.includes('/bank-accounts/')
-                            ? (startDate || endDate)
-                                ? `Delete Filtered Bank Entries (${pagination.total} entries)`
-                                : `Delete Bank Entries (${pagination.total} entries)`
-                            : (startDate || endDate)
-                                ? `Clear Filtered Ledger (${pagination.total} entries)`
-                                : `Clear All Ledger (${pagination.total} entries)`}
-                </button>
             </div>
 
             {/* Summary Statistics Cards */}

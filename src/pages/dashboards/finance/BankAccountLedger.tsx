@@ -1194,11 +1194,15 @@ const BankAccountLedger = () => {
 
             // Skip offset account validation for invoice/supplier connected entries
             if (!entry.invoice && !entry.customer && !entry.supplier && !(entry as any).bill) {
+                const normVal = (val: any) => String(val || '').replace(/\u00a0/g, ' ').replace(/[\/\\_-]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+                const rawVal = String(entry.accountingCode || '').trim();
+                const cleanEntry = normVal(entry.accountingCode);
+
                 const hasMatchedCode = allAccountingCodes.some(c =>
-                    String(c._id) === String(entry.accountingCode) ||
-                    (c.name || '').toLowerCase().trim() === String(entry.accountingCode || '').toLowerCase().trim() ||
-                    (c.code || '').toLowerCase().trim() === String(entry.accountingCode || '').toLowerCase().trim() ||
-                    `${c.code} - ${c.name}`.toLowerCase().trim() === String(entry.accountingCode || '').toLowerCase().trim()
+                    String(c._id) === rawVal ||
+                    (c.code && (c.code.trim() === rawVal || normVal(c.code) === cleanEntry)) ||
+                    (c.name && (normVal(c.name) === cleanEntry || normVal(c.name).includes(cleanEntry) || cleanEntry.includes(normVal(c.name)))) ||
+                    normVal(`${c.code || ''} ${c.name || ''}`) === cleanEntry
                 );
                 if (!hasMatchedCode) {
                     toast.error(`Row ${i + 1}: Offset Account "${entry.accountingCode || 'N/A'}" is not found in Chart of Accounts.`);
@@ -1212,11 +1216,15 @@ const BankAccountLedger = () => {
             const { bulkEditBankAccountTransactions } = await import('../../../services/bankAccountService');
 
              const updatesPayload = editEntries.map(entry => {
+                const normVal = (val: any) => String(val || '').replace(/\u00a0/g, ' ').replace(/[\/\\_-]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+                const rawVal = String(entry.accountingCode || '').trim();
+                const cleanEntry = normVal(entry.accountingCode);
+
                 const resolvedCodeObj = allAccountingCodes.find(c =>
-                    String(c._id) === String(entry.accountingCode) ||
-                    (c.name || '').toLowerCase().trim() === String(entry.accountingCode || '').toLowerCase().trim() ||
-                    (c.code || '').toLowerCase().trim() === String(entry.accountingCode || '').toLowerCase().trim() ||
-                    `${c.code} - ${c.name}`.toLowerCase().trim() === String(entry.accountingCode || '').toLowerCase().trim()
+                    String(c._id) === rawVal ||
+                    (c.code && (c.code.trim() === rawVal || normVal(c.code) === cleanEntry)) ||
+                    (c.name && (normVal(c.name) === cleanEntry || normVal(c.name).includes(cleanEntry) || cleanEntry.includes(normVal(c.name)))) ||
+                    normVal(`${c.code || ''} ${c.name || ''}`) === cleanEntry
                 );
 
                 return {
@@ -1325,8 +1333,8 @@ const BankAccountLedger = () => {
     }, []);
 
     const selectableEntries = React.useMemo(() => {
-        return sortedEntries.filter(entry => !isEntryConnectedWithInvoice(entry));
-    }, [sortedEntries, isEntryConnectedWithInvoice]);
+        return sortedEntries;
+    }, [sortedEntries]);
 
     const runningBalancesMap = React.useMemo(() => {
         const map: Record<string, number> = {};
@@ -2481,7 +2489,7 @@ const BankAccountLedger = () => {
                                                 }
                                             }}
                                             className={`rounded border-white/20 text-[#C8E600] focus:ring-[#C8E600] bg-transparent ${selectableEntries.length === 0 ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
-                                            title={selectableEntries.length === 0 ? "No selectable transactions (all are connected with invoices)" : "Select all non-invoice transactions"}
+                                            title={selectableEntries.length === 0 ? "No transactions to select" : "Select all transactions"}
                                         />
                                     </th>
                                     <th
@@ -2538,18 +2546,15 @@ const BankAccountLedger = () => {
                                             <td className="px-6 py-4 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
                                                 <input
                                                     type="checkbox"
-                                                    checked={isSelected && !isConnectedWithInvoice}
-                                                    disabled={isConnectedWithInvoice}
+                                                    checked={isSelected}
                                                     onChange={(e) => {
-                                                        if (isConnectedWithInvoice) return;
                                                         if (e.target.checked) {
                                                             setSelectedIds(prev => [...prev, entry._id]);
                                                         } else {
                                                             setSelectedIds(prev => prev.filter(id => id !== entry._id));
                                                         }
                                                     }}
-                                                    className={`rounded border-white/20 text-[#C8E600] focus:ring-[#C8E600] bg-transparent ${isConnectedWithInvoice ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
-                                                    title={isConnectedWithInvoice ? "Transactions connected with invoices cannot be selected" : ""}
+                                                    className="rounded border-white/20 text-[#C8E600] focus:ring-[#C8E600] bg-transparent cursor-pointer"
                                                 />
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">

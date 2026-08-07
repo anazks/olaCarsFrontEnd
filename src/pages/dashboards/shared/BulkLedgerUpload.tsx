@@ -42,7 +42,7 @@ interface ParsedTransaction {
 }
 
 const TEMPLATE_HEADERS = [
-    'DATE', 'PREFIX', 'NUMBER', 'BANK NAME', 'ACCOUNTS NAME', 'RECEIPT', 'PAYMENT', 'DESCRIPTION', 'REMARKS', 'BRANCH', 'CUSTOMER NAME', 'SUPPLIER NAME'
+    'DATE', 'PREFIX', 'NUMBER', 'BANK NAME', 'ACCOUNTS NAME', 'RECEIPT', 'PAYMENT', 'DESCRIPTION', 'REMARKS', 'BRANCH', 'DRIVER NAME', 'SUPPLIER NAME', 'CUSTOMER NAME'
 ];
 
 const SAMPLE_ROWS = [
@@ -54,11 +54,12 @@ const SAMPLE_ROWS = [
         'ACCOUNTS NAME': 'Accounts Receivable',
         RECEIPT: 100.00,
         PAYMENT: 0.00,
-        DESCRIPTION: 'ACH - Customer Receipt',
-        REMARKS: 'Invoice Payment Receipt',
+        DESCRIPTION: 'ACH - Driver Weekly Payment',
+        REMARKS: 'Weekly Lease Settlement',
         BRANCH: 'HEAD OFFICE',
-        'CUSTOMER NAME': 'Jessica Soto',
-        'SUPPLIER NAME': ''
+        'DRIVER NAME': 'Jessica Soto',
+        'SUPPLIER NAME': '',
+        'CUSTOMER NAME': ''
     },
     {
         DATE: '02-06-2026',
@@ -71,8 +72,24 @@ const SAMPLE_ROWS = [
         DESCRIPTION: 'Vendor Payment - Spare Parts',
         REMARKS: 'Supplier Bill Settlement',
         BRANCH: 'HEAD OFFICE',
-        'CUSTOMER NAME': '',
-        'SUPPLIER NAME': 'Auto Parts Ltd'
+        'DRIVER NAME': '',
+        'SUPPLIER NAME': 'Auto Parts Ltd',
+        'CUSTOMER NAME': ''
+    },
+    {
+        DATE: '03-06-2026',
+        PREFIX: '2026',
+        NUMBER: '0000003',
+        'BANK NAME': 'Banco General AH 1601',
+        'ACCOUNTS NAME': 'Accounts Receivable',
+        RECEIPT: 500.00,
+        PAYMENT: 0.00,
+        DESCRIPTION: 'Customer ACH Deposit',
+        REMARKS: 'Corporate Direct Deposit',
+        BRANCH: 'HEAD OFFICE',
+        'DRIVER NAME': '',
+        'SUPPLIER NAME': '',
+        'CUSTOMER NAME': 'Rodriguez Transport S.A.'
     }
 ];
 
@@ -121,27 +138,79 @@ const parseSheetToJSON = (ws: XLSX.WorkSheet): any[] => {
     return XLSX.utils.sheet_to_json(ws);
 };
 
-const findAccountingCode = (queryStr: string, codes: AccountingCode[]): AccountingCode | undefined => {
+const normalizeStr = (str: string) => {
+    if (!str) return '';
+    return str
+        .replace(/\u00a0/g, ' ')
+        .replace(/[\/\\_-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+};
+
+const findAccountingCode = (
+    queryStr: string,
+    codes: AccountingCode[]
+): AccountingCode | undefined => {
     if (!queryStr) return undefined;
-    const cleanQuery = queryStr.trim().toLowerCase();
-    
-    // 1. Exact match on code
-    let match = codes.find(c => c.code === queryStr.trim());
-    if (match) return match;
-    
-    // 2. Exact match on name
-    match = codes.find(c => c.name.toLowerCase().trim() === cleanQuery);
-    if (match) return match;
-    
-    // 3. Partial match: if queryStr is a substring of the account name
-    match = codes.find(c => c.name.toLowerCase().includes(cleanQuery));
-    if (match) return match;
-    
-    // 4. Partial match: if the account name is a substring of queryStr
-    match = codes.find(c => cleanQuery.includes(c.name.toLowerCase().trim()));
+    const trimmedRaw = queryStr.trim();
+    const cleanQuery = normalizeStr(queryStr);
+    if (!cleanQuery) return undefined;
+
+    // 1. Direct match on _id
+    let match = codes.find(c => String(c._id) === trimmedRaw);
     if (match) return match;
 
-    // 5. Intelligent translation/keyword match for common heads
+    // 2. Direct match on code (e.g. "1.1.02-1" or "1.1.02.1")
+    match = codes.find(c => c.code && (c.code.trim() === trimmedRaw || normalizeStr(c.code) === cleanQuery));
+    if (match) return match;
+
+    // 3. Exact normalized match on AccountingCode name
+    match = codes.find(c => c.name && normalizeStr(c.name) === cleanQuery);
+    if (match) return match;
+
+    // 4. Check formatted strings like "code - name" or "name (code)"
+    match = codes.find(c => {
+        const formatted1 = normalizeStr(`${c.code || ''} ${c.name || ''}`);
+        const formatted2 = normalizeStr(`${c.name || ''} ${c.code || ''}`);
+        return formatted1 === cleanQuery || formatted2 === cleanQuery;
+    });
+    if (match) return match;
+
+    // 6. Substring match: if cleanQuery is in account name or account name is in cleanQuery
+    match = codes.find(c => {
+        if (!c.name) return false;
+        const normName = normalizeStr(c.name);
+        return normName.length > 3 && (normName.includes(cleanQuery) || cleanQuery.includes(normName));
+    });
+    if (match) return match;
+
+    // 7. Token/Word similarity matching (e.g. "Banco", "General", "AH", "1601")
+    const queryTokens = cleanQuery.split(' ').filter(t => t.length > 0);
+    if (queryTokens.length > 1) {
+        match = codes.find(c => {
+            if (!c.name) return false;
+            const normName = normalizeStr(c.name);
+            return queryTokens.every(token => normName.includes(token));
+        });
+        if (match) return match;
+
+        if (accounts && accounts.length > 0) {
+            const bankMatch = accounts.find(a => {
+                const combined = normalizeStr(`${a.bankName || ''} ${a.accountName || ''}`);
+                return queryTokens.every(token => combined.includes(token));
+            });
+            if (bankMatch && bankMatch.accountingCode) {
+                const accCodeId = typeof bankMatch.accountingCode === 'object'
+                    ? String((bankMatch.accountingCode as any)._id || (bankMatch.accountingCode as any).id)
+                    : String(bankMatch.accountingCode);
+                const codeFromBank = codes.find(c => String(c._id) === accCodeId);
+                if (codeFromBank) return codeFromBank;
+            }
+        }
+    }
+
+    // 8. Intelligent translation/keyword match for common heads
     if (cleanQuery.includes("receivable") || cleanQuery.includes("cobrar")) {
         match = codes.find(c => c.code === "1.1.03");
         if (match) return match;
@@ -150,7 +219,7 @@ const findAccountingCode = (queryStr: string, codes: AccountingCode[]): Accounti
         match = codes.find(c => c.code === "2.1.01");
         if (match) return match;
     }
-    
+
     return undefined;
 };
 
@@ -718,10 +787,13 @@ interface SetOffPreview {
             errors.push('Row cannot have both Receipt and Payment');
         }
 
-        const customerNameVal = getRowVal(row, ['customer name', 'customer_name', 'Customer Name', 'CUSTOMER NAME']);
+        const driverNameVal = getRowVal(row, ['driver name', 'driver_name', 'Driver Name', 'DRIVER NAME']);
         const supplierNameVal = getRowVal(row, ['supplier name', 'supplier_name', 'Supplier Name', 'SUPPLIER NAME']);
-        if (customerNameVal && String(customerNameVal).trim() && supplierNameVal && String(supplierNameVal).trim()) {
-            errors.push('Row cannot have both Customer Name and Supplier Name filled simultaneously');
+        const customerNameVal = getRowVal(row, ['customer name', 'customer_name', 'Customer Name', 'CUSTOMER NAME']);
+
+        const filledEntities = [driverNameVal, supplierNameVal, customerNameVal].filter(v => v && String(v).trim()).length;
+        if (filledEntities > 1) {
+            errors.push('Row cannot have more than one entity (Driver Name, Supplier Name, Customer Name) filled simultaneously');
         }
 
         const branchVal = getRowVal(row, ['branch', 'Branch', 'BRANCH']);
@@ -896,10 +968,14 @@ interface SetOffPreview {
             const accountsNameStr = String(accountsNameVal || '').trim();
             const matchedAccount = findAccountingCode(accountsNameStr, allAccountingCodes);
 
-            const customerNameVal = getRowVal(raw, ['customer name', 'customer_name', 'Customer Name', 'CUSTOMER NAME']);
+            const driverNameVal = getRowVal(raw, ['driver name', 'driver_name', 'Driver Name', 'DRIVER NAME']);
             const supplierNameVal = getRowVal(raw, ['supplier name', 'supplier_name', 'Supplier Name', 'SUPPLIER NAME']);
+            const customerNameVal = getRowVal(raw, ['customer name', 'customer_name', 'Customer Name', 'CUSTOMER NAME']);
 
-            const matchedCustomer = row.customer || matchCustomerHelper(customerNameVal ? String(customerNameVal) : undefined, allCustomers);
+            const isDriver = Boolean(driverNameVal && String(driverNameVal).trim());
+            const isCustomer = Boolean(customerNameVal && String(customerNameVal).trim() && !isDriver);
+
+            const matchedCustomer = row.customer || matchCustomerHelper(driverNameVal ? String(driverNameVal) : (customerNameVal ? String(customerNameVal) : undefined), allCustomers);
             const matchedSupplier = row.supplier || matchSupplierHelper(supplierNameVal ? String(supplierNameVal) : undefined, allSuppliers);
 
             return {
@@ -908,7 +984,10 @@ interface SetOffPreview {
                 accountsName: accountsNameStr || undefined,
                 matchedAccount,
                 customer: matchedCustomer,
+                driverName: driverNameVal ? String(driverNameVal).trim() : undefined,
                 customerName: customerNameVal ? String(customerNameVal).trim() : undefined,
+                isDriver,
+                isCustomer,
                 supplier: matchedSupplier,
                 supplierName: supplierNameVal ? String(supplierNameVal).trim() : undefined,
                 _rowErrors: errors
@@ -954,7 +1033,7 @@ interface SetOffPreview {
     const downloadFailedRowsCSV = (failed: ParsedTransaction[], nameOfFile: string) => {
         if (!failed || failed.length === 0) return;
 
-        const csvHeaders = ["DATE", "PREFIX", "NUMBER", "BANK NAME", "SUB ACCOUNT", "PARENT ACCOUNT", "RECEIPT", "PAYMENT", "DESCRIPTION", "REMARKS", "BRANCH", "CUSTOMER NAME", "SUPPLIER NAME", "Errors"];
+        const csvHeaders = ["DATE", "PREFIX", "NUMBER", "BANK NAME", "SUB ACCOUNT", "PARENT ACCOUNT", "RECEIPT", "PAYMENT", "DESCRIPTION", "REMARKS", "BRANCH", "DRIVER NAME", "SUPPLIER NAME", "CUSTOMER NAME", "Errors"];
         const csvRows = failed.map(r => {
             const raw = r._rawRow || {};
             return [
@@ -969,8 +1048,9 @@ interface SetOffPreview {
                 `"${String(getRowVal(raw, ['description', 'Description', 'DESCRIPTION']) || '').replace(/"/g, '""')}"`,
                 `"${String(getRowVal(raw, ['remarks', 'Remarks', 'REMARKS']) || '').replace(/"/g, '""')}"`,
                 `"${String(getRowVal(raw, ['branch', 'Branch', 'BRANCH']) || '').replace(/"/g, '""')}"`,
-                `"${String(getRowVal(raw, ['customer name', 'customer_name', 'Customer Name', 'CUSTOMER NAME']) || '').replace(/"/g, '""')}"`,
+                `"${String(getRowVal(raw, ['driver name', 'driver_name', 'Driver Name', 'DRIVER NAME']) || '').replace(/"/g, '""')}"`,
                 `"${String(getRowVal(raw, ['supplier name', 'supplier_name', 'Supplier Name', 'SUPPLIER NAME']) || '').replace(/"/g, '""')}"`,
+                `"${String(getRowVal(raw, ['customer name', 'customer_name', 'Customer Name', 'CUSTOMER NAME']) || '').replace(/"/g, '""')}"`,
                 `"${r._rowErrors.join("; ").replace(/"/g, '""')}"`
             ];
         });
@@ -1012,8 +1092,15 @@ interface SetOffPreview {
                 const rawPayment = getRowVal(row, ['payment', 'Payment', 'PAYMENT']);
                 const descVal = getRowVal(row, ['description', 'Description', 'DESCRIPTION']) || '';
                 const remarksVal = getRowVal(row, ['remarks', 'Remarks', 'REMARKS']) || '';
-                const customerNameVal = getRowVal(row, ['customer name', 'customer_name', 'Customer Name', 'CUSTOMER NAME']);
+                const driverNameVal = getRowVal(row, ['driver name', 'driver_name', 'Driver Name', 'DRIVER NAME']);
                 const supplierNameVal = getRowVal(row, ['supplier name', 'supplier_name', 'Supplier Name', 'SUPPLIER NAME']);
+                const customerNameVal = getRowVal(row, ['customer name', 'customer_name', 'Customer Name', 'CUSTOMER NAME']);
+
+                const isDriver = Boolean(driverNameVal && String(driverNameVal).trim());
+                const isCustomer = Boolean(customerNameVal && String(customerNameVal).trim() && !isDriver);
+
+                const matchedCustomer = matchCustomerHelper(driverNameVal ? String(driverNameVal) : (customerNameVal ? String(customerNameVal) : undefined), allCustomers);
+                const matchedSupplier = matchSupplierHelper(supplierNameVal ? String(supplierNameVal) : undefined, allSuppliers);
 
                 const receiptVal = cleanNumber(rawReceipt);
                 const paymentVal = cleanNumber(rawPayment);
@@ -1041,9 +1128,6 @@ interface SetOffPreview {
                     ? `${String(prefixVal).trim()}${String(numberVal).trim()}`
                     : '';
 
-                const matchedCustomer = matchCustomerHelper(customerNameVal ? String(customerNameVal) : undefined, allCustomers);
-                const matchedSupplier = matchSupplierHelper(supplierNameVal ? String(supplierNameVal) : undefined, allSuppliers);
-
                 const accountsNameVal = getRowVal(row, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
                 const accountsNameStr = String(accountsNameVal || '').trim();
                 const matchedAccount = findAccountingCode(accountsNameStr, allAccountingCodes);
@@ -1066,7 +1150,10 @@ interface SetOffPreview {
                     Amount: amountVal,
                     transactionId: combinedTxId || undefined,
                     customer: matchedCustomer,
+                    driverName: driverNameVal ? String(driverNameVal).trim() : undefined,
                     customerName: customerNameVal ? String(customerNameVal).trim() : undefined,
+                    isDriver,
+                    isCustomer,
                     supplier: matchedSupplier,
                     supplierName: supplierNameVal ? String(supplierNameVal).trim() : undefined,
 
@@ -1140,6 +1227,9 @@ interface SetOffPreview {
                     }
                     if (row.supplier?._id) {
                         rest.supplierId = row.supplier._id;
+                    }
+                    if (row.driverName) {
+                        rest['DRIVER NAME'] = row.driverName;
                     }
                     if (row.customerName) {
                         rest['CUSTOMER NAME'] = row.customerName;
@@ -1494,14 +1584,17 @@ interface SetOffPreview {
                                                                 <span className="text-white/30 text-xs px-2">—</span>
                                                             )}
 
-                                                            {/* Customer / Supplier / Invoice context sub-info */}
+                                                            {/* Customer / Driver / Supplier context sub-info */}
                                                             {row.customer ? (
                                                                 <div className="flex flex-col gap-0.5 mt-0.5 border-t border-white/5 pt-0.5">
                                                                     <div className="flex items-center gap-1 text-[10px] text-dim">
-                                                                        <span>👤</span>
+                                                                        <span>{row.isDriver ? '🏎️' : '👤'}</span>
                                                                         <span className="truncate max-w-[120px]">{row.customer.name}</span>
+                                                                        {row.isCustomer && (
+                                                                            <span className="text-[8px] bg-blue-500/20 text-blue-300 px-1 py-0.2 rounded font-mono">No Auto Set-Off</span>
+                                                                        )}
                                                                     </div>
-                                                                    {row["Transaction Type"] === 'DEBIT' && (
+                                                                    {row.isDriver && row["Transaction Type"] === 'DEBIT' && (
                                                                         <div className="mt-1 space-y-1">
                                                                             {(() => {
                                                                                 const preview = cumulativeSetOffPreviews.get(idx);
