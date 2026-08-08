@@ -91,6 +91,28 @@ export const bulkEditBankAccountTransactions = async (id: string, updates: any[]
     return response.data;
 };
 
+export const bulkEditBankTransactions = bulkEditBankAccountTransactions;
+
+export const updateCustomerTransactionAmount = async (transactionId: string, data: { amount: number; notes?: string; entryDate?: string }) => {
+    const response = await api.put(`/api/bank-accounts/transactions/${transactionId}/customer-amount`, data);
+    return response.data;
+};
+
+export const updateCustomerContact = async (transactionId: string, data: { newCustomerId: string }) => {
+    const response = await api.put(`/api/bank-accounts/transactions/${transactionId}/customer-contact`, data);
+    return response.data;
+};
+
+export const updateVendorTransactionAmount = async (transactionId: string, data: { amount: number; notes?: string; entryDate?: string }) => {
+    const response = await api.put(`/api/bank-accounts/transactions/${transactionId}/vendor-amount`, data);
+    return response.data;
+};
+
+export const updateVendorContact = async (transactionId: string, data: { newSupplierId: string }) => {
+    const response = await api.put(`/api/bank-accounts/transactions/${transactionId}/vendor-contact`, data);
+    return response.data;
+};
+
 export const downloadBankAccountLedgerPdf = async (id: string, params?: any) => {
     const response = await api.get(`/api/bank-accounts/${id}/ledger/pdf`, {
         params,

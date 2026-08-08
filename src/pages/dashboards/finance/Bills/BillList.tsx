@@ -543,25 +543,25 @@ const BillList = () => {
                                             <td className="py-4 px-5">
                                                 <div className="flex items-center gap-1.5">
                                                     <Calendar size={12} className="opacity-40" />
-                                                    {new Date(bill.billDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    {bill.billDate ? new Date(bill.billDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                                                 </div>
                                             </td>
                                             <td className="py-4 px-5">
                                                 <div className="flex items-center gap-1.5">
                                                     <Calendar size={12} className="opacity-40" />
-                                                    {new Date(bill.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    {bill.dueDate ? new Date(bill.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                                                 </div>
                                             </td>
                                             <td className="py-4 px-5 text-right font-black text-sm">
-                                                ${bill.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                ${(bill.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="py-4 px-5 text-right font-black text-sm text-[#C8E600]">
-                                                ${bill.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                ${(bill.balanceDue ?? bill.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="py-4 px-5 text-center">
                                                 <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border"
                                                     style={{ background: s.bg, color: s.text, borderColor: s.text + '33' }}>
-                                                    {s.icon} {bill.status.replace('_', ' ')}
+                                                    {s.icon} {(bill.status || 'OPEN').replace('_', ' ')}
                                                 </div>
                                             </td>
                                             <td className="py-4 px-5 text-center" onClick={(e) => e.stopPropagation()}>

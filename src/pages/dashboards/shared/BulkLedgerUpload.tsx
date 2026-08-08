@@ -90,6 +90,21 @@ const SAMPLE_ROWS = [
         'DRIVER NAME': '',
         'SUPPLIER NAME': '',
         'CUSTOMER NAME': 'Rodriguez Transport S.A.'
+    },
+    {
+        DATE: '04-06-2026',
+        PREFIX: '2026',
+        NUMBER: '0000004',
+        'BANK NAME': 'Banco General AH  1601',
+        'ACCOUNTS NAME': 'Banco General CT  7905',
+        RECEIPT: 0.00,
+        PAYMENT: 1000.00,
+        DESCRIPTION: 'Inter-Bank Transfer to Banco General CT  7905',
+        REMARKS: 'Internal Funds Transfer between Company Accounts',
+        BRANCH: 'HEAD OFFICE',
+        'DRIVER NAME': '',
+        'SUPPLIER NAME': '',
+        'CUSTOMER NAME': ''
     }
 ];
 
@@ -157,6 +172,33 @@ const findAccountingCode = (
     const trimmedRaw = queryStr.trim();
     const cleanQuery = normalizeStr(queryStr);
     if (!cleanQuery) return undefined;
+
+    // 0. Match against system Bank Accounts first (for Inter-Bank Transfers between /bank-accounts)
+    if (bankAccounts && bankAccounts.length > 0) {
+        const bankMatch = bankAccounts.find((a: BankAccount) => {
+            const accName = normalizeStr(a.accountName || '');
+            const bankName = normalizeStr(a.bankName || '');
+            const accNum = normalizeStr(a.accountNumber || '');
+            const combined = normalizeStr(`${a.bankName || ''} ${a.accountName || ''}`);
+            const combinedRev = normalizeStr(`${a.accountName || ''} ${a.bankName || ''}`);
+            return (
+                accName === cleanQuery ||
+                bankName === cleanQuery ||
+                accNum === cleanQuery ||
+                combined === cleanQuery ||
+                combinedRev === cleanQuery ||
+                (cleanQuery.length > 3 && (accName.includes(cleanQuery) || cleanQuery.includes(accName)))
+            );
+        });
+
+        if (bankMatch && bankMatch.accountingCode) {
+            const accCodeId = typeof bankMatch.accountingCode === 'object'
+                ? String((bankMatch.accountingCode as any)._id || (bankMatch.accountingCode as any).id)
+                : String(bankMatch.accountingCode);
+            const codeFromBank = codes.find(c => String(c._id) === accCodeId);
+            if (codeFromBank) return codeFromBank;
+        }
+    }
 
     // 1. Direct match on _id
     let match = codes.find(c => String(c._id) === trimmedRaw);
@@ -752,9 +794,9 @@ interface SetOffPreview {
         const accountsNameStr = String(accountsNameVal || '').trim();
 
         if (accountsNameStr) {
-            const offsetCode = findAccountingCode(accountsNameStr, allAccountingCodes);
+            const offsetCode = findAccountingCode(accountsNameStr, allAccountingCodes, accounts);
             if (!offsetCode) {
-                errors.push(`Accounts Name "${accountsNameStr}" not found in Chart of Accounts`);
+                errors.push(`Accounts Name "${accountsNameStr}" not found in Chart of Accounts or Bank Accounts`);
             }
         }
 
@@ -967,7 +1009,7 @@ interface SetOffPreview {
 
             const accountsNameVal = getRowVal(raw, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
             const accountsNameStr = String(accountsNameVal || '').trim();
-            const matchedAccount = findAccountingCode(accountsNameStr, allAccountingCodes);
+            const matchedAccount = findAccountingCode(accountsNameStr, allAccountingCodes, accounts);
 
             const driverNameVal = getRowVal(raw, ['driver name', 'driver_name', 'Driver Name', 'DRIVER NAME']);
             const supplierNameVal = getRowVal(raw, ['supplier name', 'supplier_name', 'Supplier Name', 'SUPPLIER NAME']);
@@ -1131,7 +1173,7 @@ interface SetOffPreview {
 
                 const accountsNameVal = getRowVal(row, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
                 const accountsNameStr = String(accountsNameVal || '').trim();
-                const matchedAccount = findAccountingCode(accountsNameStr, allAccountingCodes);
+                const matchedAccount = findAccountingCode(accountsNameStr, allAccountingCodes, accounts);
 
                 return {
                     Date: isoDate || String(dateVal || ''),
@@ -1461,14 +1503,14 @@ interface SetOffPreview {
 
                     {/* Template downloads */}
                     {!result && !uploading && rows.length === 0 && (
-                        <div className="flex flex-wrap items-center gap-3 p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                        <div className={`flex flex-wrap items-center gap-3 p-4 rounded-xl border ${loadingData ? 'opacity-40 pointer-events-none' : ''}`} style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                             <Info size={16} style={{ color: 'var(--brand-lime)' }} />
                             <span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Download upload template with specific columns:</span>
                             <div className="ml-auto flex gap-2">
-                                <button onClick={() => downloadTemplate('xlsx')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 border bg-card hover:bg-black/10" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}>
+                                <button onClick={() => downloadTemplate('xlsx')} disabled={loadingData} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 border bg-card hover:bg-black/10 disabled:opacity-40" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}>
                                     <Download size={14} /> Excel Template
                                 </button>
-                                <button onClick={() => downloadTemplate('csv')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 border bg-card hover:bg-black/10" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}>
+                                <button onClick={() => downloadTemplate('csv')} disabled={loadingData} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:scale-105 border bg-card hover:bg-black/10 disabled:opacity-40" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)', background: 'var(--bg-card)' }}>
                                     <Download size={14} /> CSV Template
                                 </button>
                             </div>
@@ -1478,21 +1520,55 @@ interface SetOffPreview {
                     {/* Drop zone */}
                     {rows.length === 0 && !result && !uploading && (
                         <div
-                            onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) parseFile(f); }}
-                            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                            onDrop={(e) => {
+                                e.preventDefault();
+                                setDragOver(false);
+                                if (loadingData) return;
+                                const f = e.dataTransfer.files?.[0];
+                                if (f) parseFile(f);
+                            }}
+                            onDragOver={(e) => {
+                                e.preventDefault();
+                                if (!loadingData) setDragOver(true);
+                            }}
                             onDragLeave={() => setDragOver(false)}
-                            onClick={() => fileRef.current?.click()}
-                            className={`flex flex-col items-center justify-center gap-3 p-12 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${dragOver ? 'scale-[1.01]' : ''}`}
-                            style={{ borderColor: dragOver ? 'var(--brand-lime)' : 'var(--border-main)', background: dragOver ? 'rgba(200,230,0,0.05)' : 'transparent' }}
+                            onClick={() => {
+                                if (!loadingData) fileRef.current?.click();
+                            }}
+                            className={`flex flex-col items-center justify-center gap-3 p-12 rounded-2xl border-2 border-dashed transition-all ${
+                                loadingData ? 'opacity-40 cursor-not-allowed pointer-events-none select-none' : 'cursor-pointer'
+                            } ${dragOver ? 'scale-[1.01]' : ''}`}
+                            style={{
+                                borderColor: dragOver ? 'var(--brand-lime)' : 'var(--border-main)',
+                                background: dragOver ? 'rgba(200,230,0,0.05)' : 'transparent'
+                            }}
                         >
                             <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'rgba(200,230,0,0.08)' }}>
-                                <Upload size={28} style={{ color: 'var(--brand-lime)' }} />
+                                {loadingData ? (
+                                    <Loader2 size={28} className="animate-spin" style={{ color: 'var(--text-dim)' }} />
+                                ) : (
+                                    <Upload size={28} style={{ color: 'var(--brand-lime)' }} />
+                                )}
                             </div>
                             <div className="text-center">
-                                <p className="text-sm font-bold text-main">Drop statement Excel or CSV here</p>
-                                <p className="text-xs mt-1 text-dim">or click to browse — .xlsx, .xls, .csv supported</p>
+                                <p className="text-sm font-bold text-main">
+                                    {loadingData ? 'Loading Target Bank Account...' : 'Drop statement Excel or CSV here'}
+                                </p>
+                                <p className="text-xs mt-1 text-dim">
+                                    {loadingData ? 'Please wait for target bank account to finish loading...' : 'or click to browse — .xlsx, .xls, .csv supported'}
+                                </p>
                             </div>
-                            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) parseFile(f); }} />
+                            <input
+                                ref={fileRef}
+                                type="file"
+                                accept=".xlsx,.xls,.csv"
+                                disabled={loadingData}
+                                className="hidden"
+                                onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f && !loadingData) parseFile(f);
+                                }}
+                            />
                         </div>
                     )}
 
@@ -1719,7 +1795,7 @@ interface SetOffPreview {
 
                                                                                                 {preview.excessAmount > 0.01 && (
                                                                                                     <div className="flex justify-between items-center text-[9px] font-bold text-[#C8E600] border-t border-amber-500/20 pt-1">
-                                                                                                        <span>Vendor Advance</span>
+                                                                                                        <span>Supplier Advances (1.1.04)</span>
                                                                                                         <span className="font-mono">${preview.excessAmount.toFixed(2)}</span>
                                                                                                     </div>
                                                                                                 )}

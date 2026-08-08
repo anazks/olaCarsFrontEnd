@@ -284,7 +284,7 @@ const InvoiceList = () => {
         const toastId = toast.loading('Generating Invoice Registry Excel report...');
         try {
             const filters: any = {
-                limit: 2000,
+                limit: 20000,
                 ignoreDefaultDates: 'true',
                 sortBy: sortBy || 'generatedAt',
                 sortOrder: sortOrder || 'desc'
@@ -315,8 +315,17 @@ const InvoiceList = () => {
             });
 
             const excelRows = exportInvoices.map((inv: any) => {
-                const dateVal = inv.generatedAt || inv.entryDate || inv.date;
-                const formattedDate = dateVal ? new Date(dateVal).toLocaleDateString() : 'N/A';
+                const dateVal = inv.generatedAt || inv.invoiceDate || inv.entryDate || inv.date || inv.createdAt;
+                let formattedDate = 'N/A';
+                if (dateVal) {
+                    const d = new Date(dateVal);
+                    if (!isNaN(d.getTime())) {
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const year = d.getFullYear();
+                        formattedDate = `${day}/${month}/${year}`;
+                    }
+                }
 
                 let customerName = 'N/A';
                 if (inv.customer) {

@@ -12,14 +12,56 @@ import {
     Hash,
     MapPin,
     AlertTriangle,
-    Layers
+    Layers,
+    DollarSign,
+    Truck
 } from 'lucide-react';
 import { getBankTransactionById } from '../../../services/bankAccountService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import { TransactionEditModal } from './modals/TransactionEditModal';
+import type { TxClassification, EditMode } from './modals/TransactionEditModal';
 
 const TYPE_STYLES = {
     'DEBIT': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)', label: 'DEBIT (Deposit)' }, // Green
     'CREDIT': { bg: 'rgba(239,68,68,0.1)', text: '#ef4444', border: 'rgba(239,68,68,0.3)', label: 'CREDIT (Withdrawal)' }, // Red
+};
+
+const detectTxClassification = (tx: any): TxClassification => {
+    if (!tx) return 'NON_DRIVER_CUSTOMER';
+
+    if (tx.detectedType && ['DRIVER', 'VENDOR', 'INTER_BANK', 'NON_DRIVER_CUSTOMER'].includes(tx.detectedType)) {
+        return tx.detectedType as TxClassification;
+    }
+
+    const connected = tx.connectedLedgerEntries || [];
+    const currentCodeId = String(tx.accountingCode?._id || tx.accountingCode || '');
+
+    const isInterBank = connected.some((lEntry: any) => {
+        const accType = lEntry.accountingCode?.accountType;
+        const codeId = String(lEntry.accountingCode?._id || lEntry.accountingCode || '');
+        return (accType === 'Bank' || accType === 'Cash') && codeId !== currentCodeId;
+    }) || (tx.description && /inter-bank|transfer.*bank|transferencia.*banco/i.test(tx.description));
+
+    if (isInterBank) return 'INTER_BANK';
+
+    if (tx.supplier || tx.contactModel === 'Supplier' || tx.setOffHistory?.targetType === 'SUPPLIER') {
+        return 'VENDOR';
+    }
+
+    const contact = tx.contact;
+    const isDriver = !!(
+        (contact && (contact.driver || contact.driverId || contact.isDriver)) ||
+        (tx.setOffHistory && tx.setOffHistory.targetType === 'CUSTOMER') ||
+        (tx.description && /driver|conductor|chofer/i.test(tx.description))
+    );
+
+    if (isDriver) return 'DRIVER';
+
+    if (contact || tx.contactModel === 'Customer') {
+        return 'NON_DRIVER_CUSTOMER';
+    }
+
+    return tx.type === 'CREDIT' ? 'VENDOR' : 'DRIVER';
 };
 
 const BankTransactionDetailPage = () => {
@@ -30,20 +72,23 @@ const BankTransactionDetailPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchTransaction = async () => {
-            if (!id) return;
-            setLoading(true);
-            try {
-                const res = await getBankTransactionById(id);
-                setTransaction(res);
-            } catch (err: any) {
-                setError(err.response?.data?.message || err.message || 'Failed to fetch transaction details');
-            } finally {
-                setLoading(false);
-            }
-        };
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [activeEditMode, setActiveEditMode] = useState<EditMode>('AMOUNT');
 
+    const fetchTransaction = async () => {
+        if (!id) return;
+        setLoading(true);
+        try {
+            const res = await getBankTransactionById(id);
+            setTransaction(res);
+        } catch (err: any) {
+            setError(err.response?.data?.message || err.message || 'Failed to fetch transaction details');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchTransaction();
     }, [id]);
 
@@ -72,12 +117,18 @@ const BankTransactionDetailPage = () => {
         );
     }
 
+    const classification = detectTxClassification(transaction);
     const typeStyle = TYPE_STYLES[transaction.type as 'DEBIT' | 'CREDIT'] || { bg: 'transparent', text: 'var(--text-main)', border: 'transparent', label: transaction.type };
     
     const dateObj = new Date(transaction.entryDate || transaction.createdAt);
     const formattedDate = !isNaN(dateObj.getTime()) 
         ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
         : transaction.entryDate;
+
+    const handleOpenEdit = (mode: EditMode) => {
+        setActiveEditMode(mode);
+        setIsEditModalOpen(true);
+    };
 
     return (
         <div className="container-responsive space-y-6 animate-fade-in pb-20">
@@ -99,18 +150,99 @@ const BankTransactionDetailPage = () => {
                     >
                         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back to Account Ledger
                     </button>
-                    <h1 className="text-2xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <Coins size={28} style={{ color: 'var(--brand-lime)' }} />
-                        Bank Transaction details
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold border ml-2" style={{ background: typeStyle.bg, color: typeStyle.text, borderColor: typeStyle.border }}>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <h1 className="text-2xl font-black tracking-tight flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+                            <Coins size={28} style={{ color: 'var(--brand-lime)' }} />
+                            Bank Transaction details
+                        </h1>
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-bold border" style={{ background: typeStyle.bg, color: typeStyle.text, borderColor: typeStyle.border }}>
                             {typeStyle.label}
                         </span>
-                    </h1>
+
+                        {/* Classification Badge */}
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border bg-white/5 border-white/10" style={{ color: 'var(--text-main)' }}>
+                            {classification === 'DRIVER' && '🏎️ Driver Transaction'}
+                            {classification === 'VENDOR' && '🚚 Vendor Transaction'}
+                            {classification === 'INTER_BANK' && '🏦 Inter-Bank Transfer'}
+                            {classification === 'NON_DRIVER_CUSTOMER' && '👤 Customer Transaction'}
+                        </span>
+                    </div>
                 </div>
-                <div className="text-right">
-                    <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-dim)' }}>Transaction Value</div>
-                    <div className={`text-3xl font-mono font-bold ${transaction.type === 'DEBIT' ? 'text-green-400' : 'text-red-400'}`}>
-                        {transaction.type === 'DEBIT' ? '+' : '-'}{transaction.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+
+                {/* Right Side: Amount & Context-Aware Edit Action Buttons */}
+                <div className="flex flex-col sm:items-end gap-3 w-full sm:w-auto">
+                    <div className="text-right">
+                        <div className="text-xs font-semibold mb-1" style={{ color: 'var(--text-dim)' }}>Transaction Value</div>
+                        <div className={`text-3xl font-mono font-bold ${transaction.type === 'DEBIT' ? 'text-green-400' : 'text-red-400'}`}>
+                            {transaction.type === 'DEBIT' ? '+' : '-'}${transaction.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </div>
+                    </div>
+
+                    {/* Context Action Buttons */}
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                        {/* 1. Driver Transaction Buttons */}
+                        {classification === 'DRIVER' && (
+                            <>
+                                <button
+                                    onClick={() => handleOpenEdit('AMOUNT')}
+                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#C8E600]/10 hover:bg-[#C8E600]/20 text-[#C8E600] border border-[#C8E600]/30 transition-all hover:scale-105 cursor-pointer"
+                                >
+                                    <DollarSign size={14} /> Edit Amount
+                                </button>
+                                <button
+                                    onClick={() => handleOpenEdit('PARTY')}
+                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all hover:scale-105 cursor-pointer"
+                                >
+                                    <User size={14} /> Change Driver
+                                </button>
+                            </>
+                        )}
+
+                        {/* 2. Vendor Transaction Buttons */}
+                        {classification === 'VENDOR' && (
+                            <>
+                                <button
+                                    onClick={() => handleOpenEdit('AMOUNT')}
+                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition-all hover:scale-105 cursor-pointer"
+                                >
+                                    <DollarSign size={14} /> Edit Amount
+                                </button>
+                                <button
+                                    onClick={() => handleOpenEdit('PARTY')}
+                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all hover:scale-105 cursor-pointer"
+                                >
+                                    <Truck size={14} /> Change Vendor
+                                </button>
+                            </>
+                        )}
+
+                        {/* 3. Inter-Bank Transaction Button */}
+                        {classification === 'INTER_BANK' && (
+                            <button
+                                onClick={() => handleOpenEdit('AMOUNT')}
+                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 transition-all hover:scale-105 cursor-pointer"
+                            >
+                                <DollarSign size={14} /> Edit Amount
+                            </button>
+                        )}
+
+                        {/* 4. Non-Driver Customer Transaction Buttons */}
+                        {classification === 'NON_DRIVER_CUSTOMER' && (
+                            <>
+                                <button
+                                    onClick={() => handleOpenEdit('AMOUNT')}
+                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all hover:scale-105 cursor-pointer"
+                                >
+                                    <DollarSign size={14} /> Edit Amount
+                                </button>
+                                <button
+                                    onClick={() => handleOpenEdit('PARTY')}
+                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all hover:scale-105 cursor-pointer"
+                                >
+                                    <User size={14} /> Change Customer
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -434,6 +566,16 @@ const BankTransactionDetailPage = () => {
 
                 </div>
             </div>
+
+            {/* Context-Aware Transaction Edit Modal */}
+            <TransactionEditModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSuccess={fetchTransaction}
+                transaction={transaction}
+                classification={classification}
+                initialMode={activeEditMode}
+            />
         </div>
     );
 };

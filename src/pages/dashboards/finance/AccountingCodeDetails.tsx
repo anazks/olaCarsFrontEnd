@@ -94,6 +94,7 @@ const AccountingCodeDetails = () => {
     const [importFile, setImportFile] = useState<File | null>(null);
     const [importing, setImporting] = useState(false);
 
+
     const handleDownloadFilteredData = async () => {
         if (!id) return;
         setLoading(true);
@@ -394,6 +395,7 @@ const AccountingCodeDetails = () => {
                     </div>
                     <p className="text-sm font-mono text-white/50">Code: {code.code}</p>
                 </div>
+
             </div>
 
             {/* Summary Statistics Cards */}
@@ -503,6 +505,7 @@ const AccountingCodeDetails = () => {
                         <Download size={12} />
                         Download
                     </button>
+
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                     <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Sort:</span>
