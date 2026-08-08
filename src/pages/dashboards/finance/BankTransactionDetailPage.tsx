@@ -14,7 +14,14 @@ import {
     AlertTriangle,
     Layers,
     DollarSign,
-    Truck
+    Truck,
+    X,
+    FileText,
+    Paperclip,
+    Shield,
+    BookOpen,
+    Zap,
+    Receipt
 } from 'lucide-react';
 import { getBankTransactionById } from '../../../services/bankAccountService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -24,6 +31,390 @@ import type { TxClassification, EditMode } from './modals/TransactionEditModal';
 const TYPE_STYLES = {
     'DEBIT': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)', label: 'DEBIT (Deposit)' }, // Green
     'CREDIT': { bg: 'rgba(239,68,68,0.1)', text: '#ef4444', border: 'rgba(239,68,68,0.3)', label: 'CREDIT (Withdrawal)' }, // Red
+};
+
+/* ─────────────────────────────────────────────────────────
+   Ledger Entry Detail Modal – comprehensive view of a 
+   single connected ledger entry
+   ───────────────────────────────────────────────────────── */
+const LedgerEntryDetailModal = ({ isOpen, onClose, entry }: { isOpen: boolean; onClose: () => void; entry: any }) => {
+    if (!isOpen || !entry) return null;
+
+    const entryDate = new Date(entry.entryDate || entry.createdAt);
+    const formattedEntryDate = !isNaN(entryDate.getTime())
+        ? `${entryDate.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })} ${entryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        : 'N/A';
+
+    const createdAt = entry.createdAt ? new Date(entry.createdAt) : null;
+    const updatedAt = entry.updatedAt ? new Date(entry.updatedAt) : null;
+    const fmtTs = (d: Date | null) => d && !isNaN(d.getTime()) ? `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '—';
+
+    const isDebit = entry.type === 'DEBIT';
+
+    const txClassLabel: Record<string, string> = {
+        DRIVER: '🏎️ Driver',
+        VENDOR: '🚚 Vendor',
+        INTER_BANK: '🏦 Inter-Bank',
+        NON_DRIVER_CUSTOMER: '👤 Customer',
+    };
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in"
+            onClick={onClose}
+        >
+            <div
+                className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border p-0 shadow-2xl animate-scale-up"
+                style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* ── Header ─────────────────────────────── */}
+                <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b rounded-t-2xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isDebit ? 'bg-emerald-500/15' : 'bg-amber-500/15'}`}>
+                            <BookOpen size={20} className={isDebit ? 'text-emerald-400' : 'text-amber-400'} />
+                        </div>
+                        <div>
+                            <h3 className="text-base font-black tracking-tight">Ledger Entry Details</h3>
+                            <p className="text-[10px] font-mono opacity-60 mt-0.5">ID: {entry._id}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2 rounded-xl hover:bg-white/10 transition-colors"
+                        style={{ color: 'var(--text-dim)' }}
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="p-6 space-y-5">
+
+                    {/* ── Amount + Type Hero ──────────────── */}
+                    <div className="flex items-center justify-between p-5 rounded-xl border" style={{ background: isDebit ? 'rgba(34,197,94,0.06)' : 'rgba(239,68,68,0.06)', borderColor: isDebit ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)' }}>
+                        <div>
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${isDebit ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30'}`}>
+                                {entry.type}
+                            </span>
+                            <p className="text-xs mt-2 opacity-70">Ledger Entry Amount</p>
+                        </div>
+                        <div className={`text-3xl font-mono font-black ${isDebit ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            {isDebit ? '+' : '-'}${entry.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}
+                        </div>
+                    </div>
+
+                    {/* ── Core Fields Grid ────────────────── */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Accounting Code */}
+                        <div className="p-4 rounded-xl border bg-white/[0.02] space-y-1" style={{ borderColor: 'var(--border-main)' }}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                <Tag size={11} /> Accounting Code
+                            </p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono font-bold text-sm px-2 py-0.5 rounded bg-white/5 border border-white/10">
+                                    {entry.accountingCode?.code || 'N/A'}
+                                </span>
+                                <span className="text-xs font-semibold opacity-90">{entry.accountingCode?.name || '—'}</span>
+                            </div>
+                            {entry.accountingCode?.category && (
+                                <p className="text-[10px] opacity-50">Category: {entry.accountingCode.category}</p>
+                            )}
+                            {entry.accountingCode?.accountType && (
+                                <p className="text-[10px] opacity-50">Account Type: {entry.accountingCode.accountType}</p>
+                            )}
+                        </div>
+
+                        {/* Entry Date */}
+                        <div className="p-4 rounded-xl border bg-white/[0.02] space-y-1" style={{ borderColor: 'var(--border-main)' }}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                <Clock size={11} /> Entry Date
+                            </p>
+                            <p className="text-sm font-semibold">{formattedEntryDate}</p>
+                        </div>
+
+                        {/* Transaction ID */}
+                        <div className="p-4 rounded-xl border bg-white/[0.02] space-y-1" style={{ borderColor: 'var(--border-main)' }}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                <Hash size={11} /> Transaction Ref ID
+                            </p>
+                            <p className="text-sm font-mono font-bold">{entry.transactionId || '—'}</p>
+                        </div>
+
+                        {/* Running Balance */}
+                        <div className="p-4 rounded-xl border bg-white/[0.02] space-y-1" style={{ borderColor: 'var(--border-main)' }}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                <Layers size={11} /> Running Balance
+                            </p>
+                            <p className="text-sm font-mono font-bold text-blue-400">
+                                {entry.runningBalance !== undefined && entry.runningBalance !== null
+                                    ? `$${entry.runningBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                                    : '—'}
+                            </p>
+                        </div>
+
+                        {/* Bank Tx Classification */}
+                        {entry.bankTxType && (
+                            <div className="p-4 rounded-xl border bg-white/[0.02] space-y-1" style={{ borderColor: 'var(--border-main)' }}>
+                                <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                    <Info size={11} /> Bank Tx Classification
+                                </p>
+                                <p className="text-sm font-bold">{txClassLabel[entry.bankTxType] || entry.bankTxType}</p>
+                            </div>
+                        )}
+
+                        {/* Transaction Type */}
+                        {entry.transactionType && (
+                            <div className="p-4 rounded-xl border bg-white/[0.02] space-y-1" style={{ borderColor: 'var(--border-main)' }}>
+                                <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                    <Info size={11} /> Transaction Type
+                                </p>
+                                <p className="text-sm font-bold">{entry.transactionType}</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── Description ─────────────────────── */}
+                    <div className="p-4 rounded-xl border bg-white/[0.02] space-y-1" style={{ borderColor: 'var(--border-main)' }}>
+                        <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                            <FileText size={11} /> Description
+                        </p>
+                        <p className="text-sm leading-relaxed">{entry.description || '—'}</p>
+                    </div>
+
+                    {/* ── Contact / Supplier ──────────────── */}
+                    {(entry.contact || entry.supplier) && (
+                        <div className="p-4 rounded-xl border space-y-3" style={{ borderColor: 'var(--border-main)', background: 'rgba(34,197,94,0.04)' }}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 text-emerald-400">
+                                <User size={11} /> Linked Party
+                            </p>
+                            {entry.contact && (
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                                        <User size={14} className="text-emerald-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-emerald-400">
+                                            {entry.contact.name || entry.contact.customerId || 'Customer'}
+                                        </p>
+                                        {entry.contact.phone && <p className="text-[10px] opacity-60">{entry.contact.phone}</p>}
+                                        {entry.contact.email && <p className="text-[10px] opacity-60">{entry.contact.email}</p>}
+                                        {entry.contact.customerId && <p className="text-[10px] font-mono opacity-50">ID: {entry.contact.customerId}</p>}
+                                    </div>
+                                </div>
+                            )}
+                            {entry.supplier && (
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                                        <Truck size={14} className="text-amber-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-amber-400">
+                                            {entry.supplier.name || entry.supplier.companyName || 'Supplier'}
+                                        </p>
+                                        {entry.supplier.phone && <p className="text-[10px] opacity-60">{entry.supplier.phone}</p>}
+                                        {entry.supplier.email && <p className="text-[10px] opacity-60">{entry.supplier.email}</p>}
+                                        {(entry.supplier.vendorNumber || entry.supplier.supplierCode) && (
+                                            <p className="text-[10px] font-mono opacity-50">Code: {entry.supplier.vendorNumber || entry.supplier.supplierCode}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── Tax Info ────────────────────────── */}
+                    {entry.taxInfo && (entry.taxInfo.taxAmount > 0 || entry.taxInfo.taxApplied) && (
+                        <div className="p-4 rounded-xl border bg-white/[0.02] space-y-2" style={{ borderColor: 'var(--border-main)' }}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                <Receipt size={11} /> Tax Information
+                            </p>
+                            <div className="flex items-center gap-4 text-xs">
+                                <div>
+                                    <span className="opacity-60">Tax Amount:</span>{' '}
+                                    <span className="font-mono font-bold">${entry.taxInfo.taxAmount?.toFixed(2) || '0.00'}</span>
+                                </div>
+                                <div>
+                                    <span className="opacity-60">Inclusive:</span>{' '}
+                                    <span className="font-bold">{entry.taxInfo.isTaxInclusive ? 'Yes' : 'No'}</span>
+                                </div>
+                                {entry.taxInfo.taxApplied && typeof entry.taxInfo.taxApplied === 'object' && (
+                                    <div>
+                                        <span className="opacity-60">Tax:</span>{' '}
+                                        <span className="font-bold">{entry.taxInfo.taxApplied.name || entry.taxInfo.taxApplied._id}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Set-off Summary ─────────────────── */}
+                    {entry.setOffSummary && (entry.setOffSummary.totalSetOff > 0 || entry.setOffSummary.invoiceCount > 0) && (
+                        <div className="p-4 rounded-xl border space-y-2" style={{ borderColor: 'rgba(200,230,0,0.2)', background: 'rgba(200,230,0,0.04)' }}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 text-[#C8E600]">
+                                <Zap size={11} /> Set-off Summary
+                            </p>
+                            <div className="flex flex-wrap gap-4 text-xs">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="opacity-60">Total Set-off:</span>
+                                    <span className="font-mono font-bold text-[#C8E600]">${entry.setOffSummary.totalSetOff?.toFixed(2)}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="opacity-60">Invoices:</span>
+                                    <span className="font-bold">{entry.setOffSummary.invoiceCount}</span>
+                                </div>
+                                {entry.setOffSummary.excessAmount > 0 && (
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="opacity-60">Excess:</span>
+                                        <span className="font-mono font-bold text-amber-400">${entry.setOffSummary.excessAmount?.toFixed(2)}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Linked Invoices ─────────────────── */}
+                    {entry.invoices && entry.invoices.length > 0 && (
+                        <div className="p-4 rounded-xl border bg-white/[0.02] space-y-3" style={{ borderColor: 'var(--border-main)' }}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                <FileText size={11} /> Linked Invoices ({entry.invoices.length})
+                            </p>
+                            <div className="space-y-1.5">
+                                {entry.invoices.map((inv: any, idx: number) => (
+                                    <div key={idx} className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg text-xs">
+                                        <span className="font-bold text-emerald-400 flex items-center gap-1.5">
+                                            <FileText size={12} /> {inv.invoiceNumber || inv.invoiceId || `Invoice #${idx + 1}`}
+                                        </span>
+                                        <span className="font-mono font-bold" style={{ color: 'var(--text-main)' }}>
+                                            ${inv.amountApplied?.toFixed(2) || '0.00'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Attachments ─────────────────────── */}
+                    {entry.attachments && entry.attachments.length > 0 && (
+                        <div className="p-4 rounded-xl border bg-white/[0.02] space-y-3" style={{ borderColor: 'var(--border-main)' }}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                <Paperclip size={11} /> Attachments ({entry.attachments.length})
+                            </p>
+                            <div className="space-y-1.5">
+                                {entry.attachments.map((att: any, idx: number) => (
+                                    <a
+                                        key={idx}
+                                        href={att.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-between px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs hover:bg-blue-500/20 transition-colors"
+                                    >
+                                        <span className="font-semibold text-blue-400 flex items-center gap-1.5 truncate">
+                                            <Paperclip size={12} /> {att.name}
+                                        </span>
+                                        {att.uploadedAt && (
+                                            <span className="text-[10px] opacity-50 ml-3 shrink-0">
+                                                {new Date(att.uploadedAt).toLocaleDateString()}
+                                            </span>
+                                        )}
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Branch Info ─────────────────────── */}
+                    {entry.branch && (
+                        <div className="p-4 rounded-xl border bg-white/[0.02] space-y-1" style={{ borderColor: 'var(--border-main)' }}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                <MapPin size={11} /> Branch
+                            </p>
+                            <p className="text-sm font-semibold">
+                                {typeof entry.branch === 'object'
+                                    ? `${entry.branch.name || ''} ${entry.branch.code ? `(${entry.branch.code})` : ''}`
+                                    : entry.branch}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* ── Audit Trail ─────────────────────── */}
+                    <div className="p-4 rounded-xl border bg-white/[0.02] space-y-3" style={{ borderColor: 'var(--border-main)' }}>
+                        <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                            <Shield size={11} /> Audit Trail
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div>
+                                <span className="opacity-60 block text-[10px] mb-0.5">Created By</span>
+                                <span className="font-bold">
+                                    {entry.createdBy && typeof entry.createdBy === 'object'
+                                        ? entry.createdBy.name || entry.createdBy.email || entry.createdBy._id
+                                        : entry.createdBy || 'SYSTEM'}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="opacity-60 block text-[10px] mb-0.5">Role / Authority</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider" style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)' }}>
+                                    {entry.creatorRole || 'SYSTEM'}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="opacity-60 block text-[10px] mb-0.5">Created At</span>
+                                <span className="font-mono text-[11px]">{fmtTs(createdAt)}</span>
+                            </div>
+                            <div>
+                                <span className="opacity-60 block text-[10px] mb-0.5">Last Updated</span>
+                                <span className="font-mono text-[11px]">{fmtTs(updatedAt)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── Linked References ───────────────── */}
+                    {(entry.transaction || entry.manualJournal || entry.voucher) && (
+                        <div className="p-4 rounded-xl border bg-white/[0.02] space-y-2" style={{ borderColor: 'var(--border-main)' }}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                <Layers size={11} /> Linked References
+                            </p>
+                            <div className="flex flex-wrap gap-3 text-xs">
+                                {entry.transaction && (
+                                    <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+                                        <span className="opacity-60">Payment Tx: </span>
+                                        <span className="font-mono font-bold text-[11px]">
+                                            {typeof entry.transaction === 'object' ? entry.transaction._id : entry.transaction}
+                                        </span>
+                                    </div>
+                                )}
+                                {entry.manualJournal && (
+                                    <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+                                        <span className="opacity-60">Manual Journal: </span>
+                                        <span className="font-mono font-bold text-[11px]">
+                                            {typeof entry.manualJournal === 'object' ? entry.manualJournal._id : entry.manualJournal}
+                                        </span>
+                                    </div>
+                                )}
+                                {entry.voucher && (
+                                    <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+                                        <span className="opacity-60">Voucher: </span>
+                                        <span className="font-mono font-bold text-[11px]">
+                                            {typeof entry.voucher === 'object' ? entry.voucher._id : entry.voucher}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Footer ──────────────────────────── */}
+                <div className="sticky bottom-0 z-10 flex justify-end px-6 py-4 border-t rounded-b-2xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <button
+                        onClick={onClose}
+                        className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-[#C8E600] text-black transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 const detectTxClassification = (tx: any): TxClassification => {
@@ -74,6 +465,10 @@ const BankTransactionDetailPage = () => {
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeEditMode, setActiveEditMode] = useState<EditMode>('AMOUNT');
+
+    // Ledger Entry Detail Modal state
+    const [isLedgerDetailOpen, setIsLedgerDetailOpen] = useState(false);
+    const [selectedLedgerEntry, setSelectedLedgerEntry] = useState<any>(null);
 
     const fetchTransaction = async () => {
         if (!id) return;
@@ -364,7 +759,10 @@ const BankTransactionDetailPage = () => {
                                                 <td className="px-4 py-3 text-center">
                                                     <button
                                                         type="button"
-                                                        onClick={() => navigate(`../ledger-entries/${lEntry._id}`)}
+                                                        onClick={() => {
+                                                            setSelectedLedgerEntry(lEntry);
+                                                            setIsLedgerDetailOpen(true);
+                                                        }}
                                                         className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/10 border rounded-lg transition-colors cursor-pointer"
                                                         style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}
                                                     >
@@ -575,6 +973,13 @@ const BankTransactionDetailPage = () => {
                 transaction={transaction}
                 classification={classification}
                 initialMode={activeEditMode}
+            />
+
+            {/* Ledger Entry Detail Modal */}
+            <LedgerEntryDetailModal
+                isOpen={isLedgerDetailOpen}
+                onClose={() => { setIsLedgerDetailOpen(false); setSelectedLedgerEntry(null); }}
+                entry={selectedLedgerEntry}
             />
         </div>
     );
