@@ -5,8 +5,6 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { dataMigrateDrivers, type DataMigrationResult } from '../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
-import { getAllFinanceStaff, createFinanceStaff, type FinanceStaff, getNextFleetNumber, checkFleetAvailability } from '../../../services/financeStaffService';
-import { Plus } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
 
 interface ParsedRow {
@@ -91,7 +89,6 @@ const SAMPLE_DATA = [{
 
 const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const fleetInputRef = useRef<HTMLInputElement>(null);
     const decoded = getDecodedToken();
     const userRole = (decoded?.role ?? '').toLowerCase();
     const isAutoAssign = AUTO_ASSIGN_ROLES.includes(userRole);
@@ -106,103 +103,17 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [branchesLoading, setBranchesLoading] = useState(false);
     const [selectedBranch, setSelectedBranch] = useState('');
-    const [financeStaff, setFinanceStaff] = useState<FinanceStaff[]>([]);
-    const [staffLoading, setStaffLoading] = useState(false);
-    const [selectedStaff, setSelectedStaff] = useState('');
-    const [selectedStaffObj, setSelectedStaffObj] = useState<FinanceStaff | null>(null);
-    const [selectedFleet, setSelectedFleet] = useState('');
-    const [isAddingNewFleet, setIsAddingNewFleet] = useState(false);
-    const [nextFleetLoading, setNextFleetLoading] = useState(false);
-    const [fleetError, setFleetError] = useState<string | null>(null);
-    const [isCheckingFleet, setIsCheckingFleet] = useState(false);
-
-    const [isCreatingStaff, setIsCreatingStaff] = useState(false);
-    const [newStaffForm, setNewStaffForm] = useState({ fullName: '', email: '', phone: '', password: '' });
-    const [creatingStaffLoader, setCreatingStaffLoader] = useState(false);
-
-    const handleCreateStaff = async () => {
-        try {
-            if (!newStaffForm.fullName || !newStaffForm.email || !newStaffForm.phone || !newStaffForm.password) {
-                toast.error("Please fill all staff fields");
-                return;
-            }
-            const branchToUse = needsBranchSelection ? selectedBranch : decoded?.branchId;
-            if (!branchToUse) {
-                toast.error("Please select a branch first");
-                return;
-            }
-            setCreatingStaffLoader(true);
-            const newStaff = await createFinanceStaff({
-                ...newStaffForm,
-                branchId: branchToUse,
-                status: 'ACTIVE'
-            });
-            toast.success("Finance staff created");
-            
-            // Refresh list
-            const res = await getAllFinanceStaff({ branchId: branchToUse, limit: 200 });
-            const updatedStaff = res.data || [];
-            setFinanceStaff(updatedStaff);
-            
-            // Auto select
-            setSelectedStaff(newStaff._id);
-            const staffObj = updatedStaff.find(s => s._id === newStaff._id) || newStaff;
-            setSelectedStaffObj(staffObj as any);
-            
-            setIsCreatingStaff(false);
-            setNewStaffForm({ fullName: '', email: '', phone: '', password: '' });
-        } catch(err: any) {
-            toast.error(err?.response?.data?.message || "Failed to create staff");
-        } finally {
-            setCreatingStaffLoader(false);
-        }
-    };
 
     useEffect(() => {
         if (isOpen && needsBranchSelection) {
             setBranchesLoading(true);
             getAllBranches().then(data => {
-                setBranches(Array.isArray(data) ? data : (data as any)?.data ?? []);
+                const list = Array.isArray(data) ? data : (data as any)?.data ?? [];
+                const nonWorkshop = list.filter((b: Branch) => b.type !== 'WORKSHOP');
+                setBranches(nonWorkshop);
             }).catch(() => {}).finally(() => setBranchesLoading(false));
         }
     }, [isOpen, needsBranchSelection]);
-
-    // Load finance staff when branch changes
-    useEffect(() => {
-        const branchToUse = needsBranchSelection ? selectedBranch : (decoded?.branchId || '');
-        if (!branchToUse) { setFinanceStaff([]); return; }
-        setStaffLoading(true);
-        getAllFinanceStaff({ branchId: branchToUse, limit: 200 })
-            .then(res => setFinanceStaff(res.data || []))
-            .catch(() => setFinanceStaff([]))
-            .finally(() => setStaffLoading(false));
-    }, [selectedBranch, isOpen]);
-
-    // Fleet number uniqueness check
-    useEffect(() => {
-        if (!selectedFleet || !isAddingNewFleet) {
-            setFleetError(null);
-            return;
-        }
-
-        const timer = setTimeout(async () => {
-            setIsCheckingFleet(true);
-            try {
-                const res = await checkFleetAvailability(selectedFleet);
-                if (!res.available && res.staffId !== selectedStaff) {
-                    setFleetError(`Fleet ${selectedFleet} is already assigned to ${res.assignedTo}`);
-                } else {
-                    setFleetError(null);
-                }
-            } catch (err) {
-                console.error('Fleet check failed:', err);
-            } finally {
-                setIsCheckingFleet(false);
-            }
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }, [selectedFleet, isAddingNewFleet, selectedStaff]);
 
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
@@ -364,7 +275,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
             }));
 
             const branchToSend = needsBranchSelection ? selectedBranch : undefined;
-            const res = await dataMigrateDrivers(payload, branchToSend, selectedStaff || undefined, selectedFleet || undefined, updateExisting);
+            const res = await dataMigrateDrivers(payload, branchToSend, undefined, undefined, updateExisting);
             
             // Map successes and errors
             const createdMap = new Map<number, any>();
@@ -401,62 +312,51 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
             if (res.data.created.length > 0) onSuccess();
         } catch (err: any) {
             const serverMsg = err?.response?.data?.message;
-            const errType = err?.response?.data?.errorType;
-            
-            if (errType === 'DUPLICATE_FLEET') {
-                toast.error(serverMsg || 'Fleet number already in use');
-                setFleetError(serverMsg);
-                setIsAddingNewFleet(true);
-                setTimeout(() => {
-                    fleetInputRef.current?.focus();
-                }, 100);
+            const resData = err?.response?.data?.data;
+            if (resData) {
+                const createdMap = new Map<number, any>();
+                if (resData.created) {
+                    resData.created.forEach((c: any) => createdMap.set(c.row, c));
+                }
+                const errorMap = new Map<number, string>();
+                if (resData.errors) {
+                    resData.errors.forEach((e: any) => errorMap.set(e.row, e.message));
+                }
+
+                const updatedRows = parsedRows.map((row, index) => {
+                    const rowNum = index + 1;
+                    if (createdMap.has(rowNum)) {
+                        const cInfo = createdMap.get(rowNum);
+                        return {
+                            ...row,
+                            migrationStatus: 'MIGRATED' as const,
+                            driverId: cInfo.driverId,
+                            serverError: undefined
+                        };
+                    } else if (errorMap.has(rowNum)) {
+                        return {
+                            ...row,
+                            migrationStatus: 'FAILED' as const,
+                            serverError: errorMap.get(rowNum)
+                        };
+                    }
+                    return row;
+                });
+                setParsedRows(updatedRows);
+                setResult(resData);
+            }
+
+            const rowErrors = err?.response?.data?.data?.errors;
+            if (rowErrors && rowErrors.length > 0) {
+                toast.error(`Row ${rowErrors[0].row}: ${rowErrors[0].message}`);
             } else {
-                const resData = err?.response?.data?.data;
-                if (resData) {
-                    const createdMap = new Map<number, any>();
-                    if (resData.created) {
-                        resData.created.forEach((c: any) => createdMap.set(c.row, c));
-                    }
-                    const errorMap = new Map<number, string>();
-                    if (resData.errors) {
-                        resData.errors.forEach((e: any) => errorMap.set(e.row, e.message));
-                    }
-
-                    const updatedRows = parsedRows.map((row, index) => {
-                        const rowNum = index + 1;
-                        if (createdMap.has(rowNum)) {
-                            const cInfo = createdMap.get(rowNum);
-                            return {
-                                ...row,
-                                migrationStatus: 'MIGRATED' as const,
-                                driverId: cInfo.driverId,
-                                serverError: undefined
-                            };
-                        } else if (errorMap.has(rowNum)) {
-                            return {
-                                ...row,
-                                migrationStatus: 'FAILED' as const,
-                                serverError: errorMap.get(rowNum)
-                            };
-                        }
-                        return row;
-                    });
-                    setParsedRows(updatedRows);
-                    setResult(resData);
-                }
-
-                const rowErrors = err?.response?.data?.data?.errors;
-                if (rowErrors && rowErrors.length > 0) {
-                    toast.error(`Row ${rowErrors[0].row}: ${rowErrors[0].message}`);
-                } else {
-                    toast.error(serverMsg || 'Data migration failed.');
-                }
+                toast.error(serverMsg || 'Data migration failed.');
             }
         } finally { setUploading(false); }
     };
 
-    const handleReset = () => { setParsedRows([]); setFileName(''); setResult(null); setSelectedFleet(''); setIsAddingNewFleet(false); if (fileInputRef.current) fileInputRef.current.value = ''; };
-    const handleClose = () => { handleReset(); setSelectedBranch(''); setSelectedStaff(''); setSelectedStaffObj(null); onClose(); };
+    const handleReset = () => { setParsedRows([]); setFileName(''); setResult(null); if (fileInputRef.current) fileInputRef.current.value = ''; };
+    const handleClose = () => { handleReset(); setSelectedBranch(''); onClose(); };
 
     const validCount = parsedRows.filter(d => d._rowErrors.length === 0).length;
     const errorCount = parsedRows.filter(d => d._rowErrors.length > 0).length;
@@ -490,11 +390,11 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                                 <div className="flex items-center gap-2 py-3"><Loader2 size={16} className="animate-spin" style={{ color: '#f59e0b' }} /><span className="text-sm" style={{ color: 'var(--text-dim)' }}>Loading branches…</span></div>
                             ) : (
                                 <div className="relative">
-                                    <select value={selectedBranch} onChange={(e) => { setSelectedBranch(e.target.value); setSelectedStaff(''); }}
+                                    <select value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)}
                                         className="w-full px-4 py-3 pr-10 rounded-xl outline-none text-sm font-bold transition-all focus:ring-2 appearance-none"
                                         style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}>
                                         <option value="">— Select a branch —</option>
-                                        {branches.map(b => <option key={b._id} value={b._id}>{b.name}{b.city ? ` — ${b.city}` : ''}</option>)}
+                                        {branches.filter(b => b.type !== 'WORKSHOP').map(b => <option key={b._id} value={b._id}>{b.name}{b.city ? ` — ${b.city}` : ''}</option>)}
                                     </select>
                                     <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
                                 </div>
@@ -509,162 +409,6 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                             <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>All migrated records will be assigned to your branch.</span>
                         </div>
                     )}
-
-                    {/* Handling Staff Selector */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                            <div className="flex justify-between items-center mb-2">
-                                <label className="text-[10px] uppercase font-black tracking-widest" style={{ color: 'var(--text-dim)' }}>Handling Staff (Finance Staff)</label>
-                                {(!needsBranchSelection || selectedBranch) && !isCreatingStaff && (
-                                    <button onClick={() => setIsCreatingStaff(true)} className="text-[10px] font-black uppercase text-amber-500 hover:text-amber-400">
-                                        + New Staff
-                                    </button>
-                                )}
-                            </div>
-
-                            {isCreatingStaff ? (
-                                <div className="space-y-3 mt-2 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
-                                    <input type="text" placeholder="Full Name" value={newStaffForm.fullName} onChange={e => setNewStaffForm({...newStaffForm, fullName: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
-                                    <input type="email" placeholder="Email Address" value={newStaffForm.email} onChange={e => setNewStaffForm({...newStaffForm, email: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
-                                    <input type="tel" placeholder="Phone Number" value={newStaffForm.phone} onChange={e => setNewStaffForm({...newStaffForm, phone: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
-                                    <input type="password" placeholder="Password" value={newStaffForm.password} onChange={e => setNewStaffForm({...newStaffForm, password: e.target.value})} className="w-full text-xs p-2 rounded outline-none transition-all focus:ring-1 focus:ring-amber-500" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }} />
-                                    <div className="flex gap-2 justify-end pt-1">
-                                        <button onClick={() => setIsCreatingStaff(false)} className="text-[10px] px-3 py-1.5 rounded uppercase font-black tracking-wider text-red-400 hover:bg-red-400/10 transition-colors">Cancel</button>
-                                        <button onClick={handleCreateStaff} disabled={creatingStaffLoader} className="text-[10px] px-3 py-1.5 rounded bg-amber-500 text-black uppercase font-black tracking-wider flex items-center gap-1 hover:opacity-90 transition-opacity">
-                                            {creatingStaffLoader ? <Loader2 size={12} className="animate-spin"/> : null} Create & Select
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : staffLoading ? (
-                                <div className="flex items-center gap-2 py-2"><Loader2 size={14} className="animate-spin" style={{ color: '#f59e0b' }} /><span className="text-xs" style={{ color: 'var(--text-dim)' }}>Loading staff…</span></div>
-                            ) : financeStaff.length === 0 ? (
-                                <p className="text-xs py-2" style={{ color: 'var(--text-dim)' }}>{needsBranchSelection && !selectedBranch ? 'Select a branch first to see available staff.' : 'No finance staff found for this branch.'}</p>
-                            ) : (
-                                <div className="relative">
-                                    <select 
-                                        value={selectedStaff} 
-                                        onChange={(e) => {
-                                            const sId = e.target.value;
-                                            setSelectedStaff(sId);
-                                            const staffObj = financeStaff.find(s => s._id === sId) || null;
-                                            setSelectedStaffObj(staffObj);
-                                            setIsAddingNewFleet(false);
-                                            
-                                            // Set first fleet if exists
-                                            if (staffObj && staffObj.fleetNumbers && staffObj.fleetNumbers.length > 0) {
-                                                setSelectedFleet(staffObj.fleetNumbers[0]);
-                                            } else {
-                                                setSelectedFleet('');
-                                            }
-                                        }}
-                                        className="w-full px-4 py-3 pr-10 rounded-xl outline-none text-sm font-bold appearance-none transition-all focus:ring-2 focus:ring-amber-500/20"
-                                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}>
-                                        <option value="">— Optional: Select handling staff —</option>
-                                        {financeStaff.map(s => (
-                                            <option key={s._id} value={s._id}>
-                                                {s.fullName} {(s.fleetNumbers && s.fleetNumbers.length > 0) ? `(Fleets: ${s.fleetNumbers.join(', ')})` : '(No Fleet Assigned)'}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Fleet Number Selector */}
-                        <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                            <label className="block text-[10px] uppercase font-black tracking-widest mb-2" style={{ color: 'var(--text-dim)' }}>Assign Fleet Number</label>
-                            {!selectedStaff ? (
-                                <div className="h-[48px] flex items-center px-4 rounded-xl border border-dashed text-xs italic" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
-                                    Select handling staff first
-                                </div>
-                            ) : (
-                                <>
-                                    {(!isAddingNewFleet && selectedStaffObj?.fleetNumbers && selectedStaffObj.fleetNumbers.length > 0) ? (
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <select
-                                                    value={selectedFleet}
-                                                    onChange={(e) => setSelectedFleet(e.target.value)}
-                                                    className="w-full px-4 py-3 pr-10 rounded-xl outline-none text-sm font-bold appearance-none transition-all focus:ring-2 focus:ring-amber-500/20"
-                                                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                                >
-                                                    <option value="">Select an existing fleet</option>
-                                                    {selectedStaffObj.fleetNumbers.map((fn, idx) => (
-                                                        <option key={idx} value={fn}>{fn}</option>
-                                                    ))}
-                                                </select>
-                                                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-dim)' }} />
-                                            </div>
-                                            <button 
-                                                type="button"
-                                                onClick={async () => {
-                                                    setIsAddingNewFleet(true);
-                                                    setNextFleetLoading(true);
-                                                    setSelectedFleet('');
-                                                    try {
-                                                        const suggested = await getNextFleetNumber();
-                                                        setSelectedFleet(suggested);
-                                                    } catch (err) {
-                                                        console.error('Failed to fetch next fleet number:', err);
-                                                    } finally {
-                                                        setNextFleetLoading(false);
-                                                    }
-                                                }}
-                                                className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1 hover:opacity-70 transition-opacity"
-                                                style={{ color: '#f59e0b' }}
-                                            >
-                                                <Plus size={10} /> Add New Fleet Number
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    placeholder={nextFleetLoading ? "Fetching next number..." : "Enter new fleet number"}
-                                                    readOnly={nextFleetLoading}
-                                                    value={selectedFleet}
-                                                    onChange={(e) => setSelectedFleet(e.target.value)}
-                                                    ref={fleetInputRef}
-                                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm font-bold transition-all focus:ring-2 focus:ring-amber-500/20"
-                                                    style={{ 
-                                                        background: 'var(--bg-card)', 
-                                                        border: '1px solid var(--border-main)', 
-                                                        color: 'var(--text-main)',
-                                                        opacity: nextFleetLoading ? 0.6 : 1
-                                                    }}
-                                                />
-                                                {(nextFleetLoading || isCheckingFleet) && (
-                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                                        <div className="w-3 h-3 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {fleetError && (
-                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-red-500 animate-pulse uppercase tracking-wider px-1">
-                                                    <AlertTriangle size={10} /> {fleetError}
-                                                </div>
-                                            )}
-                                            {selectedStaffObj?.fleetNumbers && selectedStaffObj.fleetNumbers.length > 0 && (
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setIsAddingNewFleet(false);
-                                                        setSelectedFleet(selectedStaffObj.fleetNumbers![0]);
-                                                    }}
-                                                    className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1 hover:opacity-70 transition-opacity"
-                                                    style={{ color: 'var(--text-dim)' }}
-                                                >
-                                                    Select from existing fleets
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    </div>
 
                     {/* Update Existing Option */}
                     <div className="flex items-center gap-3 p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
