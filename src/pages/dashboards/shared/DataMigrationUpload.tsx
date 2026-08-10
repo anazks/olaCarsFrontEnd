@@ -625,7 +625,7 @@ const DataMigrationUpload = ({ isOpen, onClose, onSuccess }: Props) => {
                         {result ? 'Close' : 'Cancel'}
                     </button>
                     {!result && parsedRows.length > 0 && (
-                        <button onClick={handleSubmit} disabled={uploading || validCount === 0 || !!fleetError}
+                        <button onClick={handleSubmit} disabled={uploading || validCount === 0}
                             className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 disabled:opacity-50 shadow-lg border-none"
                             style={{ backgroundColor: '#f59e0b', color: '#0A0A0A' }}>
                             {uploading ? <Loader2 size={16} className="animate-spin" /> : <Database size={16} />}
