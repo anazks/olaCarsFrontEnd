@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { isTokenValid, getUserRole, hasPermission } from '../utils/auth';
-import { API_ROLE_TO_ROUTE } from '../services/authService';
+import { getUserBaseRoute } from '../utils/routeUtils';
 
 interface ProtectedRouteProps {
     allowedRoles?: string[];
@@ -18,17 +19,21 @@ const ProtectedRoute = ({ allowedRoles, requiredPermission }: ProtectedRouteProp
         return <Navigate to="/admin/login" state={{ from: location }} replace />;
     }
 
+    const normalizedRole = userRole ? userRole.toLowerCase() : null;
+
     // 2. Check Permissions (Granular)
     if (requiredPermission && !hasPermission(requiredPermission)) {
         console.log(`[ProtectedRoute] ❌ Lacks required permission: ${requiredPermission}`);
-        const ownRoute = (userRole && API_ROLE_TO_ROUTE[userRole]) ?? '/admin/login';
+        toast.error('Page not accessible', { id: 'page-not-accessible' });
+        const ownRoute = getUserBaseRoute(normalizedRole);
         return <Navigate to={ownRoute} replace />;
     }
 
     // 3. Check Roles (Legacy/Fallback)
-    if (allowedRoles && userRole && !allowedRoles.includes(userRole)) {
-        const ownRoute = API_ROLE_TO_ROUTE[userRole] ?? '/admin/login';
-        console.log(`[ProtectedRoute] ❌ Wrong role (${userRole} not in [${allowedRoles}]) → ${ownRoute}`);
+    if (allowedRoles && normalizedRole && !allowedRoles.includes(normalizedRole)) {
+        console.log(`[ProtectedRoute] ❌ Wrong role (${normalizedRole} not in [${allowedRoles}])`);
+        toast.error('Page not accessible', { id: 'page-not-accessible' });
+        const ownRoute = getUserBaseRoute(normalizedRole);
         return <Navigate to={ownRoute} replace />;
     }
 
@@ -37,3 +42,4 @@ const ProtectedRoute = ({ allowedRoles, requiredPermission }: ProtectedRouteProp
 };
 
 export default ProtectedRoute;
+

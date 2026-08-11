@@ -14,6 +14,8 @@ import "./i18n";
 import AdminLogin from "./pages/admin/AdminLogin";
 import DashboardLayout from "./layouts/DashboardLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import CrossRoleRouteGuard from "./components/CrossRoleRouteGuard";
+import NotFoundRedirect from "./components/NotFoundRedirect";
 import { ThemeProvider } from "./context/ThemeContext";
 
 // Sidebars
@@ -216,7 +218,8 @@ function App() {
         }}
       />
       <Router>
-        <Routes>
+        <CrossRoleRouteGuard>
+          <Routes>
           {/* Admin Login Gateway */}
           <Route path="/admin/login" element={<AdminLogin />} />
 
@@ -1758,10 +1761,11 @@ function App() {
             </Route>
           </Route>
 
-          {/* Redirect "/" and any unknown routes to login */}
-          <Route path="*" element={<Navigate to="/admin/login" replace />} />
+          {/* Redirect "/" and any unknown routes using NotFoundRedirect */}
+          <Route path="*" element={<NotFoundRedirect />} />
         </Routes>
-      </Router>
+      </CrossRoleRouteGuard>
+    </Router>
     </ThemeProvider>
   );
 }

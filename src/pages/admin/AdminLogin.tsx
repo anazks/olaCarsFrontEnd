@@ -4,6 +4,7 @@ import { Eye, EyeOff, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { loginByRole, API_ROLE_TO_ROUTE, UI_ROLE_TO_API_ROLE } from '../../services/authService';
 import { setToken, getDecodedToken, setRefreshToken, setAPIRole } from '../../utils/auth';
+import { resolveTargetRouteForRole } from '../../utils/routeUtils';
 import loginBgVideo from '../../assets/loginbgvideo.mp4';
 
 import { useTranslation } from 'react-i18next';
@@ -67,6 +68,7 @@ const AdminLogin = () => {
             // Decode to get the role from the JWT payload, normalize to lowercase
             const decoded = getDecodedToken();
             const jwtRole = decoded?.role ? decoded.role.toLowerCase() : null;
+            const activeRole = jwtRole || UI_ROLE_TO_API_ROLE[role] || role.replace(/-/g, '');
 
             // Navigate to the shared link destination if present, otherwise default role dashboard
             let destination =
@@ -75,7 +77,8 @@ const AdminLogin = () => {
                 `/admin/${role}`;
 
             if (fromLocation && fromLocation.pathname) {
-                destination = fromLocation.pathname + (fromLocation.search || '');
+                const targetPath = fromLocation.pathname + (fromLocation.search || '') + (fromLocation.hash || '');
+                destination = resolveTargetRouteForRole(targetPath, activeRole);
             }
 
             console.log('[login] navigating to:', destination);
