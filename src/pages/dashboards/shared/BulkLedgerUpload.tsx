@@ -108,6 +108,90 @@ const SAMPLE_ROWS = [
     }
 ];
 
+export const computeRowBankTxType = (
+    row: ParsedTransaction,
+    accounts: BankAccount[] = [],
+    _allAccountingCodes: AccountingCode[] = []
+) => {
+    const targetName = String(row.accountsName || row.matchedAccount?.name || '').trim();
+    const matchedAccountObj = row.matchedAccount;
+
+    const isTargetBankAcc = accounts.some(acc =>
+        (matchedAccountObj && acc.accountingCode === matchedAccountObj._id) ||
+        (targetName && (
+            acc.accountName?.toLowerCase() === targetName.toLowerCase() ||
+            acc.bankName?.toLowerCase() === targetName.toLowerCase() ||
+            acc.accountNumber === targetName
+        ))
+    );
+
+    const isBankTypeOrName = isTargetBankAcc ||
+        (matchedAccountObj && (
+            matchedAccountObj.accountType?.toLowerCase() === 'bank' ||
+            matchedAccountObj.accountType?.toLowerCase() === 'cash' ||
+            (matchedAccountObj.category as string) === 'Bank' ||
+            (matchedAccountObj.category as string) === 'Cash'
+        )) ||
+        /bank|banco|cuenta.*banco|transfer.*bank|inter-bank|interbank/i.test(targetName) ||
+        /inter-bank|transfer.*bank|transferencia.*banco/i.test(row.Description || '');
+
+    const hasSupplier = Boolean(row.supplier || (row.supplierName && String(row.supplierName).trim()));
+    const hasDriverName = Boolean((row.driverName && String(row.driverName).trim()) || row.isDriver);
+    const hasCustomerName = Boolean((row.customerName && String(row.customerName).trim()) || row.isCustomer || row.customer);
+
+    if (isBankTypeOrName && !hasCustomerName && !hasDriverName && !hasSupplier) {
+        return {
+            code: 'INTER_BANK',
+            label: 'Inter-Bank',
+            icon: '🏦',
+            badgeStyle: 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+        };
+    }
+
+    if (hasSupplier) {
+        return {
+            code: 'VENDOR',
+            label: 'Vendor',
+            icon: '🏢',
+            badgeStyle: 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+        };
+    }
+
+    if (hasDriverName) {
+        return {
+            code: 'DRIVER',
+            label: 'Driver',
+            icon: '🏎️',
+            badgeStyle: 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+        };
+    }
+
+    if (hasCustomerName) {
+        return {
+            code: 'NON_DRIVER_CUSTOMER',
+            label: 'Customer',
+            icon: '👤',
+            badgeStyle: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+        };
+    }
+
+    if (isBankTypeOrName) {
+        return {
+            code: 'INTER_BANK',
+            label: 'Inter-Bank',
+            icon: '🏦',
+            badgeStyle: 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+        };
+    }
+
+    return {
+        code: 'UNCLASSIFIED',
+        label: 'General',
+        icon: '📁',
+        badgeStyle: 'bg-gray-500/10 text-gray-400 border border-gray-500/30'
+    };
+};
+
 const parseSheetToJSON = (ws: XLSX.WorkSheet): any[] => {
     // Parse as 2D array first
     const rows2D: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
@@ -1609,6 +1693,50 @@ interface SetOffPreview {
                                 </div>
                             </div>
 
+                            {/* Summary Breakdown per Txn Type */}
+                            {rows.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
+                                    {(() => {
+                                        const counts: Record<string, number> = { INTER_BANK: 0, DRIVER: 0, VENDOR: 0, NON_DRIVER_CUSTOMER: 0, UNCLASSIFIED: 0 };
+                                        rows.forEach(r => {
+                                            const t = computeRowBankTxType(r, accounts, allAccountingCodes).code;
+                                            counts[t] = (counts[t] || 0) + 1;
+                                        });
+
+                                        return (
+                                            <>
+                                                <span className="text-[10px] font-black uppercase tracking-wider text-dim">Detected Txn Types:</span>
+                                                {counts.INTER_BANK > 0 && (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                                        🏦 Inter-Bank ({counts.INTER_BANK})
+                                                    </span>
+                                                )}
+                                                {counts.DRIVER > 0 && (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                                                        🏎️ Driver ({counts.DRIVER})
+                                                    </span>
+                                                )}
+                                                {counts.VENDOR > 0 && (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                        🏢 Vendor ({counts.VENDOR})
+                                                    </span>
+                                                )}
+                                                {counts.NON_DRIVER_CUSTOMER > 0 && (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                        👤 Customer ({counts.NON_DRIVER_CUSTOMER})
+                                                    </span>
+                                                )}
+                                                {counts.UNCLASSIFIED > 0 && (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-gray-500/10 text-gray-400 border border-gray-500/20">
+                                                        📁 General ({counts.UNCLASSIFIED})
+                                                    </span>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
                             {/* Table */}
                             <div className="border rounded-xl overflow-hidden relative z-1" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
@@ -1618,6 +1746,7 @@ interface SetOffPreview {
                                                 <th className="py-3 px-4">Date</th>
                                                 <th className="py-3 px-4">Description</th>
                                                 <th className="py-3 px-4">Account Name</th>
+                                                <th className="py-3 px-4">Txn Type</th>
                                                 <th className="py-3 px-4">Details</th>
                                                 <th className="py-3 px-4">Debit</th>
                                                 <th className="py-3 px-4">Credit</th>
@@ -1853,6 +1982,17 @@ interface SetOffPreview {
                                                                 </div>
                                                             ) : null}
                                                         </div>
+                                                    </td>
+                                                    <td className="py-3 px-4 whitespace-nowrap">
+                                                        {(() => {
+                                                            const txType = computeRowBankTxType(row, accounts, allAccountingCodes);
+                                                            return (
+                                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${txType.badgeStyle}`}>
+                                                                    <span>{txType.icon}</span>
+                                                                    <span>{txType.label}</span>
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </td>
                                                     <td className="py-3 px-4 max-w-[150px] truncate" title={row["Transaction Details"]}>{row["Transaction Details"] || '-'}</td>
                                                     <td className="py-3 px-4 font-mono text-emerald-500 font-semibold">{row.Debit > 0 ? `$${row.Debit.toFixed(2)}` : '-'}</td>

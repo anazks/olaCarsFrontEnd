@@ -35,6 +35,27 @@ import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 
+const CUTOFF_DATE_STR = '2026-06-15';
+
+export const isTransactionDisabledForDelete = (entry: LedgerEntry): boolean => {
+    const entryDateStr = entry.entryDate || entry.date;
+    if (!entryDateStr) return false;
+    const dateObj = new Date(entryDateStr);
+    if (isNaN(dateObj.getTime())) return false;
+
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const yyyymmdd = `${year}-${month}-${day}`;
+
+    const utcYear = dateObj.getUTCFullYear();
+    const utcMonth = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+    const utcDay = String(dateObj.getUTCDate()).padStart(2, '0');
+    const utcYyyymmdd = `${utcYear}-${utcMonth}-${utcDay}`;
+
+    return yyyymmdd <= CUTOFF_DATE_STR || utcYyyymmdd <= CUTOFF_DATE_STR;
+};
+
 const BankAccountLedger = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -1290,10 +1311,19 @@ const BankAccountLedger = () => {
 
     const handleBulkDeleteSubmit = async () => {
         if (!id) return;
+        const validSelectedIds = selectedIds.filter(id => {
+            const entry = entries.find(e => e._id === id);
+            return entry && !isTransactionDisabledForDelete(entry);
+        });
+        if (validSelectedIds.length === 0) {
+            toast.error("Transactions till 15/06/2026 cannot be deleted.");
+            setShowDeleteConfirm(false);
+            return;
+        }
         setDeleting(true);
         try {
             const { bulkDeleteBankAccountTransactions } = await import('../../../services/bankAccountService');
-            await bulkDeleteBankAccountTransactions(id, selectedIds);
+            await bulkDeleteBankAccountTransactions(id, validSelectedIds);
             toast.success('Transactions deleted and running balances recalculated successfully.');
             setShowDeleteConfirm(false);
             setSelectedIds([]);
@@ -1320,7 +1350,7 @@ const BankAccountLedger = () => {
     }, [entries, sortDirection]);
 
     const selectableEntries = React.useMemo(() => {
-        return sortedEntries;
+        return sortedEntries.filter(entry => !isTransactionDisabledForDelete(entry));
     }, [sortedEntries]);
 
     const runningBalancesMap = React.useMemo(() => {
@@ -2476,7 +2506,7 @@ const BankAccountLedger = () => {
                                                 }
                                             }}
                                             className={`rounded border-white/20 text-[#C8E600] focus:ring-[#C8E600] bg-transparent ${selectableEntries.length === 0 ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
-                                            title={selectableEntries.length === 0 ? "No transactions to select" : "Select all transactions"}
+                                            title={selectableEntries.length === 0 ? "No selectable transactions after 15/06/2026" : "Select all transactions"}
                                         />
                                     </th>
                                     <th
@@ -2518,6 +2548,7 @@ const BankAccountLedger = () => {
                                         : (entry.credit || 0);
 
                                     const isSelected = selectedIds.includes(entry._id);
+                                    const isDisabledForDelete = isTransactionDisabledForDelete(entry);
 
                                     return (
                                         <tr
@@ -2530,18 +2561,28 @@ const BankAccountLedger = () => {
                                             }}
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isSelected}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setSelectedIds(prev => [...prev, entry._id]);
-                                                        } else {
-                                                            setSelectedIds(prev => prev.filter(id => id !== entry._id));
-                                                        }
-                                                    }}
-                                                    className="rounded border-white/20 text-[#C8E600] focus:ring-[#C8E600] bg-transparent cursor-pointer"
-                                                />
+                                                {isDisabledForDelete ? (
+                                                    <input
+                                                        type="checkbox"
+                                                        disabled
+                                                        checked={false}
+                                                        title="Transactions till 15/06/2026 cannot be deleted"
+                                                        className="rounded border-white/10 opacity-20 cursor-not-allowed bg-transparent"
+                                                    />
+                                                ) : (
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedIds(prev => [...prev, entry._id]);
+                                                            } else {
+                                                                setSelectedIds(prev => prev.filter(id => id !== entry._id));
+                                                            }
+                                                        }}
+                                                        className="rounded border-white/20 text-[#C8E600] focus:ring-[#C8E600] bg-transparent cursor-pointer"
+                                                    />
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{formattedDate}</div>
