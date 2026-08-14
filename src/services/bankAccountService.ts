@@ -113,6 +113,16 @@ export const updateVendorContact = async (transactionId: string, data: { newSupp
     return response.data;
 };
 
+export const updateInterBankTransactionAmount = async (transactionId: string, data: { amount: number; notes?: string; entryDate?: string }) => {
+    const response = await api.put(`/api/bank-accounts/transactions/${transactionId}/inter-bank-amt-edit`, data);
+    return response.data;
+};
+
+export const updateLinkedAccountingCode = async (transactionId: string, data: { newAccountingCodeId: string }) => {
+    const response = await api.put(`/api/bank-accounts/transactions/${transactionId}/linked-account`, data);
+    return response.data;
+};
+
 export const downloadBankAccountLedgerPdf = async (id: string, params?: any) => {
     const response = await api.get(`/api/bank-accounts/${id}/ledger/pdf`, {
         params,

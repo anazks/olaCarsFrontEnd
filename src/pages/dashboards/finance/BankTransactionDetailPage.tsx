@@ -21,9 +21,12 @@ import {
     Shield,
     BookOpen,
     Zap,
-    Receipt
+    Receipt,
+    Repeat
 } from 'lucide-react';
-import { getBankTransactionById } from '../../../services/bankAccountService';
+import toast from 'react-hot-toast';
+import { getBankTransactionById, updateLinkedAccountingCode } from '../../../services/bankAccountService';
+import { getAllAccountingCodes } from '../../../services/accountingService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import { TransactionEditModal } from './modals/TransactionEditModal';
 import type { TxClassification, EditMode } from './modals/TransactionEditModal';
@@ -417,6 +420,124 @@ const LedgerEntryDetailModal = ({ isOpen, onClose, entry }: { isOpen: boolean; o
     );
 };
 
+/* ─────────────────────────────────────────────────────────
+   Modal: Change Linked Accounting Code (Single-Leg Swap)
+   ───────────────────────────────────────────────────────── */
+interface ChangeLinkedAccountModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
+    targetLeg: any;
+}
+
+const ChangeLinkedAccountModal = ({ isOpen, onClose, onSuccess, targetLeg }: ChangeLinkedAccountModalProps) => {
+    const [allAccounts, setAllAccounts] = useState<any[]>([]);
+    const [selectedCodeId, setSelectedCodeId] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (isOpen && targetLeg) {
+            setSelectedCodeId(targetLeg.accountingCode?._id || targetLeg.accountingCode || '');
+            const fetchAccounts = async () => {
+                setLoading(true);
+                try {
+                    const res = await getAllAccountingCodes() as any;
+                    const list = Array.isArray(res) ? res : (res.data || []);
+                    setAllAccounts(list);
+                } catch (err) {
+                    toast.error('Failed to load chart of accounts');
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchAccounts();
+        }
+    }, [isOpen, targetLeg]);
+
+    if (!isOpen || !targetLeg) return null;
+
+    const currentCode = targetLeg.accountingCode?.code || 'N/A';
+    const currentName = targetLeg.accountingCode?.name || 'Unassigned';
+
+    const handleSubmit = async () => {
+        if (!selectedCodeId) {
+            toast.error('Please select a target accounting code');
+            return;
+        }
+        if (selectedCodeId === (targetLeg.accountingCode?._id || targetLeg.accountingCode)) {
+            toast.error('Selected account must be different from current account');
+            return;
+        }
+
+        setSubmitting(true);
+        const toastId = toast.loading('Updating linked account...');
+        try {
+            await updateLinkedAccountingCode(targetLeg._id, { newAccountingCodeId: selectedCodeId });
+            toast.success('Linked accounting code updated successfully!', { id: toastId });
+            onSuccess();
+            onClose();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || err.message || 'Failed to update linked account', { id: toastId });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+            <div className="w-full max-w-lg rounded-2xl border p-6 shadow-2xl space-y-5 animate-scale-up" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center border-b pb-4" style={{ borderColor: 'var(--border-main)' }}>
+                    <h3 className="text-base font-black flex items-center gap-2">
+                        <Repeat size={18} className="text-[#C8E600]" /> Change Linked Account Code
+                    </h3>
+                    <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/10"><X size={18} /></button>
+                </div>
+
+                <div className="p-3 rounded-xl border bg-white/5 space-y-1 text-xs" style={{ borderColor: 'var(--border-main)' }}>
+                    <p className="opacity-60 font-semibold uppercase text-[10px]">Target Leg Line</p>
+                    <p className="font-bold font-mono text-sm">{targetLeg.type}: ${targetLeg.amount?.toFixed(2)} ({targetLeg.description || 'No description'})</p>
+                    <p className="text-xs">Current Code: <span className="font-mono font-bold text-[#C8E600]">{currentCode} - {currentName}</span></p>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider block opacity-70">Select New Accounting Code</label>
+                    {loading ? (
+                        <div className="p-3 text-center text-xs opacity-60">Loading Chart of Accounts...</div>
+                    ) : (
+                        <select
+                            value={selectedCodeId}
+                            onChange={e => setSelectedCodeId(e.target.value)}
+                            className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs font-medium"
+                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            disabled={submitting}
+                        >
+                            <option value="">Select Accounting Code...</option>
+                            {allAccounts.map(acc => (
+                                <option key={acc._id} value={acc._id} className="bg-[var(--bg-card)]">
+                                    {acc.code} - {acc.name} ({acc.category || acc.accountType})
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                </div>
+
+                <div className="p-3 rounded-xl border bg-amber-500/10 border-amber-500/20 text-[11px] text-amber-300 space-y-1">
+                    <p className="font-bold flex items-center gap-1"><Info size={12} /> Single-Leg Isolation Notice</p>
+                    <p className="opacity-90">Only this specific leg's accounting code will be updated. Connected partner legs remain completely untouched.</p>
+                </div>
+
+                <div className="flex justify-end items-center gap-3 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                    <button onClick={onClose} disabled={submitting} className="px-4 py-2 rounded-xl text-xs font-bold bg-white/5 border border-white/10 hover:bg-white/10">Cancel</button>
+                    <button onClick={handleSubmit} disabled={submitting || loading || !selectedCodeId} className="px-5 py-2 rounded-xl text-xs font-black uppercase bg-[#C8E600] text-black hover:opacity-90 disabled:opacity-50">
+                        {submitting ? 'Updating...' : 'Confirm Account Swap'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const detectTxClassification = (tx: any): TxClassification => {
     if (!tx) return 'NON_DRIVER_CUSTOMER';
 
@@ -469,6 +590,10 @@ const BankTransactionDetailPage = () => {
     // Ledger Entry Detail Modal state
     const [isLedgerDetailOpen, setIsLedgerDetailOpen] = useState(false);
     const [selectedLedgerEntry, setSelectedLedgerEntry] = useState<any>(null);
+
+    // Change Linked Account Modal state
+    const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+    const [targetLegForSwap, setTargetLegForSwap] = useState<any>(null);
 
     const fetchTransaction = async () => {
         if (!id) return;
@@ -680,7 +805,21 @@ const BankTransactionDetailPage = () => {
                             </div>
                             {transaction.accountingCode && (
                                 <div className="col-span-1 sm:col-span-2 border-t pt-4 mt-2" style={{ borderColor: 'var(--border-main)' }}>
-                                    <p className="text-xs font-semibold mb-2 flex items-center gap-1" style={{ color: 'var(--text-dim)' }}><Tag size={12}/> Linked Accounting Code</p>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                            <Tag size={12}/> Linked Accounting Code
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setTargetLegForSwap(transaction);
+                                                setIsAccountModalOpen(true);
+                                            }}
+                                            className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-[#C8E600]/10 hover:bg-[#C8E600]/20 border border-[#C8E600]/30 text-[#C8E600] rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                                        >
+                                            <Repeat size={11} /> Change Account
+                                        </button>
+                                    </div>
                                     <div className="flex items-start gap-4">
                                         <div className="bg-white/5 border px-3 py-1.5 rounded-lg font-mono font-bold" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
                                             {transaction.accountingCode.code}
@@ -757,17 +896,29 @@ const BankTransactionDetailPage = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setSelectedLedgerEntry(lEntry);
-                                                            setIsLedgerDetailOpen(true);
-                                                        }}
-                                                        className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/10 border rounded-lg transition-colors cursor-pointer"
-                                                        style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}
-                                                    >
-                                                        View Detail
-                                                    </button>
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSelectedLedgerEntry(lEntry);
+                                                                setIsLedgerDetailOpen(true);
+                                                            }}
+                                                            className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/10 border rounded-lg transition-colors cursor-pointer"
+                                                            style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}
+                                                        >
+                                                            View Detail
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setTargetLegForSwap(lEntry);
+                                                                setIsAccountModalOpen(true);
+                                                            }}
+                                                            className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-[#C8E600]/10 hover:bg-[#C8E600]/20 border border-[#C8E600]/30 text-[#C8E600] rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                                                        >
+                                                            <Repeat size={10} /> Change Account
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -980,6 +1131,14 @@ const BankTransactionDetailPage = () => {
                 isOpen={isLedgerDetailOpen}
                 onClose={() => { setIsLedgerDetailOpen(false); setSelectedLedgerEntry(null); }}
                 entry={selectedLedgerEntry}
+            />
+
+            {/* Change Linked Account Modal */}
+            <ChangeLinkedAccountModal
+                isOpen={isAccountModalOpen}
+                onClose={() => { setIsAccountModalOpen(false); setTargetLegForSwap(null); }}
+                onSuccess={fetchTransaction}
+                targetLeg={targetLegForSwap}
             />
         </div>
     );

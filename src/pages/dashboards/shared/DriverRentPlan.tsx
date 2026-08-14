@@ -32,9 +32,15 @@ const DriverRentPlan = () => {
             const driverData = await getDriverById(id!);
             setDriver(driverData);
 
-            if (driverData.currentVehicle) {
-                const vehicleData = await getVehicleById(driverData.currentVehicle);
-                setAssignedVehicle(vehicleData);
+            const vehicleRef = driverData.currentVehicle || (driverData as any).previousVehicle;
+            if (vehicleRef) {
+                try {
+                    const vId = typeof vehicleRef === 'object' ? vehicleRef._id : vehicleRef;
+                    const vehicleData = await getVehicleById(vId);
+                    setAssignedVehicle(vehicleData);
+                } catch (vErr) {
+                    if (typeof vehicleRef === 'object') setAssignedVehicle(vehicleRef);
+                }
             }
 
             const fetchedInvoices = await getInvoicesByDriver(id!);
@@ -73,7 +79,7 @@ const DriverRentPlan = () => {
     };
 
     if (loading) return <div className="p-8 text-center animate-pulse font-bold text-dim uppercase tracking-widest">Loading Rent Plan...</div>;
-    if (!driver || !assignedVehicle) return <div className="p-8 text-center">Driver or Vehicle data not found</div>;
+    if (!driver) return <div className="p-8 text-center">Driver data not found</div>;
 
     const rentTracking = driver.rentTracking || [];
     const frequency = rentTracking.length > 50 ? 'WEEKLY' : 'MONTHLY'; // Heuristic if frequency not in model
@@ -82,6 +88,7 @@ const DriverRentPlan = () => {
     const totalOutstanding = invoices.reduce((sum, inv) => sum + (inv.balance || 0), 0);
     const periodsPaid = invoices.filter(inv => inv.status === 'PAID').length;
     const totalPeriods = rentTracking.length;
+    const isCancelled = (driver.status as string) === 'INACTIVE' || !assignedVehicle;
 
     return (
         <div className="min-h-screen p-4 md:p-8 space-y-8" style={{ background: 'var(--bg-main)' }}>
@@ -92,14 +99,21 @@ const DriverRentPlan = () => {
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate(-1)}
-                        className="p-3 rounded-2xl bg-white/5 border border-white/10 text-dim hover:text-white transition-all"
+                        className="p-3 rounded-2xl bg-white/5 border border-white/10 text-dim hover:text-white transition-all cursor-pointer"
                     >
                         <ChevronLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-lg font-black uppercase tracking-tighter" style={{ color: 'var(--text-main)' }}>Rent Repayment Plan</h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-lg font-black uppercase tracking-tighter" style={{ color: 'var(--text-main)' }}>Rent Repayment Plan</h1>
+                            {isCancelled && (
+                                <span className="px-2.5 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black uppercase tracking-wider">
+                                    Contract Cancelled
+                                </span>
+                            )}
+                        </div>
                         <p className="text-xs font-bold text-dim uppercase tracking-widest">
-                            {driver.personalInfo.fullName} • {assignedVehicle.basicDetails.make} {assignedVehicle.basicDetails.model}
+                            {driver.personalInfo.fullName} • {assignedVehicle ? `${assignedVehicle.basicDetails?.make || ''} ${assignedVehicle.basicDetails?.model || ''}` : 'Vehicle Released'}
                         </p>
                     </div>
                 </div>
@@ -150,6 +164,9 @@ const DriverRentPlan = () => {
                                         label={item.weekLabel}
                                         invoice={invoice}
                                         baseAmount={item.amount}
+                                        itemStatus={item.status}
+                                        itemDueDate={item.dueDate}
+                                        isDriverInactive={(driver.status as string) === 'INACTIVE'}
                                         onDownload={() => invoice && handleDownloadInvoice(invoice)}
                                         onView={() => invoice && navigate(`../invoices/${invoice._id}`)}
                                     />
@@ -173,33 +190,43 @@ const SummaryCard = ({ label, value, icon, color }: any) => (
     </div>
 );
 
-const ScheduleRow = ({ period, label, invoice, baseAmount, onDownload, onView }: any) => {
-    const status = invoice?.status || 'PENDING';
+const ScheduleRow = ({ period, label, invoice, baseAmount, itemStatus, itemDueDate, isDriverInactive, onDownload, onView }: any) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dueDateObj = itemDueDate ? new Date(itemDueDate) : (invoice?.dueDate ? new Date(invoice.dueDate) : null);
+    if (dueDateObj) dueDateObj.setHours(0, 0, 0, 0);
+
+    const isFutureWeek = dueDateObj ? dueDateObj > today : false;
+    const isCancelled = invoice?.status === 'CANCELLED' || itemStatus === 'CANCELLED' || (isDriverInactive && isFutureWeek && (itemStatus === 'PENDING' || !itemStatus));
+    const status = isCancelled ? 'CANCELLED' : (invoice?.status || itemStatus || 'PENDING');
     const totalDue = invoice?.totalAmountDue || baseAmount;
     const paid = invoice?.amountPaid || 0;
-    const balance = invoice?.balance ?? (totalDue - paid);
-    const dueDate = invoice?.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'TBD';
+    const balance = isCancelled ? 0 : (invoice?.balance ?? (totalDue - paid));
+    const dueDate = invoice?.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : (itemDueDate ? new Date(itemDueDate).toLocaleDateString() : 'TBD');
 
     return (
-        <tr className="group transition-all hover:bg-white/[0.02]">
+        <tr className={`group transition-all ${isCancelled ? 'bg-red-500/[0.02] opacity-60' : 'hover:bg-white/[0.02]'}`}>
             <td className="p-6">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-[10px] font-black" style={{ color: 'var(--text-main)' }}>
+                    <div className={`w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-[10px] font-black ${isCancelled ? 'line-through text-red-400' : ''}`} style={{ color: 'var(--text-main)' }}>
                         {period}
                     </div>
-                    <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{label}</span>
+                    <span className={`text-xs font-bold ${isCancelled ? 'line-through text-red-400/80' : ''}`} style={{ color: 'var(--text-main)' }}>{label}</span>
                 </div>
             </td>
-            <td className="p-6 text-xs font-medium text-dim">{dueDate}</td>
-            <td className="p-6 text-xs font-black" style={{ color: 'var(--text-main)' }}>${totalDue.toLocaleString()}</td>
-            <td className="p-6 text-xs font-bold text-brand-lime">${paid.toLocaleString()}</td>
-            <td className="p-6 text-xs font-bold text-orange-400">${balance.toLocaleString()}</td>
+            <td className={`p-6 text-xs font-medium ${isCancelled ? 'line-through text-red-400/60' : 'text-dim'}`}>{dueDate}</td>
+            <td className={`p-6 text-xs font-black ${isCancelled ? 'line-through text-red-400/60' : ''}`} style={{ color: 'var(--text-main)' }}>${totalDue.toLocaleString()}</td>
+            <td className={`p-6 text-xs font-bold ${isCancelled ? 'line-through opacity-40' : 'text-brand-lime'}`}>${paid.toLocaleString()}</td>
+            <td className={`p-6 text-xs font-bold ${isCancelled ? 'line-through text-red-400/60' : 'text-orange-400'}`}>${balance.toLocaleString()}</td>
             <td className="p-6">
-                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${status === 'PAID' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-                        status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                        status === 'OVERDUE' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                            'bg-white/5 text-dim border-white/10'
-                    }`}>
+                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${
+                    status === 'PAID' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                    status === 'PARTIAL' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                    status === 'OVERDUE' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                    status === 'CANCELLED' ? 'bg-red-500/15 text-red-400 border-red-500/30' :
+                    'bg-white/5 text-dim border-white/10'
+                }`}>
                     {status}
                 </span>
             </td>
@@ -223,7 +250,9 @@ const ScheduleRow = ({ period, label, invoice, baseAmount, onDownload, onView }:
                         </button>
                     </div>
                 ) : (
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-dim/50">Not Generated</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-widest ${isCancelled ? 'text-red-400/60 line-through' : 'text-dim/50'}`}>
+                        {isCancelled ? 'Cancelled' : 'Not Generated'}
+                    </span>
                 )}
             </td>
         </tr>

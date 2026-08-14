@@ -53,13 +53,16 @@ const DriverDetail = () => {
                 console.error('Error fetching driver invoices:', invErr);
             }
 
-            if (data.currentVehicle) {
+            const vehicleRef = data.currentVehicle || (data as any).previousVehicle;
+            if (vehicleRef) {
                 try {
                     setLoadingVehicle(true);
-                    const vehicleData = await getVehicleById(data.currentVehicle);
+                    const vId = typeof vehicleRef === 'object' ? vehicleRef._id : vehicleRef;
+                    const vehicleData = await getVehicleById(vId);
                     setAssignedVehicle(vehicleData);
                 } catch (vError) {
-                    console.error('Error fetching assigned vehicle:', vError);
+                    console.error('Error fetching assigned/previous vehicle:', vError);
+                    if (typeof vehicleRef === 'object') setAssignedVehicle(vehicleRef);
                 } finally {
                     setLoadingVehicle(false);
                 }
@@ -672,6 +675,16 @@ const DriverDetail = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {driver.rentTracking && driver.rentTracking.length > 0 && (
+                        <button
+                            onClick={() => navigate('rent-plan')}
+                            className="px-5 py-2.5 font-black uppercase tracking-wider text-xs rounded-xl transition-all flex items-center gap-2 border hover:scale-105 active:scale-95 shadow-lg cursor-pointer"
+                            style={{ backgroundColor: 'var(--brand-lime)', borderColor: 'var(--brand-lime)', color: '#000' }}
+                        >
+                            <CreditCard size={16} />
+                            View Repayment Plan
+                        </button>
+                    )}
                     {!(driver.status === 'ACTIVE' && driver.currentVehicle) && (
                         <HasPermission permission="DRIVER_DELETE">
                             <button
@@ -1150,11 +1163,11 @@ const DriverDetail = () => {
                         {[1, 2, 3, 4].map(i => <div key={i} className="h-10 bg-gray-200 rounded" style={{ backgroundColor: 'var(--bg-input)' }} />)}
                     </div>
                 </div>
-            ) : assignedVehicle ? (() => {
-                const sellingPrice = assignedVehicle.basicDetails?.sellingValue || assignedVehicle.purchaseDetails?.purchasePrice || 0;
-                const depositPayment = driver.additionalPayments?.find(
+            ) : (assignedVehicle || (driver.rentTracking && driver.rentTracking.length > 0)) ? (() => {
+                const sellingPrice = assignedVehicle ? (assignedVehicle.basicDetails?.sellingValue || assignedVehicle.purchaseDetails?.purchasePrice || 0) : 0;
+                const depositPayment = assignedVehicle ? driver.additionalPayments?.find(
                     p => p.type === 'DEPOSIT' && p.relatedVehicle === assignedVehicle._id
-                );
+                ) : driver.additionalPayments?.find(p => p.type === 'DEPOSIT');
                 const depositAmount = depositPayment ? depositPayment.amount : 0;
                 const effectiveCost = Math.max(0, sellingPrice - depositAmount);
 
@@ -1164,7 +1177,7 @@ const DriverDetail = () => {
 
                 const duration = driver.rentTracking && driver.rentTracking.length > 0
                     ? driver.rentTracking.length
-                    : (isWeekly ? (assignedVehicle.basicDetails?.leaseDurationWeeks || 260) : (assignedVehicle.basicDetails?.leaseDurationMonths || 60));
+                    : (isWeekly ? (assignedVehicle?.basicDetails?.leaseDurationWeeks || 260) : (assignedVehicle?.basicDetails?.leaseDurationMonths || 60));
 
                 const rent = driver.rentTracking && driver.rentTracking.length > 0
                     ? driver.rentTracking[0].amount
@@ -1191,8 +1204,8 @@ const DriverDetail = () => {
                                     <Car size={14} />
                                 </div>
                                 <div>
-                                    <h2 className="font-black uppercase tracking-widest text-[12px]" style={{ color: 'var(--text-main)' }}>Assigned Vehicle & Contract</h2>
-                                    <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Physical Asset & Rent Terms</p>
+                                    <h2 className="font-black uppercase tracking-widest text-[12px]" style={{ color: 'var(--text-main)' }}>Assigned Vehicle &amp; Contract Plan</h2>
+                                    <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Physical Asset &amp; Rent Terms</p>
                                 </div>
                             </div>
 
@@ -1220,13 +1233,19 @@ const DriverDetail = () => {
 
                                 {/* Action Buttons */}
                                 <div className="flex items-center gap-2">
-                                    <div className="px-2 py-0.5 rounded-full bg-brand-lime/10 text-brand-lime text-[10px] font-black uppercase tracking-wider border border-brand-lime/20 shadow-sm animate-pulse">
-                                        Active Rental
-                                    </div>
-                                    {isStaff && (
+                                    {(driver.status as string) === 'INACTIVE' || !driver.currentVehicle ? (
+                                        <div className="px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-wider border border-red-500/20 shadow-sm">
+                                            Contract Cancelled (Vehicle Released)
+                                        </div>
+                                    ) : (
+                                        <div className="px-2.5 py-0.5 rounded-full bg-brand-lime/10 text-brand-lime text-[10px] font-black uppercase tracking-wider border border-brand-lime/20 shadow-sm animate-pulse">
+                                            Active Rental
+                                        </div>
+                                    )}
+                                    {isStaff && driver.status === 'ACTIVE' && driver.currentVehicle && (
                                         <button
                                             onClick={handleCancelContract}
-                                            className="px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all"
+                                            className="px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer"
                                         >
                                             Cancel Contract
                                         </button>
@@ -1239,57 +1258,67 @@ const DriverDetail = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 relative z-10">
                             {/* Left: Physical Vehicle Details */}
                             <div className="lg:col-span-5 space-y-3">
-                                <div 
-                                    onClick={() => navigate(`/admin/${getUserRole()?.replace(' ', '-').toLowerCase()}/vehicles/${assignedVehicle._id}`)}
-                                    className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex gap-3 items-center cursor-pointer hover:bg-white/[0.03] hover:border-white/10 transition-all shadow-sm hover:shadow-md"
-                                >
-                                    <div className="w-16 h-16 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
-                                        {assignedVehicle.purchaseDetails?.purchaseReceipt ? (
-                                            <img
-                                                src={assignedVehicle.purchaseDetails.purchaseReceipt.startsWith('http') ? assignedVehicle.purchaseDetails.purchaseReceipt : `${import.meta.env.VITE_S3_BASE_URL || import.meta.env.VITE_API_BASE_URL || ''}/${assignedVehicle.purchaseDetails.purchaseReceipt}`}
-                                                alt="Vehicle"
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            <Car size={24} className="text-dim opacity-30" />
-                                        )}
-                                    </div>
-                                    <div className="space-y-1 flex-grow">
-                                        <div className="text-[10px] font-black uppercase tracking-widest text-brand-lime">Asset Details</div>
-                                        <h3 className="text-sm font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
-                                            {assignedVehicle.basicDetails.make} {assignedVehicle.basicDetails.model}
-                                        </h3>
-                                        <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                                            <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5 font-bold text-dim">
-                                                Reg: {assignedVehicle.legalDocs?.registrationNumber || 'N/A'}
-                                            </span>
+                                {assignedVehicle ? (
+                                    <>
+                                        <div 
+                                            onClick={() => navigate(`/admin/${getUserRole()?.replace(' ', '-').toLowerCase()}/vehicles/${assignedVehicle._id}`)}
+                                            className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex gap-3 items-center cursor-pointer hover:bg-white/[0.03] hover:border-white/10 transition-all shadow-sm hover:shadow-md"
+                                        >
+                                            <div className="w-16 h-16 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                                                {assignedVehicle.purchaseDetails?.purchaseReceipt ? (
+                                                    <img
+                                                        src={assignedVehicle.purchaseDetails.purchaseReceipt.startsWith('http') ? assignedVehicle.purchaseDetails.purchaseReceipt : `${import.meta.env.VITE_S3_BASE_URL || import.meta.env.VITE_API_BASE_URL || ''}/${assignedVehicle.purchaseDetails.purchaseReceipt}`}
+                                                        alt="Vehicle"
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <Car size={24} className="text-dim opacity-30" />
+                                                )}
+                                            </div>
+                                            <div className="space-y-1 flex-grow">
+                                                <div className="text-[10px] font-black uppercase tracking-widest text-brand-lime">Asset Details</div>
+                                                <h3 className="text-sm font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
+                                                    {assignedVehicle.basicDetails?.make} {assignedVehicle.basicDetails?.model}
+                                                </h3>
+                                                <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                                                    <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5 font-bold text-dim">
+                                                        Reg: {assignedVehicle.legalDocs?.registrationNumber || 'N/A'}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
 
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div className="p-2.5 rounded-lg bg-white/[0.01] border border-white/5">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Make / Model</p>
-                                        <p className="text-sm font-bold truncate text-white">{assignedVehicle.basicDetails.make} {assignedVehicle.basicDetails.model}</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="p-2.5 rounded-lg bg-white/[0.01] border border-white/5">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Make / Model</p>
+                                                <p className="text-sm font-bold truncate text-white">{assignedVehicle.basicDetails?.make} {assignedVehicle.basicDetails?.model}</p>
+                                            </div>
+                                            <div className="p-2.5 rounded-lg bg-white/[0.01] border border-white/5">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Registration</p>
+                                                <p className="text-sm font-bold truncate text-white">{assignedVehicle.legalDocs?.registrationNumber || 'N/A'}</p>
+                                            </div>
+                                            <div className="p-2.5 rounded-lg bg-white/[0.01] border border-white/5">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Plate No</p>
+                                                <p className="text-sm font-bold truncate text-white">{assignedVehicle.basicDetails?.vin}</p>
+                                            </div>
+                                            <div className="p-2.5 rounded-lg bg-white/[0.01] border border-white/5">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Color / Year</p>
+                                                <p className="text-sm font-bold truncate text-white">{assignedVehicle.basicDetails?.colour || 'N/A'} ({assignedVehicle.basicDetails?.year || 'N/A'})</p>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="p-4 rounded-xl bg-white/[0.01] border border-white/5 flex flex-col items-center justify-center text-center py-8 space-y-2 h-full">
+                                        <Car size={32} className="text-dim opacity-30" />
+                                        <h4 className="text-xs font-black uppercase tracking-wider text-white">Vehicle Asset Unassigned</h4>
+                                        <p className="text-[11px] text-dim max-w-[200px]">Driver contract is inactive. The previous vehicle has been released to available fleet.</p>
                                     </div>
-                                    <div className="p-2.5 rounded-lg bg-white/[0.01] border border-white/5">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Registration</p>
-                                        <p className="text-sm font-bold truncate text-white">{assignedVehicle.legalDocs?.registrationNumber || 'N/A'}</p>
-                                    </div>
-                                    <div className="p-2.5 rounded-lg bg-white/[0.01] border border-white/5">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Plate No</p>
-                                        <p className="text-sm font-bold truncate text-white">{assignedVehicle.basicDetails.vin}</p>
-                                    </div>
-                                    <div className="p-2.5 rounded-lg bg-white/[0.01] border border-white/5">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Color / Year</p>
-                                        <p className="text-sm font-bold truncate text-white">{assignedVehicle.basicDetails.colour || 'N/A'} ({assignedVehicle.basicDetails.year || 'N/A'})</p>
-                                    </div>
-                                </div>
+                                )}
                             </div>
 
                             {/* Right: Lease Contract Financial Terms */}
                             <div className="lg:col-span-7 flex flex-col justify-between gap-4">
-                                {driver.status === 'ACTIVE' ? (
+                                {driver.status === 'ACTIVE' || (driver.rentTracking && driver.rentTracking.length > 0) ? (
                                     <div className="p-4 rounded-xl bg-white/[0.01] border border-white/5 relative h-full flex flex-col justify-between">
                                         <div>
                                             <div className="flex items-center justify-between mb-3">
@@ -1319,13 +1348,13 @@ const DriverDetail = () => {
                                                 <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
                                                     <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Selling Price</p>
                                                     <p className="text-base font-black tracking-tight text-white">
-                                                        {assignedVehicle.purchaseDetails?.currency || '$'}{sellingPrice.toLocaleString()}
+                                                        {assignedVehicle?.purchaseDetails?.currency || '$'}{sellingPrice.toLocaleString()}
                                                     </p>
                                                 </div>
                                                 <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
                                                     <p className="text-[9px] font-black uppercase tracking-widest text-dim mb-0.5">Down Payment</p>
                                                     <p className="text-base font-black tracking-tight text-blue-400">
-                                                        {assignedVehicle.purchaseDetails?.currency || '$'}{depositAmount.toLocaleString()}
+                                                        {assignedVehicle?.purchaseDetails?.currency || '$'}{depositAmount.toLocaleString()}
                                                     </p>
                                                 </div>
                                                 <div className="p-2.5 rounded-lg bg-brand-lime/5 border border-brand-lime/10">

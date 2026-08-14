@@ -18,7 +18,7 @@ const DriverList = () => {
     const [drivers, setDrivers] = useState<Driver[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(true);
     const [showBulkUpload, setShowBulkUpload] = useState(false);
     const [showDataMigration, setShowDataMigration] = useState(false);
 
@@ -257,7 +257,8 @@ const DriverList = () => {
             case 'ACTIVE':
             case 'APPROVED': return 'bg-green-100 text-green-700';
             case 'REJECTED':
-            case 'SUSPENDED': return 'bg-red-100 text-red-700';
+            case 'SUSPENDED':
+            case 'INACTIVE': return 'bg-red-100 text-red-700';
             case 'PENDING REVIEW':
             case 'VERIFICATION':
             case 'CREDIT CHECK': 
@@ -352,8 +353,8 @@ const DriverList = () => {
                         <Filter size={14} /> {t('management.common.filters')}
                     </button>
                     <button
-                        onClick={() => setShowDataMigration(true)}
-                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all hover:bg-white/5 active:scale-95 border"
+                        onClick={() => navigate('../data-migration-upload')}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all hover:bg-white/5 active:scale-95 border cursor-pointer"
                         style={{ 
                             borderColor: '#f59e0b', 
                             color: '#f59e0b',
@@ -416,8 +417,8 @@ const DriverList = () => {
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             >
                                 <option value="ALL">{t('management.drivers.filters.allStatuses')}</option>
-                                {['DRAFT', 'PENDING REVIEW', 'VERIFICATION', 'CREDIT CHECK', 'MANAGER REVIEW', 'APPROVED', 'CONTRACT PENDING', 'ACTIVE', 'SUSPENDED', 'REJECTED'].map(status => (
-                                    <option key={status} value={status}>{t(`management.drivers.statusLabels.${status}`)}</option>
+                                {['DRAFT', 'PENDING REVIEW', 'VERIFICATION', 'CREDIT CHECK', 'MANAGER REVIEW', 'APPROVED', 'CONTRACT PENDING', 'ACTIVE', 'SUSPENDED', 'REJECTED', 'INACTIVE'].map(status => (
+                                    <option key={status} value={status}>{t(`management.drivers.statusLabels.${status}`, status)}</option>
                                 ))}
                             </select>
                         </div>
@@ -455,6 +456,24 @@ const DriverList = () => {
                                 style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
                             />
                         </div>
+                        {(statusFilter !== 'ALL' || branchFilter !== 'ALL' || startDate || endDate || searchTerm) && (
+                            <div className="flex justify-end pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setStatusFilter('ALL');
+                                        setBranchFilter('ALL');
+                                        setStartDate('');
+                                        setEndDate('');
+                                        setSearchTerm('');
+                                        setCurrentPage(1);
+                                    }}
+                                    className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors cursor-pointer flex items-center gap-1"
+                                >
+                                    Reset Filters
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -537,7 +556,7 @@ const DriverList = () => {
                                         </td>
                                         <td className="px-4 py-2.5">
                                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusColor(driver.status)}`}>
-                                                {t(`management.drivers.statusLabels.${driver.status}`)}
+                                                {t(`management.drivers.statusLabels.${driver.status}`, driver.status)}
                                             </span>
                                         </td>
                                          <td className="px-4 py-2.5">

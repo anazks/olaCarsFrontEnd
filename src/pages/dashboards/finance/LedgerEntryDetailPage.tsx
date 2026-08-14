@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { getLedgerEntryById, getLedgerEntries, updateLedgerEntry } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
-import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -123,48 +122,7 @@ const LedgerEntryDetailPage = () => {
         return `${base}${sanitizedUrl}`;
     };
 
-    const [isTransferringAccount, setIsTransferringAccount] = useState(false);
-    const [allAccounts, setAllAccounts] = useState<AccountingCode[]>([]);
-    const [selectedAccountCode, setSelectedAccountCode] = useState('');
-    const [updatingAccount, setUpdatingAccount] = useState(false);
 
-    const handleStartTransfer = async () => {
-        setIsTransferringAccount(true);
-        if (allAccounts.length === 0) {
-            const toastId = toast.loading("Loading charts of accounts...");
-            try {
-                const res = (await getAllAccountingCodes()) as any;
-                const codes = Array.isArray(res) ? res : (res.data || []);
-                setAllAccounts(codes);
-                toast.dismiss(toastId);
-            } catch (err) {
-                toast.error("Failed to load accounts", { id: toastId });
-            }
-        }
-        if (entry?.accountingCode?._id) {
-            setSelectedAccountCode(entry.accountingCode._id);
-        }
-    };
-
-    const handleTransferAccount = async () => {
-        if (!entry || !id || !selectedAccountCode) return;
-        if (selectedAccountCode === entry.accountingCode?._id) {
-            toast.error("Target account must be different from current account");
-            return;
-        }
-        setUpdatingAccount(true);
-        const toastId = toast.loading("Transferring account booking...");
-        try {
-            const updated = await updateLedgerEntry(id, { accountingCode: selectedAccountCode });
-            setEntry(updated);
-            setIsTransferringAccount(false);
-            toast.success("Transferred to new chart of account successfully", { id: toastId });
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || "Failed to transfer account", { id: toastId });
-        } finally {
-            setUpdatingAccount(false);
-        }
-    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -386,58 +344,13 @@ const LedgerEntryDetailPage = () => {
                                 <p className="font-mono text-sm" style={{ color: 'var(--text-main)' }}>{formattedDate}</p>
                             </div>
                             <div>
-                                <p className="text-xs font-semibold mb-1 flex items-center justify-between" style={{ color: 'var(--text-dim)' }}>
-                                    <span className="flex items-center gap-1"><Tag size={12} /> Accounting Code</span>
-                                    {!isTransferringAccount && (
-                                        <button 
-                                            onClick={handleStartTransfer}
-                                            className="text-[10px] font-black uppercase text-brand-lime hover:opacity-80 transition-all flex items-center gap-1 bg-transparent border-none cursor-pointer"
-                                            style={{ color: 'var(--brand-lime)' }}
-                                            title="Transfer to Another Chart of Account"
-                                        >
-                                            <Repeat size={10} /> Transfer Account
-                                        </button>
-                                    )}
+                                <p className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                    <Tag size={12} /> Accounting Code
                                 </p>
-                                {isTransferringAccount ? (
-                                    <div className="space-y-2 mt-1">
-                                        <select
-                                            value={selectedAccountCode}
-                                            onChange={e => setSelectedAccountCode(e.target.value)}
-                                            className="w-full px-3 py-2 rounded-xl border outline-none text-sm"
-                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                            disabled={updatingAccount}
-                                        >
-                                            <option value="">Select Target Account...</option>
-                                            {allAccounts.map(acc => (
-                                                <option key={acc._id} value={acc._id} className="bg-[var(--bg-card)]">
-                                                    {acc.code} - {acc.name} ({acc.category})
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={handleTransferAccount}
-                                                disabled={updatingAccount || !selectedAccountCode}
-                                                className="px-3 py-1.5 bg-[#D4F12E] hover:bg-lime-400 text-black text-xs font-bold rounded-lg cursor-pointer transition-all active:scale-95 disabled:opacity-50"
-                                            >
-                                                {updatingAccount ? "Transferring..." : "Confirm"}
-                                            </button>
-                                            <button
-                                                onClick={() => setIsTransferringAccount(false)}
-                                                disabled={updatingAccount}
-                                                className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[var(--text-main)] text-xs font-bold rounded-lg cursor-pointer transition-all active:scale-95 border border-[var(--border-main)]"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col">
-                                        <span className="font-mono font-bold" style={{ color: 'var(--text-main)' }}>{entry.accountingCode?.code}</span>
-                                        <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{entry.accountingCode?.name}</span>
-                                    </div>
-                                )}
+                                <div className="flex flex-col">
+                                    <span className="font-mono font-bold" style={{ color: 'var(--text-main)' }}>{entry.accountingCode?.code}</span>
+                                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>{entry.accountingCode?.name}</span>
+                                </div>
                             </div>
                             <div>
                                 <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-dim)' }}>Category</p>

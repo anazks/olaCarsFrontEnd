@@ -262,8 +262,11 @@ export const dataMigrateDrivers = async (
     return response.data;
 };
 
-// Also export as a default object for backward compatibility if needed, 
-// though individual exports are preferred now.
+export const verifyAndCorrectDriverPlans = async (drivers: any[]): Promise<any> => {
+    const response = await api.post('/api/driver/verify-and-correct-plans', { drivers }, { timeout: 300000 });
+    return response.data;
+};
+
 export const driverService = {
     getAllDrivers,
     getDriverById,
@@ -276,6 +279,7 @@ export const driverService = {
     cancelContract,
     bulkCreateDrivers,
     dataMigrateDrivers,
+    verifyAndCorrectDriverPlans,
     payAdditionalPayment
 };
 

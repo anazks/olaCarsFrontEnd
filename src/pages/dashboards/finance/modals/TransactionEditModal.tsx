@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { X, DollarSign, User, Truck, Building2, Save, Loader2, Search, Zap, FileText, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { 
-    bulkEditBankAccountTransactions,
     updateCustomerTransactionAmount,
     updateCustomerContact,
     updateVendorTransactionAmount,
-    updateVendorContact
+    updateVendorContact,
+    updateInterBankTransactionAmount
 } from '../../../../services/bankAccountService';
 import { getAllDrivers } from '../../../../services/driverService';
 import { getAllCustomers, type Customer } from '../../../../services/customerService';
@@ -96,7 +96,7 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
         const txAmount = Number(amount || transaction.amount || 0);
 
         if (
-            (classification === 'DRIVER' || classification === 'NON_DRIVER_CUSTOMER') && 
+            classification === 'DRIVER' && 
             selectedCustomerId && 
             selectedCustomerId !== initialCustomerId
         ) {
@@ -266,40 +266,26 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
             const rawCustomers = extractArray(custList);
             const rawSuppliers = extractArray(supList);
 
-            // Consolidate driver options list
-            const combinedDrivers: any[] = [];
-            const addedIds = new Set<string>();
+            // Fetch drivers directly from Driver collection
+            const driverOptions: any[] = [];
+            const addedDriverIds = new Set<string>();
 
-            // 1. Add drivers from Customer records
-            rawCustomers.forEach((c: any) => {
-                if (c.driver || c.driverId || c.isDriver) {
-                    const idStr = String(c._id);
-                    if (!addedIds.has(idStr)) {
-                        addedIds.add(idStr);
-                        combinedDrivers.push({
-                            _id: c._id,
-                            name: c.name,
-                            code: c.customerId || (typeof c.driver === 'object' ? c.driver?.driverId : '')
-                        });
-                    }
-                }
-            });
-
-            // 2. Add drivers from Driver API records
             rawDrivers.forEach((d: any) => {
                 const targetId = typeof d.customer === 'object' ? d.customer?._id : (d.customer || d._id);
                 const idStr = String(targetId);
-                if (targetId && !addedIds.has(idStr)) {
-                    addedIds.add(idStr);
-                    combinedDrivers.push({
+                if (targetId && !addedDriverIds.has(idStr)) {
+                    addedDriverIds.add(idStr);
+                    const dName = d.name || d.personalInfo?.fullName || d.fullName || 'Unnamed Driver';
+                    const dCode = d.driverId || d.code || (typeof d.customer === 'object' ? d.customer?.customerId : '') || '';
+                    driverOptions.push({
                         _id: targetId,
-                        name: d.name,
-                        code: d.driverId || d.code || ''
+                        name: dName,
+                        code: dCode
                     });
                 }
             });
 
-            setDriversList(combinedDrivers);
+            setDriversList(driverOptions);
             setCustomers(rawCustomers);
             setSuppliers(rawSuppliers);
         } catch (err) {
@@ -313,9 +299,6 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
 
     const safeCustomers = Array.isArray(customers) ? customers : [];
     const safeSuppliers = Array.isArray(suppliers) ? suppliers : [];
-
-    // Non-driver customers filter
-    const nonDriverCustomers = safeCustomers.filter(c => !((c as any).driver || (c as any).driverId || (c as any).isDriver));
 
     // Filter drivers by search query
     const filteredDrivers = driversList.filter(d => {
@@ -334,12 +317,11 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
         return nameStr.includes(term) || codeStr.includes(term);
     });
 
-    const customerPool = nonDriverCustomers.length > 0 ? nonDriverCustomers : safeCustomers;
-    const filteredCustomers = customerPool.filter(c => {
+    const filteredCustomers = safeCustomers.filter(c => {
         if (!searchTerm.trim()) return true;
         const term = searchTerm.toLowerCase();
-        const nameStr = (c.name || '').toLowerCase();
-        const idStr = String((c as any).customerId || '').toLowerCase();
+        const nameStr = (c.name || (c as any).companyName || '').toLowerCase();
+        const idStr = String((c as any).customerId || (c as any).customerNumber || '').toLowerCase();
         return nameStr.includes(term) || idStr.includes(term);
     });
 
@@ -357,10 +339,7 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
 
         try {
             if (classification === 'INTER_BANK') {
-                const bId = typeof transaction.bankAccount === 'object' && transaction.bankAccount
-                    ? transaction.bankAccount._id
-                    : (transaction.bankAccountId || transaction.accountingCode?._id || transaction.accountingCode);
-                await bulkEditBankAccountTransactions(bId, [{ id: transaction._id, amount: numAmount }]);
+                await updateInterBankTransactionAmount(transaction._id, { amount: numAmount });
             } else if (classification === 'VENDOR') {
                 if (mode === 'PARTY') {
                     if (!selectedSupplierId) {
