@@ -11,7 +11,7 @@ import { getAllVehicles } from '../../../services/vehicleService';
 import type { Vehicle } from '../../../services/vehicleService';
 import { getAllWorkOrders } from '../../../services/workOrderService';
 import { getUser, getUserRole } from '../../../utils/auth';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LabelList } from 'recharts';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../store';
@@ -945,7 +945,16 @@ const DriverPerformanceDashboard = () => {
                                         fill="#C8E600"
                                         radius={[0, 4, 4, 0]}
                                         maxBarSize={16}
-                                    />
+                                    >
+                                        <LabelList
+                                            dataKey="value"
+                                            position="right"
+                                            fill="var(--text-main)"
+                                            fontSize={11}
+                                            fontWeight={700}
+                                            offset={8}
+                                        />
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
@@ -966,7 +975,7 @@ const DriverPerformanceDashboard = () => {
                                 <BarChart
                                     data={brandData}
                                     layout="vertical"
-                                    margin={{ top: 0, right: 0, left: -25, bottom: 0 }}
+                                    margin={{ top: 0, right: 30, left: -25, bottom: 0 }}
                                 >
                                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" horizontal={false} />
                                     <XAxis type="number" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} />
@@ -996,7 +1005,16 @@ const DriverPerformanceDashboard = () => {
                                         fill="#ef4444"
                                         radius={[0, 4, 4, 0]}
                                         maxBarSize={16}
-                                    />
+                                    >
+                                        <LabelList
+                                            dataKey="value"
+                                            position="right"
+                                            fill="var(--text-main)"
+                                            fontSize={11}
+                                            fontWeight={700}
+                                            offset={8}
+                                        />
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
