@@ -154,9 +154,9 @@ const SupplierDetail = () => {
             setSupplier(supRes);
 
             const [billsRes, poRes, paymentsRes, dnRes, cnRes, ledgerResSearch, ledgerResAll] = await Promise.all([
-                getAllBills({ limit: 1000 }).catch(() => ({ data: [] })),
-                getAllPurchaseOrders({ limit: 1000 }).catch(() => ({ data: [] })),
-                api.get('/api/payments-made', { params: { limit: 1000 } }).catch(() => ({ data: [] })),
+                getAllBills({ supplier: id, limit: 1000, ignoreDefaultDates: 'true' }).catch(() => ({ data: [] })),
+                getAllPurchaseOrders({ supplier: id, limit: 1000 }).catch(() => ({ data: [] })),
+                api.get('/api/payments-made', { params: { supplier: id, limit: 1000 } }).catch(() => ({ data: [] })),
                 api.get('/api/debit-notes', { params: { supplierId: id, limit: 1000 }, headers: { 'X-Skip-Toast': 'true' } }).catch(() => ({ data: [] })),
                 api.get('/api/credit-notes', { params: { supplierId: id, limit: 1000 }, headers: { 'X-Skip-Toast': 'true' } }).catch(() => ({ data: [] })),
                 api.get('/api/ledger', { params: { search: supRes?.name, limit: 1000 }, headers: { 'X-Skip-Toast': 'true' } }).catch(() => ({ data: [] })),
@@ -166,44 +166,51 @@ const SupplierDetail = () => {
             // Filter Debit Notes for this supplier
             const dnList = dnRes.data?.data || dnRes.data || [];
             const filteredDNs = dnList.filter((dn: any) => {
+                if (!dn) return false;
                 const sId = typeof dn.supplierId === 'object' ? dn.supplierId?._id : dn.supplierId;
-                return sId === id || dn.supplierName === supRes?.name;
+                return String(sId) === String(id) || dn.supplierName === supRes?.name;
             });
             setDebitNotes(filteredDNs);
 
             // Filter Credit Notes for this supplier
             const cnList = cnRes.data?.data || cnRes.data || [];
             const filteredCNs = cnList.filter((cn: any) => {
+                if (!cn) return false;
                 const sId = typeof cn.supplierId === 'object' ? cn.supplierId?._id : cn.supplierId;
-                return sId === id || cn.supplierName === supRes?.name;
+                return String(sId) === String(id) || cn.supplierName === supRes?.name;
             });
             setCreditNotes(filteredCNs);
 
             // Filter Bills
-            if (billsRes && billsRes.data) {
+            if (billsRes && Array.isArray(billsRes.data)) {
                 const filteredBills = billsRes.data.filter((b: Bill) => {
-                    const supId = typeof b.supplier === 'object' ? b.supplier._id : b.supplier;
-                    return supId === id;
+                    if (!b) return false;
+                    const supId = typeof b.supplier === 'object' ? b.supplier?._id : b.supplier;
+                    return String(supId) === String(id);
                 });
                 setBills(filteredBills);
             }
 
             // Filter Purchase Orders
-            if (poRes && poRes.data) {
+            if (poRes && Array.isArray(poRes.data)) {
                 const filteredPOs = poRes.data.filter((po: PurchaseOrder) => {
-                    const supId = typeof po.supplier === 'object' ? po.supplier._id : po.supplier;
-                    return supId === id;
+                    if (!po) return false;
+                    const supId = typeof po.supplier === 'object' ? po.supplier?._id : po.supplier;
+                    return String(supId) === String(id);
                 });
                 setPurchaseOrders(filteredPOs);
             }
 
             // Filter Payments
             const payData = paymentsRes.data?.data || paymentsRes.data || [];
-            const filteredPayments = payData.filter((p: any) => {
-                const supId = typeof p.supplier === 'object' ? p.supplier._id : p.supplier;
-                return supId === id;
-            });
-            setPayments(filteredPayments);
+            if (Array.isArray(payData)) {
+                const filteredPayments = payData.filter((p: any) => {
+                    if (!p) return false;
+                    const supId = typeof p.supplier === 'object' ? p.supplier?._id : p.supplier;
+                    return String(supId) === String(id);
+                });
+                setPayments(filteredPayments);
+            }
 
             // Filter & Deduplicate Ledger Entries for this supplier
             const list1 = ledgerResSearch.data?.data || ledgerResSearch.data || [];
@@ -1017,25 +1024,6 @@ const SupplierDetail = () => {
                 {/* 8. GENERAL LEDGER VIEW TAB */}
                 {activeTab === 'ledger' && (
                     <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
-                        {/* Ledger Header Summary Cards */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div className="p-5 rounded-2xl border bg-black/20" style={{ borderColor: 'var(--border-main)' }}>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-dim block mb-1">Accounts Payable Code</span>
-                                <p className="text-base font-black text-brand-lime">2.1.01 (Accounts Payable)</p>
-                                <span className="text-[9px] text-dim block mt-1">Primary Vendor Liability Ledger</span>
-                            </div>
-                            <div className="p-5 rounded-2xl border bg-emerald-500/5" style={{ borderColor: 'rgba(34,197,94,0.2)' }}>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 block mb-1">Total Debits (Disbursed)</span>
-                                <p className="text-xl font-black text-emerald-400">${fmt(totalPaidAmount + totalDebitNotesAmount)}</p>
-                                <span className="text-[9px] text-emerald-500/70 block mt-1">Payments & Debit Adjustments</span>
-                            </div>
-                            <div className="p-5 rounded-2xl border bg-rose-500/5" style={{ borderColor: 'rgba(244,63,94,0.2)' }}>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-rose-400 block mb-1">Total Credits (Liability Billed)</span>
-                                <p className="text-xl font-black text-rose-400">${fmt(totalBilledAmount + totalCreditNotesAmount)}</p>
-                                <span className="text-[9px] text-rose-500/70 block mt-1">Invoiced Bills & Credit Notes</span>
-                            </div>
-                        </div>
-
                         {/* Ledger Journal Table */}
                         <div className="rounded-[2rem] border overflow-hidden shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                             <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
