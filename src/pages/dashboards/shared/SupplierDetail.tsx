@@ -212,28 +212,72 @@ const SupplierDetail = () => {
                 setPayments(filteredPayments);
             }
 
-            // Filter & Deduplicate Ledger Entries for this supplier
+            // Filter & Deduplicate Bank Account Ledger Entries (and connected Double-Entry pairs) for this supplier
             const list1 = ledgerResSearch.data?.data || ledgerResSearch.data || [];
             const list2 = ledgerResAll.data?.data || ledgerResAll.data || [];
             const combinedLedger = [...list1, ...list2];
 
-            const map = new Map();
             const supNameLower = (supRes?.name || '').toLowerCase();
             const supVendorNumLower = (supRes?.vendorNumber || '').toLowerCase();
+
+            // 1. Identify all bank transactions directly linked to this vendor
+            const vendorBankTransactionIds = new Set<string>();
+            const vendorBankVouchers = new Set<string>();
+            const directBankEntryIds = new Set<string>();
 
             combinedLedger.forEach((l: any) => {
                 if (!l || !l._id) return;
                 const desc = (l.description || '').toLowerCase();
-                const contactName = (l.contact?.name || l.contact || '').toLowerCase();
+                const contactName = (typeof l.contact === 'string' ? l.contact : (l.contact?.name || (l.contact ? String(l.contact) : ''))).toLowerCase();
                 const txId = (l.transactionId || '').toLowerCase();
+                const accCat = (l.accountingCode?.category || '').toUpperCase();
+                const accCodeStr = (l.accountingCode?.code || '').toLowerCase();
+                const accNameStr = (l.accountingCode?.name || '').toLowerCase();
 
-                const isMatch = (
+                const isVendorMatch = (
                     (supNameLower && (desc.includes(supNameLower) || contactName.includes(supNameLower) || txId.includes(supNameLower))) ||
                     (supVendorNumLower && (desc.includes(supVendorNumLower) || txId.includes(supVendorNumLower))) ||
-                    (l.contact && (l.contact === id || l.contact?._id === id))
+                    (l.contact && (String(l.contact) === String(id) || String(l.contact?._id) === String(id))) ||
+                    (l.supplier && (String(l.supplier) === String(id) || String(l.supplier?._id) === String(id)))
                 );
 
-                if (isMatch) {
+                const isBankTx = (
+                    l.transaction ||
+                    l.bankTxType ||
+                    accCat === 'ASSET' ||
+                    accCodeStr.startsWith('1.1') ||
+                    accNameStr.includes('bank') ||
+                    accNameStr.includes('cash') ||
+                    desc.includes('payment') ||
+                    desc.includes('pmt') ||
+                    desc.includes('bank') ||
+                    desc.includes('transfer')
+                );
+
+                if (isVendorMatch && isBankTx) {
+                    directBankEntryIds.add(l._id);
+                    if (l.transactionId) vendorBankTransactionIds.add(l.transactionId);
+                    if (l.transaction?._id) vendorBankTransactionIds.add(String(l.transaction._id));
+                    if (l.voucher?._id) vendorBankVouchers.add(String(l.voucher._id));
+                }
+            });
+
+            // 2. Include ALL connected double-entry legs sharing those transaction IDs
+            const map = new Map();
+            combinedLedger.forEach((l: any) => {
+                if (!l || !l._id) return;
+                const tId = l.transactionId;
+                const txObjId = l.transaction?._id ? String(l.transaction._id) : null;
+                const vId = l.voucher?._id ? String(l.voucher._id) : null;
+
+                const isConnectedDoubleEntry = (
+                    directBankEntryIds.has(l._id) ||
+                    (tId && vendorBankTransactionIds.has(tId)) ||
+                    (txObjId && vendorBankTransactionIds.has(txObjId)) ||
+                    (vId && vendorBankVouchers.has(vId))
+                );
+
+                if (isConnectedDoubleEntry) {
                     map.set(l._id, l);
                 }
             });
@@ -285,6 +329,29 @@ const SupplierDetail = () => {
         } catch (err: any) {
             console.error("Failed to print PDF:", err);
             toast.error("Failed generating supplier PDF document.", { id: toastId });
+        }
+    };
+
+    const handleDownloadSupplierPdf = async () => {
+        if (!id || !supplier) return;
+        const toastId = toast.loading("Downloading Supplier Bank Ledger PDF...");
+        try {
+            const res = await api.get(`/api/supplier/${id}/pdf`, { responseType: 'blob' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const dateStr = new Date().toISOString().split('T')[0];
+            const safeName = (supplier.name || 'supplier').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            link.setAttribute('download', `${safeName}_bank_ledger_${dateStr}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success("Bank Ledger PDF downloaded successfully!", { id: toastId });
+        } catch (err: any) {
+            console.error("Failed to download Bank Ledger PDF:", err);
+            toast.error("Failed to download Bank Ledger PDF.", { id: toastId });
         }
     };
 
@@ -1021,26 +1088,34 @@ const SupplierDetail = () => {
                     </div>
                 )}
 
-                {/* 8. GENERAL LEDGER VIEW TAB */}
+                {/* 8. BANK LEDGER VIEW TAB */}
                 {activeTab === 'ledger' && (
                     <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
                         {/* Ledger Journal Table */}
                         <div className="rounded-[2rem] border overflow-hidden shadow-lg" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                            <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
+                            <div className="px-6 py-4 border-b flex flex-wrap items-center justify-between gap-4" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
                                 <div className="flex items-center gap-2">
                                     <FileSpreadsheet size={18} className="text-brand-lime" />
-                                    <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Vendor General Ledger Journal Entries</h3>
+                                    <div>
+                                        <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Vendor Bank Ledger Journal Entries</h3>
+                                        <span className="text-[10px] font-bold text-dim block mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                                            Connected Ledger Entries (Double-Entry Impact from Bank Accounts)
+                                        </span>
+                                    </div>
                                 </div>
-                                <span className="text-[10px] font-bold text-dim" style={{ color: 'var(--text-dim)' }}>
-                                    Double-Entry Transaction History
-                                </span>
+                                <button
+                                    onClick={handleDownloadSupplierPdf}
+                                    className="px-3.5 py-2 rounded-xl bg-brand-lime/10 text-brand-lime hover:bg-brand-lime/20 border border-brand-lime/30 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95"
+                                >
+                                    <Download size={14} /> Download Bank Ledger PDF
+                                </button>
                             </div>
                             <div className="overflow-x-auto custom-scrollbar">
                                 <table className="w-full text-left border-collapse whitespace-nowrap">
                                     <thead>
                                         <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
                                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Date</th>
-                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Reference / Voucher</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Transaction ID / Ref</th>
                                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Account Code & Name</th>
                                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Type</th>
                                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Description / Details</th>
@@ -1060,91 +1135,77 @@ const SupplierDetail = () => {
                                                 description: string;
                                                 debit: number;
                                                 credit: number;
+                                                runningBalance?: number;
                                             }> = [];
 
-                                            // 1. Bills
-                                            bills.forEach(b => {
-                                                entries.push({
-                                                    id: `bill-${b._id}`,
-                                                    ref: b.billNumber,
-                                                    date: new Date(b.billDate),
-                                                    account: '2.1.01 Accounts Payable',
-                                                    type: 'CREDIT',
-                                                    description: `Supplier Bill Invoiced (${b.items?.length || 0} line items)`,
-                                                    debit: 0,
-                                                    credit: b.totalAmount
-                                                });
-                                            });
-
-                                            // 2. Payments
+                                            // 1. Process Payments Made (Double-Entry Impact: Debit AP/Expense & Credit Bank Account)
                                             payments.forEach(p => {
-                                                entries.push({
-                                                    id: `pmt-${p._id}`,
-                                                    ref: p.paymentCode,
-                                                    date: new Date(p.paymentDate),
-                                                    account: '1.1.02 Bank / Cash',
-                                                    type: 'DEBIT',
-                                                    description: `Payment Disbursed (${p.paymentMethod}) ${p.referenceNumber ? `Ref: ${p.referenceNumber}` : ''}`,
-                                                    debit: p.amount,
-                                                    credit: 0
-                                                });
+                                                const pmtRef = p.paymentCode || p.referenceNumber || `PMT-${p._id}`;
+                                                const hasBackendCoverage = backendLedgerEntries.some(bl => 
+                                                    (bl.transactionId && (bl.transactionId === pmtRef || bl.transactionId === p.paymentCode || bl.transactionId === p.referenceNumber))
+                                                );
+
+                                                if (!hasBackendCoverage) {
+                                                    // Double-Entry Leg 1: Debit Accounts Payable
+                                                    entries.push({
+                                                        id: `pmt-deb-${p._id}`,
+                                                        ref: pmtRef,
+                                                        date: new Date(p.paymentDate),
+                                                        account: '2.1.01 Accounts Payable',
+                                                        type: 'DEBIT',
+                                                        description: `Bank Payment Disbursed to Vendor (${p.paymentMethod || 'Bank Transfer'}) ${p.referenceNumber ? `Ref: ${p.referenceNumber}` : ''}`,
+                                                        debit: p.amount || 0,
+                                                        credit: 0
+                                                    });
+
+                                                    // Double-Entry Leg 2: Credit Bank Account
+                                                    entries.push({
+                                                        id: `pmt-cred-${p._id}`,
+                                                        ref: pmtRef,
+                                                        date: new Date(p.paymentDate),
+                                                        account: '1.1.02 Bank Account',
+                                                        type: 'CREDIT',
+                                                        description: `Bank Disbursed Output (${p.paymentMethod || 'Bank Transfer'})`,
+                                                        debit: 0,
+                                                        credit: p.amount || 0
+                                                    });
+                                                }
                                             });
 
-                                            // 3. Debit Notes
-                                            debitNotes.forEach(dn => {
-                                                entries.push({
-                                                    id: `dn-${dn._id}`,
-                                                    ref: dn.debitNoteNumber,
-                                                    date: new Date(dn.debitNoteDate || dn.createdAt),
-                                                    account: '2.1.01 Accounts Payable',
-                                                    type: 'DEBIT',
-                                                    description: `Debit Note Adjustment: ${dn.reason || 'Vendor Debit'}`,
-                                                    debit: dn.amount || 0,
-                                                    credit: 0
-                                                });
-                                            });
-
-                                            // 4. Credit Notes
-                                            creditNotes.forEach(cn => {
-                                                entries.push({
-                                                    id: `cn-${cn._id}`,
-                                                    ref: cn.creditNoteNumber,
-                                                    date: new Date(cn.creditNoteDate || cn.createdAt),
-                                                    account: '2.1.01 Accounts Payable',
-                                                    type: 'CREDIT',
-                                                    description: `Credit Note Adjustment: ${cn.reason || 'Vendor Credit'}`,
-                                                    debit: 0,
-                                                    credit: cn.amount || 0
-                                                });
-                                            });
-
-                                            // 5. Backend Ledger Entries
+                                            // 2. Process Backend Bank Ledger Entries (All Connected Double-Entry Legs)
                                             backendLedgerEntries.forEach(bl => {
                                                 const accCode = bl.accountingCode 
                                                     ? `${bl.accountingCode.code || ''} ${bl.accountingCode.name || ''}` 
-                                                    : 'General Ledger';
+                                                    : (bl.type === 'CREDIT' ? '1.1.02 Bank Account' : '2.1.01 Accounts Payable');
+
                                                 entries.push({
                                                     id: bl._id,
-                                                    ref: bl.transactionId || bl.voucher?.voucherNumber || 'GL-ENTRY',
+                                                    ref: bl.transactionId || bl.voucher?.voucherNumber || 'BANK-TX',
                                                     date: new Date(bl.entryDate || bl.createdAt),
                                                     account: accCode,
                                                     type: bl.type as 'DEBIT' | 'CREDIT',
-                                                    description: bl.description || 'System Ledger Journal Entry',
+                                                    description: bl.description || 'Vendor Bank Transaction Entry',
                                                     debit: bl.type === 'DEBIT' ? (bl.amount || 0) : 0,
                                                     credit: bl.type === 'CREDIT' ? (bl.amount || 0) : 0
                                                 });
                                             });
 
-                                            entries.sort((a, b) => a.date.getTime() - b.date.getTime());
-
-                                            let runningBalance = 0;
-
                                             if (entries.length === 0) {
-                                                return <tr><td colSpan={8} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No ledger journal entries found for this vendor.</td></tr>;
+                                                return <tr><td colSpan={8} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No bank account ledger transactions found for this vendor.</td></tr>;
                                             }
 
+                                            // Step A: Calculate cumulative running balance in chronological order (oldest first)
+                                            entries.sort((a, b) => a.date.getTime() - b.date.getTime());
+                                            let cumBalance = 0;
+                                            entries.forEach(ent => {
+                                                cumBalance = cumBalance + ent.credit - ent.debit;
+                                                ent.runningBalance = cumBalance;
+                                            });
+
+                                            // Step B: Sort in reverse chronological order (latest at top) for display
+                                            entries.sort((a, b) => b.date.getTime() - a.date.getTime());
+
                                             return entries.map((ent, idx) => {
-                                                runningBalance = runningBalance + ent.credit - ent.debit;
                                                 return (
                                                     <tr key={idx} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
                                                         <td className="px-6 py-4 text-xs font-medium text-dim" style={{ color: 'var(--text-dim)' }}>
@@ -1173,7 +1234,7 @@ const SupplierDetail = () => {
                                                             {ent.credit > 0 ? `$${fmt(ent.credit)}` : '—'}
                                                         </td>
                                                         <td className="px-6 py-4 text-right text-xs font-black text-orange-400">
-                                                            ${fmt(runningBalance)}
+                                                            ${fmt(ent.runningBalance || 0)}
                                                         </td>
                                                     </tr>
                                                 );
