@@ -61,7 +61,19 @@ const TYPE_STYLES = {
    Ledger Entry Detail Modal – comprehensive view of a 
    single connected ledger entry
    ───────────────────────────────────────────────────────── */
-const LedgerEntryDetailModal = ({ isOpen, onClose, entry }: { isOpen: boolean; onClose: () => void; entry: any }) => {
+const LedgerEntryDetailModal = ({ 
+    isOpen, 
+    onClose, 
+    entry,
+    onChangeAccount,
+    isCutoffDisabled
+}: { 
+    isOpen: boolean; 
+    onClose: () => void; 
+    entry: any;
+    onChangeAccount?: (entry: any) => void;
+    isCutoffDisabled?: boolean;
+}) => {
     if (!isOpen || !entry) return null;
 
     const entryDate = new Date(entry.entryDate || entry.createdAt);
@@ -131,9 +143,29 @@ const LedgerEntryDetailModal = ({ isOpen, onClose, entry }: { isOpen: boolean; o
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Accounting Code */}
                         <div className="p-4 rounded-xl border bg-white/[0.02] space-y-1" style={{ borderColor: 'var(--border-main)' }}>
-                            <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
-                                <Tag size={11} /> Accounting Code
-                            </p>
+                            <div className="flex items-center justify-between">
+                                <p className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                    <Tag size={11} /> Accounting Code
+                                </p>
+                                {onChangeAccount && (
+                                    <button
+                                        type="button"
+                                        disabled={isCutoffDisabled}
+                                        onClick={() => {
+                                            onClose();
+                                            onChangeAccount(entry);
+                                        }}
+                                        title={isCutoffDisabled ? "Transactions till 15/06/2026 cannot be edited" : "Change Account"}
+                                        className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border rounded-lg transition-colors flex items-center gap-1 ${
+                                            isCutoffDisabled 
+                                                ? 'bg-white/5 text-white/40 border-white/10 opacity-40 cursor-not-allowed' 
+                                                : 'bg-[#C8E600]/10 hover:bg-[#C8E600]/20 border-[#C8E600]/30 text-[#C8E600] cursor-pointer'
+                                        }`}
+                                    >
+                                        <Repeat size={10} /> Change Account
+                                    </button>
+                                )}
+                            </div>
                             <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-mono font-bold text-sm px-2 py-0.5 rounded bg-white/5 border border-white/10">
                                     {entry.accountingCode?.code || 'N/A'}
@@ -1046,6 +1078,23 @@ const BankTransactionDetailPage = () => {
                                                     <div className="flex items-center justify-center gap-1.5">
                                                         <button
                                                             type="button"
+                                                            disabled={isCutoffDisabled}
+                                                            onClick={() => {
+                                                                if (isCutoffDisabled) return;
+                                                                setTargetLegForSwap(lEntry);
+                                                                setIsAccountModalOpen(true);
+                                                            }}
+                                                            title={isCutoffDisabled ? "Transactions till 15/06/2026 cannot be edited" : "Change Account"}
+                                                            className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border rounded-lg transition-colors flex items-center gap-1 ${
+                                                                isCutoffDisabled 
+                                                                    ? 'bg-white/5 text-white/40 border-white/10 opacity-40 cursor-not-allowed' 
+                                                                    : 'bg-[#C8E600]/10 hover:bg-[#C8E600]/20 border-[#C8E600]/30 text-[#C8E600] cursor-pointer'
+                                                            }`}
+                                                        >
+                                                            <Repeat size={11} /> Change Account
+                                                        </button>
+                                                        <button
+                                                            type="button"
                                                             onClick={() => {
                                                                 setSelectedLedgerEntry(lEntry);
                                                                 setIsLedgerDetailOpen(true);
@@ -1268,6 +1317,11 @@ const BankTransactionDetailPage = () => {
                 isOpen={isLedgerDetailOpen}
                 onClose={() => { setIsLedgerDetailOpen(false); setSelectedLedgerEntry(null); }}
                 entry={selectedLedgerEntry}
+                isCutoffDisabled={isCutoffDisabled}
+                onChangeAccount={(leg) => {
+                    setTargetLegForSwap(leg);
+                    setIsAccountModalOpen(true);
+                }}
             />
 
             {/* Change Linked Account Modal */}
