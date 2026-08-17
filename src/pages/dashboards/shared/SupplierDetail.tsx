@@ -1088,7 +1088,7 @@ const SupplierDetail = () => {
                     </div>
                 )}
 
-                {/* 8. BANK LEDGER VIEW TAB */}
+                {/* 8. GENERAL LEDGER VIEW TAB */}
                 {activeTab === 'ledger' && (
                     <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
                         {/* Ledger Journal Table */}
@@ -1097,9 +1097,9 @@ const SupplierDetail = () => {
                                 <div className="flex items-center gap-2">
                                     <FileSpreadsheet size={18} className="text-brand-lime" />
                                     <div>
-                                        <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Vendor Bank Ledger Journal Entries</h3>
+                                        <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Vendor General Ledger Statement</h3>
                                         <span className="text-[10px] font-bold text-dim block mt-0.5" style={{ color: 'var(--text-dim)' }}>
-                                            Connected Ledger Entries (Double-Entry Impact from Bank Accounts)
+                                            Chronological History of Supplier Bills, Vendor Payments & Adjustments
                                         </span>
                                     </div>
                                 </div>
@@ -1107,7 +1107,7 @@ const SupplierDetail = () => {
                                     onClick={handleDownloadSupplierPdf}
                                     className="px-3.5 py-2 rounded-xl bg-brand-lime/10 text-brand-lime hover:bg-brand-lime/20 border border-brand-lime/30 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95"
                                 >
-                                    <Download size={14} /> Download Bank Ledger PDF
+                                    <Download size={14} /> Download Ledger PDF
                                 </button>
                             </div>
                             <div className="overflow-x-auto custom-scrollbar">
@@ -1115,126 +1115,148 @@ const SupplierDetail = () => {
                                     <thead>
                                         <tr className="border-b" style={{ borderColor: 'var(--border-main)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
                                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Date</th>
-                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Transaction ID / Ref</th>
-                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Account Code & Name</th>
-                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Type</th>
-                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Description / Details</th>
-                                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Debit ($)</th>
-                                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Credit ($)</th>
-                                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Running Balance ($)</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Transaction</th>
+                                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Reference & Details</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Billed ($)</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Paid ($)</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Balance ($)</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                         {(() => {
-                                            const entries: Array<{
+                                            interface SupplierStatementRow {
                                                 id: string;
-                                                ref: string;
                                                 date: Date;
-                                                account: string;
-                                                type: 'DEBIT' | 'CREDIT';
-                                                description: string;
-                                                debit: number;
-                                                credit: number;
-                                                runningBalance?: number;
-                                            }> = [];
+                                                type: 'bill' | 'payment' | 'debit_note' | 'credit_note' | 'ledger';
+                                                transactionLabel: string;
+                                                ref: string;
+                                                details: string;
+                                                billed: number;
+                                                paid: number;
+                                                balance?: number;
+                                            }
 
-                                            // 1. Process Payments Made (Double-Entry Impact: Debit AP/Expense & Credit Bank Account)
+                                            const rows: SupplierStatementRow[] = [];
+
+                                            // 1. Supplier Bills (Billed Liability)
+                                            bills.forEach(b => {
+                                                rows.push({
+                                                    id: `bill-${b._id}`,
+                                                    date: new Date(b.billDate),
+                                                    type: 'bill',
+                                                    transactionLabel: 'Supplier Bill',
+                                                    ref: b.billNumber,
+                                                    details: `Invoiced (${b.items?.length || 0} line items)`,
+                                                    billed: b.totalAmount || 0,
+                                                    paid: 0
+                                                });
+                                            });
+
+                                            // 2. Vendor Payments (Paid Disbursed)
                                             payments.forEach(p => {
                                                 const pmtRef = p.paymentCode || p.referenceNumber || `PMT-${p._id}`;
-                                                const hasBackendCoverage = backendLedgerEntries.some(bl => 
-                                                    (bl.transactionId && (bl.transactionId === pmtRef || bl.transactionId === p.paymentCode || bl.transactionId === p.referenceNumber))
-                                                );
+                                                rows.push({
+                                                    id: `pmt-${p._id}`,
+                                                    date: new Date(p.paymentDate),
+                                                    type: 'payment',
+                                                    transactionLabel: 'Vendor Payment',
+                                                    ref: pmtRef,
+                                                    details: `Disbursed via ${p.paymentMethod || 'Bank Transfer'}${p.referenceNumber ? ` (Ref: ${p.referenceNumber})` : ''}`,
+                                                    billed: 0,
+                                                    paid: p.amount || 0
+                                                });
+                                            });
 
-                                                if (!hasBackendCoverage) {
-                                                    // Double-Entry Leg 1: Debit Accounts Payable
-                                                    entries.push({
-                                                        id: `pmt-deb-${p._id}`,
-                                                        ref: pmtRef,
-                                                        date: new Date(p.paymentDate),
-                                                        account: '2.1.01 Accounts Payable',
-                                                        type: 'DEBIT',
-                                                        description: `Bank Payment Disbursed to Vendor (${p.paymentMethod || 'Bank Transfer'}) ${p.referenceNumber ? `Ref: ${p.referenceNumber}` : ''}`,
-                                                        debit: p.amount || 0,
-                                                        credit: 0
-                                                    });
+                                            // 3. Debit Notes (Reduces Liability)
+                                            debitNotes.forEach(dn => {
+                                                rows.push({
+                                                    id: `dn-${dn._id}`,
+                                                    date: new Date(dn.debitNoteDate || dn.createdAt),
+                                                    type: 'debit_note',
+                                                    transactionLabel: 'Debit Note',
+                                                    ref: dn.debitNoteNumber,
+                                                    details: `Adjustment: ${dn.reason || 'Vendor Debit'}`,
+                                                    billed: 0,
+                                                    paid: dn.amount || 0
+                                                });
+                                            });
 
-                                                    // Double-Entry Leg 2: Credit Bank Account
-                                                    entries.push({
-                                                        id: `pmt-cred-${p._id}`,
-                                                        ref: pmtRef,
-                                                        date: new Date(p.paymentDate),
-                                                        account: '1.1.02 Bank Account',
-                                                        type: 'CREDIT',
-                                                        description: `Bank Disbursed Output (${p.paymentMethod || 'Bank Transfer'})`,
-                                                        debit: 0,
-                                                        credit: p.amount || 0
+                                            // 4. Credit Notes (Increases Liability)
+                                            creditNotes.forEach(cn => {
+                                                rows.push({
+                                                    id: `cn-${cn._id}`,
+                                                    date: new Date(cn.creditNoteDate || cn.createdAt),
+                                                    type: 'credit_note',
+                                                    transactionLabel: 'Credit Note',
+                                                    ref: cn.creditNoteNumber,
+                                                    details: `Adjustment: ${cn.reason || 'Vendor Credit'}`,
+                                                    billed: cn.amount || 0,
+                                                    paid: 0
+                                                });
+                                            });
+
+                                            // 5. Additional Posted Backend Ledger Entries (if any not covered above)
+                                            backendLedgerEntries.forEach(bl => {
+                                                const blRef = bl.transactionId || bl.voucher?.voucherNumber || 'GL-ENTRY';
+                                                const isDuplicate = rows.some(r => r.ref === blRef);
+                                                if (!isDuplicate) {
+                                                    rows.push({
+                                                        id: bl._id,
+                                                        date: new Date(bl.entryDate || bl.createdAt),
+                                                        type: 'ledger',
+                                                        transactionLabel: bl.type === 'CREDIT' ? 'Ledger Billed' : 'Ledger Paid',
+                                                        ref: blRef,
+                                                        details: bl.description || 'System Journal Entry',
+                                                        billed: bl.type === 'CREDIT' ? (bl.amount || 0) : 0,
+                                                        paid: bl.type === 'DEBIT' ? (bl.amount || 0) : 0
                                                     });
                                                 }
                                             });
 
-                                            // 2. Process Backend Bank Ledger Entries (All Connected Double-Entry Legs)
-                                            backendLedgerEntries.forEach(bl => {
-                                                const accCode = bl.accountingCode 
-                                                    ? `${bl.accountingCode.code || ''} ${bl.accountingCode.name || ''}` 
-                                                    : (bl.type === 'CREDIT' ? '1.1.02 Bank Account' : '2.1.01 Accounts Payable');
-
-                                                entries.push({
-                                                    id: bl._id,
-                                                    ref: bl.transactionId || bl.voucher?.voucherNumber || 'BANK-TX',
-                                                    date: new Date(bl.entryDate || bl.createdAt),
-                                                    account: accCode,
-                                                    type: bl.type as 'DEBIT' | 'CREDIT',
-                                                    description: bl.description || 'Vendor Bank Transaction Entry',
-                                                    debit: bl.type === 'DEBIT' ? (bl.amount || 0) : 0,
-                                                    credit: bl.type === 'CREDIT' ? (bl.amount || 0) : 0
-                                                });
-                                            });
-
-                                            if (entries.length === 0) {
-                                                return <tr><td colSpan={8} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No bank account ledger transactions found for this vendor.</td></tr>;
+                                            if (rows.length === 0) {
+                                                return <tr><td colSpan={6} className="p-20 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No ledger transactions found for this vendor.</td></tr>;
                                             }
 
-                                            // Step A: Calculate cumulative running balance in chronological order (oldest first)
-                                            entries.sort((a, b) => a.date.getTime() - b.date.getTime());
-                                            let cumBalance = 0;
-                                            entries.forEach(ent => {
-                                                cumBalance = cumBalance + ent.credit - ent.debit;
-                                                ent.runningBalance = cumBalance;
+                                            // Step A: Sort ascending (oldest first) to calculate cumulative running AP balance
+                                            rows.sort((a, b) => a.date.getTime() - b.date.getTime());
+                                            let runningBal = 0;
+                                            rows.forEach(r => {
+                                                runningBal = runningBal + r.billed - r.paid;
+                                                r.balance = runningBal;
                                             });
 
-                                            // Step B: Sort in reverse chronological order (latest at top) for display
-                                            entries.sort((a, b) => b.date.getTime() - a.date.getTime());
+                                            // Step B: Sort descending (newest first - LATEST AT TOP) for display
+                                            rows.sort((a, b) => b.date.getTime() - a.date.getTime());
 
-                                            return entries.map((ent, idx) => {
+                                            return rows.map((r, idx) => {
                                                 return (
                                                     <tr key={idx} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
                                                         <td className="px-6 py-4 text-xs font-medium text-dim" style={{ color: 'var(--text-dim)' }}>
-                                                            {ent.date.toLocaleDateString()}
-                                                        </td>
-                                                        <td className="px-6 py-4 font-black text-xs text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
-                                                            {ent.ref}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-xs font-bold text-white">
-                                                            {ent.account}
+                                                            {r.date.toLocaleDateString()}
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
-                                                                ent.type === 'DEBIT' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                                            <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                                                                r.type === 'bill' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' :
+                                                                r.type === 'payment' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                                                r.type === 'debit_note' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                                                                r.type === 'credit_note' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                                                                'bg-white/5 text-dim border-white/10'
                                                             }`}>
-                                                                {ent.type}
+                                                                {r.transactionLabel}
                                                             </span>
                                                         </td>
-                                                        <td className="px-6 py-4 text-xs text-dim truncate max-w-[250px]" style={{ color: 'var(--text-dim)' }}>
-                                                            {ent.description}
+                                                        <td className="px-6 py-4">
+                                                            <div className="font-black text-xs text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{r.ref}</div>
+                                                            <div className="text-[10px] font-medium text-dim truncate max-w-[280px]" style={{ color: 'var(--text-dim)' }}>{r.details}</div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right text-xs font-bold text-indigo-400">
+                                                            {r.billed > 0 ? `$${fmt(r.billed)}` : '—'}
                                                         </td>
                                                         <td className="px-6 py-4 text-right text-xs font-bold text-emerald-400">
-                                                            {ent.debit > 0 ? `$${fmt(ent.debit)}` : '—'}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-right text-xs font-bold text-rose-400">
-                                                            {ent.credit > 0 ? `$${fmt(ent.credit)}` : '—'}
+                                                            {r.paid > 0 ? `$${fmt(r.paid)}` : '—'}
                                                         </td>
                                                         <td className="px-6 py-4 text-right text-xs font-black text-orange-400">
-                                                            ${fmt(ent.runningBalance || 0)}
+                                                            ${fmt(r.balance || 0)}
                                                         </td>
                                                     </tr>
                                                 );
