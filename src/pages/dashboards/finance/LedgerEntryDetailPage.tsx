@@ -10,14 +10,8 @@ import {
     Info,
     Receipt,
     Repeat,
-    ArrowRight,
     AlertTriangle,
-    Pencil,
-    Trash2,
-    Paperclip,
-    ExternalLink,
-    Plus,
-    Loader2
+    Pencil
 } from 'lucide-react';
 import { getLedgerEntryById, getLedgerEntries, updateLedgerEntry } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
@@ -47,7 +41,6 @@ const LedgerEntryDetailPage = () => {
     const [isEditingDescription, setIsEditingDescription] = useState(false);
     const [editedDescription, setEditedDescription] = useState('');
     const [updatingDescription, setUpdatingDescription] = useState(false);
-    const [uploadingFile, setUploadingFile] = useState(false);
 
     const handleUpdateDescription = async () => {
         if (!entry || !id) return;
@@ -69,59 +62,6 @@ const LedgerEntryDetailPage = () => {
         }
     };
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!entry || !id || !e.target.files || e.target.files.length === 0) return;
-        const file = e.target.files[0];
-        
-        const isValidType = file.type.startsWith("image/") || file.type === "application/pdf";
-        if (!isValidType) {
-            toast.error("Only images and PDF files are allowed!");
-            return;
-        }
-
-        const currentCount = entry.attachments?.length || 0;
-        if (currentCount >= 5) {
-            toast.error("Maximum 5 documents can be attached.");
-            return;
-        }
-
-        setUploadingFile(true);
-        const toastId = toast.loading(`Uploading ${file.name}...`);
-        try {
-            const updated = await updateLedgerEntry(id, { files: [file] });
-            setEntry(updated);
-            toast.success("Document attached successfully", { id: toastId });
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || "Failed to attach document", { id: toastId });
-        } finally {
-            setUploadingFile(false);
-            e.target.value = "";
-        }
-    };
-
-    const handleDeleteAttachment = async (attachmentId: string) => {
-        if (!entry || !id) return;
-        if (!window.confirm("Are you sure you want to delete this document?")) return;
-
-        const remaining = (entry.attachments || []).filter(att => att._id !== attachmentId);
-        const toastId = toast.loading("Deleting document...");
-        try {
-            const updated = await updateLedgerEntry(id, { existingAttachments: remaining });
-            setEntry(updated);
-            toast.success("Document deleted successfully", { id: toastId });
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || "Failed to delete document", { id: toastId });
-        }
-    };
-
-    const getDocUrl = (url: string) => {
-        if (!url) return "";
-        if (url.startsWith('http://') || url.startsWith('https://')) return url;
-        const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
-        const sanitizedUrl = url.startsWith('/') ? url : `/${url}`;
-        return `${base}${sanitizedUrl}`;
-    };
-
 
 
     useEffect(() => {
@@ -134,33 +74,55 @@ const LedgerEntryDetailPage = () => {
                 setEntry(fetchedEntry);
 
                 // 2. Determine base transaction to fetch double-entries
-                const filters: any = {};
+                const entryAny = fetchedEntry as any;
+                let list: LedgerEntry[] = [];
                 let baseDocType = null;
                 let refId = null;
 
-                const entryAny = fetchedEntry as any;
-                if (entryAny.transaction) {
-                    filters.transaction = entryAny.transaction._id;
-                    baseDocType = entryAny.transaction.referenceModel;
-                    refId = fetchedEntry.referenceId || entryAny.transaction.referenceId;
-                } else if (entryAny.manualJournal) {
-                    filters.manualJournal = typeof entryAny.manualJournal === 'string' ? entryAny.manualJournal : entryAny.manualJournal._id;
-                } else if (entryAny.voucher) {
-                    filters.voucher = typeof entryAny.voucher === 'string' ? entryAny.voucher : entryAny.voucher._id;
-                } else if (fetchedEntry.referenceId) {
-                    filters.search = fetchedEntry.referenceId;
-                    refId = fetchedEntry.referenceId;
+                const extractList = (res: any): LedgerEntry[] => {
+                    if (!res) return [];
+                    if (Array.isArray(res)) return res;
+                    if (Array.isArray(res.data)) return res.data;
+                    if (Array.isArray(res.entries)) return res.entries;
+                    return [];
+                };
+
+                if (entryAny.transactionId) {
+                    const res = await getLedgerEntries({ transactionId: entryAny.transactionId, limit: 50 });
+                    list = extractList(res);
                 }
 
-                // Fetch related double entry lines
-                if (Object.keys(filters).length > 0) {
-                    const relatedRes = await getLedgerEntries(filters);
-                    const sortedRelated = Array.isArray(relatedRes.data) ? [...relatedRes.data].sort((a, b) => {
-                        if (a.type === b.type) return 0;
-                        return a.type === 'DEBIT' ? -1 : 1;
-                    }) : [];
-                    setRelatedEntries(sortedRelated);
+                if (list.length === 0 && entryAny.transaction) {
+                    const txId = typeof entryAny.transaction === 'object' ? entryAny.transaction._id : entryAny.transaction;
+                    baseDocType = entryAny.transaction.referenceModel;
+                    refId = fetchedEntry.referenceId || entryAny.transaction.referenceId;
+                    const res = await getLedgerEntries({ transaction: txId, limit: 50 });
+                    list = extractList(res);
                 }
+
+                if (list.length === 0 && entryAny.manualJournal) {
+                    const mjId = typeof entryAny.manualJournal === 'object' ? entryAny.manualJournal._id : entryAny.manualJournal;
+                    const res = await getLedgerEntries({ manualJournal: mjId, limit: 50 });
+                    list = extractList(res);
+                }
+
+                if (list.length === 0 && entryAny.voucher) {
+                    const vId = typeof entryAny.voucher === 'object' ? entryAny.voucher._id : entryAny.voucher;
+                    const res = await getLedgerEntries({ voucher: vId, limit: 50 });
+                    list = extractList(res);
+                }
+
+                if (list.length === 0 && fetchedEntry.referenceId) {
+                    refId = fetchedEntry.referenceId;
+                    const res = await getLedgerEntries({ search: fetchedEntry.referenceId, limit: 50 });
+                    list = extractList(res);
+                }
+
+                if (!list.some(e => String(e._id) === String(fetchedEntry._id))) {
+                    list.unshift(fetchedEntry);
+                }
+
+                setRelatedEntries(list);
 
                 // 3. Check if it's related to rent/invoice to get driver details
                 const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*)/i;
@@ -361,128 +323,76 @@ const LedgerEntryDetailPage = () => {
                         </div>
                     </div>
 
-                    {/* Attachments / Supporting Documents */}
-                    <div className="p-6 rounded-2xl border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
-                                <Paperclip size={16} /> Supporting Documents ({entry.attachments?.length || 0}/5)
-                            </h3>
-                            {(!entry.attachments || entry.attachments.length < 5) && (
-                                <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer hover:bg-brand-lime/10 ${uploadingFile ? 'opacity-50 pointer-events-none' : ''}`} style={{ borderColor: 'var(--brand-lime)', color: 'var(--brand-lime)' }}>
-                                    {uploadingFile ? (
-                                        <Loader2 size={13} className="animate-spin" />
-                                    ) : (
-                                        <Plus size={13} />
-                                    )}
-                                    Attach Document
-                                    <input 
-                                        type="file" 
-                                        className="hidden" 
-                                        accept="image/*,application/pdf" 
-                                        onChange={handleFileUpload} 
-                                        disabled={uploadingFile} 
-                                    />
-                                </label>
-                            )}
-                        </div>
-
-                        {!entry.attachments || entry.attachments.length === 0 ? (
-                            <div className="text-center py-8 text-xs font-semibold text-dim border border-dashed rounded-xl" style={{ borderColor: 'var(--border-main)' }}>
-                                No documents attached to this transaction yet.
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {entry.attachments.map((doc) => (
-                                    <div key={doc._id} className="flex items-center justify-between p-3.5 rounded-xl border transition-all" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                                        <div className="flex items-center gap-3 overflow-hidden mr-2">
-                                            <div className="w-8 h-8 rounded-lg bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center flex-shrink-0">
-                                                <FileText size={16} style={{ color: 'var(--brand-lime)' }} />
-                                            </div>
-                                            <div className="flex flex-col overflow-hidden">
-                                                <span className="text-xs font-bold truncate text-[var(--text-main)]" title={doc.name}>
-                                                    {doc.name}
-                                                </span>
-                                                {doc.uploadedAt && (
-                                                    <span className="text-[9px] font-semibold text-dim mt-0.5">
-                                                        Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                            <a 
-                                                href={getDocUrl(doc.url)} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer" 
-                                                className="p-2 rounded-lg border hover:bg-white/5 transition-all text-dim hover:text-[var(--text-main)]" 
-                                                style={{ borderColor: 'var(--border-main)' }}
-                                                title="View Document"
-                                            >
-                                                <ExternalLink size={13} />
-                                            </a>
-                                            <button 
-                                                onClick={() => handleDeleteAttachment(doc._id!)}
-                                                className="p-2 rounded-lg border hover:bg-rose-500/10 border-rose-500/20 text-rose-400 hover:text-rose-500 transition-all cursor-pointer" 
-                                                title="Delete Document"
-                                            >
-                                                <Trash2 size={13} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Double Entry Breakdown */}
+                    {/* Associated Transactions */}
                     <div className="p-6 rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <h3 className="text-sm font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
-                            <Repeat size={16} /> Double-Entry Breakdown
+                            <Repeat size={16} /> Associated Transactions
                         </h3>
                         {relatedEntries.length === 0 ? (
                             <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>No related double entries found for this transaction.</p>
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                <table className="w-full text-left text-xs">
+                                    <thead className="border-b uppercase tracking-wider" style={{ borderColor: 'var(--border-main)', color: 'var(--text-muted)' }}>
                                         <tr>
-                                            <th className="pb-3 font-semibold" style={{ color: 'var(--text-dim)' }}>Ledger Account</th>
-                                            <th className="pb-3 font-semibold text-right" style={{ color: 'var(--text-dim)' }}>Debit</th>
-                                            <th className="pb-3 font-semibold text-right" style={{ color: 'var(--text-dim)' }}>Credit</th>
+                                            <th className="py-3 px-3 font-bold">Leg Role</th>
+                                            <th className="py-3 px-3 font-bold">Ledger Account</th>
+                                            <th className="py-3 px-3 font-bold text-center">Type</th>
+                                            <th className="py-3 px-3 font-bold text-right">Debit ($)</th>
+                                            <th className="py-3 px-3 font-bold text-right">Credit ($)</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {relatedEntries.map(rel => {
-                                            const isSelf = rel._id === entry._id;
+                                            const isPrimary = String(rel._id) === String(entry._id);
                                             const relDebit = rel.amount !== undefined ? (rel.type === 'DEBIT' ? rel.amount : 0) : (rel.debit || 0);
                                             const relCredit = rel.amount !== undefined ? (rel.type === 'CREDIT' ? rel.amount : 0) : (rel.credit || 0);
                                             return (
-                                                <tr key={rel._id} className={`border-b last:border-0 ${isSelf ? 'bg-brand-lime/5' : ''}`} style={{ borderColor: 'var(--border-main)' }}>
-                                                    <td className="py-4">
+                                                <tr key={rel._id} className={`border-b last:border-0 hover:bg-white/5 transition-colors ${isPrimary ? 'bg-[#C8E600]/10 font-medium' : ''}`} style={{ borderColor: 'var(--border-main)' }}>
+                                                    <td className="py-3 px-3">
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${
+                                                            isPrimary 
+                                                                ? 'bg-[#C8E600]/20 text-[#C8E600] border-[#C8E600]/30' 
+                                                                : 'bg-white/5 text-white/70 border-white/10'
+                                                        }`}>
+                                                            {isPrimary ? '⭐ Primary Leg' : '🔗 Partner Leg'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-3">
                                                         <div className="flex items-center gap-2">
-                                                            {isSelf && <ArrowRight size={14} className="text-brand-lime" />}
-                                                            <div className="flex flex-col">
-                                                                <span className="font-mono font-bold" style={{ color: isSelf ? 'var(--text-main)' : 'var(--text-muted)' }}>{rel.accountingCode?.code}</span>
-                                                                <span className="text-xs" style={{ color: 'var(--text-dim)' }}>{rel.accountingCode?.name}</span>
-                                                            </div>
+                                                            <span className="font-mono font-bold px-2 py-0.5 rounded bg-black/10 dark:bg-white/5 border border-white/10" style={{ color: 'var(--text-main)' }}>
+                                                                {rel.accountingCode?.code || 'GL'}
+                                                            </span>
+                                                            <span className="text-xs" style={{ color: 'var(--text-main)' }}>
+                                                                {rel.accountingCode?.name || 'General Ledger'}
+                                                            </span>
                                                         </div>
                                                     </td>
-                                                    <td className="py-4 text-right">
-                                                        {relDebit > 0 ? <span className="font-mono font-bold text-red-400">{relDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> : '-'}
+                                                    <td className="py-3 px-3 text-center">
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                                                            rel.type === 'DEBIT' 
+                                                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' 
+                                                                : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                                                        }`}>
+                                                            {rel.type || 'DEBIT'}
+                                                        </span>
                                                     </td>
-                                                    <td className="py-4 text-right">
-                                                        {relCredit > 0 ? <span className="font-mono font-bold text-green-400">{relCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> : '-'}
+                                                    <td className="py-3 px-3 text-right font-mono font-bold text-green-400">
+                                                        {relDebit > 0 ? `$${relDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '-'}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-right font-mono font-bold text-red-400">
+                                                        {relCredit > 0 ? `$${relCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '-'}
                                                     </td>
                                                 </tr>
                                             );
                                         })}
                                         <tr style={{ background: 'var(--bg-sidebar)' }}>
-                                            <td className="py-3 px-4 font-bold uppercase tracking-widest text-xs" style={{ color: 'var(--text-muted)' }}>Total</td>
-                                            <td className="py-3 px-4 text-right font-mono font-bold text-red-400">
-                                                {relatedEntries.reduce((sum, e) => sum + (e.amount !== undefined ? (e.type === 'DEBIT' ? e.amount : 0) : (e.debit || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            <td colSpan={3} className="py-3 px-3 font-bold uppercase tracking-widest text-xs text-right" style={{ color: 'var(--text-muted)' }}>Totals</td>
+                                            <td className="py-3 px-3 text-right font-mono font-bold text-green-400">
+                                                ${relatedEntries.reduce((sum, e) => sum + (e.amount !== undefined ? (e.type === 'DEBIT' ? e.amount : 0) : (e.debit || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
-                                            <td className="py-3 px-4 text-right font-mono font-bold text-green-400">
-                                                {relatedEntries.reduce((sum, e) => sum + (e.amount !== undefined ? (e.type === 'CREDIT' ? e.amount : 0) : (e.credit || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            <td className="py-3 px-3 text-right font-mono font-bold text-red-400">
+                                                ${relatedEntries.reduce((sum, e) => sum + (e.amount !== undefined ? (e.type === 'CREDIT' ? e.amount : 0) : (e.credit || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
                                         </tr>
                                     </tbody>

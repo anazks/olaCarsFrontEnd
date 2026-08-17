@@ -577,7 +577,7 @@ const AccountingCodeDetails = () => {
                                             style={{ borderColor: 'var(--border-main)' }}
                                             onClick={() => {
                                                 const basePath = location.pathname.split('/chart-of-accounts/')[0];
-                                                navigate(`${basePath}/ledger/${entry._id}`);
+                                                navigate(`${basePath}/chart-of-accounts-transaction/${entry._id}`);
                                             }}
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap">

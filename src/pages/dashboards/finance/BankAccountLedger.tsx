@@ -17,7 +17,6 @@ import {
     Search,
     ArrowDownRight,
     ArrowUpRight,
-    Eye,
     DollarSign,
     UserCheck,
     Zap
@@ -2523,7 +2522,6 @@ const BankAccountLedger = () => {
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right">Deposits</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right">Withdrawals</th>
                                     <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-right">Running Balance</th>
-                                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2621,19 +2619,6 @@ const BankAccountLedger = () => {
                                                             ? runningBalancesMap[entry._id].toLocaleString(undefined, { minimumFractionDigits: 2 })
                                                             : '-'}
                                                 </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setSelectedIds([entry._id]);
-                                                        setIsBulkEditing(true);
-                                                    }}
-                                                    className="p-2 rounded-xl bg-white/5 hover:bg-[#C8E600]/20 text-white/80 hover:text-[#C8E600] border border-white/10 hover:border-[#C8E600]/30 transition-all cursor-pointer inline-flex items-center justify-center"
-                                                    title="View / Edit Entry"
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
                                             </td>
                                         </tr>
                                     );

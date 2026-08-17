@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     ArrowLeft, 
@@ -22,7 +22,8 @@ import {
     BookOpen,
     Zap,
     Receipt,
-    Repeat
+    Repeat,
+    Search
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getBankTransactionById, updateLinkedAccountingCode } from '../../../services/bankAccountService';
@@ -30,6 +31,26 @@ import { getAllAccountingCodes } from '../../../services/accountingService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import { TransactionEditModal } from './modals/TransactionEditModal';
 import type { TxClassification, EditMode } from './modals/TransactionEditModal';
+
+const CUTOFF_DATE_STR = '2026-06-15';
+
+export const isTransactionDisabledForEdit = (dateVal: string | Date | undefined): boolean => {
+    if (!dateVal) return false;
+    const dateObj = new Date(dateVal);
+    if (isNaN(dateObj.getTime())) return false;
+
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const yyyymmdd = `${year}-${month}-${day}`;
+
+    const utcYear = dateObj.getUTCFullYear();
+    const utcMonth = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+    const utcDay = String(dateObj.getUTCDate()).padStart(2, '0');
+    const utcYyyymmdd = `${utcYear}-${utcMonth}-${utcDay}`;
+
+    return yyyymmdd <= CUTOFF_DATE_STR || utcYyyymmdd <= CUTOFF_DATE_STR;
+};
 
 const TYPE_STYLES = {
     'DEBIT': { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', border: 'rgba(34,197,94,0.3)', label: 'DEBIT (Deposit)' }, // Green
@@ -428,17 +449,20 @@ interface ChangeLinkedAccountModalProps {
     onClose: () => void;
     onSuccess: () => void;
     targetLeg: any;
+    transaction: any;
 }
 
-const ChangeLinkedAccountModal = ({ isOpen, onClose, onSuccess, targetLeg }: ChangeLinkedAccountModalProps) => {
+const ChangeLinkedAccountModal = ({ isOpen, onClose, onSuccess, targetLeg, transaction }: ChangeLinkedAccountModalProps) => {
     const [allAccounts, setAllAccounts] = useState<any[]>([]);
     const [selectedCodeId, setSelectedCodeId] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         if (isOpen && targetLeg) {
             setSelectedCodeId(targetLeg.accountingCode?._id || targetLeg.accountingCode || '');
+            setSearchQuery('');
             const fetchAccounts = async () => {
                 setLoading(true);
                 try {
@@ -455,6 +479,48 @@ const ChangeLinkedAccountModal = ({ isOpen, onClose, onSuccess, targetLeg }: Cha
         }
     }, [isOpen, targetLeg]);
 
+    // Partner Leg Account IDs to exclude (so both legs cannot be assigned the exact same account)
+    const partnerAccountIds = useMemo(() => {
+        if (!transaction || !targetLeg) return new Set<string>();
+
+        const targetLegId = String(targetLeg._id || '');
+        const ids = new Set<string>();
+
+        // 1. Primary transaction accounting code (if targetLeg is a connected entry)
+        const primaryId = String(transaction._id || '');
+        if (primaryId !== targetLegId && transaction.accountingCode) {
+            const pCodeId = String(transaction.accountingCode._id || transaction.accountingCode);
+            if (pCodeId) ids.add(pCodeId);
+        }
+
+        // 2. Connected ledger entries (if targetLeg is primary or another connected entry)
+        const connected = transaction.connectedLedgerEntries || [];
+        connected.forEach((cEntry: any) => {
+            const cLegId = String(cEntry._id || '');
+            if (cLegId !== targetLegId && cEntry.accountingCode) {
+                const cCodeId = String(cEntry.accountingCode._id || cEntry.accountingCode);
+                if (cCodeId) ids.add(cCodeId);
+            }
+        });
+
+        return ids;
+    }, [transaction, targetLeg]);
+
+    const selectableAccounts = useMemo(() => {
+        return allAccounts.filter(acc => !partnerAccountIds.has(String(acc._id || '')));
+    }, [allAccounts, partnerAccountIds]);
+
+    const filteredAccounts = useMemo(() => {
+        if (!searchQuery.trim()) return selectableAccounts;
+        const q = searchQuery.toLowerCase().trim();
+        return selectableAccounts.filter(acc => {
+            const codeStr = String(acc.code || '').toLowerCase();
+            const nameStr = String(acc.name || '').toLowerCase();
+            const catStr = String(acc.category || acc.accountType || '').toLowerCase();
+            return codeStr.includes(q) || nameStr.includes(q) || catStr.includes(q);
+        });
+    }, [selectableAccounts, searchQuery]);
+
     if (!isOpen || !targetLeg) return null;
 
     const currentCode = targetLeg.accountingCode?.code || 'N/A';
@@ -467,6 +533,10 @@ const ChangeLinkedAccountModal = ({ isOpen, onClose, onSuccess, targetLeg }: Cha
         }
         if (selectedCodeId === (targetLeg.accountingCode?._id || targetLeg.accountingCode)) {
             toast.error('Selected account must be different from current account');
+            return;
+        }
+        if (partnerAccountIds.has(selectedCodeId)) {
+            toast.error('Cannot select the accounting code of a connected partner leg');
             return;
         }
 
@@ -502,6 +572,30 @@ const ChangeLinkedAccountModal = ({ isOpen, onClose, onSuccess, targetLeg }: Cha
 
                 <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-wider block opacity-70">Select New Accounting Code</label>
+                    
+                    {/* Search Input Filter Box */}
+                    <div className="relative">
+                        <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 opacity-40" style={{ color: 'var(--text-main)' }} />
+                        <input
+                            type="text"
+                            placeholder="Search code, name, or category..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            className="w-full bg-transparent border rounded-xl pl-9 pr-8 py-2 text-xs outline-none focus:border-[#C8E600] transition-all"
+                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            disabled={submitting || loading}
+                        />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-2.5 top-2.5 opacity-40 hover:opacity-100"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
+
                     {loading ? (
                         <div className="p-3 text-center text-xs opacity-60">Loading Chart of Accounts...</div>
                     ) : (
@@ -512,10 +606,12 @@ const ChangeLinkedAccountModal = ({ isOpen, onClose, onSuccess, targetLeg }: Cha
                             style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             disabled={submitting}
                         >
-                            <option value="">Select Accounting Code...</option>
-                            {allAccounts.map(acc => (
+                            <option value="">
+                                {filteredAccounts.length === 0 ? 'No matching accounting codes found' : 'Select Accounting Code...'}
+                            </option>
+                            {filteredAccounts.map(acc => (
                                 <option key={acc._id} value={acc._id} className="bg-[var(--bg-card)]">
-                                    {acc.code} - {acc.name} ({acc.category || acc.accountType})
+                                    {acc.code} - {acc.name} ({acc.category || acc.accountType || 'GL'})
                                 </option>
                             ))}
                         </select>
@@ -638,6 +734,7 @@ const BankTransactionDetailPage = () => {
     }
 
     const classification = detectTxClassification(transaction);
+    const isCutoffDisabled = isTransactionDisabledForEdit(transaction.entryDate || transaction.date || transaction.createdAt);
     const typeStyle = TYPE_STYLES[transaction.type as 'DEBIT' | 'CREDIT'] || { bg: 'transparent', text: 'var(--text-main)', border: 'transparent', label: transaction.type };
     
     const dateObj = new Date(transaction.entryDate || transaction.createdAt);
@@ -646,6 +743,7 @@ const BankTransactionDetailPage = () => {
         : transaction.entryDate;
 
     const handleOpenEdit = (mode: EditMode) => {
+        if (isCutoffDisabled) return;
         setActiveEditMode(mode);
         setIsEditModalOpen(true);
     };
@@ -704,14 +802,26 @@ const BankTransactionDetailPage = () => {
                         {classification === 'DRIVER' && (
                             <>
                                 <button
-                                    onClick={() => handleOpenEdit('AMOUNT')}
-                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#C8E600]/10 hover:bg-[#C8E600]/20 text-[#C8E600] border border-[#C8E600]/30 transition-all hover:scale-105 cursor-pointer"
+                                    disabled={isCutoffDisabled}
+                                    onClick={() => !isCutoffDisabled && handleOpenEdit('AMOUNT')}
+                                    title={isCutoffDisabled ? "Transactions till 15/06/2026 cannot be edited" : "Edit Amount"}
+                                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                        isCutoffDisabled 
+                                            ? 'bg-white/5 text-white/40 border-white/10 opacity-40 cursor-not-allowed' 
+                                            : 'bg-[#C8E600]/10 hover:bg-[#C8E600]/20 text-[#C8E600] border-[#C8E600]/30 hover:scale-105 cursor-pointer'
+                                    }`}
                                 >
                                     <DollarSign size={14} /> Edit Amount
                                 </button>
                                 <button
-                                    onClick={() => handleOpenEdit('PARTY')}
-                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all hover:scale-105 cursor-pointer"
+                                    disabled={isCutoffDisabled}
+                                    onClick={() => !isCutoffDisabled && handleOpenEdit('PARTY')}
+                                    title={isCutoffDisabled ? "Transactions till 15/06/2026 cannot be edited" : "Change Driver"}
+                                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                        isCutoffDisabled 
+                                            ? 'bg-white/5 text-white/40 border-white/10 opacity-40 cursor-not-allowed' 
+                                            : 'bg-white/5 hover:bg-white/10 text-white border-white/10 hover:scale-105 cursor-pointer'
+                                    }`}
                                 >
                                     <User size={14} /> Change Driver
                                 </button>
@@ -722,14 +832,26 @@ const BankTransactionDetailPage = () => {
                         {classification === 'VENDOR' && (
                             <>
                                 <button
-                                    onClick={() => handleOpenEdit('AMOUNT')}
-                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition-all hover:scale-105 cursor-pointer"
+                                    disabled={isCutoffDisabled}
+                                    onClick={() => !isCutoffDisabled && handleOpenEdit('AMOUNT')}
+                                    title={isCutoffDisabled ? "Transactions till 15/06/2026 cannot be edited" : "Edit Amount"}
+                                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                        isCutoffDisabled 
+                                            ? 'bg-white/5 text-white/40 border-white/10 opacity-40 cursor-not-allowed' 
+                                            : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border-amber-500/30 hover:scale-105 cursor-pointer'
+                                    }`}
                                 >
                                     <DollarSign size={14} /> Edit Amount
                                 </button>
                                 <button
-                                    onClick={() => handleOpenEdit('PARTY')}
-                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all hover:scale-105 cursor-pointer"
+                                    disabled={isCutoffDisabled}
+                                    onClick={() => !isCutoffDisabled && handleOpenEdit('PARTY')}
+                                    title={isCutoffDisabled ? "Transactions till 15/06/2026 cannot be edited" : "Change Vendor"}
+                                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                        isCutoffDisabled 
+                                            ? 'bg-white/5 text-white/40 border-white/10 opacity-40 cursor-not-allowed' 
+                                            : 'bg-white/5 hover:bg-white/10 text-white border-white/10 hover:scale-105 cursor-pointer'
+                                    }`}
                                 >
                                     <Truck size={14} /> Change Vendor
                                 </button>
@@ -739,8 +861,14 @@ const BankTransactionDetailPage = () => {
                         {/* 3. Inter-Bank Transaction Button */}
                         {classification === 'INTER_BANK' && (
                             <button
-                                onClick={() => handleOpenEdit('AMOUNT')}
-                                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 transition-all hover:scale-105 cursor-pointer"
+                                disabled={isCutoffDisabled}
+                                onClick={() => !isCutoffDisabled && handleOpenEdit('AMOUNT')}
+                                title={isCutoffDisabled ? "Transactions till 15/06/2026 cannot be edited" : "Edit Amount"}
+                                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                    isCutoffDisabled 
+                                        ? 'bg-white/5 text-white/40 border-white/10 opacity-40 cursor-not-allowed' 
+                                        : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/30 hover:scale-105 cursor-pointer'
+                                }`}
                             >
                                 <DollarSign size={14} /> Edit Amount
                             </button>
@@ -750,14 +878,26 @@ const BankTransactionDetailPage = () => {
                         {classification === 'NON_DRIVER_CUSTOMER' && (
                             <>
                                 <button
-                                    onClick={() => handleOpenEdit('AMOUNT')}
-                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all hover:scale-105 cursor-pointer"
+                                    disabled={isCutoffDisabled}
+                                    onClick={() => !isCutoffDisabled && handleOpenEdit('AMOUNT')}
+                                    title={isCutoffDisabled ? "Transactions till 15/06/2026 cannot be edited" : "Edit Amount"}
+                                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                        isCutoffDisabled 
+                                            ? 'bg-white/5 text-white/40 border-white/10 opacity-40 cursor-not-allowed' 
+                                            : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:scale-105 cursor-pointer'
+                                    }`}
                                 >
                                     <DollarSign size={14} /> Edit Amount
                                 </button>
                                 <button
-                                    onClick={() => handleOpenEdit('PARTY')}
-                                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all hover:scale-105 cursor-pointer"
+                                    disabled={isCutoffDisabled}
+                                    onClick={() => !isCutoffDisabled && handleOpenEdit('PARTY')}
+                                    title={isCutoffDisabled ? "Transactions till 15/06/2026 cannot be edited" : "Change Customer"}
+                                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                        isCutoffDisabled 
+                                            ? 'bg-white/5 text-white/40 border-white/10 opacity-40 cursor-not-allowed' 
+                                            : 'bg-white/5 hover:bg-white/10 text-white border-white/10 hover:scale-105 cursor-pointer'
+                                    }`}
                                 >
                                     <User size={14} /> Change Customer
                                 </button>
@@ -811,11 +951,18 @@ const BankTransactionDetailPage = () => {
                                         </p>
                                         <button
                                             type="button"
+                                            disabled={isCutoffDisabled}
                                             onClick={() => {
+                                                if (isCutoffDisabled) return;
                                                 setTargetLegForSwap(transaction);
                                                 setIsAccountModalOpen(true);
                                             }}
-                                            className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-[#C8E600]/10 hover:bg-[#C8E600]/20 border border-[#C8E600]/30 text-[#C8E600] rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                                            title={isCutoffDisabled ? "Transactions till 15/06/2026 cannot be edited" : "Change Account"}
+                                            className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border rounded-lg transition-colors flex items-center gap-1 ${
+                                                isCutoffDisabled 
+                                                    ? 'bg-white/5 text-white/40 border-white/10 opacity-40 cursor-not-allowed' 
+                                                    : 'bg-[#C8E600]/10 hover:bg-[#C8E600]/20 border-[#C8E600]/30 text-[#C8E600] cursor-pointer'
+                                            }`}
                                         >
                                             <Repeat size={11} /> Change Account
                                         </button>
@@ -907,16 +1054,6 @@ const BankTransactionDetailPage = () => {
                                                             style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}
                                                         >
                                                             View Detail
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setTargetLegForSwap(lEntry);
-                                                                setIsAccountModalOpen(true);
-                                                            }}
-                                                            className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-[#C8E600]/10 hover:bg-[#C8E600]/20 border border-[#C8E600]/30 text-[#C8E600] rounded-lg transition-colors cursor-pointer flex items-center gap-1"
-                                                        >
-                                                            <Repeat size={10} /> Change Account
                                                         </button>
                                                     </div>
                                                 </td>
@@ -1139,6 +1276,7 @@ const BankTransactionDetailPage = () => {
                 onClose={() => { setIsAccountModalOpen(false); setTargetLegForSwap(null); }}
                 onSuccess={fetchTransaction}
                 targetLeg={targetLegForSwap}
+                transaction={transaction}
             />
         </div>
     );

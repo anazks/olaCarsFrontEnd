@@ -129,6 +129,7 @@ import MyTasks from "./pages/dashboards/shared/MyTasks";
 import TaxManagement from "./pages/dashboards/finance/TaxManagement";
 import ChartOfAccounts from "./pages/dashboards/finance/ChartOfAccounts";
 import AccountingCodeDetails from "./pages/dashboards/finance/AccountingCodeDetails";
+import AccountingTransactionDetailPage from "./pages/dashboards/finance/AccountingTransactionDetailPage";
 import GeneralLedger from "./pages/dashboards/finance/GeneralLedger";
 import BulkLedgerUploadPage from "./pages/dashboards/finance/BulkLedgerUploadPage";
 import BulkLedgerUpload from "./pages/dashboards/shared/BulkLedgerUpload";
@@ -463,6 +464,10 @@ function App() {
               <Route
                 path="chart-of-accounts/:id"
                 element={<AccountingCodeDetails />}
+              />
+              <Route
+                path="chart-of-accounts-transaction/:id"
+                element={<AccountingTransactionDetailPage />}
               />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="bulk-ledger-upload" element={<BulkLedgerUploadPage />} />
@@ -1020,6 +1025,10 @@ function App() {
                 path="chart-of-accounts/:id"
                 element={<AccountingCodeDetails />}
               />
+              <Route
+                path="chart-of-accounts-transaction/:id"
+                element={<AccountingTransactionDetailPage />}
+              />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="bulk-ledger-upload" element={<BulkLedgerUploadPage />} />
               <Route path="ledger/:id" element={<LedgerEntryDetailPage />} />
@@ -1251,6 +1260,10 @@ function App() {
               <Route
                 path="chart-of-accounts/:id"
                 element={<AccountingCodeDetails />}
+              />
+              <Route
+                path="chart-of-accounts-transaction/:id"
+                element={<AccountingTransactionDetailPage />}
               />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="bulk-ledger-upload" element={<BulkLedgerUploadPage />} />
@@ -1675,6 +1688,10 @@ function App() {
               <Route
                 path="chart-of-accounts/:id"
                 element={<AccountingCodeDetails />}
+              />
+              <Route
+                path="chart-of-accounts-transaction/:id"
+                element={<AccountingTransactionDetailPage />}
               />
               <Route path="ledger" element={<GeneralLedger />} />
               <Route path="bulk-ledger-upload" element={<BulkLedgerUploadPage />} />
