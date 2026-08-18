@@ -26,6 +26,10 @@ const DriverDetail = () => {
     const [contractPreviewHTML, setContractPreviewHTML] = useState<string | null>(null);
     const [invoices, setInvoices] = useState<any[]>([]);
 
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [cancelNotes, setCancelNotes] = useState('');
+    const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+
     const [expandedPayments, setExpandedPayments] = useState<Record<string, boolean>>({});
     const [isDocsExpanded, setIsDocsExpanded] = useState(false);
     const currentUser = getUser();
@@ -153,25 +157,22 @@ const DriverDetail = () => {
         }
     };
 
-    const handleCancelContract = async () => {
+    const handleConfirmCancelContract = async () => {
         if (!id) return;
-        const confirmCancel = window.confirm(
-            "Are you sure you want to cancel this contract? This will set both the driver and customer status to INACTIVE, release the assigned vehicle, and stop all future automated rent invoicing."
-        );
-        if (!confirmCancel) return;
-
-        const notes = window.prompt("Please enter a reason/note for cancelling the contract (optional):");
-        if (notes === null) return; // User clicked cancel on prompt
-
         const toastId = toast.loading("Cancelling contract and releasing vehicle...");
         try {
-            await cancelContract(id, notes || undefined);
+            setIsSubmittingCancel(true);
+            await cancelContract(id, cancelNotes || undefined);
             toast.success("Contract cancelled successfully!", { id: toastId });
+            setIsCancelModalOpen(false);
+            setCancelNotes('');
             await fetchDriver();
         } catch (err: any) {
             console.error("Failed to cancel contract:", err);
             const errMsg = err.response?.data?.message || err.message || "Failed to cancel contract.";
             toast.error(errMsg, { id: toastId });
+        } finally {
+            setIsSubmittingCancel(false);
         }
     };
 
@@ -1244,7 +1245,7 @@ const DriverDetail = () => {
                                     )}
                                     {isStaff && driver.status === 'ACTIVE' && driver.currentVehicle && (
                                         <button
-                                            onClick={handleCancelContract}
+                                            onClick={() => setIsCancelModalOpen(true)}
                                             className="px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer"
                                         >
                                             Cancel Contract
@@ -1731,6 +1732,99 @@ const DriverDetail = () => {
                                     Confirm & Issue
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Cancel Contract Custom Confirmation Modal */}
+            {isCancelModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+                    <div className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        {/* Header */}
+                        <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20">
+                                    <AlertCircle size={22} />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black uppercase tracking-wider text-white">Cancel Driver Contract</h3>
+                                    <p className="text-[11px] font-bold text-dim uppercase tracking-wide">Confirm Contract Termination</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    if (!isSubmittingCancel) {
+                                        setIsCancelModalOpen(false);
+                                        setCancelNotes('');
+                                    }
+                                }}
+                                className="p-1.5 rounded-lg text-dim hover:text-white hover:bg-white/5 transition-colors"
+                            >
+                                <XCircle size={20} />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-5 space-y-4">
+                            <div className="p-3.5 rounded-xl bg-red-500/5 border border-red-500/15 space-y-2">
+                                <p className="text-[12px] font-bold text-red-400 leading-relaxed">
+                                    Are you sure you want to cancel this contract?
+                                </p>
+                                <ul className="text-[11px] text-dim space-y-1 font-medium list-disc list-inside">
+                                    <li>Driver and customer status will be set to <strong className="text-white">INACTIVE</strong>.</li>
+                                    {assignedVehicle && (
+                                        <li>Assigned vehicle (<strong className="text-white">{assignedVehicle.basicDetails?.make} {assignedVehicle.basicDetails?.model}</strong>) will be released and set to <strong className="text-white">AVAILABLE</strong>.</li>
+                                    )}
+                                    <li>All future automated rent invoicing & repayments will be stopped.</li>
+                                </ul>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-black uppercase tracking-wider text-dim block">
+                                    Reason / Notes for Cancellation <span className="text-dim opacity-50 font-normal">(Optional)</span>
+                                </label>
+                                <textarea
+                                    value={cancelNotes}
+                                    onChange={(e) => setCancelNotes(e.target.value)}
+                                    placeholder="Enter reason or additional notes for cancelling..."
+                                    rows={3}
+                                    disabled={isSubmittingCancel}
+                                    className="w-full p-3 rounded-xl bg-black/20 border text-xs font-medium text-white placeholder:text-gray-500 outline-none focus:border-red-500/50 transition-all resize-none"
+                                    style={{ borderColor: 'var(--border-main)' }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="p-4 border-t flex items-center justify-end gap-3" style={{ backgroundColor: 'rgba(0,0,0,0.2)', borderColor: 'rgba(255,255,255,0.05)' }}>
+                            <button
+                                onClick={() => {
+                                    setIsCancelModalOpen(false);
+                                    setCancelNotes('');
+                                }}
+                                disabled={isSubmittingCancel}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-dim hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+                            >
+                                Keep Contract
+                            </button>
+                            <button
+                                onClick={handleConfirmCancelContract}
+                                disabled={isSubmittingCancel}
+                                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-lg active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                                {isSubmittingCancel ? (
+                                    <>
+                                        <Clock size={14} className="animate-spin" />
+                                        Cancelling...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Ban size={14} />
+                                        Confirm Cancellation
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>

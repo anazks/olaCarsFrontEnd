@@ -101,6 +101,7 @@ export interface Driver {
         lastUpdated: string;
     };
     rentTracking?: Array<{
+        vehicle?: any | string;
         weekNumber: number;
         weekLabel: string;
         amount: number;
@@ -108,7 +109,7 @@ export interface Driver {
         totalDue?: number;
         amountPaid?: number;
         balance?: number;
-        status: 'PAID' | 'PARTIAL' | 'PENDING';
+        status: 'PAID' | 'PARTIAL' | 'PENDING' | 'OVERDUE' | 'CANCELLED';
         paidAt?: string;
         dueDate?: string;
         payments?: Array<{

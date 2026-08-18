@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { getVehicleById, progressVehicle, uploadVehicleDocuments, editVehicle, assignVehicleToDriver } from '../../../services/vehicleService';
 import { getEligibleInsurances, getVehiclePoliciesByVehicleId } from '../../../services/insuranceService';
-import { getAllDrivers } from '../../../services/driverService';
+import { getAllDrivers, cancelContract } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getAllBranches } from '../../../services/branchService';
 import type { Branch } from '../../../services/branchService';
@@ -136,6 +136,12 @@ const VehicleDetail = () => {
     const [loadingUnassignedDrivers, setLoadingUnassignedDrivers] = useState(false);
     const [driverSearchQuery, setDriverSearchQuery] = useState('');
     const [changingDriver, setChangingDriver] = useState(false);
+
+    // Cancel Contract modal state for vehicle driver change
+    const [isCancelContractModalOpen, setIsCancelContractModalOpen] = useState(false);
+    const [cancelNotes, setCancelNotes] = useState('');
+    const [pendingNewDriverId, setPendingNewDriverId] = useState<string | null>(null);
+    const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
     const STATUS_OPTIONS = [
         { value: 'ACTIVE — AVAILABLE', label: 'Active — Available' },
@@ -334,7 +340,7 @@ const VehicleDetail = () => {
         setLoadingUnassignedDrivers(true);
         try {
             const params: any = {
-                status: 'ACTIVE',
+                status: 'ACTIVE,APPROVED',
                 search: searchQuery,
                 limit: 50
             };
@@ -356,45 +362,87 @@ const VehicleDetail = () => {
         }
     }, [isChangeDriverModalOpen, driverSearchQuery, driverModalMode, fetchUnassignedDrivers]);
 
-    const handleChangeDriver = async (newDriverId: string) => {
+    const handleSelectNewDriver = (newDriverId: string) => {
+        if (assignedDriver) {
+            setPendingNewDriverId(newDriverId);
+            setCancelNotes('');
+            setIsCancelContractModalOpen(true);
+        } else {
+            executeAssignNewDriver(newDriverId);
+        }
+    };
+
+    const handleTriggerUnassignDriver = () => {
+        if (assignedDriver) {
+            setPendingNewDriverId(null);
+            setCancelNotes('');
+            setIsCancelContractModalOpen(true);
+        } else {
+            handleUnassignDriverOnly();
+        }
+    };
+
+    const executeAssignNewDriver = async (newDriverId: string) => {
         if (!vehicle || !id) return;
         setChangingDriver(true);
         try {
-            // 1. Unlink old driver's currentVehicle if exists
-            if (assignedDriver) {
-                const { updateDriver } = await import('../../../services/driverService');
-                await updateDriver(assignedDriver._id, { currentVehicle: null });
-            }
-
-            // 2. Set new driver on vehicle
-            await editVehicle(id, { currentDriver: newDriverId } as any);
-
-            // 3. Set new driver's currentVehicle
             const { updateDriver } = await import('../../../services/driverService');
+            await editVehicle(id, { currentDriver: newDriverId } as any);
             await updateDriver(newDriverId, { currentVehicle: id });
 
-            toast.success('Driver changed successfully');
+            toast.success('Driver assigned successfully');
             setIsChangeDriverModalOpen(false);
             setDriverSearchQuery('');
             fetchVehicle();
         } catch (err: any) {
-            toast.error(err.response?.data?.message || err.message || 'Failed to change driver');
+            toast.error(err.response?.data?.message || err.message || 'Failed to assign driver');
         } finally {
             setChangingDriver(false);
         }
     };
 
-    const handleUnassignDriver = async () => {
+    const handleConfirmCancelContractOnVehicle = async () => {
+        if (!assignedDriver || !id) return;
+        setIsSubmittingCancel(true);
+        const toastId = toast.loading("Cancelling contract and updating vehicle...");
+        try {
+            // 1. Cancel contract for existing assigned driver
+            await cancelContract(assignedDriver._id, cancelNotes || undefined);
+
+            // 2. If a new driver was selected to replace old driver, assign new driver
+            if (pendingNewDriverId) {
+                const { updateDriver } = await import('../../../services/driverService');
+                await editVehicle(id, { currentDriver: pendingNewDriverId } as any);
+                await updateDriver(pendingNewDriverId, { currentVehicle: id });
+                toast.success("Contract cancelled and new driver assigned successfully!", { id: toastId });
+            } else {
+                toast.success("Contract cancelled and driver unassigned successfully!", { id: toastId });
+            }
+
+            setIsCancelContractModalOpen(false);
+            setIsChangeDriverModalOpen(false);
+            setCancelNotes('');
+            setPendingNewDriverId(null);
+            setAssignedDriver(null);
+            fetchVehicle();
+        } catch (err: any) {
+            console.error("Failed to cancel contract:", err);
+            const errMsg = err.response?.data?.message || err.message || "Failed to cancel contract.";
+            toast.error(errMsg, { id: toastId });
+        } finally {
+            setIsSubmittingCancel(false);
+        }
+    };
+
+    const handleUnassignDriverOnly = async () => {
         if (!vehicle || !id) return;
         setChangingDriver(true);
         try {
-            // 1. Unlink old driver's currentVehicle
             if (assignedDriver) {
                 const { updateDriver } = await import('../../../services/driverService');
                 await updateDriver(assignedDriver._id, { currentVehicle: null });
             }
 
-            // 2. Clear vehicle's currentDriver
             await editVehicle(id, { currentDriver: null } as any);
 
             toast.success('Driver unassigned successfully');
@@ -2205,7 +2253,7 @@ const VehicleDetail = () => {
                                         </div>
                                     </div>
                                     <button
-                                        onClick={handleUnassignDriver}
+                                        onClick={handleTriggerUnassignDriver}
                                         disabled={changingDriver}
                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20 transition-all hover:bg-red-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
                                     >
@@ -2278,7 +2326,7 @@ const VehicleDetail = () => {
                                     {unassignedDrivers.map((driver) => (
                                         <button
                                             key={driver._id}
-                                            onClick={() => driverModalMode === 'TEMP' ? handleChangeTempDriver(driver._id) : handleChangeDriver(driver._id)}
+                                            onClick={() => driverModalMode === 'TEMP' ? handleChangeTempDriver(driver._id) : handleSelectNewDriver(driver._id)}
                                             disabled={changingDriver}
                                             className="w-full flex items-center gap-3 p-4 text-left transition-all hover:bg-white/5 active:scale-[0.99] disabled:opacity-50"
                                         >
@@ -2336,6 +2384,105 @@ const VehicleDetail = () => {
                     setTimeout(() => setActionSuccess(null), 3000);
                 }}
             />
+
+            {/* Cancel Contract Custom Confirmation Modal for Vehicle Detail */}
+            {isCancelContractModalOpen && assignedDriver && (
+                <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+                    <div className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        {/* Header */}
+                        <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20">
+                                    <AlertTriangle size={22} />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-black uppercase tracking-wider text-white">Cancel Driver Contract</h3>
+                                    <p className="text-[11px] font-bold text-dim uppercase tracking-wide">
+                                        {pendingNewDriverId ? 'Required to Change Driver' : 'Required to Unassign Driver'}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    if (!isSubmittingCancel) {
+                                        setIsCancelContractModalOpen(false);
+                                        setCancelNotes('');
+                                        setPendingNewDriverId(null);
+                                    }
+                                }}
+                                className="p-1.5 rounded-lg text-dim hover:text-white hover:bg-white/5 transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-5 space-y-4">
+                            <div className="p-3.5 rounded-xl bg-red-500/5 border border-red-500/15 space-y-2">
+                                <p className="text-[12px] font-bold text-red-400 leading-relaxed">
+                                    {pendingNewDriverId ? (
+                                        <>Changing driver will cancel the contract for <strong className="text-white">{assignedDriver.personalInfo?.fullName}</strong>.</>
+                                    ) : (
+                                        <>Are you sure you want to cancel the contract for <strong className="text-white">{assignedDriver.personalInfo?.fullName}</strong>?</>
+                                    )}
+                                </p>
+                                <ul className="text-[11px] text-dim space-y-1 font-medium list-disc list-inside">
+                                    <li>Driver and customer status will be set to <strong className="text-white">INACTIVE</strong>.</li>
+                                    <li>This vehicle (<strong className="text-white">{vehicle?.basicDetails?.make} {vehicle?.basicDetails?.model}</strong>) will be released.</li>
+                                    <li>All future automated rent invoicing & repayments will be stopped.</li>
+                                </ul>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-black uppercase tracking-wider text-dim block">
+                                    Reason / Notes for Cancellation <span className="text-dim opacity-50 font-normal">(Optional)</span>
+                                </label>
+                                <textarea
+                                    value={cancelNotes}
+                                    onChange={(e) => setCancelNotes(e.target.value)}
+                                    placeholder="Enter reason or additional notes for cancelling contract..."
+                                    rows={3}
+                                    disabled={isSubmittingCancel}
+                                    className="w-full p-3 rounded-xl bg-black/20 border text-xs font-medium text-white placeholder:text-gray-500 outline-none focus:border-red-500/50 transition-all resize-none"
+                                    style={{ borderColor: 'var(--border-main)' }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="p-4 border-t flex items-center justify-end gap-3" style={{ backgroundColor: 'rgba(0,0,0,0.2)', borderColor: 'rgba(255,255,255,0.05)' }}>
+                            <button
+                                onClick={() => {
+                                    setIsCancelContractModalOpen(false);
+                                    setCancelNotes('');
+                                    setPendingNewDriverId(null);
+                                }}
+                                disabled={isSubmittingCancel}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-dim hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmCancelContractOnVehicle}
+                                disabled={isSubmittingCancel}
+                                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-lg active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                                {isSubmittingCancel ? (
+                                    <>
+                                        <Clock size={14} className="animate-spin" />
+                                        Cancelling...
+                                    </>
+                                ) : (
+                                    <>
+                                        <UserMinus size={14} />
+                                        {pendingNewDriverId ? 'Cancel Contract & Change Driver' : 'Cancel Contract & Unassign'}
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
