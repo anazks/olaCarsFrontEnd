@@ -9,7 +9,6 @@ import DataMigrationUpload from './DataMigrationUpload';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import BulkUploadJournal from '../finance/BulkUploadJournal';
-import BulkInvoiceUpload from './BulkInvoiceUpload';
 import BulkSupplierUpload from './BulkSupplierUpload';
 import BulkCustomerUpload from './BulkCustomerUpload';
 import BulkInventoryUpload from './BulkInventoryUpload';

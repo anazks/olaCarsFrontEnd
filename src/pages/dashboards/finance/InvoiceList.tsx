@@ -11,7 +11,6 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import InvoiceSettingsModal from './InvoiceSettingsModal';
-import BulkInvoiceUpload from '../shared/BulkInvoiceUpload';
 import { getUserRole } from '../../../utils/auth';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 
@@ -24,7 +23,6 @@ const InvoiceList = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
-    const [showBulkUpload, setShowBulkUpload] = useState(false);
     const [downloadingPdf, setDownloadingPdf] = useState(false);
     const [downloadingExcel, setDownloadingExcel] = useState(false);
 
