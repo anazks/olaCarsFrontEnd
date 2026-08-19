@@ -507,8 +507,8 @@ const InvoiceList = () => {
                         </button>
 
                         <button
-                            onClick={() => setShowBulkUpload(true)}
-                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                            onClick={() => navigate('../bulk-invoice-upload')}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 cursor-pointer"
                             style={{ background: 'var(--bg-input)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}
                         >
                             <Download size={14} strokeWidth={3} />
@@ -955,14 +955,7 @@ const InvoiceList = () => {
                 />
             )}
 
-            <BulkInvoiceUpload
-                isOpen={showBulkUpload}
-                onClose={() => setShowBulkUpload(false)}
-                onSuccess={() => {
-                    setShowBulkUpload(false);
-                    fetchData();
-                }}
-            />
+
         </div>
     );
 };

@@ -687,11 +687,11 @@ const BulkUploadsHub = () => {
                             </div>
                         </div>
                         <button
-                            onClick={() => setActiveModal('invoice')}
-                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm"
+                            onClick={() => navigate('../bulk-invoice-upload')}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer"
                             style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
                         >
-                            Launch Importer <ArrowRight size={14} />
+                            Open Importer Page <ArrowRight size={14} />
                         </button>
                     </div>
                 </div>
@@ -1220,11 +1220,7 @@ const BulkUploadsHub = () => {
                 </div>
             )}
 
-            <BulkInvoiceUpload 
-                isOpen={activeModal === 'invoice'} 
-                onClose={() => setActiveModal(null)} 
-                onSuccess={() => setActiveModal(null)} 
-            />
+
 
             <BulkSupplierUpload
                 isOpen={activeModal === 'supplier'}

@@ -180,6 +180,43 @@ const DataMigrationUpload = ({ isOpen = true, onClose, onSuccess }: Props) => {
         }
     };
 
+    const downloadInvalidRows = (format: 'xlsx' | 'csv') => {
+        const invalidRows = parsedRows.filter(r => r._rowErrors.length > 0 || Boolean(r.serverError) || r.migrationStatus === 'FAILED');
+        if (invalidRows.length === 0) {
+            toast.error('No invalid rows found to download.');
+            return;
+        }
+
+        const exportData = invalidRows.map(r => {
+            const rowData: Record<string, any> = {};
+            MIGRATION_COLUMNS.forEach(col => {
+                rowData[col] = (r as any)[col] !== undefined && (r as any)[col] !== null ? (r as any)[col] : '';
+            });
+            const errorList = [...(r._rowErrors || [])];
+            if (r.serverError) errorList.push(`Server Error: ${r.serverError}`);
+            rowData['parsingErrors'] = errorList.join('; ');
+            return rowData;
+        });
+
+        const dateStr = new Date().toISOString().slice(0, 10);
+        if (format === 'xlsx') {
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Invalid Rows");
+            XLSX.writeFile(wb, `invalid_rows_data_migration_${dateStr}.xlsx`);
+        } else {
+            const content = Papa.unparse(exportData, { columns: [...MIGRATION_COLUMNS, 'parsingErrors'] });
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `invalid_rows_data_migration_${dateStr}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        toast.success(`Downloaded ${invalidRows.length} invalid row(s) in migration template format.`);
+    };
+
     const handleSubmit = async () => {
         const valid = parsedRows.filter(d => d._rowErrors.length === 0);
         if (valid.length === 0) { toast.error('No valid rows to upload.'); return; }
@@ -644,7 +681,27 @@ const DataMigrationUpload = ({ isOpen = true, onClose, onSuccess }: Props) => {
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-2 ml-auto">
+                            <div className="flex flex-wrap items-center gap-2 ml-auto">
+                                {errorCount > 0 && (
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => downloadInvalidRows('xlsx')}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-400 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 transition-all cursor-pointer shadow-sm"
+                                            title="Download invalid rows pre-filled in Excel migration template"
+                                        >
+                                            <Download size={13} /> Invalid Rows (Excel)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => downloadInvalidRows('csv')}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-400 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 transition-all cursor-pointer shadow-sm"
+                                            title="Download invalid rows pre-filled in CSV migration template"
+                                        >
+                                            <Download size={13} /> Invalid Rows (CSV)
+                                        </button>
+                                    </div>
+                                )}
                                 {errorCount > 0 && !result && (
                                     <button
                                         type="button"
@@ -659,6 +716,31 @@ const DataMigrationUpload = ({ isOpen = true, onClose, onSuccess }: Props) => {
                                     style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>Clear &amp; Re-upload</button>
                             </div>
                         </div>
+
+                        {errorCount > 0 && statusFilter === 'ERRORS' && (
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/5">
+                                <div className="flex items-center gap-2.5 text-xs font-medium text-amber-300">
+                                    <AlertTriangle size={16} className="text-amber-400 shrink-0" />
+                                    <span>Showing <strong>{errorCount}</strong> invalid row(s). You can download these rows pre-populated in the migration template format, correct the fields, and re-upload.</span>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => downloadInvalidRows('xlsx')}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-black hover:bg-amber-400 transition-all cursor-pointer shadow-sm"
+                                    >
+                                        <Download size={13} /> Download Excel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => downloadInvalidRows('csv')}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 transition-all cursor-pointer shadow-sm"
+                                    >
+                                        <Download size={13} /> Download CSV
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="rounded-xl border overflow-hidden w-full" style={{ borderColor: 'var(--border-main)' }}>
                             <div className="overflow-x-auto max-h-[calc(100vh-320px)] min-h-[350px] w-full">
@@ -819,7 +901,25 @@ const DataMigrationUpload = ({ isOpen = true, onClose, onSuccess }: Props) => {
                         </div>
                         {result.errors.length > 0 && (
                             <div className="p-4 rounded-xl border" style={{ borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.05)' }}>
-                                <p className="text-sm font-bold" style={{ color: '#ef4444' }}>✗ {result.errors.length} error(s)</p>
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                    <p className="text-sm font-bold" style={{ color: '#ef4444' }}>✗ {result.errors.length} error(s)</p>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => downloadInvalidRows('xlsx')}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-red-300 border border-red-500/40 bg-red-500/20 hover:bg-red-500/30 transition-all cursor-pointer shadow-sm"
+                                        >
+                                            <Download size={13} /> Download Failed Rows (Excel)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => downloadInvalidRows('csv')}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-red-300 border border-red-500/40 bg-red-500/20 hover:bg-red-500/30 transition-all cursor-pointer shadow-sm"
+                                        >
+                                            <Download size={13} /> Download Failed Rows (CSV)
+                                        </button>
+                                    </div>
+                                </div>
                                 <div className="mt-2 space-y-1 max-h-[150px] overflow-y-auto">
                                     {result.errors.map((e, i) => (
                                         <p key={i} className="text-xs" style={{ color: '#ef4444' }}>Row {e.row}: {e.message}</p>

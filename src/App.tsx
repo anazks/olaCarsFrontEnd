@@ -83,6 +83,7 @@ import StaffManagement from "./pages/dashboards/shared/StaffManagement";
 import DashboardSettings from "./pages/dashboards/shared/DashboardSettings";
 import BulkUploadsHub from "./pages/dashboards/shared/BulkUploadsHub";
 import DataMigrationUpload from "./pages/dashboards/shared/DataMigrationUpload";
+import BulkInvoiceUpload from "./pages/dashboards/shared/BulkInvoiceUpload";
 import AlertsManagement from "./pages/dashboards/shared/AlertsManagement";
 import InsuranceClaimsView from "./pages/dashboards/financialAdmin/InsuranceClaimsView";
 import AccidentReports from "./pages/dashboards/shared/AccidentReports";
@@ -452,6 +453,7 @@ function App() {
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="data-migration-upload" element={<DataMigrationUpload />} />
+              <Route path="bulk-invoice-upload" element={<BulkInvoiceUpload />} />
               <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"
@@ -731,6 +733,7 @@ function App() {
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="data-migration-upload" element={<DataMigrationUpload />} />
+              <Route path="bulk-invoice-upload" element={<BulkInvoiceUpload />} />
               <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"
@@ -1012,6 +1015,7 @@ function App() {
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="data-migration-upload" element={<DataMigrationUpload />} />
+              <Route path="bulk-invoice-upload" element={<BulkInvoiceUpload />} />
               <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"
@@ -1244,6 +1248,7 @@ function App() {
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="data-migration-upload" element={<DataMigrationUpload />} />
+              <Route path="bulk-invoice-upload" element={<BulkInvoiceUpload />} />
               <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"
@@ -1453,6 +1458,7 @@ function App() {
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="data-migration-upload" element={<DataMigrationUpload />} />
+              <Route path="bulk-invoice-upload" element={<BulkInvoiceUpload />} />
               <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"
@@ -1569,6 +1575,7 @@ function App() {
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="data-migration-upload" element={<DataMigrationUpload />} />
+              <Route path="bulk-invoice-upload" element={<BulkInvoiceUpload />} />
               <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"
@@ -1677,6 +1684,7 @@ function App() {
               />
               <Route path="bulk-uploads" element={<BulkUploadsHub />} />
               <Route path="data-migration-upload" element={<DataMigrationUpload />} />
+              <Route path="bulk-invoice-upload" element={<BulkInvoiceUpload />} />
               <Route path="bulk-bank-upload" element={<BulkLedgerUpload />} />
               <Route
                 path="profile"

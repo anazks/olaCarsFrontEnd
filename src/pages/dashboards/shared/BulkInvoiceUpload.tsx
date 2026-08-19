@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2 } from 'lucide-react';
+import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ArrowLeft, Search } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import { bulkUploadInvoices } from '../../../services/invoiceService';
 import { getAllCustomers } from '../../../services/customerService';
+import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 interface ParsedInvoiceRow {
     [key: string]: any;
@@ -12,9 +14,9 @@ interface ParsedInvoiceRow {
 }
 
 interface BulkInvoiceUploadProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSuccess: () => void;
+    isOpen?: boolean;
+    onClose?: () => void;
+    onSuccess?: () => void;
 }
 
 const CSV_COLUMNS = [
@@ -191,8 +193,9 @@ const normalizeRowDates = (row: any): any => {
     return updated;
 };
 
-const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProps) => {
+const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUploadProps) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const navigate = useNavigate();
     const [invoiceType, setInvoiceType] = useState<'RENTAL' | 'WORKSHOP' | 'DEPOSIT'>('RENTAL');
     const [parsedRows, setParsedRows] = useState<ParsedInvoiceRow[]>([]);
     const [fileName, setFileName] = useState('');
@@ -207,6 +210,7 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
     const [verifiedInvoices, setVerifiedInvoices] = useState<Map<string, { exists: boolean, lineItems?: string[] }>>(new Map());
     const [verifyingInvoices, setVerifyingInvoices] = useState(false);
     const [rowFilter, setRowFilter] = useState<'all' | 'valid' | 'invalid'>('all');
+    const [searchInvoiceNo, setSearchInvoiceNo] = useState('');
     const [autoDownloadFailed, setAutoDownloadFailed] = useState(true);
 
     useEffect(() => {
@@ -640,16 +644,19 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
         setVerifiedInvoices(new Map());
         setVerifyingInvoices(false);
         setRowFilter('all');
+        setSearchInvoiceNo('');
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const handleClose = () => {
-        const hasResult = !!result;
         handleReset();
-        if (hasResult) {
+        if (result && onSuccess) {
             onSuccess();
-        } else {
+        }
+        if (onClose) {
             onClose();
+        } else {
+            navigate(-1);
         }
     };
 
@@ -676,14 +683,19 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
         toast.success("Downloaded invalid invoices template.");
     };
 
-    if (!isOpen) return null;
-
     const validCount = parsedRows.filter(r => r._rowErrors.length === 0).length;
     const errorCount = parsedRows.filter(r => r._rowErrors.length > 0).length;
 
     const filteredRows = parsedRows.filter(row => {
-        if (rowFilter === 'valid') return row._rowErrors.length === 0;
-        if (rowFilter === 'invalid') return row._rowErrors.length > 0;
+        if (rowFilter === 'valid' && row._rowErrors.length > 0) return false;
+        if (rowFilter === 'invalid' && row._rowErrors.length === 0) return false;
+
+        if (searchInvoiceNo.trim()) {
+            const query = searchInvoiceNo.trim().toLowerCase();
+            const invNo = String(getRowVal(row, ['Invoice Number', 'invoiceNumber', 'Invoice ID', 'invoiceId']) || '').toLowerCase();
+            const customerName = String(getRowVal(row, ['Customer Name', 'customerName', 'customer']) || '').toLowerCase();
+            if (!invNo.includes(query) && !customerName.includes(query)) return false;
+        }
         return true;
     });
 
@@ -701,27 +713,37 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
     };
     const uniqueInvoicesCount = getUniqueInvoicesCount();
 
+    if (!isOpen) return null;
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-            <div className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
-                            <FileText size={20} className="text-blue-500" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>Bulk Invoice Upload</h2>
-                            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Upload CSV or XLSX to generate multiple invoices</p>
-                        </div>
-                    </div>
-                    <button onClick={handleClose} className="p-2 rounded-lg transition-all hover:scale-110" style={{ color: 'var(--text-dim)' }}>
-                        <X size={20} />
+        <div className="w-full p-4 sm:p-6 space-y-6">
+            {/* Breadcrumbs */}
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Bulk Uploads', path: '../bulk-uploads' }, { label: 'Bulk Invoice Upload', active: true }]} />
+
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 sm:p-6 rounded-2xl border shadow-sm w-full" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="flex items-center gap-4">
+                    <button onClick={handleClose} className="p-2.5 rounded-xl border transition-all hover:scale-105 cursor-pointer" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)', color: 'var(--text-main)' }} title="Go Back">
+                        <ArrowLeft size={18} />
                     </button>
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
+                        <FileText size={24} className="text-blue-500" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>Bulk Invoice Upload</h1>
+                        <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Upload CSV or XLSX to generate multiple invoices in bulk</p>
+                    </div>
                 </div>
 
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex items-center gap-3">
+                    <button onClick={handleClose} className="px-4 py-2 rounded-xl text-xs font-bold border transition-all hover:scale-105 cursor-pointer" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                        {result ? 'Done' : 'Back to Hub'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Page Body Container */}
+            <div className="w-full p-4 sm:p-6 rounded-2xl border shadow-sm space-y-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     
                     <div className="space-y-3">
                         <label className="text-xs font-bold text-dim uppercase tracking-wider">Select Invoice Category</label>
@@ -798,14 +820,34 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <div className="relative min-w-[220px]">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-dim pointer-events-none" size={14} />
+                                        <input
+                                            type="text"
+                                            value={searchInvoiceNo}
+                                            onChange={(e) => setSearchInvoiceNo(e.target.value)}
+                                            placeholder="Filter by Invoice No. / Customer..."
+                                            className="w-full pl-9 pr-7 py-2 rounded-lg text-xs font-medium border outline-none transition-all focus:border-brand-lime"
+                                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                        {searchInvoiceNo && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSearchInvoiceNo('')}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-dim hover:text-main cursor-pointer"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
                                     <select
                                         value={rowFilter}
                                         onChange={(e) => setRowFilter(e.target.value as 'all' | 'valid' | 'invalid')}
                                         className="text-xs font-bold px-3 py-2 rounded-lg border focus:outline-none"
                                         style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
                                     >
-                                        <option value="all">All Rows ({parsedRows.length})</option>
+                                        <option value="all">All Statuses ({parsedRows.length})</option>
                                         <option value="valid">Valid Rows ({validCount})</option>
                                         <option value="invalid">Invalid Rows ({errorCount})</option>
                                     </select>
@@ -886,7 +928,7 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                                             {filteredRows.map((row, idx) => (
                                                 <tr key={idx} style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
-                                                    <td className="py-3 px-4">{getRowVal(row, ['Invoice Number', 'invoiceNumber']) || '-'}</td>
+                                                    <td className="py-3 px-4 font-bold">{getRowVal(row, ['Invoice Number', 'invoiceNumber']) || '-'}</td>
                                                     <td className="py-3 px-4">{getRowVal(row, ['Customer Name', 'customerName', 'customer']) || '-'}</td>
                                                     <td className="py-3 px-4 font-bold">{getRowVal(row, ['SubTotal', 'subtotal', 'amount', 'itemPrice', 'Item Price']) || '-'}</td>
                                                     <td className="py-3 px-4 font-bold text-emerald-500">{getRowVal(row, ['Total', 'total']) || '-'}</td>
@@ -923,6 +965,13 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                                                     </td>
                                                 </tr>
                                             ))}
+                                            {filteredRows.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={8} className="py-8 text-center text-xs font-medium text-dim">
+                                                        No rows match your filter criteria{searchInvoiceNo ? ` ("${searchInvoiceNo}")` : ''}.
+                                                    </td>
+                                                </tr>
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
@@ -968,13 +1017,12 @@ const BulkInvoiceUpload = ({ isOpen, onClose, onSuccess }: BulkInvoiceUploadProp
                             )}
 
                              <div className="pt-6">
-                                <button onClick={handleClose} className="px-6 py-2.5 rounded-xl text-sm font-bold transition-all border-none" style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}>
+                                <button onClick={handleClose} className="px-6 py-2.5 rounded-xl text-sm font-bold transition-all border-none cursor-pointer" style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}>
                                     Done
                                 </button>
                             </div>
                         </div>
                     )}
-                </div>
             </div>
         </div>
     );
