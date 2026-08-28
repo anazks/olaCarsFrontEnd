@@ -37,6 +37,8 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
     const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0]);
     const [dueDate, setDueDate] = useState('');
     const [notes, setNotes] = useState('');
+    const [purchaseType, setPurchaseType] = useState<'CREDIT' | 'CASH' | 'BANK'>('CREDIT');
+    const [selectedCreditAccount, setSelectedCreditAccount] = useState<string>('');
 
     const [lineItems, setLineItems] = useState<LineItem[]>([
         { itemName: '', description: '', quantity: '1', unitPrice: '', accountId: '' }
@@ -57,9 +59,20 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 getAllAccountingCodes()
             ]);
             
+            const codes = codesRes || [];
             setSuppliers(supplierRes.data || []);
             setBranches(branchRes.data || []);
-            setAccountingCodes(codesRes || []);
+            setAccountingCodes(codes);
+
+            // Default credit account to Accounts Payable (2.1.01)
+            const apCode = codes.find((c: any) => 
+                c.code === '2.1.01' || 
+                (c.accountType && c.accountType.toLowerCase() === 'accounts payable') || 
+                (c.category && c.category.toLowerCase() === 'accounts payable')
+            );
+            if (apCode) {
+                setSelectedCreditAccount(apCode._id);
+            }
         } catch (err) {
             console.error('Failed to load Create Bill dependencies', err);
             toast.error('Failed to load suppliers, branches, or accounts list.');
@@ -76,9 +89,50 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
             setBillDate(new Date().toISOString().split('T')[0]);
             setDueDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]); // Default 30 days due
             setNotes('');
+            setPurchaseType('CREDIT');
             setLineItems([defaultItem()]);
         }
     }, [isOpen, fetchData]);
+
+    const isCashAccount = (c: any) => {
+        const type = (c.accountType || '').toLowerCase();
+        const cat = (c.category || '').toLowerCase();
+        return type === 'cash' || cat === 'cash';
+    };
+
+    const isBankAccount = (c: any) => {
+        const type = (c.accountType || '').toLowerCase();
+        const cat = (c.category || '').toLowerCase();
+        return type === 'bank' || cat === 'bank';
+    };
+
+    const isPayableAccount = (c: any) => {
+        const type = (c.accountType || '').toLowerCase();
+        const cat = (c.category || '').toLowerCase();
+        return type === 'accounts payable' || cat === 'accounts payable' || c.code === '2.1.01';
+    };
+
+    // Update credit account when purchase type changes
+    const handlePurchaseTypeChange = (type: 'CREDIT' | 'CASH' | 'BANK') => {
+        setPurchaseType(type);
+        if (type === 'CASH') {
+            const cashAcc = accountingCodes.find(isCashAccount);
+            setSelectedCreditAccount(cashAcc ? cashAcc._id : '');
+        } else if (type === 'BANK') {
+            const bankAcc = accountingCodes.find(isBankAccount);
+            setSelectedCreditAccount(bankAcc ? bankAcc._id : '');
+        } else {
+            const apAcc = accountingCodes.find(isPayableAccount);
+            setSelectedCreditAccount(apAcc ? apAcc._id : '');
+        }
+    };
+
+    // Filter credit accounts based on selected purchase type
+    const availableCreditAccounts = accountingCodes.filter((c: any) => {
+        if (purchaseType === 'CASH') return isCashAccount(c);
+        if (purchaseType === 'BANK') return isBankAccount(c);
+        return isPayableAccount(c);
+    });
 
     // ── Calculations ──────────────────────────────────────────────────────────
     const grandTotal = lineItems.reduce((sum, item) => {
@@ -124,6 +178,8 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 branch: selectedBranch,
                 billDate,
                 dueDate,
+                purchaseType,
+                creditAccountId: selectedCreditAccount || undefined,
                 notes,
                 items: validItems.map(i => ({
                     itemName: i.itemName,
@@ -250,6 +306,75 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} 
                                     />
                                 </div>
+                            </div>
+
+                            {/* Purchase Type Selector */}
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
+                                    <Tag size={11} /> Purchase Type <span className="text-rose-400">*</span>
+                                </label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => handlePurchaseTypeChange('CASH')}
+                                        className={`px-3 py-2.5 rounded-2xl text-xs font-bold transition-all border cursor-pointer flex items-center justify-center gap-1.5 ${
+                                            purchaseType === 'CASH'
+                                                ? 'bg-green-500/20 text-green-400 border-green-500/50 shadow-sm'
+                                                : 'border-transparent text-dim hover:bg-input'
+                                        }`}
+                                        style={{ background: purchaseType === 'CASH' ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-input)' }}
+                                    >
+                                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                        Cash Purchase
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handlePurchaseTypeChange('BANK')}
+                                        className={`px-3 py-2.5 rounded-2xl text-xs font-bold transition-all border cursor-pointer flex items-center justify-center gap-1.5 ${
+                                            purchaseType === 'BANK'
+                                                ? 'bg-blue-500/20 text-blue-400 border-blue-500/50 shadow-sm'
+                                                : 'border-transparent text-dim hover:bg-input'
+                                        }`}
+                                        style={{ background: purchaseType === 'BANK' ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-input)' }}
+                                    >
+                                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                                        Bank Purchase
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handlePurchaseTypeChange('CREDIT')}
+                                        className={`px-3 py-2.5 rounded-2xl text-xs font-bold transition-all border cursor-pointer flex items-center justify-center gap-1.5 ${
+                                            purchaseType === 'CREDIT'
+                                                ? 'bg-amber-500/20 text-amber-400 border-amber-500/50 shadow-sm'
+                                                : 'border-transparent text-dim hover:bg-input'
+                                        }`}
+                                        style={{ background: purchaseType === 'CREDIT' ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-input)' }}
+                                    >
+                                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                                        Credit Purchase
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Credit Account Selector (Filtered by Purchase Type) */}
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest flex items-center justify-between" style={{ color: 'var(--text-dim)' }}>
+                                    <span className="flex items-center gap-1.5">
+                                        <Landmark size={11} /> 
+                                        {purchaseType === 'CASH' ? 'Credit Account (Cash A/c)' : purchaseType === 'BANK' ? 'Credit Account (Bank A/c)' : 'Credit Account (Accounts Payable)'}
+                                        <span className="text-rose-400">*</span>
+                                    </span>
+                                    <span className="text-[9px] lowercase opacity-70">
+                                        {purchaseType === 'CASH' ? 'type: cash' : purchaseType === 'BANK' ? 'type: bank' : 'type: accounts payable'}
+                                    </span>
+                                </label>
+                                <SearchableSelect
+                                    options={availableCreditAccounts.map(a => ({ value: a._id, label: `${a.code} - ${a.name} (${a.accountType || a.category})` }))}
+                                    value={selectedCreditAccount}
+                                    onChange={setSelectedCreditAccount}
+                                    placeholder={`Select ${purchaseType === 'CASH' ? 'Cash' : purchaseType === 'BANK' ? 'Bank' : 'Accounts Payable'} Account`}
+                                    required
+                                />
                             </div>
                         </div>
 

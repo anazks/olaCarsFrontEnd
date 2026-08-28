@@ -295,6 +295,10 @@ const ExecutiveSidebar = ({
           path: "/admin/admin/manual-journals",
         },
         {
+          label: t("sidebar.items.vouchers", "Vouchers"),
+          path: "/admin/admin/vouchers",
+        },
+        {
           label: t("sidebar.items.fixedAssets", {
             defaultValue: "Fixed Assets",
           }),

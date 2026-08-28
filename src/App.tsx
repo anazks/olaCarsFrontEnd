@@ -142,6 +142,7 @@ import ReportsPage from "./pages/dashboards/finance/ReportsPage";
 import BalanceSheet from "./pages/dashboards/finance/BalanceSheet";
 import StaffSalaries from "./pages/dashboards/finance/StaffSalaries.tsx";
 import VoucherDashboard from "./pages/dashboards/finance/VoucherDashboard";
+import CreateVoucherPage from "./pages/dashboards/finance/CreateVoucherPage";
 import ManualJournals from "./pages/dashboards/finance/ManualJournals";
 import CreateJournalPage from "./pages/dashboards/finance/CreateJournalPage";
 import FixedAssets from "./pages/dashboards/finance/FixedAssets";
@@ -482,6 +483,8 @@ function App() {
               <Route path="fixed-assets/new/:id" element={<CreateFixedAsset />} />
               <Route path="fixed-assets/:id" element={<FixedAssetDetail />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
+              <Route path="vouchers/create" element={<CreateVoucherPage />} />
+              <Route path="vouchers/new" element={<CreateVoucherPage />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/create" element={<CreateInvoicePage />} />
               <Route path="invoices/aging-summary" element={<InvoiceAgingSummary />} />
@@ -1044,6 +1047,8 @@ function App() {
               <Route path="fixed-assets/new/:id" element={<CreateFixedAsset />} />
               <Route path="fixed-assets/:id" element={<FixedAssetDetail />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
+              <Route path="vouchers/create" element={<CreateVoucherPage />} />
+              <Route path="vouchers/new" element={<CreateVoucherPage />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/create" element={<CreateInvoicePage />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
@@ -1277,6 +1282,8 @@ function App() {
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
+              <Route path="vouchers/create" element={<CreateVoucherPage />} />
+              <Route path="vouchers/new" element={<CreateVoucherPage />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/create" element={<CreateInvoicePage />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />
@@ -1708,6 +1715,8 @@ function App() {
               <Route path="manual-journals" element={<ManualJournals />} />
               <Route path="manual-journals/new" element={<CreateJournalPage />} />
               <Route path="vouchers" element={<VoucherDashboard />} />
+              <Route path="vouchers/create" element={<CreateVoucherPage />} />
+              <Route path="vouchers/new" element={<CreateVoucherPage />} />
               <Route path="invoices" element={<InvoiceList />} />
               <Route path="invoices/create" element={<CreateInvoicePage />} />
               <Route path="invoices/:id" element={<InvoiceDetail />} />

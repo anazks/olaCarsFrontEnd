@@ -15,11 +15,13 @@ import {
     Plus,
     Eye,
     RefreshCw,
-    FileText
+    FileText,
+    Upload
 } from 'lucide-react';
 import * as billService from '../../../../services/billService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import CreateBillModal from './CreateBillModal';
+import BulkBillUpload from '../../shared/BulkBillUpload';
 import DateRangeReportModal from '../../shared/DateRangeReportModal';
 import { downloadExcelReport } from '../../../../services/reportingService';
 import type { RootState } from '../../../../store';
@@ -42,6 +44,7 @@ const BillList = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
     const handleDownloadReport = async (start: string, end: string) => {
@@ -435,6 +438,13 @@ const BillList = () => {
                         Download Report
                     </button>
                     <button
+                        onClick={() => setIsBulkUploadOpen(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <Upload size={14} className="text-[#C8E600]" /> Bulk Upload
+                    </button>
+                    <button
                         onClick={() => setIsCreateModalOpen(true)}
                         className="flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold transition-all hover:scale-[1.03] active:scale-95 shadow-lg cursor-pointer"
                         style={{ background: '#C8E600', color: '#111', border: 'none' }}
@@ -530,7 +540,17 @@ const BillList = () => {
                                                 {String(startIndex + index + 1).padStart(2, '0')}
                                             </td>
                                             <td className="py-4 px-5 font-black text-sm">
-                                                {bill.billNumber}
+                                                <div>{bill.billNumber}</div>
+                                                {bill.purchaseType && (
+                                                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider"
+                                                        style={{
+                                                            background: bill.purchaseType === 'CASH' ? 'rgba(34, 197, 94, 0.12)' : bill.purchaseType === 'BANK' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(245, 158, 11, 0.12)',
+                                                            color: bill.purchaseType === 'CASH' ? '#22c55e' : bill.purchaseType === 'BANK' ? '#3b82f6' : '#f59e0b',
+                                                            border: `1px solid ${bill.purchaseType === 'CASH' ? 'rgba(34, 197, 94, 0.25)' : bill.purchaseType === 'BANK' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`
+                                                        }}>
+                                                        {bill.purchaseType}
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="py-4 px-5">
                                                 <div className="font-bold">{supplierName}</div>
@@ -641,6 +661,14 @@ const BillList = () => {
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 onSuccess={fetchBills}
+            />
+            <BulkBillUpload
+                isOpen={isBulkUploadOpen}
+                onClose={() => setIsBulkUploadOpen(false)}
+                onSuccess={() => {
+                    setIsBulkUploadOpen(false);
+                    fetchBills();
+                }}
             />
             <DateRangeReportModal
                 isOpen={isReportModalOpen}

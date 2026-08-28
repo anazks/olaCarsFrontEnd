@@ -12,7 +12,10 @@ import {
     Receipt, 
     Printer, 
     AlertCircle, 
-    Loader2 
+    Loader2,
+    Sparkles,
+    CheckCircle2,
+    Layers
 } from 'lucide-react';
 import { getVoucherById, type Voucher } from '../../../services/ledgerService';
 import { useTheme } from '../../../context/ThemeContext';
@@ -53,8 +56,8 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
     if (loading) {
         return (
             <div className="p-20 text-center flex flex-col items-center justify-center gap-3">
-                <Loader2 className="w-8 h-8 text-brand-lime animate-spin" />
-                <p className="text-xs text-[color:var(--text-dim)]">Loading voucher details...</p>
+                <Loader2 className="w-8 h-8 text-[#C8E600] animate-spin" />
+                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>Loading voucher details...</p>
             </div>
         );
     }
@@ -67,7 +70,7 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
                 </div>
                 <button 
                     onClick={onClose}
-                    className="px-6 py-2 rounded-xl text-xs font-bold bg-white/5 border border-white/10 hover:bg-white/10 text-[color:var(--text-main)]"
+                    className="px-6 py-2 rounded-xl text-xs font-bold bg-white/5 border border-white/10 hover:bg-white/10 text-[color:var(--text-main)] cursor-pointer"
                 >
                     Close
                 </button>
@@ -90,8 +93,6 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
 
     const borderStyle = { borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' };
     const textDimColor = isDark ? 'var(--text-dim)' : '#4B5563';
-
-
 
     const handlePrint = async () => {
         if (!voucher) return;
@@ -137,14 +138,14 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
                         <ActiveIcon size={28} className={typeColor} />
                     </div>
                     <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2.5">
                             <h2 className="text-xl font-bold tracking-tight text-[color:var(--text-main)] print:text-black">
                                 {voucher.voucherNumber}
                             </h2>
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                                voucher.status === 'POSTED' ? 'bg-emerald-500/10 text-emerald-500' :
-                                voucher.status === 'CANCELLED' ? 'bg-rose-500/10 text-rose-500' :
-                                'bg-amber-500/10 text-amber-500'
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                voucher.status === 'POSTED' ? 'bg-emerald-500/10 text-emerald-400' :
+                                voucher.status === 'CANCELLED' ? 'bg-rose-500/10 text-rose-400' :
+                                'bg-amber-500/10 text-amber-400'
                             } print:border print:border-black print:text-black print:bg-transparent`}>
                                 {voucher.status}
                             </span>
@@ -157,14 +158,14 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
                 <div className="flex items-center gap-2 print:hidden">
                     <button 
                         onClick={handlePrint}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold transition-all text-[color:var(--text-main)]"
+                        className="flex items-center gap-1.5 px-4 py-2 bg-white/5 hover:bg-white/10 border rounded-xl text-xs font-bold transition-all text-[color:var(--text-main)] cursor-pointer"
                         style={{ borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}
                     >
                         <Printer size={14} /> Print
                     </button>
                     <button 
                         onClick={onClose} 
-                        className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[color:var(--text-dim)]"
+                        className="p-2.5 rounded-xl hover:bg-white/5 transition-all text-[color:var(--text-dim)] cursor-pointer"
                     >
                         <X size={20} />
                     </button>
@@ -176,7 +177,7 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-1">
                         <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5" style={{ color: textDimColor }}>
-                            <Calendar size={12} /> Date
+                            <Calendar size={12} /> Voucher Date
                         </span>
                         <p className="text-sm font-semibold text-[color:var(--text-main)] print:text-black">
                             {new Date(voucher.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -202,32 +203,32 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
 
                 {/* Reference Info Section */}
                 {voucher.referenceInfo && (voucher.referenceInfo.referenceNumber || voucher.referenceInfo.partyName) && (
-                    <div className="p-6 border rounded-2xl space-y-4 print:border-black print:bg-transparent" style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#F3F4F6', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
+                    <div className="p-5 border rounded-2xl space-y-3 print:border-black print:bg-transparent" style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#F3F4F6', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
                         <h3 className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: textDimColor }}>
-                            <Hash size={12} /> Reference & Party Details
+                            <Hash size={12} /> Party & Reference Details
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
-                            {voucher.referenceInfo.referenceNumber && (
-                                <div>
-                                    <p style={{ color: textDimColor }}>Ref Number</p>
-                                    <p className="font-bold mt-0.5 text-[color:var(--text-main)] print:text-black">{voucher.referenceInfo.referenceNumber}</p>
-                                </div>
-                            )}
                             {voucher.referenceInfo.partyName && (
                                 <div>
-                                    <p style={{ color: textDimColor }}>Party Name</p>
+                                    <p className="text-[10px]" style={{ color: textDimColor }}>Party Name</p>
                                     <p className="font-bold mt-0.5 text-[color:var(--text-main)] print:text-black">{voucher.referenceInfo.partyName}</p>
                                 </div>
                             )}
                             {voucher.referenceInfo.partyType && (
                                 <div>
-                                    <p style={{ color: textDimColor }}>Party Type</p>
+                                    <p className="text-[10px]" style={{ color: textDimColor }}>Party Type</p>
                                     <p className="font-bold mt-0.5 text-[color:var(--text-main)] print:text-black">{voucher.referenceInfo.partyType}</p>
+                                </div>
+                            )}
+                            {voucher.referenceInfo.referenceNumber && (
+                                <div>
+                                    <p className="text-[10px]" style={{ color: textDimColor }}>Ref / Cheque #</p>
+                                    <p className="font-bold mt-0.5 text-[color:var(--text-main)] print:text-black">{voucher.referenceInfo.referenceNumber}</p>
                                 </div>
                             )}
                             {voucher.referenceInfo.partyId && (
                                 <div>
-                                    <p style={{ color: textDimColor }}>External ID</p>
+                                    <p className="text-[10px]" style={{ color: textDimColor }}>Party ID</p>
                                     <p className="font-mono mt-0.5 text-[color:var(--text-main)] print:text-black">{voucher.referenceInfo.partyId}</p>
                                 </div>
                             )}
@@ -235,29 +236,76 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
                     </div>
                 )}
 
+                {/* Auto Set-off Breakdown Card */}
+                {voucher.setOffSummary && (voucher.setOffSummary.totalSetOff > 0 || (voucher.setOffSummary.itemsSetOff && voucher.setOffSummary.itemsSetOff.length > 0)) && (
+                    <div className="p-5 border rounded-2xl space-y-3 bg-emerald-500/[0.04] border-emerald-500/20">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-2">
+                                <Sparkles size={14} /> Auto Set-off Breakdown
+                            </h3>
+                            <span className="text-xs font-mono font-bold text-emerald-400">
+                                Applied: ${voucher.setOffSummary.totalSetOff?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                        </div>
+
+                        {voucher.setOffSummary.itemsSetOff && voucher.setOffSummary.itemsSetOff.length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                                {voucher.setOffSummary.itemsSetOff.map((item, idx) => (
+                                    <div key={idx} className="p-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05] text-xs space-y-1">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-mono font-bold text-[color:var(--text-main)]">
+                                                {item.invoiceNumber ? `Inv #${item.invoiceNumber}` : item.billNumber ? `Bill #${item.billNumber}` : `Item ${idx + 1}`}
+                                            </span>
+                                            <span className="text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400">
+                                                {item.newStatus || 'SET-OFF'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between text-[11px]" style={{ color: textDimColor }}>
+                                            <span>Applied:</span>
+                                            <span className="font-bold font-mono text-emerald-400">${item.amountApplied?.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {voucher.setOffSummary.excessAmount > 0 && (
+                            <div className="text-xs text-amber-400 flex items-center gap-2 pt-1">
+                                <CheckCircle2 size={13} />
+                                <span>
+                                    Excess amount of <strong>${voucher.setOffSummary.excessAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong> booked as unapplied advance.
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Transaction Lines Table */}
                 <div className="rounded-2xl border overflow-hidden print:border-black" style={{ borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
+                    <div className="p-3 border-b flex items-center gap-2 text-xs font-bold" style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#F3F4F6', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB', color: textDimColor }}>
+                        <Layers size={14} /> Double-Entry Ledger Lines
+                    </div>
                     <table className="w-full text-left border-collapse">
                         <thead style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#F3F4F6' }}>
                             <tr className="border-b print:border-b-2 print:border-black" style={{ borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
-                                <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>Account</th>
-                                <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>Description</th>
-                                <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-center" style={{ color: textDimColor }}>DR/CR</th>
-                                <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-right" style={{ color: textDimColor }}>Amount</th>
+                                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>Account</th>
+                                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>Description</th>
+                                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-center" style={{ color: textDimColor }}>DR / CR</th>
+                                <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-right" style={{ color: textDimColor }}>Amount ($)</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y print:divide-y-2 print:divide-black" style={{ borderColor: isDark ? 'var(--border-main)' : '#E5E7EB' }}>
                             {voucher.lines.map((line, index) => (
                                 <tr key={index} className="hover:bg-white/[0.01]">
-                                    <td className="px-5 py-4 w-1/3">
+                                    <td className="px-5 py-3.5 w-1/3">
                                         <p className="text-xs font-bold text-[color:var(--text-main)] print:text-black">
                                             {(line.accountingCode as any)?.code || 'N/A'}
                                         </p>
-                                        <p className="text-[10px] mt-0.5" style={{ color: textDimColor }}>
+                                        <p className="text-[11px] mt-0.5" style={{ color: textDimColor }}>
                                             {(line.accountingCode as any)?.name || 'N/A'}
                                         </p>
                                     </td>
-                                    <td className="px-5 py-4 text-xs text-[color:var(--text-main)] print:text-black">
+                                    <td className="px-5 py-3.5 text-xs text-[color:var(--text-main)] print:text-black">
                                         <div>{line.description || '—'}</div>
                                         {line.taxInfo && line.taxInfo.taxAmount !== undefined && line.taxInfo.taxAmount > 0 && (
                                             <div className="text-[10px] text-amber-500 mt-1 flex flex-wrap items-center gap-1">
@@ -267,20 +315,19 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
                                                 </span>
                                                 <span>—</span>
                                                 <span>Amount: ${line.taxInfo.taxAmount.toFixed(2)}</span>
-                                                <span>({line.taxInfo.isTaxInclusive ? 'Inclusive' : 'Exclusive'})</span>
                                             </div>
                                         )}
                                     </td>
-                                    <td className="px-5 py-4 text-center">
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                                    <td className="px-5 py-3.5 text-center">
+                                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
                                             line.type === 'DEBIT' 
-                                                ? 'bg-emerald-500/10 text-emerald-500 print:text-black print:bg-transparent' 
-                                                : 'bg-rose-500/10 text-rose-500 print:text-black print:bg-transparent'
+                                                ? 'bg-emerald-500/10 text-emerald-400 print:text-black print:bg-transparent' 
+                                                : 'bg-rose-500/10 text-rose-400 print:text-black print:bg-transparent'
                                         }`}>
                                             {line.type}
                                         </span>
                                     </td>
-                                    <td className="px-5 py-4 text-right font-mono text-xs font-bold text-[color:var(--text-main)] print:text-black">
+                                    <td className="px-5 py-3.5 text-right font-mono text-xs font-bold text-[color:var(--text-main)] print:text-black">
                                         ${line.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
                                 </tr>
@@ -297,15 +344,15 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
                         </p>
                         {voucher.postedAt && (
                             <p>
-                                Posted by: <span className="font-semibold text-[color:var(--text-main)] print:text-black">{(voucher as any).postedBy?.personalInfo?.fullName || (voucher as any).postedBy?.username || `User (${(voucher as any).postedByRole || 'System'})`}</span> on {new Date(voucher.postedAt).toLocaleString()}
+                                Posted on: <span className="font-semibold text-[color:var(--text-main)] print:text-black">{new Date(voucher.postedAt).toLocaleString()}</span>
                             </p>
                         )}
                     </div>
 
                     <div className="flex items-center gap-8 self-end sm:self-auto">
                         <div className="text-right">
-                            <p className="text-[9px] font-bold uppercase tracking-wider" style={{ color: textDimColor }}>Total Amount</p>
-                            <p className="text-lg font-mono font-bold text-emerald-500 print:text-black">
+                            <p className="text-[9px] font-bold uppercase tracking-wider" style={{ color: textDimColor }}>Total Voucher Amount</p>
+                            <p className="text-xl font-mono font-black text-emerald-400 print:text-black">
                                 ${voucher.totalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
                         </div>

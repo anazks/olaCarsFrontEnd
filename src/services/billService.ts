@@ -37,6 +37,8 @@ export interface Bill {
     amountPaid: number;
     balanceDue: number;
     status: BillStatus;
+    purchaseType?: 'CASH' | 'BANK' | 'CREDIT';
+    creditAccountId?: string | AccountingCode;
     payments?: BillPayment[];
     isInclusiveTax?: boolean;
     taxId?: any;

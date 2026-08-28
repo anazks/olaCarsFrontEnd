@@ -122,6 +122,17 @@ const BillDetail = () => {
                                 style={{ background: s.bg, color: s.text, borderColor: s.text + '33' }}>
                                 {s.icon} {bill.status.replace('_', ' ')}
                             </div>
+                            {bill.purchaseType && (
+                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border"
+                                    style={{
+                                        background: bill.purchaseType === 'CASH' ? 'rgba(34, 197, 94, 0.1)' : bill.purchaseType === 'BANK' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                                        color: bill.purchaseType === 'CASH' ? '#22c55e' : bill.purchaseType === 'BANK' ? '#3b82f6' : '#f59e0b',
+                                        borderColor: bill.purchaseType === 'CASH' ? '#22c55e33' : bill.purchaseType === 'BANK' ? '#3b82f633' : '#f59e0b33'
+                                    }}>
+                                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: bill.purchaseType === 'CASH' ? '#22c55e' : bill.purchaseType === 'BANK' ? '#3b82f6' : '#f59e0b' }}></span>
+                                    {bill.purchaseType} Purchase
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -189,6 +200,82 @@ const BillDetail = () => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Related Transaction Entries (Debit & Credit Accounts) */}
+                    <div className="rounded-3xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
+                            <div className="flex items-center gap-2">
+                                <Landmark size={16} className="text-[#C8E600]" />
+                                <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Related Transaction Entries</h3>
+                            </div>
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-white/5 border border-white/10" style={{ color: 'var(--text-dim)' }}>
+                                {bill.ledgerEntries?.length || 0} entries posted
+                            </span>
+                        </div>
+                        {bill.ledgerEntries && bill.ledgerEntries.length > 0 ? (
+                            <table className="w-full text-left">
+                                <thead className="bg-white/5">
+                                    <tr>
+                                        <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Date</th>
+                                        <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Account</th>
+                                        <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Debit</th>
+                                        <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Credit</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5 text-xs">
+                                    {bill.ledgerEntries.map((entry: any, idx: number) => {
+                                        const entryDateStr = entry.entryDate || entry.createdAt;
+                                        const dateObj = new Date(entryDateStr);
+                                        const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString(undefined, { timeZone: 'UTC' }) : entryDateStr;
+
+                                        return (
+                                            <tr
+                                                key={idx}
+                                                className="hover:bg-white/5 transition-colors cursor-pointer"
+                                                onClick={() => navigate(`../../ledger/${entry._id}`)}
+                                            >
+                                                <td className="px-6 py-4" style={{ color: 'var(--text-dim)' }}>{formattedDate}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className="font-bold" style={{ color: 'var(--text-main)' }}>
+                                                        {entry.accountingCode?.code} - {entry.accountingCode?.name}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-dim" style={{ color: 'var(--text-dim)' }}>
+                                                            {entry.accountingCode?.category}
+                                                        </span>
+                                                        {entry.transactionId && (
+                                                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 font-mono font-bold">
+                                                                Ref: {entry.transactionId}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {entry.description && (
+                                                        <div className="text-[11px] mt-1 opacity-70 italic max-w-md truncate" style={{ color: 'var(--text-dim)' }}>
+                                                            {entry.description}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    {entry.type === 'DEBIT' ? (
+                                                        <span className="font-bold text-red-400">${entry.amount?.toFixed(2)}</span>
+                                                    ) : '—'}
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    {entry.type === 'CREDIT' ? (
+                                                        <span className="font-bold text-green-400">${entry.amount?.toFixed(2)}</span>
+                                                    ) : '—'}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <div className="p-6 text-center text-xs opacity-60" style={{ color: 'var(--text-dim)' }}>
+                                No ledger entries recorded for this bill yet.
+                            </div>
+                        )}
                     </div>
 
                     {/* Items Table */}

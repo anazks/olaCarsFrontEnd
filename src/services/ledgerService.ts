@@ -169,6 +169,24 @@ export const getManualJournals = async (filters: Record<string, any> = {}): Prom
 export type VoucherType = 'SALES' | 'PURCHASE' | 'RECEIPT' | 'PAYMENT' | 'JOURNAL' | 'CONTRA';
 export type VoucherStatus = 'DRAFT' | 'POSTED' | 'CANCELLED';
 
+export interface VoucherSetOffItem {
+    invoiceId?: string;
+    invoiceNumber?: string;
+    billId?: string;
+    billNumber?: string;
+    amountApplied: number;
+    newStatus?: string;
+    newBalance?: number;
+}
+
+export interface VoucherSetOffSummary {
+    totalSetOff: number;
+    excessAmount: number;
+    invoiceCount?: number;
+    billCount?: number;
+    itemsSetOff?: VoucherSetOffItem[];
+}
+
 export interface Voucher {
     _id: string;
     voucherNumber: string;
@@ -176,6 +194,12 @@ export interface Voucher {
     type: VoucherType;
     branch: any;
     narration: string;
+    autoSetOff?: boolean;
+    setOffSummary?: VoucherSetOffSummary;
+    paymentReceived?: any;
+    paymentMade?: any;
+    contact?: string;
+    contactModel?: 'Customer' | 'Supplier' | 'Driver' | 'Other';
     referenceInfo?: {
         referenceNumber?: string;
         partyName?: string;
@@ -198,6 +222,9 @@ export interface CreateVoucherPayload {
     date: string;
     branch: string;
     narration: string;
+    autoSetOff?: boolean;
+    contact?: string;
+    contactModel?: 'Customer' | 'Supplier' | 'Driver' | 'Other';
     referenceInfo?: {
         referenceNumber?: string;
         partyName?: string;
@@ -205,6 +232,12 @@ export interface CreateVoucherPayload {
         partyType?: 'CUSTOMER' | 'SUPPLIER' | 'DRIVER' | 'OTHER';
     };
     lines: JournalLine[];
+}
+
+export interface VoucherStatsResponse {
+    totalVouchers: number;
+    totalAmount: number;
+    byType: Record<VoucherType, { count: number; totalAmount: number }>;
 }
 
 export const createVoucher = async (payload: CreateVoucherPayload): Promise<any> => {
@@ -221,6 +254,18 @@ export const getVouchers = async (filters: Record<string, any> = {}): Promise<{ 
 
 export const getVoucherById = async (id: string): Promise<Voucher> => {
     const response = await api.get(`/api/vouchers/${id}`);
+    return response.data.data;
+};
+
+export const cancelVoucher = async (id: string): Promise<Voucher> => {
+    const response = await api.patch(`/api/vouchers/${id}/cancel`);
+    return response.data.data;
+};
+
+export const getVoucherStats = async (filters: Record<string, any> = {}): Promise<VoucherStatsResponse> => {
+    const params = new URLSearchParams(filters).toString();
+    const url = `/api/vouchers/stats${params ? `?${params}` : ''}`;
+    const response = await api.get(url);
     return response.data.data;
 };
 

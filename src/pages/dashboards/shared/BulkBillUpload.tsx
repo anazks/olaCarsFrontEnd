@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { bulkUploadBills } from '../../../services/billService';
 import { getAllSuppliers } from '../../../services/supplierService';
+import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
 
 interface ParsedBillRow {
     [key: string]: any;
@@ -18,15 +19,17 @@ interface BulkBillUploadProps {
 }
 
 const CSV_COLUMNS = [
-    'Bill Date', 'Due Date', 'Bill ID', 'Accounts Payable', 'Vendor Name', 'Vendor Number',
-    'Entity Discount Percent', 'Payment Terms', 'Payment Terms Label', 'Bill Number', 'PurchaseOrder',
-    'Currency Code', 'Exchange Rate', 'SubTotal', 'Total', 'Balance', 'TotalRetentionAmountFCY',
-    'TotalRetentionAmountBCY', 'Adjustment', 'Adjustment Description', 'Adjustment Account', 'Bill Type',
-    'Branch ID', 'Branch Name', 'Location Name', 'Is Inclusive Tax', 'Bill Status', 'Created By',
-    'Account', 'Account Code', 'Description', 'Quantity', 'Usage unit', 'Tax Amount', 'Item Total',
-    'Is Billable', 'Line Item Location Name', 'Rate', 'Discount Type', 'Is Discount Before Tax',
-    'Discount', 'Discount Amount', 'Bill Receive Status', 'Manually Received Quantity', 'Tax ID',
-    'Tax Name', 'Tax Percentage', 'Tax Type', 'Entity Discount Amount', 'Discount Account', 'Is Landed Cost'
+    'Bill Number',
+    'Bill Date',
+    'Due Date',
+    'Vendor Name',
+    'Branch Name',
+    'Purchase Type',
+    'Debit Account',
+    'Item Name',
+    'Quantity',
+    'Rate',
+    'Description'
 ];
 
 const SAMPLE_DATA = [
@@ -35,30 +38,39 @@ const SAMPLE_DATA = [
         'Bill Date': '2026-06-12',
         'Due Date': '2026-07-12',
         'Vendor Name': 'Acme Car Parts',
-        'Vendor Number': 'VEND-001',
         'Branch Name': 'Downtown Branch',
-        'Item Name': 'Synthetic Engine Oil 5W-30',
-        'Rate': '45.00',
-        'Quantity': '10',
-        'Description': 'High performance synthetic oil',
-        'Bill Status': 'Open',
-        'Account': 'Cost of Goods Sold',
-        'Account Code': '5000'
+        'Purchase Type': 'Cash',
+        'Debit Account': '6.1.09',
+        'Item Name': 'Office Supplies',
+        'Quantity': '5',
+        'Rate': '50.00',
+        'Description': 'Stationery and paper supplies'
     },
     {
-        'Bill Number': 'BILL-000101',
-        'Bill Date': '2026-06-12',
-        'Due Date': '2026-07-12',
-        'Vendor Name': 'Acme Car Parts',
-        'Vendor Number': 'VEND-001',
+        'Bill Number': 'BILL-000102',
+        'Bill Date': '2026-06-15',
+        'Due Date': '2026-07-15',
+        'Vendor Name': 'Tech Solutions Ltd',
         'Branch Name': 'Downtown Branch',
-        'Item Name': 'Premium Oil Filter',
-        'Rate': '12.50',
-        'Quantity': '10',
-        'Description': 'OEM specification oil filter',
-        'Bill Status': 'Open',
-        'Account': 'Cost of Goods Sold',
-        'Account Code': '5000'
+        'Purchase Type': 'Bank',
+        'Debit Account': 'FA0001',
+        'Item Name': 'Office Furniture',
+        'Quantity': '1',
+        'Rate': '1200.00',
+        'Description': 'Ergonomic office desk set'
+    },
+    {
+        'Bill Number': 'BILL-000103',
+        'Bill Date': '2026-06-18',
+        'Due Date': '2026-08-18',
+        'Vendor Name': 'Speedy Auto Parts',
+        'Branch Name': 'Downtown Branch',
+        'Purchase Type': 'Credit',
+        'Debit Account': 'EXP0006',
+        'Item Name': 'Brake Pads, Oil Filters, Spark Plugs',
+        'Quantity': '20, 30, 50',
+        'Rate': '25.00, 12.00, 8.00',
+        'Description': 'Bulk spare parts order on credit'
     }
 ];
 
@@ -149,12 +161,12 @@ const normalizeRowDates = (row: any): any => {
         }
     }
 
-    // Default item details
-    const itemVal = getRowVal(row, ['Description', 'description', 'Item Name', 'itemName']);
+    // Default item details - prioritize Item Name
+    const itemVal = getRowVal(row, ['Item Name', 'itemName', 'Item', 'item', 'Description', 'description']);
     const itemKey = Object.keys(row).find(k => {
         const l = k.trim().toLowerCase();
-        return l === 'description' || l === 'item name' || l === 'itemname';
-    }) || 'Description';
+        return l === 'item name' || l === 'itemname' || l === 'item' || l === 'description';
+    }) || 'Item Name';
 
     if (!itemVal) {
         updated[itemKey] = 'No Item Details';
@@ -174,22 +186,27 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
     const [uploadStatusText, setUploadStatusText] = useState('');
     const [availableSupplierNames, setAvailableSupplierNames] = useState<Set<string>>(new Set());
     const [availableSupplierNumbers, setAvailableSupplierNumbers] = useState<Set<string>>(new Set());
+    const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
     const [loadingSuppliers, setLoadingSuppliers] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             setLoadingSuppliers(true);
-            getAllSuppliers({ limit: 100000 })
-                .then(res => {
-                    const list = Array.isArray(res.data) ? res.data : [];
+            Promise.all([
+                getAllSuppliers({ limit: 100000 }),
+                getAllAccountingCodes()
+            ])
+                .then(([supRes, codeRes]) => {
+                    const list = Array.isArray(supRes.data) ? supRes.data : [];
                     const names = new Set(list.map(s => s.name?.toLowerCase().trim().replace(/\s+/g, ' ')).filter((n): n is string => !!n));
                     const numbers = new Set(list.map(s => s.vendorNumber?.toLowerCase().trim()).filter((num): num is string => !!num));
                     setAvailableSupplierNames(names);
                     setAvailableSupplierNumbers(numbers);
-                    console.log(`[BulkBillUpload] Loaded ${names.size} suppliers for verification.`);
+                    setAccountingCodes(codeRes || []);
+                    console.log(`[BulkBillUpload] Loaded ${names.size} suppliers and ${(codeRes || []).length} accounting codes.`);
                 })
                 .catch(err => {
-                    console.error('Failed to load supplier registry for validation', err);
+                    console.error('Failed to load supplier/accounting registries for validation', err);
                 })
                 .finally(() => {
                     setLoadingSuppliers(false);
@@ -197,6 +214,7 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
         } else {
             setAvailableSupplierNames(new Set());
             setAvailableSupplierNumbers(new Set());
+            setAccountingCodes([]);
             setLoadingSuppliers(false);
             setParsedRows([]);
             setFileName('');
@@ -207,21 +225,27 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
         
-        // Validate Quantity
+        // Validate Quantity (supports comma-separated)
         const qty = getRowVal(row, ['Quantity', 'quantity']);
         if (qty !== undefined && qty !== null && qty !== '') {
-            const parsedQty = parseFloat(qty);
-            if (isNaN(parsedQty) || parsedQty <= 0) {
-                errors.push('Quantity must be greater than 0');
+            const qtyParts = qty.toString().split(',').map((s: string) => s.trim()).filter(Boolean);
+            for (const q of qtyParts) {
+                const parsedQty = parseFloat(q);
+                if (isNaN(parsedQty) || parsedQty <= 0) {
+                    errors.push(`Quantity "${q}" must be greater than 0`);
+                }
             }
         }
 
-        // Validate Price/Rate
+        // Validate Price/Rate (supports comma-separated)
         const price = getRowVal(row, ['Rate', 'rate', 'Item Price', 'itemPrice', 'unitPrice']);
         if (price !== undefined && price !== null && price !== '') {
-            const parsedPrice = parseFloat(price);
-            if (isNaN(parsedPrice) || parsedPrice < 0) {
-                errors.push('Rate must be greater than or equal to 0');
+            const priceParts = price.toString().split(',').map((s: string) => s.trim()).filter(Boolean);
+            for (const p of priceParts) {
+                const parsedPrice = parseFloat(p);
+                if (isNaN(parsedPrice) || parsedPrice < 0) {
+                    errors.push(`Rate "${p}" must be greater than or equal to 0`);
+                }
             }
         }
 
@@ -243,8 +267,48 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
             }
         }
 
+        // Validate Debit Account
+        const debitAccVal = getRowVal(row, ['Debit Account', 'debitAccount', 'Debit Account Code', 'debitAccountCode', 'Account Code', 'accountCode', 'Account']);
+        if (!debitAccVal) {
+            errors.push('Debit Account is required');
+        } else if (accountingCodes.length > 0) {
+            const cleanDebit = debitAccVal.toString().trim().toLowerCase();
+            const foundDebit = accountingCodes.find(a => 
+                a.code?.toLowerCase().trim() === cleanDebit || 
+                a.name?.toLowerCase().trim().replace(/\s+/g, ' ') === cleanDebit
+            );
+            if (!foundDebit) {
+                errors.push(`Debit Account "${debitAccVal}" not found in Chart of Accounts`);
+            }
+        }
+
+        // Validate Purchase Type & Credit Account
+        const purchaseType = getRowVal(row, ['Purchase Type', 'purchaseType', 'Bill Type', 'billType']);
+        let normalizedPType = 'CREDIT';
+        if (purchaseType) {
+            const rawNormalized = purchaseType.toString().trim().toUpperCase();
+            const validTypes = ['CASH', 'BANK', 'CREDIT', 'CASH PURCHASE', 'BANK PURCHASE', 'BANK TRANSFER', 'CREDIT PURCHASE', 'ON CREDIT', 'PAYABLE'];
+            if (!validTypes.includes(rawNormalized)) {
+                errors.push(`Invalid Purchase Type "${purchaseType}" (expected Cash, Bank, or Credit)`);
+            }
+            normalizedPType = rawNormalized.includes('CASH') ? 'CASH' : rawNormalized.includes('BANK') ? 'BANK' : 'CREDIT';
+        }
+
+        // Credit Account is optional (defaults to 2.1.01 - Accounts Payable on creation)
+        const creditAccVal = getRowVal(row, ['Credit Account', 'Credit Account Code', 'creditAccountCode', 'creditAccount', 'Accounts Payable']);
+        if (creditAccVal && accountingCodes.length > 0) {
+            const cleanCredit = creditAccVal.toString().trim().toLowerCase();
+            const foundCredit = accountingCodes.find(a => 
+                a.code?.toLowerCase().trim() === cleanCredit || 
+                a.name?.toLowerCase().trim().replace(/\s+/g, ' ') === cleanCredit
+            );
+            if (!foundCredit) {
+                errors.push(`Credit Account "${creditAccVal}" not found in Chart of Accounts`);
+            }
+        }
+
         return errors;
-    }, []);
+    }, [accountingCodes]);
 
     useEffect(() => {
         if (parsedRows.length > 0) {
@@ -253,7 +317,7 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                 _rowErrors: validateRow(row)
             })));
         }
-    }, [availableSupplierNames, availableSupplierNumbers, validateRow]);
+    }, [availableSupplierNames, availableSupplierNumbers, accountingCodes, validateRow]);
 
     const parseFile = (file: File) => {
         setResult(null);
@@ -634,9 +698,12 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                                                 <th className="p-3 font-bold">Row</th>
                                                 <th className="p-3 font-bold">Bill Number</th>
                                                 <th className="p-3 font-bold">Vendor Name</th>
-                                                <th className="p-3 font-bold">Description</th>
+                                                <th className="p-3 font-bold">Item Name</th>
                                                 <th className="p-3 font-bold">Qty</th>
                                                 <th className="p-3 font-bold">Rate</th>
+                                                <th className="p-3 font-bold">Purchase Type</th>
+                                                <th className="p-3 font-bold">Debit Account</th>
+                                                <th className="p-3 font-bold">Credit Account</th>
                                                 <th className="p-3 font-bold">Validation Status</th>
                                                 <th className="p-3 font-bold text-center">Actions</th>
                                             </tr>
@@ -646,18 +713,34 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                                                 const hasErrors = row._rowErrors.length > 0;
                                                 const billNumber = getRowVal(row, ['Bill Number', 'billNumber']);
                                                 const vName = getRowVal(row, ['Vendor Name', 'vendorName', 'supplier']);
-                                                const desc = getRowVal(row, ['Description', 'description']);
+                                                const itemNameVal = getRowVal(row, ['Item Name', 'itemName', 'Item', 'item']);
+                                                const descVal = getRowVal(row, ['Description', 'description']);
                                                 const qtyVal = getRowVal(row, ['Quantity', 'quantity']);
                                                 const priceVal = getRowVal(row, ['Rate', 'rate', 'unitPrice']);
+                                                const debitAccCode = getRowVal(row, ['Debit Account', 'debitAccount', 'Debit Account Code', 'debitAccountCode', 'Account Code', 'accountCode', 'Account']);
+                                                const pType = (getRowVal(row, ['Purchase Type', 'purchaseType', 'Bill Type', 'billType']) || 'Credit').toString().trim();
+                                                const creditAccCode = getRowVal(row, ['Credit Account', 'creditAccount', 'Credit Account Code', 'creditAccountCode', 'Accounts Payable']);
+                                                const pTypeNorm = pType.toUpperCase().includes('CASH') ? 'Cash' : pType.toUpperCase().includes('BANK') ? 'Bank' : 'Credit';
+                                                const pTypeBadgeStyle = pTypeNorm === 'Cash' ? { background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.3)' } : pTypeNorm === 'Bank' ? { background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)' } : { background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' };
 
                                                 return (
                                                     <tr key={idx} className={`transition-colors hover:bg-input/20 ${hasErrors ? 'bg-red-500/5' : ''}`}>
                                                         <td className="p-3 text-dim font-medium">{idx + 1}</td>
                                                         <td className="p-3 font-bold text-main">{billNumber || 'Auto-generated'}</td>
                                                         <td className="p-3 text-main font-bold">{vName || <span className="text-dim/60 italic">Fallback (captured in notes)</span>}</td>
-                                                        <td className="p-3 text-main">{desc || <span className="text-dim/60 italic">No details</span>}</td>
+                                                        <td className="p-3 text-main">
+                                                            <div className="font-bold">{itemNameVal || descVal || 'No Item Details'}</div>
+                                                            {descVal && itemNameVal && descVal !== itemNameVal && (
+                                                                <div className="text-[10px] text-dim/70 italic max-w-xs truncate">{descVal}</div>
+                                                            )}
+                                                        </td>
                                                         <td className="p-3 text-main font-bold">{qtyVal || 1}</td>
                                                         <td className="p-3 text-main font-bold">${priceVal || 0}</td>
+                                                        <td className="p-3">
+                                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold" style={pTypeBadgeStyle}>{pTypeNorm}</span>
+                                                        </td>
+                                                        <td className="p-3 text-main text-[10px] font-medium">{debitAccCode || <span className="text-dim/60 italic">Default</span>}</td>
+                                                        <td className="p-3 text-main text-[10px] font-medium">{creditAccCode || <span className="text-dim/80 italic font-normal">2.1.01 (Accounts Payable)</span>}</td>
                                                         <td className="p-3">
                                                             {hasErrors ? (
                                                                 <div className="space-y-1">

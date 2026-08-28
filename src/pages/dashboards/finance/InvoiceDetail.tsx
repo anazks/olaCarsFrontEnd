@@ -60,30 +60,34 @@ const InvoiceDetail = () => {
             setInvoice(res);
             setError(null);
 
-            // Fetch Ledger entries for this invoice
-            try {
-                const queries = [
-                    getLedgerEntries({ search: res.invoiceNumber, exact: true })
-                ];
-                if ((res as any).invoiceID) {
-                    queries.push(getLedgerEntries({ transactionId: (res as any).invoiceID }));
-                }
-                if (res.invoiceNumber && (res as any).invoiceID !== res.invoiceNumber) {
-                    queries.push(getLedgerEntries({ transactionId: res.invoiceNumber }));
-                }
+            // Populate Ledger entries directly if available, fallback to search query for legacy entries
+            if (res.ledgerEntries && Array.isArray(res.ledgerEntries) && res.ledgerEntries.length > 0) {
+                setLedgerEntries(res.ledgerEntries);
+            } else {
+                try {
+                    const queries = [
+                        getLedgerEntries({ search: res.invoiceNumber, exact: true })
+                    ];
+                    if ((res as any).invoiceID) {
+                        queries.push(getLedgerEntries({ transactionId: (res as any).invoiceID }));
+                    }
+                    if (res.invoiceNumber && (res as any).invoiceID !== res.invoiceNumber) {
+                        queries.push(getLedgerEntries({ transactionId: res.invoiceNumber }));
+                    }
 
-                const responses = await Promise.all(queries);
-                const uniqueEntriesMap = new Map();
-                for (const r of responses) {
-                    if (r && r.data) {
-                        for (const entry of r.data) {
-                            uniqueEntriesMap.set(entry._id, entry);
+                    const responses = await Promise.all(queries);
+                    const uniqueEntriesMap = new Map();
+                    for (const r of responses) {
+                        if (r && r.data) {
+                            for (const entry of r.data) {
+                                uniqueEntriesMap.set(entry._id, entry);
+                            }
                         }
                     }
+                    setLedgerEntries(Array.from(uniqueEntriesMap.values()));
+                } catch (e) {
+                    console.error("Error loading ledger entries:", e);
                 }
-                setLedgerEntries(Array.from(uniqueEntriesMap.values()));
-            } catch (e) {
-                console.error("Error loading ledger entries:", e);
             }
         } catch (err: any) {
             setError(err.response?.data?.message || "Failed loading invoice details.");
@@ -471,12 +475,12 @@ const InvoiceDetail = () => {
                         </div>
                     </div>
 
-                    {/* Double-Entry Ledger Impact (Debit & Credit Accounts) */}
+                    {/* Related Transaction Entries (Debit & Credit Accounts) */}
                     <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
                             <div className="flex items-center gap-2">
                                 <Landmark size={16} className="text-[#C8E600]" />
-                                <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Double-Entry Ledger Impact</h3>
+                                <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Related Transaction Entries</h3>
                             </div>
                             <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-white/5 border border-white/10" style={{ color: 'var(--text-dim)' }}>
                                 {ledgerEntries.length} entries posted

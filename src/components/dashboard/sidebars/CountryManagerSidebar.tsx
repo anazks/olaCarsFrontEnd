@@ -226,6 +226,10 @@ const CountryManagerSidebar = ({
           path: "/admin/country-manager/finance-dashboard",
           permission: "REPORTS_VIEW",
         },
+        {
+          label: t("sidebar.items.vouchers", "Vouchers"),
+          path: "/admin/country-manager/vouchers",
+        },
       ],
     },
     {

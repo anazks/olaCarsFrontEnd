@@ -255,6 +255,10 @@ const FinancialAdminSidebar = ({
           path: "/admin/financial-admin/manual-journals",
         },
         {
+          label: t("sidebar.items.vouchers", "Vouchers"),
+          path: "/admin/financial-admin/vouchers",
+        },
+        {
           label: t("sidebar.items.fixedAssets", {
             defaultValue: "Fixed Assets",
           }),

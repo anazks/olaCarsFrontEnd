@@ -17,7 +17,8 @@ import {
     Settings,
     Building2,
     Upload,
-    Mail
+    Mail,
+    TrendingDown
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../context/ThemeContext';
@@ -128,6 +129,13 @@ const DashboardSettings = () => {
     const [cronError, setCronError] = useState<string | null>(null);
     const [cronSuccess, setCronSuccess] = useState(false);
 
+    // Operations (Depreciation Cron Enabled) State
+    const [depreciationCronEnabled, setDepreciationCronEnabled] = useState<boolean>(true);
+    const [loadingDepreciationCron, setLoadingDepreciationCron] = useState(false);
+    const [savingDepreciationCron, setSavingDepreciationCron] = useState(false);
+    const [depreciationCronError, setDepreciationCronError] = useState<string | null>(null);
+    const [depreciationCronSuccess, setDepreciationCronSuccess] = useState(false);
+
     // Fetch PO Threshold
     const fetchThreshold = useCallback(async () => {
         if (role !== 'admin' && role !== 'operationadmin') return;
@@ -173,13 +181,29 @@ const DashboardSettings = () => {
         }
     }, [role]);
 
+    // Fetch Depreciation Cron Suspended Setting
+    const fetchDepreciationCronSetting = useCallback(async () => {
+        if (role !== 'admin' && role !== 'operationadmin') return;
+        setLoadingDepreciationCron(true);
+        setDepreciationCronError(null);
+        try {
+            const suspended = await systemSettingsService.getDepreciationCronSuspended();
+            setDepreciationCronEnabled(!suspended);
+        } catch (err: any) {
+            setDepreciationCronError(err.message || 'Failed to fetch depreciation cron setting');
+        } finally {
+            setLoadingDepreciationCron(false);
+        }
+    }, [role]);
+
     useEffect(() => {
         if (activeTab === 'operations') {
             fetchThreshold();
             fetchEmailsSetting();
             fetchCronSetting();
+            fetchDepreciationCronSetting();
         }
-    }, [activeTab, fetchThreshold, fetchEmailsSetting, fetchCronSetting]);
+    }, [activeTab, fetchThreshold, fetchEmailsSetting, fetchCronSetting, fetchDepreciationCronSetting]);
 
     // Handlers
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -263,6 +287,24 @@ const DashboardSettings = () => {
             toast.error(err.message || 'Failed to update setting');
         } finally {
             setSavingCron(false);
+        }
+    };
+
+    const handleToggleDepreciationCron = async (checked: boolean) => {
+        setSavingDepreciationCron(true);
+        setDepreciationCronError(null);
+        setDepreciationCronSuccess(false);
+        try {
+            await systemSettingsService.updateDepreciationCronSuspended(!checked);
+            setDepreciationCronEnabled(checked);
+            setDepreciationCronSuccess(true);
+            toast.success(checked ? 'Asset depreciation cron job enabled' : 'Asset depreciation cron job suspended');
+            setTimeout(() => setDepreciationCronSuccess(false), 3000);
+        } catch (err: any) {
+            setDepreciationCronError(err.message || 'Failed to update depreciation cron setting');
+            toast.error(err.message || 'Failed to update setting');
+        } finally {
+            setSavingDepreciationCron(false);
         }
     };
 
@@ -759,12 +801,71 @@ const DashboardSettings = () => {
                                 )}
                             </div>
 
+                            {/* Asset Depreciation Cron Job Toggle */}
+                            <div className="p-8 rounded-3xl border bg-card shadow-xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-xl font-black flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                                        <TrendingDown size={20} className="text-lime" style={{ color: 'var(--brand-lime)' }} />
+                                        Asset Depreciation Cron Job
+                                    </h3>
+                                    <button 
+                                        onClick={fetchDepreciationCronSetting}
+                                        className="p-2 rounded-lg hover:bg-black/5 transition-colors"
+                                        style={{ color: 'var(--text-dim)' }}
+                                    >
+                                        <RefreshCw size={18} className={loadingDepreciationCron ? 'animate-spin' : ''} />
+                                    </button>
+                                </div>
+
+                                {loadingDepreciationCron ? (
+                                    <div className="py-12 flex flex-col items-center gap-4">
+                                        <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--brand-lime)', borderTopColor: 'transparent' }}></div>
+                                        <p className="text-sm font-medium animate-pulse" style={{ color: 'var(--text-dim)' }}>Fetching latest settings...</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between p-6 rounded-2xl border" style={{ background: "rgba(255,255,255,0.01)", borderColor: "var(--border-main)" }}>
+                                            <div className="space-y-1 pr-4">
+                                                <div className="text-sm font-black" style={{ color: "var(--text-main)" }}>
+                                                    {depreciationCronEnabled ? 'Depreciation Cron Active' : 'Depreciation Cron Suspended'}
+                                                </div>
+                                                <div className="text-xs" style={{ color: "var(--text-dim)" }}>
+                                                    Toggle to enable or temporarily suspend the automated month-end cron job (at 23:30 on the last day of each month) that auto-posts monthly fixed asset depreciation ledger entries.
+                                                </div>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                                <input
+                                                    type="checkbox"
+                                                    className="sr-only peer"
+                                                    disabled={savingDepreciationCron}
+                                                    checked={depreciationCronEnabled}
+                                                    onChange={(e) => handleToggleDepreciationCron(e.target.checked)}
+                                                />
+                                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lime-500"></div>
+                                            </label>
+                                        </div>
+
+                                        {depreciationCronError && (
+                                            <div className="p-4 rounded-xl flex items-center gap-3 text-sm bg-red-500/10 text-red-500 border border-red-500/20">
+                                                <AlertTriangle size={18} /> {depreciationCronError}
+                                            </div>
+                                        )}
+
+                                        {depreciationCronSuccess && (
+                                            <div className="p-4 rounded-xl flex items-center gap-3 text-sm bg-green-500/10 text-green-500 border border-green-500/20">
+                                                <CheckCircle2 size={18} /> Depreciation cron setting updated successfully
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="p-6 rounded-2xl border border-dashed flex items-start gap-4" style={{ background: 'rgba(200,230,0,0.02)', borderColor: 'var(--border-main)' }}>
                                 <Shield size={20} style={{ color: 'var(--brand-lime)' }} className="mt-1 flex-shrink-0" />
                                 <div>
                                     <h4 className="text-sm font-black mb-1" style={{ color: 'var(--text-main)' }}>Policy Enforcement</h4>
                                     <p className="text-xs leading-relaxed" style={{ color: 'var(--text-dim)' }}>
-                                        Changing the PO threshold or mailing system toggle will apply immediately. Existing settings will be overwritten and enforced globally.
+                                        Changing the PO threshold, mailing system toggle, or cron job status will apply immediately. Existing settings will be overwritten and enforced globally.
                                     </p>
                                 </div>
                             </div>

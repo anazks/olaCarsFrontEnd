@@ -149,6 +149,10 @@ const BranchFinStaffSidebar = ({
           path: "/admin/branch-fin-staff/finance-dashboard",
         },
         {
+          label: t("sidebar.items.vouchers", "Vouchers"),
+          path: "/admin/branch-fin-staff/vouchers",
+        },
+        {
           label: t("sidebar.items.financialStatements"),
           path: "/admin/branch-fin-staff/financial-statements",
         },

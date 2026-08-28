@@ -92,6 +92,32 @@ const systemSettingsService = {
             console.error('Error updating invoice cron suspended setting:', error);
             throw error;
         }
+    },
+
+    /**
+     * Get whether the asset depreciation cron job is suspended
+     */
+    getDepreciationCronSuspended: async (): Promise<boolean> => {
+        try {
+            const response = await api.get('/api/system-settings/depreciation_cron_suspended');
+            return response.data.value === true || response.data.value === 'true';
+        } catch (error) {
+            console.error('Error fetching depreciation cron suspended setting:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Update the asset depreciation cron suspended status (Admin only)
+     */
+    updateDepreciationCronSuspended: async (value: boolean): Promise<boolean> => {
+        try {
+            const response = await api.put('/api/system-settings/depreciation_cron_suspended', { value });
+            return response.data.success;
+        } catch (error) {
+            console.error('Error updating depreciation cron suspended setting:', error);
+            throw error;
+        }
     }
 };
 

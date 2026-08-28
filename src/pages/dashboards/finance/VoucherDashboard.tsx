@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
     Receipt, 
     Plus, 
@@ -15,9 +16,21 @@ import {
     CheckCircle2,
     Clock,
     XCircle,
-    RefreshCw
+    RefreshCw,
+    Ban,
+    Sparkles,
+    AlertTriangle,
+    Wallet
 } from 'lucide-react';
-import { getVouchers, getVoucherById, type Voucher, type VoucherType } from '../../../services/ledgerService';
+import { 
+    getVouchers, 
+    getVoucherById, 
+    cancelVoucher, 
+    getVoucherStats, 
+    type Voucher, 
+    type VoucherType, 
+    type VoucherStatsResponse 
+} from '../../../services/ledgerService';
 import CreateVoucher from './CreateVoucher';
 import ViewVoucher from './ViewVoucher';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -34,6 +47,7 @@ const formatDate = (date: Date) => {
 };
 
 const VoucherDashboard = () => {
+    const navigate = useNavigate();
     const { theme } = useTheme();
     const isDark = theme === 'dark';
 
@@ -43,6 +57,7 @@ const VoucherDashboard = () => {
     oneMonthAgo.setMonth(today.getMonth() - 1);
 
     const [vouchers, setVouchers] = useState<Voucher[]>([]);
+    const [stats, setStats] = useState<VoucherStatsResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState<VoucherType | 'ALL'>('ALL');
@@ -50,6 +65,8 @@ const VoucherDashboard = () => {
     const [endDate, setEndDate] = useState(formatDate(today));
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedVoucherId, setSelectedVoucherId] = useState<string | null>(null);
+    const [voucherToCancel, setVoucherToCancel] = useState<Voucher | null>(null);
+    const [cancelling, setCancelling] = useState(false);
 
     // Pagination states
     const [page, setPage] = useState(1);
@@ -57,7 +74,16 @@ const VoucherDashboard = () => {
     const [totalVouchers, setTotalVouchers] = useState(0);
     const limit = 10;
 
-    const fetchVouchers = async () => {
+    const fetchStats = useCallback(async () => {
+        try {
+            const data = await getVoucherStats({ startDate, endDate });
+            setStats(data);
+        } catch (err) {
+            console.error('Failed to load voucher stats:', err);
+        }
+    }, [startDate, endDate]);
+
+    const fetchVouchers = useCallback(async () => {
         setLoading(true);
         try {
             const filters: any = {
@@ -75,10 +101,11 @@ const VoucherDashboard = () => {
             setTotalVouchers(data.pagination?.total || data.vouchers.length);
         } catch (err: any) {
             console.error(err.message || 'Failed to fetch vouchers');
+            toast.error('Failed to fetch vouchers');
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, limit, typeFilter, startDate, endDate, search]);
 
     // Debounce filters and reset page to 1
     useEffect(() => {
@@ -88,15 +115,32 @@ const VoucherDashboard = () => {
             } else {
                 fetchVouchers();
             }
+            fetchStats();
         }, 300);
 
         return () => clearTimeout(handler);
-    }, [search, typeFilter, startDate, endDate]);
+    }, [search, typeFilter, startDate, endDate, fetchStats]);
 
     // Fetch on page change
     useEffect(() => {
         fetchVouchers();
-    }, [page]);
+    }, [page, fetchVouchers]);
+
+    const handleCancelVoucher = async () => {
+        if (!voucherToCancel) return;
+        setCancelling(true);
+        try {
+            await cancelVoucher(voucherToCancel._id);
+            toast.success(`Voucher ${voucherToCancel.voucherNumber} has been cancelled and reversed`);
+            setVoucherToCancel(null);
+            fetchVouchers();
+            fetchStats();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || err.message || 'Failed to cancel voucher');
+        } finally {
+            setCancelling(false);
+        }
+    };
 
     const handleDownloadPDF = async (voucherId: string) => {
         try {
@@ -128,8 +172,23 @@ const VoucherDashboard = () => {
                 doc.text(`Ref Number: ${voucher.referenceInfo.referenceNumber || 'N/A'}`, 14, startY + 6);
                 doc.text(`Party Name: ${voucher.referenceInfo.partyName || 'N/A'}`, 14, startY + 12);
                 doc.text(`Party Type: ${voucher.referenceInfo.partyType || 'N/A'}`, 14, startY + 18);
-                doc.text(`Party ID: ${voucher.referenceInfo.partyId || 'N/A'}`, 14, startY + 24);
-                startY += 32;
+                startY += 26;
+            }
+
+            // Set-off Info
+            if (voucher.setOffSummary && voucher.setOffSummary.totalSetOff > 0) {
+                doc.setFontSize(11);
+                doc.setTextColor(10, 10, 10);
+                doc.text("Auto Set-off Details", 14, startY);
+                doc.setFontSize(9);
+                doc.setTextColor(80, 80, 80);
+                doc.text(`Applied to Documents: $${voucher.setOffSummary.totalSetOff.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 14, startY + 6);
+                if (voucher.setOffSummary.excessAmount > 0) {
+                    doc.text(`Advance Booked: $${voucher.setOffSummary.excessAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 14, startY + 12);
+                    startY += 18;
+                } else {
+                    startY += 12;
+                }
             }
             
             // Narration
@@ -142,7 +201,7 @@ const VoucherDashboard = () => {
             startY += 16;
             
             // Table of Lines
-            const head = [['Account', 'Description', 'Type', 'Amount']];
+            const head = [['Account', 'Description', 'DR/CR', 'Amount']];
             const body = voucher.lines.map(line => [
                 `${(line.accountingCode as any)?.code || 'N/A'} - ${(line.accountingCode as any)?.name || 'N/A'}`,
                 line.description || '—',
@@ -178,13 +237,13 @@ const VoucherDashboard = () => {
 
     const getTypeIcon = (type: VoucherType) => {
         switch (type) {
-            case 'PAYMENT': return <ArrowUpRight className="text-rose-500" size={18} />;
-            case 'RECEIPT': return <ArrowDownLeft className="text-emerald-500" size={18} />;
-            case 'CONTRA': return <ArrowLeftRight className="text-blue-500" size={18} />;
-            case 'JOURNAL': return <FileText className="text-amber-500" size={18} />;
-            case 'SALES': return <Receipt className="text-[#C8E600]" size={18} />;
-            case 'PURCHASE': return <Receipt className="text-indigo-500" size={18} />;
-            default: return <FileText size={18} />;
+            case 'PAYMENT': return <ArrowUpRight className="text-rose-500" size={16} />;
+            case 'RECEIPT': return <ArrowDownLeft className="text-emerald-500" size={16} />;
+            case 'CONTRA': return <ArrowLeftRight className="text-blue-500" size={16} />;
+            case 'JOURNAL': return <FileText className="text-amber-500" size={16} />;
+            case 'SALES': return <Receipt className="text-[#C8E600]" size={16} />;
+            case 'PURCHASE': return <Receipt className="text-indigo-500" size={16} />;
+            default: return <FileText size={16} />;
         }
     };
 
@@ -192,20 +251,20 @@ const VoucherDashboard = () => {
         switch (status) {
             case 'POSTED':
                 return (
-                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold">
-                        <CheckCircle2 size={12} /> POSTED
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">
+                        <CheckCircle2 size={11} /> POSTED
                     </span>
                 );
             case 'DRAFT':
                 return (
-                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-bold">
-                        <Clock size={12} /> DRAFT
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold">
+                        <Clock size={11} /> DRAFT
                     </span>
                 );
             case 'CANCELLED':
                 return (
-                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-500 text-[10px] font-bold">
-                        <XCircle size={12} /> CANCELLED
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-bold">
+                        <XCircle size={11} /> CANCELLED
                     </span>
                 );
             default:
@@ -213,88 +272,143 @@ const VoucherDashboard = () => {
         }
     };
 
-    const filteredVouchers = vouchers;
-
     return (
         <div className="container-responsive space-y-6 animate-in fade-in duration-700">
-            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Voucher Dashboard', active: true }]} />
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Voucher Management', active: true }]} />
 
-            {/* Compact Header */}
+            {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
-                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                        <Receipt size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
-                        Voucher Management
+                    <h1 className="text-xl font-black tracking-tight flex items-center gap-2.5" style={{ color: 'var(--text-main)' }}>
+                        <Receipt size={22} className="text-[#C8E600]" />
+                        Voucher Management & Auto Set-off
                     </h1>
-                    <p className="text-xs font-medium text-dim mt-0.5">Structured financial transaction records and audit trail</p>
+                    <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                        Structured financial entries with automatic invoice & bill set-off
+                    </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button 
-                        onClick={fetchVouchers}
-                        className="flex items-center justify-center p-2 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"
+                        onClick={() => { fetchVouchers(); fetchStats(); }}
+                        className="flex items-center justify-center p-2.5 rounded-xl border transition-all hover:bg-white/5 cursor-pointer"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                        title="Refresh"
                     >
-                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                        <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
                     </button>
                     <button 
-                        onClick={() => setShowCreateModal(true)}
-                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
-                        style={{ backgroundColor: 'var(--brand-lime)' }}
+                        onClick={() => navigate('create')}
+                        className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide bg-[#C8E600] text-black transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(200,230,0,0.25)] cursor-pointer"
                     >
-                        <Plus size={14} strokeWidth={3} /> Create Voucher
+                        <Plus size={15} strokeWidth={3} /> Create Voucher
                     </button>
                 </div>
             </div>
 
+            {/* Top Metric Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl border transition-all" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Receipts (Inflow)</span>
+                        <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400"><ArrowDownLeft size={16} /></div>
+                    </div>
+                    <p className="text-lg font-black font-mono mt-2 text-emerald-400">
+                        ${(stats?.byType?.RECEIPT?.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                        {stats?.byType?.RECEIPT?.count || 0} vouchers
+                    </p>
+                </div>
+
+                <div className="p-4 rounded-2xl border transition-all" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Payments (Outflow)</span>
+                        <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400"><ArrowUpRight size={16} /></div>
+                    </div>
+                    <p className="text-lg font-black font-mono mt-2 text-rose-400">
+                        ${(stats?.byType?.PAYMENT?.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                        {stats?.byType?.PAYMENT?.count || 0} vouchers
+                    </p>
+                </div>
+
+                <div className="p-4 rounded-2xl border transition-all" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Contra Transfers</span>
+                        <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400"><ArrowLeftRight size={16} /></div>
+                    </div>
+                    <p className="text-lg font-black font-mono mt-2 text-blue-400">
+                        ${(stats?.byType?.CONTRA?.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                        {stats?.byType?.CONTRA?.count || 0} vouchers
+                    </p>
+                </div>
+
+                <div className="p-4 rounded-2xl border transition-all" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Total Active Volume</span>
+                        <div className="p-1.5 rounded-lg bg-[#C8E600]/10 text-[#C8E600]"><Wallet size={16} /></div>
+                    </div>
+                    <p className="text-lg font-black font-mono mt-2 text-[#C8E600]">
+                        ${(stats?.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                        {stats?.totalVouchers || 0} total active vouchers
+                    </p>
+                </div>
+            </div>
+
             {/* Filters Bar */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                 <div className="md:col-span-2 relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} size={18} />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} size={16} />
                     <input 
                         type="text" 
-                        placeholder="Search by voucher #, narration or party..."
+                        placeholder="Search voucher #, narration or party..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        className="w-full border rounded-2xl pl-12 pr-4 py-3 text-sm outline-none transition-all focus:border-[#C8E600]"
+                        className="w-full border rounded-xl pl-11 pr-4 py-2.5 text-xs outline-none transition-all focus:border-[#C8E600]"
                         style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     />
                 </div>
                 <div className="relative">
-                    <Filter className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} size={18} />
+                    <Filter className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} size={16} />
                     <select 
                         value={typeFilter}
                         onChange={e => setTypeFilter(e.target.value as any)}
-                        className="w-full border rounded-2xl pl-12 pr-4 py-3 text-sm outline-none appearance-none transition-all focus:border-[#C8E600] cursor-pointer"
+                        className="w-full border rounded-xl pl-11 pr-4 py-2.5 text-xs outline-none appearance-none transition-all focus:border-[#C8E600] cursor-pointer"
                         style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     >
-                        <option value="ALL" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>All Types</option>
-                        <option value="PAYMENT" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Payment</option>
-                        <option value="RECEIPT" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Receipt</option>
-                        <option value="CONTRA" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Contra</option>
+                        <option value="ALL" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>All Voucher Types</option>
+                        <option value="RECEIPT" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Receipt (Inflow)</option>
+                        <option value="PAYMENT" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Payment (Outflow)</option>
+                        <option value="CONTRA" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Contra (Bank/Cash)</option>
                         <option value="JOURNAL" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Journal</option>
                         <option value="SALES" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Sales</option>
                         <option value="PURCHASE" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Purchase</option>
                     </select>
                 </div>
                 <div className="relative">
-                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} size={18} />
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} size={16} />
                     <input 
                         type="date"
                         value={startDate}
                         onChange={e => setStartDate(e.target.value)}
-                        className="w-full border rounded-2xl pl-12 pr-4 py-3 text-sm outline-none transition-all focus:border-[#C8E600]"
+                        className="w-full border rounded-xl pl-11 pr-4 py-2.5 text-xs outline-none transition-all focus:border-[#C8E600]"
                         style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: isDark ? 'dark' : 'light' }}
                         title="Start Date"
                     />
                 </div>
                 <div className="relative">
-                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} size={18} />
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} size={16} />
                     <input 
                         type="date"
                         value={endDate}
                         min={startDate}
                         onChange={e => setEndDate(e.target.value)}
-                        className="w-full border rounded-2xl pl-12 pr-4 py-3 text-sm outline-none transition-all focus:border-[#C8E600]"
+                        className="w-full border rounded-xl pl-11 pr-4 py-2.5 text-xs outline-none transition-all focus:border-[#C8E600]"
                         style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)', colorScheme: isDark ? 'dark' : 'light' }}
                         title="End Date"
                     />
@@ -302,104 +416,121 @@ const VoucherDashboard = () => {
             </div>
 
             {/* Vouchers Table */}
-            <div className="border rounded-3xl overflow-hidden backdrop-blur-sm shadow-sm" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+            <div className="border rounded-2xl overflow-hidden shadow-sm" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
                             <tr className="border-b" style={{ borderColor: 'var(--border-main)', background: 'rgba(0,0,0,0.02)' }}>
-                                <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Voucher Info</th>
-                                <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Date & Branch</th>
-                                <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Party / Narration</th>
-                                <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Amount</th>
-                                <th className="px-6 py-5 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
+                                <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Voucher</th>
+                                <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Date & Branch</th>
+                                <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Party / Narration</th>
+                                <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Set-off / Status</th>
+                                <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Amount ($)</th>
+                                <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-wider text-right" style={{ color: 'var(--text-dim)' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
                             {loading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <tr key={i} className="animate-pulse border-b last:border-0" style={{ borderColor: 'var(--border-main)' }}>
-                                        <td colSpan={5} className="px-6 py-8">
+                                        <td colSpan={6} className="px-5 py-6">
                                             <div className="h-4 rounded w-full" style={{ backgroundColor: 'var(--bg-input)' }}></div>
                                         </td>
                                     </tr>
                                 ))
-                            ) : filteredVouchers.length > 0 ? (
-                                filteredVouchers.map((voucher) => (
+                            ) : vouchers.length > 0 ? (
+                                vouchers.map((voucher) => (
                                     <tr key={voucher._id} className="border-b last:border-0 hover:bg-white/[0.02] transition-colors group" style={{ borderColor: 'var(--border-main)' }}>
-                                        <td className="px-6 py-5">
+                                        <td className="px-5 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="p-2 rounded-lg transition-colors" style={{ backgroundColor: 'var(--bg-input)' }}>
+                                                <div className="p-2 rounded-xl" style={{ backgroundColor: 'var(--bg-input)' }}>
                                                     {getTypeIcon(voucher.type)}
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-bold font-mono" style={{ color: 'var(--text-main)' }}>{voucher.voucherNumber}</p>
-                                                    <p className="text-[10px] font-bold uppercase tracking-tighter mt-0.5" style={{ color: 'var(--text-dim)' }}>{voucher.type}</p>
+                                                    <p className="text-xs font-black font-mono" style={{ color: 'var(--text-main)' }}>{voucher.voucherNumber}</p>
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider mt-0.5 inline-block" style={{ color: 'var(--text-dim)' }}>
+                                                        {voucher.type}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                                        <td className="px-5 py-4">
+                                            <div className="flex flex-col gap-0.5">
+                                                <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--text-main)' }}>
                                                     <Calendar size={12} style={{ color: 'var(--text-dim)' }} />
                                                     {new Date(voucher.date).toLocaleDateString('en-GB')}
                                                 </div>
-                                                <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-                                                    <Building2 size={12} style={{ color: 'var(--text-dim)' }} />
+                                                <div className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-dim)' }}>
+                                                    <Building2 size={11} />
                                                     {voucher.branch?.name || 'Main Branch'}
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5 max-w-xs">
-                                            <div className="space-y-1">
-                                                <p className="text-xs font-medium truncate" style={{ color: 'var(--text-main)' }}>
-                                                    {voucher.referenceInfo?.partyName || 'N/A'}
+                                        <td className="px-5 py-4 max-w-xs">
+                                            <div className="space-y-0.5">
+                                                <p className="text-xs font-bold truncate" style={{ color: 'var(--text-main)' }}>
+                                                    {voucher.referenceInfo?.partyName || '—'}
                                                 </p>
                                                 <p className="text-[11px] truncate italic" style={{ color: 'var(--text-dim)' }}>
                                                     "{voucher.narration}"
                                                 </p>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5">
+                                        <td className="px-5 py-4">
                                             <div className="flex flex-col items-start gap-1">
-                                                <p className="text-sm font-bold font-mono" style={{ color: 'var(--text-main)' }}>
-                                                    ${voucher.totalAmount.toLocaleString()}
-                                                </p>
                                                 {getStatusBadge(voucher.status)}
+                                                {voucher.setOffSummary && voucher.setOffSummary.totalSetOff > 0 && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">
+                                                        <Sparkles size={10} /> Set-off: ${voucher.setOffSummary.totalSetOff.toLocaleString()}
+                                                    </span>
+                                                )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5 text-right">
-                                            <div className="flex items-center justify-end gap-2">
+                                        <td className="px-5 py-4 text-right font-mono text-xs font-black" style={{ color: 'var(--text-main)' }}>
+                                            ${voucher.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="px-5 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-1.5">
                                                 <button 
                                                     onClick={() => setSelectedVoucherId(voucher._id)}
-                                                    className="p-2 hover:bg-white/10 rounded-lg transition-all cursor-pointer" 
+                                                    className="p-1.5 hover:bg-white/10 rounded-lg transition-all cursor-pointer" 
                                                     style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-dim)' }} 
-                                                    title="View Details"
+                                                    title="View Details & Ledger Entries"
                                                 >
-                                                    <Eye size={16} />
+                                                    <Eye size={15} />
                                                 </button>
                                                 <button 
                                                     onClick={() => handleDownloadPDF(voucher._id)}
-                                                    className="p-2 hover:bg-white/10 rounded-lg transition-all cursor-pointer" 
+                                                    className="p-1.5 hover:bg-white/10 rounded-lg transition-all cursor-pointer" 
                                                     style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-dim)' }} 
                                                     title="Download PDF"
                                                 >
-                                                    <Download size={16} />
+                                                    <Download size={15} />
                                                 </button>
+                                                {voucher.status === 'POSTED' && (
+                                                    <button 
+                                                        onClick={() => setVoucherToCancel(voucher)}
+                                                        className="p-1.5 hover:bg-rose-500/20 text-rose-400/60 hover:text-rose-400 rounded-lg transition-all cursor-pointer" 
+                                                        title="Cancel / Void Voucher"
+                                                    >
+                                                        <Ban size={15} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-20 text-center">
+                                    <td colSpan={6} className="px-5 py-16 text-center">
                                         <div className="flex flex-col items-center gap-3" style={{ color: 'var(--text-dim)' }}>
-                                            <Receipt size={48} strokeWidth={1} />
-                                            <p className="text-sm font-medium">No vouchers found</p>
+                                            <Receipt size={40} strokeWidth={1} />
+                                            <p className="text-xs font-medium">No vouchers found matching your filters</p>
                                             <button 
-                                                onClick={() => setShowCreateModal(true)}
-                                                className="text-brand-lime text-xs font-bold hover:underline"
+                                                onClick={() => navigate('create')}
+                                                className="text-[#C8E600] text-xs font-bold hover:underline cursor-pointer"
                                             >
-                                                Create your first voucher
+                                                Create a new voucher
                                             </button>
                                         </div>
                                     </td>
@@ -412,15 +543,15 @@ const VoucherDashboard = () => {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-                <div className="flex justify-between items-center px-6 py-4 border rounded-3xl mt-4" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="flex justify-between items-center px-5 py-3.5 border rounded-2xl mt-4" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                        Showing Page <span className="font-bold text-[color:var(--text-main)]">{page}</span> of <span className="font-bold text-[color:var(--text-main)]">{totalPages}</span> ({totalVouchers} total records)
+                        Showing Page <span className="font-bold text-[color:var(--text-main)]">{page}</span> of <span className="font-bold text-[color:var(--text-main)]">{totalPages}</span> ({totalVouchers} total vouchers)
                     </p>
                     <div className="flex items-center gap-2">
                         <button
                             disabled={page === 1}
                             onClick={() => setPage(p => Math.max(p - 1, 1))}
-                            className="px-4 py-2 border rounded-xl text-xs font-bold transition-all hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer text-[color:var(--text-main)]"
+                            className="px-3 py-1.5 border rounded-xl text-xs font-bold transition-all hover:bg-white/5 disabled:opacity-30 cursor-pointer text-[color:var(--text-main)]"
                             style={{ borderColor: 'var(--border-main)' }}
                         >
                             Previous
@@ -428,7 +559,7 @@ const VoucherDashboard = () => {
                         <button
                             disabled={page === totalPages}
                             onClick={() => setPage(p => Math.min(p + 1, totalPages))}
-                            className="px-4 py-2 border rounded-xl text-xs font-bold transition-all hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer text-[color:var(--text-main)]"
+                            className="px-3 py-1.5 border rounded-xl text-xs font-bold transition-all hover:bg-white/5 disabled:opacity-30 cursor-pointer text-[color:var(--text-main)]"
                             style={{ borderColor: 'var(--border-main)' }}
                         >
                             Next
@@ -441,12 +572,13 @@ const VoucherDashboard = () => {
             {showCreateModal && (
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowCreateModal(false)} />
-                    <div className="relative w-full max-w-6xl max-h-[90vh] overflow-y-auto custom-scrollbar border rounded-3xl shadow-2xl" style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#9CA3AF' }}>
+                    <div className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto custom-scrollbar border rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200" style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#9CA3AF' }}>
                         <CreateVoucher 
                             onClose={() => setShowCreateModal(false)} 
                             onSuccess={() => {
                                 setShowCreateModal(false);
                                 fetchVouchers();
+                                fetchStats();
                             }} 
                         />
                     </div>
@@ -462,6 +594,42 @@ const VoucherDashboard = () => {
                             voucherId={selectedVoucherId} 
                             onClose={() => setSelectedVoucherId(null)} 
                         />
+                    </div>
+                </div>
+            )}
+
+            {/* Cancellation Confirmation Modal */}
+            {voucherToCancel && (
+                <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => !cancelling && setVoucherToCancel(null)} />
+                    <div className="relative w-full max-w-md p-6 rounded-2xl border shadow-2xl animate-in zoom-in-95 duration-200 space-y-4" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-3 text-rose-500">
+                            <div className="p-2.5 rounded-xl bg-rose-500/10"><AlertTriangle size={24} /></div>
+                            <div>
+                                <h3 className="text-base font-bold text-[color:var(--text-main)]">Cancel Voucher</h3>
+                                <p className="text-xs text-[color:var(--text-dim)]">{voucherToCancel.voucherNumber}</p>
+                            </div>
+                        </div>
+                        <p className="text-xs text-[color:var(--text-muted)] leading-relaxed">
+                            Are you sure you want to cancel this voucher? This will <strong>revert any invoice or bill set-offs</strong>, restore original balances/statuses, and delete associated ledger entries.
+                        </p>
+                        <div className="flex items-center justify-end gap-3 pt-2">
+                            <button
+                                disabled={cancelling}
+                                onClick={() => setVoucherToCancel(null)}
+                                className="px-4 py-2 rounded-xl text-xs font-bold border hover:bg-white/5 transition-all cursor-pointer text-[color:var(--text-main)]"
+                                style={{ borderColor: 'var(--border-main)' }}
+                            >
+                                Nevermind
+                            </button>
+                            <button
+                                disabled={cancelling}
+                                onClick={handleCancelVoucher}
+                                className="px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition-all cursor-pointer"
+                            >
+                                {cancelling ? 'Reversing...' : 'Yes, Cancel & Revert'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
