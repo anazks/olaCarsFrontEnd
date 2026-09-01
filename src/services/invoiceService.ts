@@ -49,6 +49,7 @@ export interface Invoice {
     taxRate?: number;
     taxAmount?: number;
     notes?: string;
+    ledgerEntries?: any[];
     supportingDocument?: {
         name: string;
         url: string;

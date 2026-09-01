@@ -492,20 +492,18 @@ const VoucherDashboard = () => {
                                         <td className="px-5 py-4 text-right">
                                             <div className="flex items-center justify-end gap-1.5">
                                                 <button 
-                                                    onClick={() => setSelectedVoucherId(voucher._id)}
-                                                    className="p-1.5 hover:bg-white/10 rounded-lg transition-all cursor-pointer" 
-                                                    style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-dim)' }} 
-                                                    title="View Details & Ledger Entries"
-                                                >
-                                                    <Eye size={15} />
-                                                </button>
-                                                <button 
                                                     onClick={() => handleDownloadPDF(voucher._id)}
-                                                    className="p-1.5 hover:bg-white/10 rounded-lg transition-all cursor-pointer" 
-                                                    style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-dim)' }} 
-                                                    title="Download PDF"
+                                                    className="p-1.5 hover:bg-white/10 text-[color:var(--text-dim)] hover:text-[color:var(--text-main)] rounded-lg transition-all cursor-pointer"
+                                                    title="Download Voucher PDF"
                                                 >
                                                     <Download size={15} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => setSelectedVoucherId(voucher._id)}
+                                                    className="p-1.5 hover:bg-white/10 text-[color:var(--text-dim)] hover:text-[#C8E600] rounded-lg transition-all cursor-pointer" 
+                                                    title="View Voucher Details"
+                                                >
+                                                    <Eye size={15} />
                                                 </button>
                                                 {voucher.status === 'POSTED' && (
                                                     <button 

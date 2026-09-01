@@ -20,14 +20,14 @@ import {
     Sparkles,
     User,
     Building,
-    Layers,
-    Clock
+    Layers
 } from 'lucide-react';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllCustomers } from '../../../services/customerService';
 import { getAllSuppliers } from '../../../services/supplierService';
+import { getAllBankAccounts } from '../../../services/bankAccountService';
 import { getInvoicesByCustomer } from '../../../services/invoiceService';
 import { getAllBills } from '../../../services/billService';
 import { createVoucher } from '../../../services/ledgerService';
@@ -47,23 +47,39 @@ interface OpenDoc {
     isOverdue: boolean;
 }
 
-const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
+const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen, placeholder = 'Select Account', searchPlaceholder = 'Search account name or code...', emptyMessage = 'No matching accounts' }: {
     codes: AccountingCode[],
     selectedId: string,
     onSelect: (id: string) => void,
     isOpen: boolean,
-    setIsOpen: (open: boolean) => void
+    setIsOpen: (open: boolean) => void,
+    placeholder?: string,
+    searchPlaceholder?: string,
+    emptyMessage?: string
 }) => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     const [search, setSearch] = useState('');
     const selectedCode = codes.find(c => c._id === selectedId);
 
-    const filteredCodes = useMemo(() => codes.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.code.toLowerCase().includes(search.toLowerCase()) ||
-        c.category?.toLowerCase().includes(search.toLowerCase())
-    ), [codes, search]);
+    const filteredCodes = useMemo(() => {
+        const q = search.toLowerCase().trim();
+        const list = codes.filter(c =>
+            c.name.toLowerCase().includes(q) ||
+            c.code.toLowerCase().includes(q) ||
+            c.category?.toLowerCase().includes(q) ||
+            (c.accountType && c.accountType.toLowerCase().includes(q))
+        );
+        return list.sort((a, b) => {
+            if (q) {
+                const aNameStarts = a.name.toLowerCase().startsWith(q);
+                const bNameStarts = b.name.toLowerCase().startsWith(q);
+                if (aNameStarts && !bNameStarts) return -1;
+                if (!aNameStarts && bNameStarts) return 1;
+            }
+            return a.name.localeCompare(b.name);
+        });
+    }, [codes, search]);
 
     const textDimColor = isDark ? 'var(--text-dim)' : '#4B5563';
 
@@ -74,34 +90,46 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
                     e.stopPropagation();
                     setIsOpen(!isOpen);
                 }}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border cursor-pointer transition-all hover:border-[#C8E600]/50"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl border cursor-pointer transition-all hover:border-[#C8E600]/50 min-h-[38px]"
                 style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}
             >
-                <span className="text-xs truncate font-medium text-[color:var(--text-main)]">
-                    {selectedCode ? `${selectedCode.code} - ${selectedCode.name}` : 'Select Account'}
-                </span>
-                <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} style={{ color: textDimColor }} />
+                {selectedCode ? (
+                    <div className="flex items-center gap-2 truncate min-w-0 pr-2">
+                        <span className="text-xs font-bold truncate text-[color:var(--text-main)]">
+                            {selectedCode.name}
+                        </span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold shrink-0"
+                              style={{ backgroundColor: isDark ? 'var(--bg-card)' : '#FFFFFF', color: isDark ? '#C8E600' : '#1F2937' }}>
+                            {selectedCode.code}
+                        </span>
+                    </div>
+                ) : (
+                    <span className="text-xs truncate font-medium" style={{ color: textDimColor }}>
+                        {placeholder}
+                    </span>
+                )}
+                <ChevronDown size={14} className={`transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} style={{ color: textDimColor }} />
             </div>
 
             {isOpen && (
                 <div 
-                    className="absolute top-full left-0 min-w-[300px] w-full mt-2 border rounded-2xl shadow-2xl z-[99999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                    className="absolute top-full left-0 min-w-[320px] w-full mt-2 border rounded-2xl shadow-2xl z-[99999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
                     style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#9CA3AF' }}
                 >
-                    <div className="p-2 border-b flex items-center gap-2"
+                    <div className="p-2.5 border-b flex items-center gap-2"
                          style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
                         <Search size={14} style={{ color: textDimColor }} />
                         <input
                             autoFocus
                             type="text"
-                            placeholder="Search code, name or category..."
+                            placeholder={searchPlaceholder}
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             onClick={e => e.stopPropagation()}
                             className="bg-transparent border-none text-xs focus:ring-0 outline-none w-full text-[color:var(--text-main)]"
                         />
                     </div>
-                    <div className="max-h-[180px] overflow-y-auto [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-thumb]:bg-[#C8E600] [&::-webkit-scrollbar-thumb]:rounded-full">
+                    <div className="max-h-[200px] overflow-y-auto [&::-webkit-scrollbar]:w-[5px] [&::-webkit-scrollbar-thumb]:bg-[#C8E600] [&::-webkit-scrollbar-thumb]:rounded-full">
                         {filteredCodes.length > 0 ? (
                             filteredCodes.map(code => (
                                 <div
@@ -111,21 +139,32 @@ const AccountSelector = ({ codes, selectedId, onSelect, isOpen, setIsOpen }: {
                                         setIsOpen(false);
                                         setSearch('');
                                     }}
-                                    className="px-3 py-2 hover:bg-[#C8E600] group cursor-pointer transition-colors border-b last:border-0"
+                                    className="px-3.5 py-2.5 hover:bg-[#C8E600] group cursor-pointer transition-colors border-b last:border-0"
                                     style={{ borderColor: isDark ? 'var(--border-main)' : '#E5E7EB' }}
                                 >
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs font-bold text-[color:var(--text-main)] group-hover:text-black">{code.code}</span>
-                                        <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider group-hover:bg-black group-hover:text-[#C8E600] text-[color:var(--text-muted)]"
+                                    <div className="flex justify-between items-start gap-2">
+                                        <span className="text-xs font-bold text-[color:var(--text-main)] group-hover:text-black truncate">
+                                            {code.name}
+                                        </span>
+                                        <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider group-hover:bg-black group-hover:text-[#C8E600] text-[color:var(--text-muted)] shrink-0"
                                               style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB' }}>
                                             {code.category}
                                         </span>
                                     </div>
-                                    <p className="text-[11px] group-hover:text-black mt-0.5 truncate text-[color:var(--text-muted)]">{code.name}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="text-[10px] font-mono font-bold text-[#C8E600] group-hover:text-black">
+                                            {code.code}
+                                        </span>
+                                        {code.accountType && (
+                                            <span className="text-[10px] text-[color:var(--text-muted)] group-hover:text-black/80">
+                                                • {code.accountType}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             ))
                         ) : (
-                            <div className="p-3 text-center text-xs" style={{ color: textDimColor }}>No matching accounts</div>
+                            <div className="p-3.5 text-center text-xs" style={{ color: textDimColor }}>{emptyMessage}</div>
                         )}
                     </div>
                 </div>
@@ -317,6 +356,7 @@ const CreateVoucher = ({ onClose, onSuccess, type: initialType = 'PAYMENT' }: { 
     const isDark = theme === 'dark';
     const [type, setType] = useState<VoucherType>(initialType);
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
+    const [bankAccounts, setBankAccounts] = useState<any[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
     const [customers, setCustomers] = useState<any[]>([]);
     const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -355,20 +395,24 @@ const CreateVoucher = ({ onClose, onSuccess, type: initialType = 'PAYMENT' }: { 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [codes, branchesData, customersData, suppliersData] = await Promise.all([
+                const [codes, branchesData, customersData, suppliersData, bankAccountsData] = await Promise.all([
                     getAllAccountingCodes(),
                     getAllBranches(),
                     getAllCustomers({ limit: 200 }).catch(() => ({ data: [] })),
-                    getAllSuppliers({ limit: 200 }).catch(() => ({ data: [] }))
+                    getAllSuppliers({ limit: 200 }).catch(() => ({ data: [] })),
+                    getAllBankAccounts({ limit: 1000 }).catch(() => ({ data: [] }))
                 ]);
                 setAccountingCodes(codes || []);
                 setBranches(branchesData?.data || []);
                 
-                const custList = customersData?.data?.customers || customersData?.customers || customersData?.data || [];
+                const custList = (customersData as any)?.data?.customers || (customersData as any)?.customers || (customersData as any)?.data || [];
                 setCustomers(custList);
 
-                const suppList = suppliersData?.data?.suppliers || suppliersData?.suppliers || suppliersData?.data || [];
+                const suppList = (suppliersData as any)?.data?.suppliers || (suppliersData as any)?.suppliers || (suppliersData as any)?.data || [];
                 setSuppliers(suppList);
+
+                const bankList = bankAccountsData?.data || [];
+                setBankAccounts(bankList);
 
                 if (branchesData?.data?.length > 0) {
                     setHeader(h => ({ ...h, branch: branchesData.data[0]._id }));
@@ -381,6 +425,43 @@ const CreateVoucher = ({ onClose, onSuccess, type: initialType = 'PAYMENT' }: { 
         };
         fetchData();
     }, []);
+
+    // Filter to Bank & Cash accounting codes only
+    const bankAccountingCodes = useMemo(() => {
+        const linkedCodeIds = new Set<string>();
+        const linkedCodeNumbers = new Set<string>();
+
+        (bankAccounts || []).forEach(b => {
+            const id = b.accountingCode?._id || (typeof b.accountingCode === 'string' ? b.accountingCode : null);
+            if (id) linkedCodeIds.add(String(id));
+            if (b.accountCode) linkedCodeNumbers.add(String(b.accountCode).toLowerCase().trim());
+        });
+
+        return (accountingCodes || []).filter(c => {
+            if (linkedCodeIds.has(String(c._id))) return true;
+            if (c.code && linkedCodeNumbers.has(String(c.code).toLowerCase().trim())) return true;
+
+            const accType = (c.accountType || '').toLowerCase().trim();
+            const cat = (c.category || '').toLowerCase().trim();
+            const name = (c.name || '').toLowerCase().trim();
+            const code = (c.code || '').trim();
+
+            if (accType === 'bank' || accType === 'cash' || accType === 'credit card') return true;
+            if (cat === 'bank' || cat === 'cash') return true;
+            if (code.startsWith('1.1.01') || code.startsWith('1.1.02')) return true;
+            if (name.includes('bank') || name.includes('banco') || name.includes('cash') || name.includes('caja') || name.includes('petty')) return true;
+
+            return false;
+        });
+    }, [accountingCodes, bankAccounts]);
+
+    // Account codes available for line selection depending on voucher type
+    const availableAccountingCodes = useMemo(() => {
+        if (type === 'CONTRA') {
+            return bankAccountingCodes;
+        }
+        return accountingCodes;
+    }, [type, accountingCodes, bankAccountingCodes]);
 
     // Fetch open invoices or bills when party or voucher type changes
     useEffect(() => {
@@ -400,24 +481,28 @@ const CreateVoucher = ({ onClose, onSuccess, type: initialType = 'PAYMENT' }: { 
                     const now = new Date();
                     const openList: OpenDoc[] = (invoices || [])
                         .filter(inv => {
-                            const bal = Number(inv.balanceDue ?? (inv.totalAmount - (inv.amountPaid || 0)));
-                            return bal > 0.01 && inv.status !== 'PAID' && inv.status !== 'CANCELLED' && inv.status !== 'VOID';
+                            const tot = Number(inv.totalAmountDue ?? (inv as any).totalAmount ?? inv.baseAmount ?? 0);
+                            const paid = Number(inv.amountPaid || 0);
+                            const bal = Number(inv.balance ?? (inv as any).balanceDue ?? (tot - paid));
+                            return bal > 0.01 && (inv.status as string) !== 'PAID' && (inv.status as string) !== 'CANCELLED' && (inv.status as string) !== 'VOID';
                         })
                         .sort((a, b) => {
                             const priority = (s: string) => s === 'OVERDUE' ? 1 : s === 'PARTIAL' ? 2 : 3;
                             if (priority(a.status) !== priority(b.status)) return priority(a.status) - priority(b.status);
-                            return new Date(a.dueDate || a.createdAt).getTime() - new Date(b.dueDate || b.createdAt).getTime();
+                            return new Date(a.dueDate || a.generatedAt || a.createdAt || 0).getTime() - new Date(b.dueDate || b.generatedAt || b.createdAt || 0).getTime();
                         })
                         .map(inv => {
-                            const bal = Number(inv.balanceDue ?? (inv.totalAmount - (inv.amountPaid || 0)));
+                            const tot = Number(inv.totalAmountDue ?? (inv as any).totalAmount ?? inv.baseAmount ?? 0);
+                            const paid = Number(inv.amountPaid || 0);
+                            const bal = Number(inv.balance ?? (inv as any).balanceDue ?? (tot - paid));
                             const due = inv.dueDate ? new Date(inv.dueDate) : null;
                             return {
                                 id: inv._id,
                                 docNumber: inv.invoiceNumber || 'INV',
-                                date: inv.createdAt,
+                                date: inv.invoiceDate || inv.generatedAt || inv.createdAt || '',
                                 dueDate: inv.dueDate,
-                                totalAmount: inv.totalAmount || 0,
-                                amountPaid: inv.amountPaid || 0,
+                                totalAmount: tot,
+                                amountPaid: paid,
                                 balanceDue: bal,
                                 status: inv.status,
                                 isOverdue: due ? due < now && inv.status !== 'PAID' : false
@@ -431,22 +516,26 @@ const CreateVoucher = ({ onClose, onSuccess, type: initialType = 'PAYMENT' }: { 
                     const now = new Date();
                     const openList: OpenDoc[] = bills
                         .filter(bill => {
-                            const bal = Number(bill.balanceDue ?? (bill.totalAmount - (bill.amountPaid || 0)));
-                            return bal > 0.01 && bill.status !== 'PAID' && bill.status !== 'VOID';
+                            const tot = Number(bill.totalAmount ?? (bill as any).totalAmountDue ?? 0);
+                            const paid = Number(bill.amountPaid || 0);
+                            const bal = Number(bill.balanceDue ?? (bill as any).balance ?? (tot - paid));
+                            return bal > 0.01 && (bill.status as string) !== 'PAID' && (bill.status as string) !== 'VOID' && (bill.status as string) !== 'CANCELLED';
                         })
                         .sort((a, b) => {
                             return new Date(a.dueDate || a.createdAt).getTime() - new Date(b.dueDate || b.createdAt).getTime();
                         })
                         .map(bill => {
-                            const bal = Number(bill.balanceDue ?? (bill.totalAmount - (bill.amountPaid || 0)));
+                            const tot = Number(bill.totalAmount ?? (bill as any).totalAmountDue ?? 0);
+                            const paid = Number(bill.amountPaid || 0);
+                            const bal = Number(bill.balanceDue ?? (bill as any).balance ?? (tot - paid));
                             const due = bill.dueDate ? new Date(bill.dueDate) : null;
                             return {
                                 id: bill._id,
                                 docNumber: bill.billNumber || 'BILL',
                                 date: bill.billDate || bill.createdAt,
                                 dueDate: bill.dueDate,
-                                totalAmount: bill.totalAmount || 0,
-                                amountPaid: bill.amountPaid || 0,
+                                totalAmount: tot,
+                                amountPaid: paid,
                                 balanceDue: bal,
                                 status: bill.status,
                                 isOverdue: due ? due < now && bill.status !== 'PAID' : false
@@ -475,7 +564,8 @@ const CreateVoucher = ({ onClose, onSuccess, type: initialType = 'PAYMENT' }: { 
     useEffect(() => {
         if (!accountingCodes.length) return;
 
-        const bankOrCashCode = accountingCodes.find(c => c.code === '1.1.01' || c.code === '1.1.02' || c.category === 'ASSET');
+        const bankOrCashCode = bankAccountingCodes[0] || accountingCodes.find(c => c.code === '1.1.01' || c.code === '1.1.02' || c.category === 'ASSET');
+        const secondBankOrCashCode = bankAccountingCodes[1] || (bankAccountingCodes.length > 0 ? bankAccountingCodes[0] : null);
         const arCode = accountingCodes.find(c => c.code === '1.1.03' || c.name.toLowerCase().includes('receivable'));
         const apCode = accountingCodes.find(c => c.code === '2.1.01' || c.name.toLowerCase().includes('payable'));
         const salesRevenueCode = accountingCodes.find(c => c.code === '4.1.01' || c.category === 'INCOME');
@@ -509,13 +599,13 @@ const CreateVoucher = ({ onClose, onSuccess, type: initialType = 'PAYMENT' }: { 
             setAutoSetOff(false);
             setHeader(h => ({ 
                 ...h, 
-                narration: 'Cash-Bank transfer',
+                narration: 'Cash-Bank internal transfer',
                 contactModel: 'Other',
                 referenceInfo: { ...h.referenceInfo, partyType: 'OTHER' }
             }));
             setLines([
                 { accountingCode: bankOrCashCode?._id || '', type: 'DEBIT', amount: 0, description: 'Receiving Bank/Cash Account' },
-                { accountingCode: '', type: 'CREDIT', amount: 0, description: 'Sending Bank/Cash Account' }
+                { accountingCode: secondBankOrCashCode?._id || '', type: 'CREDIT', amount: 0, description: 'Sending Bank/Cash Account' }
             ]);
         } else if (type === 'SALES') {
             setAutoSetOff(false);
@@ -554,7 +644,7 @@ const CreateVoucher = ({ onClose, onSuccess, type: initialType = 'PAYMENT' }: { 
                 { accountingCode: '', type: 'CREDIT', amount: 0, description: '' }
             ]);
         }
-    }, [type, accountingCodes]);
+    }, [type, accountingCodes, bankAccountingCodes]);
 
     const handlePartyTypeChange = (pType: 'CUSTOMER' | 'SUPPLIER' | 'DRIVER' | 'OTHER') => {
         const cModel = pType === 'CUSTOMER' ? 'Customer' : pType === 'SUPPLIER' ? 'Supplier' : pType === 'DRIVER' ? 'Driver' : 'Other';
@@ -963,13 +1053,30 @@ const CreateVoucher = ({ onClose, onSuccess, type: initialType = 'PAYMENT' }: { 
                     )}
                 </div>
 
+                {/* Contra Voucher Notification Banner */}
+                {type === 'CONTRA' && (
+                    <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-blue-500/20 text-blue-400 shrink-0">
+                            <ArrowLeftRight size={16} />
+                        </div>
+                        <div>
+                            <p className="font-bold text-blue-300">Contra Voucher (Internal Transfer)</p>
+                            <p className="text-[11px] text-blue-400/80 mt-0.5">
+                                Showing Bank & Cash Accounts only. Use Contra vouchers exclusively for transfers between Bank accounts and Cash accounts.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Transaction Lines Table */}
                 <div className="rounded-2xl border overflow-visible" style={{ backgroundColor: 'var(--bg-card)', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
                     <div className="overflow-visible">
                         <table className="w-full text-left border-collapse">
                             <thead className="border-b" style={{ backgroundColor: isDark ? 'var(--bg-input)' : '#E5E7EB', borderColor: isDark ? 'var(--border-main)' : '#D1D5DB' }}>
                                 <tr>
-                                    <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest w-1/3" style={{ color: textDimColor }}>Account Code</th>
+                                    <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest w-1/3" style={{ color: textDimColor }}>
+                                        {type === 'CONTRA' ? 'Bank / Cash Account' : 'Account Code'}
+                                    </th>
                                     <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: textDimColor }}>Description / Memo</th>
                                     <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest w-28" style={{ color: textDimColor }}>DR / CR</th>
                                     <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest w-44" style={{ color: textDimColor }}>Amount ($)</th>
@@ -981,7 +1088,7 @@ const CreateVoucher = ({ onClose, onSuccess, type: initialType = 'PAYMENT' }: { 
                                     <tr key={index} className={`hover:bg-white/[0.01] transition-colors ${openDropdownIndex === index ? 'relative z-[990]' : 'relative z-[1]'}`} style={{ borderColor: isDark ? 'var(--border-main)' : '#E5E7EB' }}>
                                         <td className={`p-3 ${openDropdownIndex === index ? 'relative z-[999]' : ''}`}>
                                             <AccountSelector
-                                                codes={accountingCodes}
+                                                codes={availableAccountingCodes}
                                                 selectedId={line.accountingCode}
                                                 onSelect={(id) => updateLine(index, 'accountingCode', id)}
                                                 isOpen={openDropdownIndex === index}
@@ -989,6 +1096,9 @@ const CreateVoucher = ({ onClose, onSuccess, type: initialType = 'PAYMENT' }: { 
                                                     setOpenDropdownIndex(open ? index : null);
                                                     if (open) setIsPartyDropdownOpen(false);
                                                 }}
+                                                placeholder={type === 'CONTRA' ? 'Select Bank / Cash Account' : 'Select Account'}
+                                                searchPlaceholder={type === 'CONTRA' ? 'Search bank or cash accounts...' : 'Search code, name or category...'}
+                                                emptyMessage={type === 'CONTRA' ? 'No matching bank or cash accounts' : 'No matching accounts'}
                                             />
                                         </td>
                                         <td className="p-3">
@@ -1100,3 +1210,4 @@ const CreateVoucher = ({ onClose, onSuccess, type: initialType = 'PAYMENT' }: { 
 };
 
 export default CreateVoucher;
+

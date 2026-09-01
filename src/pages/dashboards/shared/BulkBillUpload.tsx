@@ -284,14 +284,12 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
 
         // Validate Purchase Type & Credit Account
         const purchaseType = getRowVal(row, ['Purchase Type', 'purchaseType', 'Bill Type', 'billType']);
-        let normalizedPType = 'CREDIT';
         if (purchaseType) {
             const rawNormalized = purchaseType.toString().trim().toUpperCase();
             const validTypes = ['CASH', 'BANK', 'CREDIT', 'CASH PURCHASE', 'BANK PURCHASE', 'BANK TRANSFER', 'CREDIT PURCHASE', 'ON CREDIT', 'PAYABLE'];
             if (!validTypes.includes(rawNormalized)) {
                 errors.push(`Invalid Purchase Type "${purchaseType}" (expected Cash, Bank, or Credit)`);
             }
-            normalizedPType = rawNormalized.includes('CASH') ? 'CASH' : rawNormalized.includes('BANK') ? 'BANK' : 'CREDIT';
         }
 
         // Credit Account is optional (defaults to 2.1.01 - Accounts Payable on creation)

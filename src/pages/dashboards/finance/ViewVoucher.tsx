@@ -295,7 +295,7 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y print:divide-y-2 print:divide-black" style={{ borderColor: isDark ? 'var(--border-main)' : '#E5E7EB' }}>
-                            {voucher.lines.map((line, index) => (
+                            {(voucher.lines || []).map((line, index) => (
                                 <tr key={index} className="hover:bg-white/[0.01]">
                                     <td className="px-5 py-3.5 w-1/3">
                                         <p className="text-xs font-bold text-[color:var(--text-main)] print:text-black">

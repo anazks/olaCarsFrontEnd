@@ -45,6 +45,7 @@ export interface Bill {
     taxPercentage?: number;
     taxAmount?: number;
     notes?: string;
+    ledgerEntries?: any[];
     createdAt: string;
     updatedAt: string;
 }
