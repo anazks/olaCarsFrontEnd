@@ -340,7 +340,7 @@ const InvoiceDetail = () => {
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6 pb-20 select-text">
+        <div className="space-y-6 pb-20 select-text">
             <div className="print:hidden">
                 <Breadcrumbs 
                     items={[

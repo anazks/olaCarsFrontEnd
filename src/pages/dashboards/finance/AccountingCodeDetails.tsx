@@ -17,6 +17,8 @@ import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { LedgerEntry } from '../../../services/ledgerService';
+import { getUserRole } from '../../../utils/auth';
+import { getUserBaseRoute } from '../../../utils/routeUtils';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
@@ -243,65 +245,135 @@ const AccountingCodeDetails = () => {
         }, 1500);
     };
 
-    const handleInvoiceClick = async (invoiceNumber: string) => {
+    const getBasePath = () => {
+        const roleBase = getUserBaseRoute(getUserRole());
+        if (location.pathname.startsWith('/admin/')) {
+            const match = location.pathname.match(/^(\/admin\/[^\/]+)/);
+            if (match) return match[1];
+        }
+        return roleBase || '/admin/admin';
+    };
+
+    const handleInvoiceClick = async (invoiceIdentifier: string) => {
         try {
+            const basePath = getBasePath();
+            const isHexId = /^[0-9a-fA-F]{24}$/.test(invoiceIdentifier);
+            if (isHexId) {
+                navigate(`${basePath}/invoices/${invoiceIdentifier}`);
+                return;
+            }
+
             const { getInvoices } = await import('../../../services/invoiceService');
-            const response = await getInvoices({ search: invoiceNumber });
-            const basePath = location.pathname.split('/chart-of-accounts/')[0];
+            const response = await getInvoices({ 
+                search: invoiceIdentifier, 
+                ignoreDefaultDates: 'true', 
+                allTime: 'true', 
+                limit: 10 
+            });
             if (response.data && response.data.length > 0) {
-                const invoice = response.data.find((inv: any) => inv.invoiceNumber === invoiceNumber) || response.data[0];
+                const invoice = response.data.find((inv: any) => 
+                    (inv.invoiceNumber || '').toLowerCase().trim() === invoiceIdentifier.toLowerCase().trim()
+                ) || response.data[0];
                 navigate(`${basePath}/invoices/${invoice._id}`);
             } else {
-                navigate(`${basePath}/invoices`, { state: { search: invoiceNumber } });
+                navigate(`${basePath}/invoices`, { state: { search: invoiceIdentifier } });
             }
         } catch (err) {
-            const basePath = location.pathname.split('/chart-of-accounts/')[0];
-            navigate(`${basePath}/invoices`, { state: { search: invoiceNumber } });
+            const basePath = getBasePath();
+            navigate(`${basePath}/invoices`, { state: { search: invoiceIdentifier } });
         }
     };
 
-    const handleBillClick = async (billNumber: string) => {
+    const handleBillClick = async (billIdentifier: string) => {
         try {
+            const basePath = getBasePath();
+            const isHexId = /^[0-9a-fA-F]{24}$/.test(billIdentifier);
+            if (isHexId) {
+                navigate(`${basePath}/bills/${billIdentifier}`);
+                return;
+            }
+
             const { getAllBills } = await import('../../../services/billService');
-            const response = await getAllBills({ search: billNumber });
-            const basePath = location.pathname.split('/chart-of-accounts/')[0];
+            const response = await getAllBills({ search: billIdentifier, limit: 10 });
             if (response.success && response.data && response.data.length > 0) {
-                const bill = response.data.find((b: any) => b.billNumber === billNumber) || response.data[0];
+                const bill = response.data.find((b: any) => 
+                    (b.billNumber || '').toLowerCase().trim() === billIdentifier.toLowerCase().trim()
+                ) || response.data[0];
                 navigate(`${basePath}/bills/${bill._id}`);
             } else {
-                navigate(`${basePath}/bills`, { state: { search: billNumber } });
+                navigate(`${basePath}/bills`, { state: { search: billIdentifier } });
             }
         } catch (err) {
-            const basePath = location.pathname.split('/chart-of-accounts/')[0];
-            navigate(`${basePath}/bills`, { state: { search: billNumber } });
+            const basePath = getBasePath();
+            navigate(`${basePath}/bills`, { state: { search: billIdentifier } });
         }
     };
 
     const renderDescriptionWithLinks = (description: string, entry?: any) => {
-        if (!description) return <span style={{ color: 'var(--text-dim)' }}>—</span>;
+        if (!description && !entry) return <span style={{ color: 'var(--text-dim)' }}>—</span>;
 
+        const cleanDesc = description || '';
         const billRegex = /((?:BILL|SB)-\w+(?:-\w+)*)/gi;
         const invoiceRegex = /((?:INV|MAN|WRK)-\w+(?:-\w+)*)/gi;
+        const isMongoId = (str: string) => /^[0-9a-fA-F]{24}$/.test(String(str).trim());
 
-        const matchedBills = Array.from(new Set(description.match(billRegex) || []));
-        const matchedInvoicesFromDesc = description.match(invoiceRegex) || [];
+        // Collect bills from description regex match
+        const matchedBillsFromDesc = cleanDesc.match(billRegex) || [];
 
+        // Collect bills from entry fields: bills array, bill object/string, or setOffSummary.bills
+        const billsFromEntry: string[] = [];
+        if (entry) {
+            if (Array.isArray(entry.bills)) {
+                entry.bills.forEach((b: any) => {
+                    const num = typeof b === 'string' ? b : (b?.billNumber || b?.billNo);
+                    if (num && !isMongoId(num)) billsFromEntry.push(num);
+                });
+            }
+            if (entry.bill) {
+                const num = typeof entry.bill === 'string' ? entry.bill : (entry.bill?.billNumber || entry.bill?.billNo);
+                if (num && !isMongoId(num)) billsFromEntry.push(num);
+            }
+            if (entry.setOffSummary && Array.isArray(entry.setOffSummary.bills)) {
+                entry.setOffSummary.bills.forEach((b: any) => {
+                    const num = b?.billNumber || b?.billNo;
+                    if (num && !isMongoId(num)) billsFromEntry.push(num);
+                });
+            }
+        }
+
+        const matchedBills = Array.from(new Set(
+            [...matchedBillsFromDesc, ...billsFromEntry]
+                .filter(b => b && !isMongoId(b))
+        ));
+
+        // Collect invoices from description regex match
+        const matchedInvoicesFromDesc = cleanDesc.match(invoiceRegex) || [];
+
+        // Collect invoices from entry setOffSummary or invoices array if present
         const invoicesFromEntry: string[] = [];
         if (entry) {
             if (Array.isArray(entry.invoices)) {
                 entry.invoices.forEach((inv: any) => {
                     const num = typeof inv === 'string' ? inv : inv?.invoiceNumber;
-                    if (num) invoicesFromEntry.push(num);
+                    if (num && !isMongoId(num)) invoicesFromEntry.push(num);
                 });
+            }
+            if (entry.invoice) {
+                const num = typeof entry.invoice === 'string' ? entry.invoice : entry.invoice?.invoiceNumber;
+                if (num && !isMongoId(num)) invoicesFromEntry.push(num);
             }
             if (entry.setOffSummary && Array.isArray(entry.setOffSummary.invoices)) {
                 entry.setOffSummary.invoices.forEach((inv: any) => {
-                    if (inv?.invoiceNumber) invoicesFromEntry.push(inv.invoiceNumber);
+                    const num = inv?.invoiceNumber;
+                    if (num && !isMongoId(num)) invoicesFromEntry.push(num);
                 });
             }
         }
 
-        const matchedInvoices = Array.from(new Set([...matchedInvoicesFromDesc, ...invoicesFromEntry]));
+        const matchedInvoices = Array.from(new Set(
+            [...matchedInvoicesFromDesc, ...invoicesFromEntry]
+                .filter(inv => inv && !isMongoId(inv))
+        ));
 
         if (matchedBills.length > 0 || matchedInvoices.length > 0) {
             return (

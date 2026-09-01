@@ -1195,16 +1195,34 @@ const SupplierDetail = () => {
                                                 });
                                             });
 
-                                            // 5. Additional Posted Backend Ledger Entries (if any not covered above)
+                                            // 5. Additional Standalone Manual Journal Entries (excluding entries already represented by Bills, Payments, or Vouchers)
                                             backendLedgerEntries.forEach(bl => {
+                                                const blDesc = (bl.description || '').toLowerCase();
                                                 const blRef = bl.transactionId || bl.voucher?.voucherNumber || 'GL-ENTRY';
-                                                const isDuplicate = rows.some(r => r.ref === blRef);
-                                                if (!isDuplicate) {
+
+                                                // Skip if this ledger entry originates from or is linked to a bill, payment, or voucher
+                                                const isFromBillOrPayment = (
+                                                    Boolean(bl.voucher) ||
+                                                    Boolean(bl.paymentMade) ||
+                                                    Boolean(bl.bill) ||
+                                                    (Array.isArray(bl.bills) && bl.bills.length > 0) ||
+                                                    blDesc.includes('set-off') ||
+                                                    blDesc.includes('bill payment') ||
+                                                    blDesc.includes('vendor payment') ||
+                                                    blDesc.includes('disbursed via') ||
+                                                    rows.some(r => 
+                                                        (r.ref && blRef && r.ref === blRef) ||
+                                                        (r.type === 'payment' && Math.abs(r.paid - bl.amount) < 0.01 && Math.abs(new Date(r.date).getTime() - new Date(bl.entryDate || bl.createdAt).getTime()) < 86400000 * 2) ||
+                                                        (r.type === 'bill' && Math.abs(r.billed - bl.amount) < 0.01 && Math.abs(new Date(r.date).getTime() - new Date(bl.entryDate || bl.createdAt).getTime()) < 86400000 * 2)
+                                                    )
+                                                );
+
+                                                if (!isFromBillOrPayment) {
                                                     rows.push({
                                                         id: bl._id,
                                                         date: new Date(bl.entryDate || bl.createdAt),
                                                         type: 'ledger',
-                                                        transactionLabel: bl.type === 'CREDIT' ? 'Ledger Billed' : 'Ledger Paid',
+                                                        transactionLabel: bl.type === 'CREDIT' ? 'Ledger Adjustment (Credit)' : 'Ledger Adjustment (Debit)',
                                                         ref: blRef,
                                                         details: bl.description || 'System Journal Entry',
                                                         billed: bl.type === 'CREDIT' ? (bl.amount || 0) : 0,
