@@ -4,6 +4,7 @@ import { createBill } from '../../../../services/billService';
 import { getAllSuppliers, type Supplier } from '../../../../services/supplierService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../../services/accountingService';
+import { getAllTaxes, type Tax } from '../../../../services/taxService';
 import toast from 'react-hot-toast';
 import { SearchableSelect } from '../../../../components/common/SearchableSelect';
 import { QuickAddSupplierModal } from '../../../../components/common/QuickAddSupplierModal';
@@ -30,6 +31,7 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
+    const [taxes, setTaxes] = useState<Tax[]>([]);
 
     const [selectedSupplier, setSelectedSupplier] = useState<string>('');
     const [selectedBranch, setSelectedBranch] = useState<string>('');
@@ -39,6 +41,8 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
     const [notes, setNotes] = useState('');
     const [purchaseType, setPurchaseType] = useState<'CREDIT' | 'CASH' | 'BANK'>('CREDIT');
     const [selectedCreditAccount, setSelectedCreditAccount] = useState<string>('');
+    const [selectedTaxId, setSelectedTaxId] = useState<string>('');
+    const [isInclusiveTax, setIsInclusiveTax] = useState<boolean>(false);
 
     const [lineItems, setLineItems] = useState<LineItem[]>([
         { itemName: '', description: '', quantity: '1', unitPrice: '', accountId: '' }
@@ -53,16 +57,18 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
 
     const fetchData = useCallback(async () => {
         try {
-            const [supplierRes, branchRes, codesRes] = await Promise.all([
+            const [supplierRes, branchRes, codesRes, taxRes] = await Promise.all([
                 getAllSuppliers({ limit: 200 }),
                 getAllBranches({ limit: 200 }),
-                getAllAccountingCodes()
+                getAllAccountingCodes(),
+                getAllTaxes()
             ]);
             
             const codes = codesRes || [];
             setSuppliers(supplierRes.data || []);
             setBranches(branchRes.data || []);
             setAccountingCodes(codes);
+            setTaxes(Array.isArray(taxRes) ? taxRes : []);
 
             // Default credit account to Accounts Payable (2.1.01)
             const apCode = codes.find((c: any) => 
@@ -90,6 +96,8 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
             setDueDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]); // Default 30 days due
             setNotes('');
             setPurchaseType('CREDIT');
+            setSelectedTaxId('');
+            setIsInclusiveTax(false);
             setLineItems([defaultItem()]);
         }
     }, [isOpen, fetchData]);
@@ -135,11 +143,29 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
     });
 
     // ── Calculations ──────────────────────────────────────────────────────────
-    const grandTotal = lineItems.reduce((sum, item) => {
+    const itemsSubtotal = lineItems.reduce((sum, item) => {
         const qty = parseFloat(item.quantity) || 0;
         const price = parseFloat(item.unitPrice) || 0;
         return sum + qty * price;
     }, 0);
+
+    const selectedTaxDoc = taxes.find(t => t._id === selectedTaxId);
+    const taxRate = selectedTaxDoc ? selectedTaxDoc.rate : 0;
+
+    let taxAmount = 0;
+    let grandTotal = itemsSubtotal;
+
+    if (taxRate > 0) {
+        if (isInclusiveTax) {
+            taxAmount = Math.round((itemsSubtotal * (taxRate / (100 + taxRate))) * 100) / 100;
+            grandTotal = itemsSubtotal;
+        } else {
+            taxAmount = Math.round((itemsSubtotal * (taxRate / 100)) * 100) / 100;
+            grandTotal = Math.round((itemsSubtotal + taxAmount) * 100) / 100;
+        }
+    }
+
+    const netExpenseSubtotal = isInclusiveTax ? Math.max(0, itemsSubtotal - taxAmount) : itemsSubtotal;
 
     // ── Line Item Helpers ─────────────────────────────────────────────────────
     const updateItem = (idx: number, field: keyof LineItem, val: string) => {
@@ -181,6 +207,9 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                 purchaseType,
                 creditAccountId: selectedCreditAccount || undefined,
                 notes,
+                isInclusiveTax,
+                taxId: selectedTaxId || undefined,
+                taxPercentage: taxRate,
                 items: validItems.map(i => ({
                     itemName: i.itemName,
                     description: i.description,
@@ -493,6 +522,55 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                             </div>
                         </div>
 
+                        {/* Tax Profiling & Settings */}
+                        <div className="p-5 border rounded-2xl space-y-3" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
+                                    <Tag size={12} className="text-[#C8E600]" />
+                                    Tax Profile & Inclusivity
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={isInclusiveTax}
+                                        onChange={e => setIsInclusiveTax(e.target.checked)}
+                                        className="rounded accent-[#C8E600] w-4 h-4 cursor-pointer"
+                                    />
+                                    <span>Tax Inclusive</span>
+                                </label>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-wider block mb-1" style={{ color: 'var(--text-dim)' }}>Tax Profile</label>
+                                    <select
+                                        value={selectedTaxId}
+                                        onChange={e => setSelectedTaxId(e.target.value)}
+                                        className="w-full px-4 py-2.5 border rounded-xl text-xs font-semibold outline-none focus:border-brand-lime transition-colors"
+                                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        <option value="">No Tax / Zero-Rated (0%)</option>
+                                        {taxes.map(t => (
+                                            <option key={t._id} value={t._id}>
+                                                {t.name} ({t.rate}%)
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex flex-col justify-end text-xs font-medium" style={{ color: 'var(--text-dim)' }}>
+                                    {taxRate > 0 ? (
+                                        <div className="p-2.5 rounded-xl border bg-white/5 flex items-center justify-between" style={{ borderColor: 'var(--border-main)' }}>
+                                            <span>Calculated Tax ({taxRate}% {isInclusiveTax ? 'Inclusive' : 'Exclusive'}):</span>
+                                            <span className="font-bold text-[#C8E600]">+${fmt(taxAmount)}</span>
+                                        </div>
+                                    ) : (
+                                        <div className="p-2.5 rounded-xl border bg-white/5 text-[11px] italic" style={{ borderColor: 'var(--border-main)' }}>
+                                            No tax applied to this bill.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Summary & Notes Section */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                             {/* Notes */}
@@ -516,12 +594,18 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                 </div>
                                 <div className="px-5 py-5 space-y-3 text-xs flex-1">
                                     <div className="flex justify-between font-semibold" style={{ color: 'var(--text-dim)' }}>
-                                        <span>Debit (Expense / Asset Accounts)</span>
-                                        <span style={{ color: 'var(--text-main)' }}>${fmt(grandTotal)}</span>
+                                        <span>Debit (Line Items Expense Accounts)</span>
+                                        <span style={{ color: 'var(--text-main)' }}>${fmt(netExpenseSubtotal)}</span>
                                     </div>
+                                    {taxRate > 0 && (
+                                        <div className="flex justify-between font-semibold" style={{ color: 'var(--text-dim)' }}>
+                                            <span>Debit (Input Tax / Tax Receivable - Asset)</span>
+                                            <span className="text-[#C8E600] font-bold">+${fmt(taxAmount)}</span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between font-semibold" style={{ color: 'var(--text-dim)' }}>
-                                        <span>Credit (Accounts Payable - Liability 2.1.01)</span>
-                                        <span className="text-brand-lime">${fmt(grandTotal)}</span>
+                                        <span>Credit ({purchaseType === 'CASH' ? 'Cash' : purchaseType === 'BANK' ? 'Bank' : 'Accounts Payable - 2.1.01'})</span>
+                                        <span className="text-brand-lime font-bold">${fmt(grandTotal)}</span>
                                     </div>
                                     <div className="pt-4 border-t mt-2" style={{ borderColor: 'var(--border-main)' }}>
                                         <div className="flex justify-between items-center">

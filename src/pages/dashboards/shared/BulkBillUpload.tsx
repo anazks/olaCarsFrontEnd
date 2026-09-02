@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { bulkUploadBills } from '../../../services/billService';
 import { getAllSuppliers } from '../../../services/supplierService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
+import { getAllTaxes, type Tax } from '../../../services/taxService';
 
 interface ParsedBillRow {
     [key: string]: any;
@@ -29,6 +30,9 @@ const CSV_COLUMNS = [
     'Item Name',
     'Quantity',
     'Rate',
+    'Item Tax',
+    'Item Tax %',
+    'Item Tax Type',
     'Description'
 ];
 
@@ -44,6 +48,9 @@ const SAMPLE_DATA = [
         'Item Name': 'Office Supplies',
         'Quantity': '5',
         'Rate': '50.00',
+        'Item Tax': 'Standard Rate',
+        'Item Tax %': '16',
+        'Item Tax Type': 'TRUE',
         'Description': 'Stationery and paper supplies'
     },
     {
@@ -57,6 +64,9 @@ const SAMPLE_DATA = [
         'Item Name': 'Office Furniture',
         'Quantity': '1',
         'Rate': '1200.00',
+        'Item Tax': 'Standard Rate',
+        'Item Tax %': '16',
+        'Item Tax Type': 'FALSE',
         'Description': 'Ergonomic office desk set'
     },
     {
@@ -70,6 +80,9 @@ const SAMPLE_DATA = [
         'Item Name': 'Brake Pads, Oil Filters, Spark Plugs',
         'Quantity': '20, 30, 50',
         'Rate': '25.00, 12.00, 8.00',
+        'Item Tax': 'Standard Rate',
+        'Item Tax %': '16',
+        'Item Tax Type': 'FALSE',
         'Description': 'Bulk spare parts order on credit'
     }
 ];
@@ -187,6 +200,7 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
     const [availableSupplierNames, setAvailableSupplierNames] = useState<Set<string>>(new Set());
     const [availableSupplierNumbers, setAvailableSupplierNumbers] = useState<Set<string>>(new Set());
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
+    const [availableTaxes, setAvailableTaxes] = useState<Tax[]>([]);
     const [loadingSuppliers, setLoadingSuppliers] = useState(false);
 
     useEffect(() => {
@@ -194,19 +208,21 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
             setLoadingSuppliers(true);
             Promise.all([
                 getAllSuppliers({ limit: 100000 }),
-                getAllAccountingCodes()
+                getAllAccountingCodes(),
+                getAllTaxes()
             ])
-                .then(([supRes, codeRes]) => {
+                .then(([supRes, codeRes, taxRes]) => {
                     const list = Array.isArray(supRes.data) ? supRes.data : [];
                     const names = new Set(list.map(s => s.name?.toLowerCase().trim().replace(/\s+/g, ' ')).filter((n): n is string => !!n));
                     const numbers = new Set(list.map(s => s.vendorNumber?.toLowerCase().trim()).filter((num): num is string => !!num));
                     setAvailableSupplierNames(names);
                     setAvailableSupplierNumbers(numbers);
                     setAccountingCodes(codeRes || []);
-                    console.log(`[BulkBillUpload] Loaded ${names.size} suppliers and ${(codeRes || []).length} accounting codes.`);
+                    setAvailableTaxes(Array.isArray(taxRes) ? taxRes : []);
+                    console.log(`[BulkBillUpload] Loaded ${names.size} suppliers, ${(codeRes || []).length} accounting codes, and ${(Array.isArray(taxRes) ? taxRes : []).length} tax profiles.`);
                 })
                 .catch(err => {
-                    console.error('Failed to load supplier/accounting registries for validation', err);
+                    console.error('Failed to load supplier/accounting/tax registries for validation', err);
                 })
                 .finally(() => {
                     setLoadingSuppliers(false);
@@ -215,6 +231,7 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
             setAvailableSupplierNames(new Set());
             setAvailableSupplierNumbers(new Set());
             setAccountingCodes([]);
+            setAvailableTaxes([]);
             setLoadingSuppliers(false);
             setParsedRows([]);
             setFileName('');
@@ -305,8 +322,51 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
             }
         }
 
+        // Validate Item Tax Profile, Tax %, and Tax Inclusivity
+        const rawTaxName = getRowVal(row, ['Item Tax', 'itemTax', 'Tax Name', 'taxName', 'Tax Profile', 'taxProfile']);
+        const rawTaxRate = getRowVal(row, ['Item Tax %', 'itemTaxPct', 'Tax Percentage', 'taxPercentage', 'taxRate']);
+        const rawTaxType = getRowVal(row, ['Item Tax Type', 'itemTaxType', 'item_tax_type', 'Is Inclusive Tax', 'isInclusiveTax']);
+
+        if (rawTaxType !== undefined && rawTaxType !== null && String(rawTaxType).trim() !== '') {
+            const cleanType = String(rawTaxType).trim().toLowerCase();
+            const validBooleans = ['true', 'false', '1', '0', 'yes', 'no', 'inclusive', 'exclusive'];
+            if (!validBooleans.includes(cleanType)) {
+                errors.push(`Invalid Item Tax Type "${rawTaxType}" (expected TRUE or FALSE)`);
+            }
+        }
+
+        if (availableTaxes.length > 0) {
+            if (rawTaxName && String(rawTaxName).trim() !== '') {
+                const cleanTaxName = String(rawTaxName).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+                const foundTax = availableTaxes.find(t => {
+                    const norm = (t.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                    return norm === cleanTaxName || norm.includes(cleanTaxName) || cleanTaxName.includes(norm);
+                });
+                if (!foundTax) {
+                    errors.push(`Tax profile "${rawTaxName}" not found in system`);
+                } else if (rawTaxRate !== undefined && rawTaxRate !== null && String(rawTaxRate).trim() !== '') {
+                    let enteredRate = parseFloat(String(rawTaxRate));
+                    if (!isNaN(enteredRate)) {
+                        if (enteredRate > 0 && enteredRate < 1) enteredRate = enteredRate * 100;
+                        if (Math.abs(foundTax.rate - enteredRate) > 0.01) {
+                            errors.push(`Tax percentage ${enteredRate}% does not match "${foundTax.name}" profile rate (${foundTax.rate}%)`);
+                        }
+                    }
+                }
+            } else if (rawTaxRate !== undefined && rawTaxRate !== null && String(rawTaxRate).trim() !== '') {
+                let enteredRate = parseFloat(String(rawTaxRate));
+                if (!isNaN(enteredRate)) {
+                    if (enteredRate > 0 && enteredRate < 1) enteredRate = enteredRate * 100;
+                    const foundTaxByRate = availableTaxes.find(t => Math.abs(t.rate - enteredRate) < 0.01);
+                    if (!foundTaxByRate) {
+                        errors.push(`No tax profile found with rate ${enteredRate}%`);
+                    }
+                }
+            }
+        }
+
         return errors;
-    }, [accountingCodes]);
+    }, [accountingCodes, availableTaxes]);
 
     useEffect(() => {
         if (parsedRows.length > 0) {
@@ -315,7 +375,7 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                 _rowErrors: validateRow(row)
             })));
         }
-    }, [availableSupplierNames, availableSupplierNumbers, accountingCodes, validateRow]);
+    }, [availableSupplierNames, availableSupplierNumbers, accountingCodes, availableTaxes, validateRow]);
 
     const parseFile = (file: File) => {
         setResult(null);
@@ -702,6 +762,7 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                                                 <th className="p-3 font-bold">Purchase Type</th>
                                                 <th className="p-3 font-bold">Debit Account</th>
                                                 <th className="p-3 font-bold">Credit Account</th>
+                                                <th className="p-3 font-bold">Tax Profile</th>
                                                 <th className="p-3 font-bold">Validation Status</th>
                                                 <th className="p-3 font-bold text-center">Actions</th>
                                             </tr>
@@ -718,6 +779,10 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                                                 const debitAccCode = getRowVal(row, ['Debit Account', 'debitAccount', 'Debit Account Code', 'debitAccountCode', 'Account Code', 'accountCode', 'Account']);
                                                 const pType = (getRowVal(row, ['Purchase Type', 'purchaseType', 'Bill Type', 'billType']) || 'Credit').toString().trim();
                                                 const creditAccCode = getRowVal(row, ['Credit Account', 'creditAccount', 'Credit Account Code', 'creditAccountCode', 'Accounts Payable']);
+                                                const taxNameVal = getRowVal(row, ['Item Tax', 'itemTax', 'Tax Name', 'taxName', 'Tax Profile', 'taxProfile']);
+                                                const taxRateVal = getRowVal(row, ['Item Tax %', 'itemTaxPct', 'Tax Percentage', 'taxPercentage', 'taxRate']);
+                                                const rawTaxType = getRowVal(row, ['Item Tax Type', 'itemTaxType', 'item_tax_type', 'Is Inclusive Tax', 'isInclusiveTax']);
+                                                const isInc = (rawTaxType === true || rawTaxType === 1 || String(rawTaxType).toLowerCase() === 'true' || String(rawTaxType).toLowerCase() === 'yes' || String(rawTaxType).toLowerCase() === 'inclusive');
                                                 const pTypeNorm = pType.toUpperCase().includes('CASH') ? 'Cash' : pType.toUpperCase().includes('BANK') ? 'Bank' : 'Credit';
                                                 const pTypeBadgeStyle = pTypeNorm === 'Cash' ? { background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.3)' } : pTypeNorm === 'Bank' ? { background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)' } : { background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' };
 
@@ -739,6 +804,23 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                                                         </td>
                                                         <td className="p-3 text-main text-[10px] font-medium">{debitAccCode || <span className="text-dim/60 italic">Default</span>}</td>
                                                         <td className="p-3 text-main text-[10px] font-medium">{creditAccCode || <span className="text-dim/80 italic font-normal">2.1.01 (Accounts Payable)</span>}</td>
+                                                        <td className="p-3 text-main text-[10px]">
+                                                            {taxNameVal || taxRateVal ? (
+                                                                <div className="space-y-0.5">
+                                                                    <div className="font-bold text-main">{taxNameVal || 'Tax Applied'}</div>
+                                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                                        {taxRateVal !== undefined && taxRateVal !== null && taxRateVal !== '' && (
+                                                                            <span className="font-bold text-[#C8E600]">{taxRateVal}%</span>
+                                                                        )}
+                                                                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${isInc ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30' : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'}`}>
+                                                                            {isInc ? 'Inclusive' : 'Exclusive'}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-dim/60 italic">None</span>
+                                                            )}
+                                                        </td>
                                                         <td className="p-3">
                                                             {hasErrors ? (
                                                                 <div className="space-y-1">

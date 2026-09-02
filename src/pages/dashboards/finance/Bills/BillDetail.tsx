@@ -319,37 +319,74 @@ const BillDetail = () => {
                     <div className="rounded-3xl border p-6 space-y-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Payment Summary</h3>
                         <div className="space-y-4">
-                            {bill.isInclusiveTax && bill.taxAmount !== undefined && bill.taxAmount > 0 ? (
-                                <>
+                            {(() => {
+                                const hasTax = (bill.taxAmount !== undefined && bill.taxAmount > 0) || (bill.taxPercentage !== undefined && bill.taxPercentage > 0);
+                                const taxRate = bill.taxPercentage || (bill.taxId && typeof bill.taxId === 'object' ? bill.taxId.rate : 0) || 0;
+                                const taxProfileName = bill.taxId && typeof bill.taxId === 'object' ? bill.taxId.name : '';
+
+                                const itemsSubtotal = (bill.items && bill.items.length > 0)
+                                    ? bill.items.reduce((s: number, it: any) => s + ((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)), 0)
+                                    : 0;
+
+                                let baseAmount = bill.totalAmount;
+                                let calculatedTaxAmount = Number(bill.taxAmount) || 0;
+
+                                if (hasTax) {
+                                    if (bill.isInclusiveTax) {
+                                        if (!calculatedTaxAmount && taxRate > 0) {
+                                            calculatedTaxAmount = Math.round((bill.totalAmount * (taxRate / (100 + taxRate))) * 100) / 100;
+                                        }
+                                        baseAmount = Math.max(0, bill.totalAmount - calculatedTaxAmount);
+                                    } else {
+                                        baseAmount = itemsSubtotal > 0 ? itemsSubtotal : Math.max(0, bill.totalAmount - calculatedTaxAmount);
+                                        if (!calculatedTaxAmount && taxRate > 0) {
+                                            calculatedTaxAmount = Math.round((baseAmount * (taxRate / 100)) * 100) / 100;
+                                        }
+                                    }
+                                }
+
+                                if (hasTax && calculatedTaxAmount > 0) {
+                                    return (
+                                        <>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span style={{ color: 'var(--text-dim)' }}>Amount (excl. Tax)</span>
+                                                <span className="font-bold" style={{ color: 'var(--text-main)' }}>
+                                                    ${baseAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span style={{ color: 'var(--text-dim)' }} className="flex items-center gap-1.5 flex-wrap">
+                                                    <span>Tax Amount</span>
+                                                    <span className="text-xs opacity-75">
+                                                        ({taxRate}%{taxProfileName ? ` - ${taxProfileName}` : ''})
+                                                    </span>
+                                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${bill.isInclusiveTax ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30' : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'}`}>
+                                                        {bill.isInclusiveTax ? 'Inclusive' : 'Exclusive'}
+                                                    </span>
+                                                </span>
+                                                <span className="font-bold text-[#C8E600]">
+                                                    +${calculatedTaxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm pt-2 border-t border-white/5">
+                                                <span style={{ color: 'var(--text-dim)' }}>Total Amount</span>
+                                                <span className="font-bold" style={{ color: 'var(--text-main)' }}>
+                                                    ${bill.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                        </>
+                                    );
+                                }
+
+                                return (
                                     <div className="flex justify-between items-center text-sm">
-                                        <span style={{ color: 'var(--text-dim)' }}>Amount (excl. Tax)</span>
+                                        <span style={{ color: 'var(--text-dim)' }}>Total Amount</span>
                                         <span className="font-bold" style={{ color: 'var(--text-main)' }}>
-                                            ${(bill.totalAmount - bill.taxAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            ${bill.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span style={{ color: 'var(--text-dim)' }}>
-                                            Tax Amount ({bill.taxPercentage || 0}% {bill.taxId && typeof bill.taxId === 'object' ? bill.taxId.name : ''})
-                                        </span>
-                                        <span className="font-bold text-[#C8E600]">
-                                            ${bill.taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-sm pt-2 border-t border-white/5">
-                                        <span style={{ color: 'var(--text-dim)' }}>Total (incl. Tax)</span>
-                                        <span className="font-bold" style={{ color: 'var(--text-main)' }}>
-                                            ${bill.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="flex justify-between items-center text-sm">
-                                    <span style={{ color: 'var(--text-dim)' }}>Total Amount</span>
-                                    <span className="font-bold" style={{ color: 'var(--text-main)' }}>
-                                        ${bill.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                    </span>
-                                </div>
-                            )}
+                                );
+                            })()}
                             <div className="flex justify-between items-center text-sm">
                                 <span style={{ color: 'var(--text-dim)' }}>Amount Paid</span>
                                 <span className="font-bold text-green-500">-${bill.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>

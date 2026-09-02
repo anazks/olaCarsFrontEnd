@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { bulkUploadInvoices } from '../../../services/invoiceService';
 import { getAllCustomers } from '../../../services/customerService';
+import { getAllTaxes, type Tax } from '../../../services/taxService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
 interface ParsedInvoiceRow {
@@ -50,7 +51,7 @@ const SAMPLE_DATA = [
         'Item Tax': 'VAT 16%',
         'Item Tax %': '16',
         'Item Tax Amount': '28.80',
-        'Item Tax Type': 'Taxable',
+        'Item Tax Type': 'TRUE',
         'Week Number': '23'
     },
     {
@@ -75,7 +76,7 @@ const SAMPLE_DATA = [
         'Item Tax': 'VAT 16%',
         'Item Tax %': '16',
         'Item Tax Amount': '16.00',
-        'Item Tax Type': 'Taxable',
+        'Item Tax Type': 'TRUE',
         'Week Number': '24'
     }
 ];
@@ -206,7 +207,9 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
     const [uploadStatusText, setUploadStatusText] = useState('');
     const [availableCustomerNames, setAvailableCustomerNames] = useState<Set<string>>(new Set());
     const [availableCustomerIds, setAvailableCustomerIds] = useState<Set<string>>(new Set());
+    const [availableTaxes, setAvailableTaxes] = useState<Tax[]>([]);
     const [loadingCustomers, setLoadingCustomers] = useState(false);
+    const [loadingTaxes, setLoadingTaxes] = useState(false);
     const [verifiedInvoices, setVerifiedInvoices] = useState<Map<string, { exists: boolean, lineItems?: string[] }>>(new Map());
     const [verifyingInvoices, setVerifyingInvoices] = useState(false);
     const [rowFilter, setRowFilter] = useState<'all' | 'valid' | 'invalid'>('all');
@@ -216,6 +219,7 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
     useEffect(() => {
         if (isOpen) {
             setLoadingCustomers(true);
+            setLoadingTaxes(true);
 
             getAllCustomers({ limit: 100000 })
                 .then(res => {
@@ -232,10 +236,25 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
                 .finally(() => {
                     setLoadingCustomers(false);
                 });
+
+            getAllTaxes()
+                .then(res => {
+                    const list = Array.isArray(res) ? res : (Array.isArray((res as any)?.data) ? (res as any).data : []);
+                    setAvailableTaxes(list);
+                    console.log(`[BulkInvoiceUpload] Loaded ${list.length} taxes for validation.`);
+                })
+                .catch(err => {
+                    console.error('Failed to load taxes for validation', err);
+                })
+                .finally(() => {
+                    setLoadingTaxes(false);
+                });
         } else {
             setAvailableCustomerNames(new Set());
             setAvailableCustomerIds(new Set());
+            setAvailableTaxes([]);
             setLoadingCustomers(false);
+            setLoadingTaxes(false);
         }
     }, [isOpen]);
 
@@ -398,19 +417,60 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
                 errors.push(`Item "${itemName}" already exists on Invoice "${invNo}"`);
             }
         }
+
+        // Tax Profile & Rate Validation
+        const itemTaxName = (getRowVal(row, ['Item Tax', 'itemTax', 'taxProfile', 'taxName']) || '').toString().trim();
+        const itemTaxPctRaw = getRowVal(row, ['Item Tax %', 'itemTaxPct', 'taxRate']);
+        let parsedTaxPct: number | null = null;
+        if (itemTaxPctRaw !== undefined && itemTaxPctRaw !== null && String(itemTaxPctRaw).trim() !== '') {
+            const num = Number(itemTaxPctRaw);
+            if (!isNaN(num)) {
+                parsedTaxPct = (num > 0 && num < 1) ? num * 100 : num;
+            } else {
+                errors.push(`Invalid Item Tax % "${itemTaxPctRaw}"`);
+            }
+        }
+
+        if (availableTaxes.length > 0) {
+            if (itemTaxName) {
+                const cleanName = itemTaxName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const foundTax = availableTaxes.find(t => {
+                    const norm = (t.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                    return norm === cleanName || norm.includes(cleanName) || cleanName.includes(norm);
+                });
+                if (!foundTax) {
+                    errors.push(`Tax profile "${itemTaxName}" not found in system`);
+                }
+            } else if (parsedTaxPct !== null) {
+                const foundTax = availableTaxes.find(t => t.rate === parsedTaxPct);
+                if (!foundTax) {
+                    errors.push(`No tax profile found with rate ${parsedTaxPct}%`);
+                }
+            }
+        }
+
+        // Tax Inclusivity (Item Tax Type) Validation
+        const itemTaxType = getRowVal(row, ['Item Tax Type', 'itemTaxType', 'item_tax_type', 'Is Inclusive Tax', 'isInclusiveTax', 'isTaxInclusive']);
+        if (itemTaxType !== undefined && itemTaxType !== null && String(itemTaxType).trim() !== '') {
+            const cleanType = String(itemTaxType).trim().toLowerCase();
+            const validBooleans = ['true', 'false', '1', '0', 'yes', 'no', 'inclusive', 'exclusive'];
+            if (!validBooleans.includes(cleanType) && itemTaxType !== true && itemTaxType !== false) {
+                errors.push(`Invalid Item Tax Type "${itemTaxType}". Expected boolean (TRUE or FALSE).`);
+            }
+        }
         
         return errors;
-    }, [availableCustomerNames, availableCustomerIds, verifiedInvoices]);
+    }, [availableCustomerNames, availableCustomerIds, verifiedInvoices, availableTaxes]);
 
-    // Re-validate rows when customer lists or verified invoices change
+    // Re-validate rows when customer lists, verified invoices, or tax profiles change
     useEffect(() => {
-        if (parsedRows.length > 0 && (availableCustomerNames.size > 0 || verifiedInvoices.size > 0)) {
+        if (parsedRows.length > 0 && (availableCustomerNames.size > 0 || verifiedInvoices.size > 0 || availableTaxes.length > 0)) {
             setParsedRows(prev => prev.map(row => ({
                 ...row,
                 _rowErrors: validateRow(row)
             })));
         }
-    }, [availableCustomerNames, availableCustomerIds, verifiedInvoices, validateRow]);
+    }, [availableCustomerNames, availableCustomerIds, verifiedInvoices, availableTaxes, validateRow]);
 
     const parseFile = (file: File) => {
         setResult(null);
@@ -881,7 +941,7 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
                                             Change File
                                         </button>
                                         <button
-                                            onClick={handleSubmit} disabled={uploading || validCount === 0 || loadingCustomers || verifyingInvoices}
+                                            onClick={handleSubmit} disabled={uploading || validCount === 0 || loadingCustomers || loadingTaxes || verifyingInvoices}
                                             className="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold disabled:opacity-50 border-none hover:scale-[1.02]"
                                             style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
                                         >
@@ -919,6 +979,7 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
                                                 <th className="py-3 px-4">Customer Name</th>
                                                 <th className="py-3 px-4">SubTotal</th>
                                                 <th className="py-3 px-4">Total</th>
+                                                <th className="py-3 px-4">Tax Profile</th>
                                                 <th className="py-3 px-4">Status</th>
                                                 <th className="py-3 px-4">Due Date</th>
                                                 <th className="py-3 px-4">Validation</th>
@@ -932,10 +993,16 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
                                                     <td className="py-3 px-4">{getRowVal(row, ['Customer Name', 'customerName', 'customer']) || '-'}</td>
                                                     <td className="py-3 px-4 font-bold">{getRowVal(row, ['SubTotal', 'subtotal', 'amount', 'itemPrice', 'Item Price']) || '-'}</td>
                                                     <td className="py-3 px-4 font-bold text-emerald-500">{getRowVal(row, ['Total', 'total']) || '-'}</td>
+                                                    <td className="py-3 px-4">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-semibold">{getRowVal(row, ['Item Tax', 'itemTax']) || (getRowVal(row, ['Item Tax %', 'itemTaxPct']) ? `${getRowVal(row, ['Item Tax %', 'itemTaxPct'])}%` : '-')}</span>
+                                                            <span className="text-[10px] text-dim">{String(getRowVal(row, ['Item Tax Type', 'itemTaxType', 'Is Inclusive Tax', 'isInclusiveTax']) || 'TRUE').toUpperCase() === 'FALSE' ? 'Exclusive' : 'Inclusive'}</span>
+                                                        </div>
+                                                    </td>
                                                     <td className="py-3 px-4">{getRowVal(row, ['Invoice Status', 'status']) || '-'}</td>
                                                     <td className="py-3 px-4 text-dim">{getRowVal(row, ['Due Date', 'dueDate']) || '-'}</td>
                                                     <td className="py-3 px-4">
-                                                        {loadingCustomers ? (
+                                                        {loadingCustomers || loadingTaxes ? (
                                                             <div className="flex items-center gap-1.5 text-blue-500">
                                                                 <Loader2 size={14} className="animate-spin" /> Verifying...
                                                             </div>
@@ -967,7 +1034,7 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
                                             ))}
                                             {filteredRows.length === 0 && (
                                                 <tr>
-                                                    <td colSpan={8} className="py-8 text-center text-xs font-medium text-dim">
+                                                    <td colSpan={9} className="py-8 text-center text-xs font-medium text-dim">
                                                         No rows match your filter criteria{searchInvoiceNo ? ` ("${searchInvoiceNo}")` : ''}.
                                                     </td>
                                                 </tr>
