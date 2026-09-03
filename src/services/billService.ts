@@ -61,6 +61,9 @@ export const getAllBills = async (params: any = {}): Promise<{
         limit: number;
     };
     metrics?: {
+        totalGrossBilled?: number;
+        totalNetSettled?: number;
+        totalCurrentBalance?: number;
         totalBilled: number;
         totalBalanceDue: number;
         openCount: number;

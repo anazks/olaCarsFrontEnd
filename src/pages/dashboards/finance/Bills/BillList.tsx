@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
 import {
     Receipt,
     Search,
@@ -24,8 +23,6 @@ import CreateBillModal from './CreateBillModal';
 import BulkBillUpload from '../../shared/BulkBillUpload';
 import DateRangeReportModal from '../../shared/DateRangeReportModal';
 import { downloadExcelReport } from '../../../../services/reportingService';
-import type { RootState } from '../../../../store';
-import { setFinanceDashboardData } from '../../../../store/dashboardSlice';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -33,14 +30,10 @@ import toast from 'react-hot-toast';
 
 const BillList = () => {
     const navigate = useNavigate();
-    const dispatch = useDispatch();
 
-    // Redux store integration for caching
-    const financeState = useSelector((state: RootState) => state.dashboard.finance);
-    const reduxBills = financeState.liveData.bills;
-    const isLoaded = financeState.isLoaded;
-
-    const [loading, setLoading] = useState(!isLoaded || reduxBills.length === 0);
+    // Local state for bills table
+    const [bills, setBills] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -54,18 +47,34 @@ const BillList = () => {
         });
     };
 
-    const handleExportExcel = () => {
-        if (paginatedBills.length === 0) {
-            toast.error("No bills available to export.");
-            return;
-        }
-        const toastId = toast.loading("Generating Excel file...");
+    const fetchAllFilteredBills = async () => {
+        return await billService.getAllBills({
+            search: debouncedSearch,
+            status: filterStatus !== 'ALL' ? filterStatus : undefined,
+            month: filterMonth,
+            year: filterYear,
+            fromDate: filterFromDate,
+            toDate: filterToDate
+        });
+    };
+
+    const handleExportExcel = async () => {
+        const toastId = toast.loading("Fetching all filtered bills for Excel export...");
         try {
-            const exportData = paginatedBills.map((bill, idx) => ({
+            const res = await fetchAllFilteredBills();
+            const allBills = res.data || [];
+            if (allBills.length === 0) {
+                toast.error("No bills available to export for the selected filters.", { id: toastId });
+                return;
+            }
+
+            const getSupplierName = (supplier: any) => (typeof supplier === 'object' && supplier ? supplier.name : supplier) || 'N/A';
+
+            const exportData = allBills.map((bill, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Bill Number": bill.billNumber || 'N/A',
                 "Status": bill.status || 'N/A',
-                "Vendor": bill.supplier?.name || 'N/A',
+                "Vendor": getSupplierName(bill.supplier),
                 "Bill Date": bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
                 "Due Date": bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
                 "Total Amount ($)": bill.totalAmount || 0,
@@ -87,26 +96,31 @@ const BillList = () => {
             });
 
             const dateStr = new Date().toISOString().split('T')[0];
-            XLSX.writeFile(wb, `bills_export_${dateStr}.xlsx`);
-            toast.success("Excel file downloaded successfully!", { id: toastId });
+            XLSX.writeFile(wb, `bills_export_all_${dateStr}.xlsx`);
+            toast.success(`Exported all ${allBills.length} bills successfully!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export Excel file.", { id: toastId });
         }
     };
 
-    const handleExportCsv = () => {
-        if (paginatedBills.length === 0) {
-            toast.error("No bills available to export.");
-            return;
-        }
-        const toastId = toast.loading("Generating CSV file...");
+    const handleExportCsv = async () => {
+        const toastId = toast.loading("Fetching all filtered bills for CSV export...");
         try {
-            const exportData = paginatedBills.map((bill, idx) => ({
+            const res = await fetchAllFilteredBills();
+            const allBills = res.data || [];
+            if (allBills.length === 0) {
+                toast.error("No bills available to export for the selected filters.", { id: toastId });
+                return;
+            }
+
+            const getSupplierName = (supplier: any) => (typeof supplier === 'object' && supplier ? supplier.name : supplier) || 'N/A';
+
+            const exportData = allBills.map((bill, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Bill Number": bill.billNumber || 'N/A',
                 "Status": bill.status || 'N/A',
-                "Vendor": bill.supplier?.name || 'N/A',
+                "Vendor": getSupplierName(bill.supplier),
                 "Bill Date": bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
                 "Due Date": bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
                 "Total Amount ($)": bill.totalAmount || 0,
@@ -122,55 +136,129 @@ const BillList = () => {
             const link = document.createElement("a");
             link.setAttribute("href", url);
             const dateStr = new Date().toISOString().split('T')[0];
-            link.setAttribute("download", `bills_export_${dateStr}.csv`);
+            link.setAttribute("download", `bills_export_all_${dateStr}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            toast.success("CSV file downloaded successfully!", { id: toastId });
+            toast.success(`Exported all ${allBills.length} bills successfully!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export CSV file.", { id: toastId });
         }
     };
 
-    const handleExportPdf = () => {
-        if (paginatedBills.length === 0) {
-            toast.error("No bills available to export.");
-            return;
-        }
-        const toastId = toast.loading("Generating PDF file...");
+    const handleExportPdf = async () => {
+        const toastId = toast.loading("Generating PDF with all bills & KPI summary...");
         try {
-            const doc = new jsPDF();
-            const dateStr = new Date().toISOString().split('T')[0];
-            const title = "Bills Report";
-            
-            doc.setFontSize(18);
-            doc.text(title, 14, 22);
-            doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            const res = await fetchAllFilteredBills();
+            const allBills = res.data || [];
+            if (allBills.length === 0) {
+                toast.error("No bills available to export for the selected filters.", { id: toastId });
+                return;
+            }
 
-            const head = [["Sl No.", "Bill Number", "Status", "Vendor", "Bill Date", "Due Date", "Total Amount"]];
-            const body = paginatedBills.map((bill, idx) => [
-                String(idx + 1).padStart(2, '0'),
+            const kpiMetrics: any = res.metrics || metrics;
+            const grossBilled = kpiMetrics.totalGrossBilled ?? kpiMetrics.totalBilled ?? 0;
+            const netSettled = kpiMetrics.totalNetSettled ?? 0;
+            const currentBalance = kpiMetrics.totalCurrentBalance ?? kpiMetrics.totalBalanceDue ?? 0;
+
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const dateStr = new Date().toISOString().split('T')[0];
+            
+            // Header Title
+            doc.setFontSize(18);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(30, 41, 59);
+            doc.text("PURCHASE BILLS REGISTRY", 14, 16);
+            
+            // Subtitle & period info
+            doc.setFontSize(8.5);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(100, 116, 139);
+            const periodText = (filterFromDate || filterToDate) 
+                ? `Filter Period: ${filterFromDate || 'Start'} to ${filterToDate || 'Current'}`
+                : 'Filter Period: All Time';
+            const statusText = filterStatus !== 'ALL' ? `  |  Status: ${filterStatus}` : '';
+            doc.text(`${periodText}${statusText}  |  Generated on: ${new Date().toLocaleString()}  |  Total Bills: ${allBills.length}`, 14, 23);
+
+            // KPI Summary Table
+            autoTable(doc, {
+                startY: 27,
+                head: [["TOTAL BILLS", "GROSS BILLED (FILTERED)", "NET SETTLED (FILTERED)", "CURRENT BALANCE DUE"]],
+                body: [[
+                    String(allBills.length),
+                    `$${grossBilled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    `$${netSettled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                    `$${currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                ]],
+                theme: 'grid',
+                headStyles: { 
+                    fillColor: [30, 41, 59], 
+                    textColor: [255, 255, 255], 
+                    fontSize: 8, 
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                bodyStyles: { 
+                    fontSize: 10, 
+                    fontStyle: 'bold', 
+                    textColor: [15, 23, 42],
+                    halign: 'center',
+                    cellPadding: 3
+                },
+                columnStyles: {
+                    0: { halign: 'center' },
+                    1: { textColor: [16, 185, 129] }, // Green
+                    2: { textColor: [37, 99, 235] },  // Blue
+                    3: { textColor: [234, 88, 12] }   // Amber / Orange
+                },
+                margin: { left: 14, right: 14 }
+            });
+
+            const summaryEndPos = (doc as any).lastAutoTable?.finalY || 45;
+
+            // Details Table
+            const head = [["#", "Bill Number", "Status", "Vendor", "Bill Date", "Due Date", "Total Amount", "Amount Paid", "Balance Due"]];
+            const body = allBills.map((bill, idx) => [
+                String(idx + 1),
                 bill.billNumber || 'N/A',
                 bill.status || 'N/A',
-                bill.supplier?.name || 'N/A',
+                (typeof bill.supplier === 'object' && bill.supplier ? bill.supplier.name : bill.supplier) || 'N/A',
                 bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
                 bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
-                `$${(bill.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                `$${(bill.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                `$${(bill.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                `$${(bill.balanceDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             ]);
 
             autoTable(doc, {
                 head,
                 body,
-                startY: 34,
+                startY: summaryEndPos + 6,
                 theme: 'striped',
-                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+                headStyles: { 
+                    fillColor: [200, 230, 0], 
+                    textColor: [0, 0, 0],
+                    fontStyle: 'bold',
+                    fontSize: 8
+                },
+                bodyStyles: {
+                    fontSize: 8,
+                    textColor: [30, 41, 59]
+                },
+                columnStyles: {
+                    0: { cellWidth: 10, halign: 'center' },
+                    1: { fontStyle: 'bold' },
+                    6: { halign: 'right' },
+                    7: { halign: 'right' },
+                    8: { halign: 'right', fontStyle: 'bold' }
+                },
+                margin: { left: 14, right: 14 }
             });
 
-            doc.save(`bills_export_${dateStr}.pdf`);
-            toast.success("PDF file downloaded successfully!", { id: toastId });
+            doc.save(`bills_report_all_${dateStr}.pdf`);
+            toast.success(`Exported all ${allBills.length} bills PDF with KPI summary!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export PDF file.", { id: toastId });
@@ -192,6 +280,7 @@ const BillList = () => {
 
     // Filters states
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+    const [filterStatus, setFilterStatus] = useState<string>('ALL');
     const [filterMonth, setFilterMonth] = useState<string>('');
     const [filterYear, setFilterYear] = useState<string>('');
     const [filterFromDate, setFilterFromDate] = useState<string>(getDefaultStartDate());
@@ -199,8 +288,20 @@ const BillList = () => {
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [pageSize, setPageSize] = useState(50);
     const [totalRecords, setTotalRecords] = useState(0);
+
+    const [metrics, setMetrics] = useState<{
+        totalGrossBilled: number;
+        totalNetSettled: number;
+        totalCurrentBalance: number;
+        isFilteredPeriod: boolean;
+    }>({
+        totalGrossBilled: 0,
+        totalNetSettled: 0,
+        totalCurrentBalance: 0,
+        isFilteredPeriod: false,
+    });
 
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -215,11 +316,11 @@ const BillList = () => {
     // Reset pagination to page 1 if search or other filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [debouncedSearch, filterMonth, filterYear, filterFromDate, filterToDate]);
+    }, [debouncedSearch, filterStatus, filterMonth, filterYear, filterFromDate, filterToDate]);
 
     useEffect(() => {
         fetchBills();
-    }, [currentPage, pageSize, debouncedSearch, filterMonth, filterYear, filterFromDate, filterToDate]);
+    }, [currentPage, pageSize, debouncedSearch, filterStatus, filterMonth, filterYear, filterFromDate, filterToDate]);
 
     const fetchBills = async () => {
         setRefreshing(true);
@@ -228,21 +329,26 @@ const BillList = () => {
                 page: currentPage,
                 limit: pageSize,
                 search: debouncedSearch,
+                status: filterStatus !== 'ALL' ? filterStatus : undefined,
                 month: filterMonth,
                 year: filterYear,
                 fromDate: filterFromDate,
                 toDate: filterToDate
             });
-            dispatch(setFinanceDashboardData({
-                liveData: {
-                    ...financeState.liveData,
-                    bills: res.data || []
-                }
-            }));
+            setBills(res.data || []);
             if (res.pagination) {
                 setTotalRecords(res.pagination.totalItems);
             } else {
                 setTotalRecords(res.data?.length || 0);
+            }
+
+            if (res.metrics) {
+                setMetrics({
+                    totalGrossBilled: res.metrics.totalGrossBilled ?? res.metrics.totalBilled ?? 0,
+                    totalNetSettled: res.metrics.totalNetSettled ?? 0,
+                    totalCurrentBalance: res.metrics.totalCurrentBalance ?? res.metrics.totalBalanceDue ?? 0,
+                    isFilteredPeriod: !!res.metrics.isFilteredPeriod
+                });
             }
 
         } catch (err: any) {
@@ -268,7 +374,7 @@ const BillList = () => {
     const totalPages = Math.ceil(totalRecords / pageSize) || 1;
 
     const startIndex = (currentPage - 1) * pageSize;
-    const paginatedBills = reduxBills || [];
+    const paginatedBills = bills;
 
     const handlePageChange = (pageNum: number) => {
         if (pageNum >= 1 && pageNum <= totalPages) {
@@ -301,6 +407,58 @@ const BillList = () => {
         <div className="space-y-6">
             <Breadcrumbs items={[{ label: 'Dashboard', path: '/admin/financial-admin' }, { label: 'Bills', active: true }]} />
 
+            {/* Small Dashboard KPI Cards */}
+            {!loading && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
+                    {/* Card 1: Gross Billed */}
+                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <FileText size={16} className="opacity-60 text-main animate-pulse" style={{ color: 'var(--brand-lime)' }} />
+                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                {metrics.isFilteredPeriod ? 'Gross Billed (Filtered Period)' : 'Gross Billed (All Time)'}
+                            </span>
+                        </div>
+                        <h2 className="text-2xl font-black mt-2" style={{ color: 'var(--text-main)' }}>
+                            ${metrics.totalGrossBilled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h2>
+                        <p className="text-[10px] mt-2" style={{ color: 'var(--text-dim)' }}>
+                            {metrics.isFilteredPeriod ? 'Filtered custom gross purchase bills total' : 'Total gross amount of purchase bills generated'}
+                        </p>
+                    </div>
+
+                    {/* Card 2: Net Settled */}
+                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle size={16} className="opacity-60" style={{ color: '#10b981' }} />
+                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                {metrics.isFilteredPeriod ? 'Net Settled (Filtered Period)' : 'Net Settled (All Time)'}
+                            </span>
+                        </div>
+                        <h2 className="text-2xl font-black mt-2" style={{ color: '#10b981' }}>
+                            ${metrics.totalNetSettled.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h2>
+                        <p className="text-[10px] mt-2" style={{ color: 'var(--text-dim)' }}>
+                            {metrics.isFilteredPeriod ? 'Filtered custom total supplier disbursements settled' : 'Total amount paid towards vendor bills'}
+                        </p>
+                    </div>
+
+                    {/* Card 3: Current Balance */}
+                    <div className="border shadow-md rounded-3xl p-6 flex flex-col justify-between" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Clock size={16} className="opacity-60" style={{ color: '#f59e0b' }} />
+                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                {metrics.isFilteredPeriod ? 'Current Balance (Filtered Period)' : 'Current Balance (All Time)'}
+                            </span>
+                        </div>
+                        <h2 className="text-2xl font-black mt-2 text-orange-400" style={{ color: '#f59e0b' }}>
+                            ${metrics.totalCurrentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h2>
+                        <p className="text-[10px] mt-2" style={{ color: 'var(--text-dim)' }}>
+                            {metrics.isFilteredPeriod ? 'Outstanding vendor liability in period' : 'Total outstanding accounts payable balance'}
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* Collapsible Filter Panel */}
             {isFilterPanelOpen && (
@@ -310,6 +468,7 @@ const BillList = () => {
                         <button
                             type="button"
                             onClick={() => {
+                                setFilterStatus('ALL');
                                 setFilterMonth('');
                                 setFilterYear('');
                                 setFilterFromDate(getDefaultStartDate());
@@ -322,7 +481,25 @@ const BillList = () => {
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                        {/* Status Selector */}
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Status</label>
+                            <select
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
+                                className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs font-bold"
+                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                <option value="ALL">All Statuses</option>
+                                <option value="PAID">Paid</option>
+                                <option value="OPEN">Open / Unpaid</option>
+                                <option value="PARTIALLY_PAID">Partially Paid</option>
+                                <option value="DRAFT">Draft</option>
+                                <option value="VOID">Void</option>
+                            </select>
+                        </div>
+
                         {/* Month Selector */}
                         <div className="space-y-1.5">
                             <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Month</label>
@@ -541,24 +718,9 @@ const BillList = () => {
                                             </td>
                                             <td className="py-4 px-5 font-black text-sm">
                                                 <div>{bill.billNumber}</div>
-                                                {bill.purchaseType && (
-                                                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider"
-                                                        style={{
-                                                            background: bill.purchaseType === 'CASH' ? 'rgba(34, 197, 94, 0.12)' : bill.purchaseType === 'BANK' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(245, 158, 11, 0.12)',
-                                                            color: bill.purchaseType === 'CASH' ? '#22c55e' : bill.purchaseType === 'BANK' ? '#3b82f6' : '#f59e0b',
-                                                            border: `1px solid ${bill.purchaseType === 'CASH' ? 'rgba(34, 197, 94, 0.25)' : bill.purchaseType === 'BANK' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`
-                                                        }}>
-                                                        {bill.purchaseType}
-                                                    </span>
-                                                )}
                                             </td>
                                             <td className="py-4 px-5">
                                                 <div className="font-bold">{supplierName}</div>
-                                                {bill.notes && bill.notes.toLowerCase().includes('vendor') && (
-                                                    <div className="text-[9px] text-orange-400/80 font-semibold tracking-wide italic max-w-xs truncate">
-                                                        Unresolved vendor info saved in notes
-                                                    </div>
-                                                )}
                                             </td>
                                             <td className="py-4 px-5">
                                                 <div className="flex items-center gap-1.5">
