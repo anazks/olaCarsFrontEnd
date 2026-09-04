@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, ChevronRight, Search, AlertCircle, Zap, ArrowLeft } from 'lucide-react';
+import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, ChevronRight, ChevronLeft, Search, AlertCircle, Zap, ArrowLeft, Eye } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -415,6 +415,14 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
     const [existingTxIdsSet, setExistingTxIdsSet] = useState<Set<string>>(new Set());
     const [expandedSetOffRows, setExpandedSetOffRows] = useState<Record<number, boolean>>({});
 
+    const [tableFilter, setTableFilter] = useState<'all' | 'valid' | 'errors'>('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState<number>(50);
+    const [isParsingFile, setIsParsingFile] = useState(false);
+    const [showErrorsModal, setShowErrorsModal] = useState(false);
+    const [errorCategoryFilter, setErrorCategoryFilter] = useState<string>('all');
+    const [errorSearchQuery, setErrorSearchQuery] = useState('');
+
     // Fetch existing transaction IDs when selected bank account changes
     useEffect(() => {
         if (!selectedAccountId) return;
@@ -566,16 +574,36 @@ interface SetOffPreview {
             return '';
         };
 
+        // Pre-index open invoices and bills by entity for O(1) instant candidate access
+        const customerInvoicesMap = new Map<string, any[]>();
         allInvoices.forEach(inv => {
             const bal = inv.balance ?? (inv.totalAmountDue - (inv.amountPaid || 0));
             runningBalanceMap[inv._id] = bal;
             isOverdueMap[inv._id] = checkOverdue(inv);
+
+            const custId = getInvoiceCustomerId(inv);
+            if (custId) {
+                if (!customerInvoicesMap.has(custId)) customerInvoicesMap.set(custId, []);
+                customerInvoicesMap.get(custId)!.push(inv);
+            }
         });
 
+        const supplierBillsMap = new Map<string, any[]>();
         allBills.forEach(b => {
             const bal = b.balanceDue ?? (b.totalAmount - (b.amountPaid || 0));
             runningBillBalanceMap[b._id] = bal;
             isBillOverdueMap[b._id] = b.dueDate ? (new Date(b.dueDate).getTime() < Date.now()) : false;
+
+            const supId = getBillSupplierId(b);
+            const supName = typeof b.supplier === 'object' ? String(b.supplier?.name || b.supplier?.companyName || '').toLowerCase().trim() : '';
+            if (supId) {
+                if (!supplierBillsMap.has(supId)) supplierBillsMap.set(supId, []);
+                supplierBillsMap.get(supId)!.push(b);
+            }
+            if (supName && supName !== supId) {
+                if (!supplierBillsMap.has(supName)) supplierBillsMap.set(supName, []);
+                supplierBillsMap.get(supName)!.push(b);
+            }
         });
 
         const previewsMap = new Map<number, SetOffPreview | null>();
@@ -586,13 +614,11 @@ interface SetOffPreview {
                 const customerId = String(row.customer._id || (row.customer as any).id || '');
                 const amount = row.Amount || row.Debit || 0;
 
-                const openInvoices = allInvoices.filter(inv => {
-                    const invCustId = getInvoiceCustomerId(inv);
+                const candidateInvoices = customerInvoicesMap.get(customerId) || [];
+                const openInvoices = candidateInvoices.filter(inv => {
                     const currentBal = runningBalanceMap[inv._id] ?? 0;
                     const statusStr = String(inv.status || '').toUpperCase();
-                    return invCustId === customerId &&
-                        ['PENDING', 'PARTIAL', 'OVERDUE'].includes(statusStr) &&
-                        currentBal > 0;
+                    return ['PENDING', 'PARTIAL', 'OVERDUE'].includes(statusStr) && currentBal > 0;
                 });
 
                 const overdueInvoices = openInvoices
@@ -666,16 +692,12 @@ interface SetOffPreview {
                 const rowSupName = String(row.supplier.name || (row.supplier as any).companyName || '').toLowerCase().trim();
                 const amount = row.Amount || row.Credit || row.Payment || 0;
 
-                const openBills = allBills.filter(b => {
-                    const bSupId = getBillSupplierId(b);
-                    const bSupName = typeof b.supplier === 'object' ? String(b.supplier?.name || b.supplier?.companyName || '').toLowerCase().trim() : '';
-                    const isSupplierMatch = (bSupId && supplierId && bSupId === supplierId) || (rowSupName && bSupName && rowSupName === bSupName);
-
+                const candidateBills = (supplierBillsMap.get(supplierId) || []).concat(rowSupName ? (supplierBillsMap.get(rowSupName) || []) : []);
+                const uniqueCandidateBills = Array.from(new Set(candidateBills));
+                const openBills = uniqueCandidateBills.filter(b => {
                     const currentBal = runningBillBalanceMap[b._id] ?? 0;
                     const statusStr = String(b.status || '').toUpperCase();
-                    return isSupplierMatch &&
-                        ['OPEN', 'PARTIALLY_PAID', 'DRAFT', 'PARTIAL', 'PENDING'].includes(statusStr) &&
-                        currentBal > 0;
+                    return ['OPEN', 'PARTIALLY_PAID', 'DRAFT', 'PARTIAL', 'PENDING'].includes(statusStr) && currentBal > 0;
                 });
 
                 const overdueBills = openBills
@@ -918,6 +940,17 @@ interface SetOffPreview {
         const supplierNameVal = getRowVal(row, ['supplier name', 'supplier_name', 'Supplier Name', 'SUPPLIER NAME']);
         const customerNameVal = getRowVal(row, ['customer name', 'customer_name', 'Customer Name', 'CUSTOMER NAME']);
 
+        const hasEntity = Boolean(
+            (driverNameVal && String(driverNameVal).trim()) ||
+            (supplierNameVal && String(supplierNameVal).trim()) ||
+            (customerNameVal && String(customerNameVal).trim()) ||
+            row.customerId || row.supplierId || row.customer || row.supplier
+        );
+
+        if (!accountsNameStr && !parentAccountStr && !hasEntity) {
+            errors.push('Missing Accounts Name: Please specify an Accounts Name or provide a Driver, Supplier, or Customer name');
+        }
+
         const filledEntities = [driverNameVal, supplierNameVal, customerNameVal].filter(v => v && String(v).trim()).length;
         if (filledEntities > 1) {
             errors.push('Row cannot have more than one entity (Driver Name, Supplier Name, Customer Name) filled simultaneously');
@@ -1129,14 +1162,14 @@ interface SetOffPreview {
         }
     }, [selectedAccountId, accounts, revalidateAndRecalculateRows]);
 
-    // Targeted async API search fallback for unmatched customer names in uploaded sheet
+    // Targeted async API search fallback for unmatched customer names in uploaded sheet (limited to first 10 for performance)
     useEffect(() => {
         if (rows.length > 0) {
             const unmatched = rows
                 .filter(r => r.customerName && !r.customer)
                 .map(r => r.customerName as string);
 
-            const uniqueUnmatched = Array.from(new Set(unmatched));
+            const uniqueUnmatched = Array.from(new Set(unmatched)).slice(0, 10);
             if (uniqueUnmatched.length > 0) {
                 uniqueUnmatched.forEach(async (nameStr) => {
                     try {
@@ -1157,8 +1190,82 @@ interface SetOffPreview {
         }
     }, [rows]);
 
-    const downloadFailedRowsCSV = (failed: ParsedTransaction[], nameOfFile: string) => {
-        if (!failed || failed.length === 0) return;
+    const getErrorCategory = useCallback((err: string): 'duplicate' | 'account' | 'branch' | 'missing' | 'other' => {
+        const l = err.toLowerCase();
+        if (l.includes('already exists') || l.includes('duplicate')) return 'duplicate';
+        if (l.includes('chart of accounts') || l.includes('bank accounts') || l.includes('bank name mismatch') || l.includes('parent account') || l.includes('accounts name')) return 'account';
+        if (l.includes('branch')) return 'branch';
+        if (l.includes('missing') || l.includes('format') || l.includes('receipt') || l.includes('payment') || l.includes('amount') || l.includes('entity')) return 'missing';
+        return 'other';
+    }, []);
+
+    const errorRowsWithIndex = useMemo(() => {
+        return rows
+            .map((row, index) => ({ row, index }))
+            .filter(({ row }) => row._rowErrors && row._rowErrors.length > 0);
+    }, [rows]);
+
+    const errorCategoryCounts = useMemo(() => {
+        const counts = { all: errorRowsWithIndex.length, duplicate: 0, account: 0, branch: 0, missing: 0, other: 0 };
+        errorRowsWithIndex.forEach(({ row }) => {
+            const categories = new Set(row._rowErrors.map(getErrorCategory));
+            categories.forEach(cat => {
+                if (cat in counts) counts[cat as keyof typeof counts]++;
+            });
+        });
+        return counts;
+    }, [errorRowsWithIndex, getErrorCategory]);
+
+    const filteredErrorRows = useMemo(() => {
+        return errorRowsWithIndex.filter(({ row, index }) => {
+            if (errorCategoryFilter !== 'all') {
+                const matchesCat = row._rowErrors.some(err => getErrorCategory(err) === errorCategoryFilter);
+                if (!matchesCat) return false;
+            }
+            if (errorSearchQuery.trim()) {
+                const q = errorSearchQuery.toLowerCase();
+                const raw = row._rawRow || {};
+                const matchRow = (
+                    String(index + 1).includes(q) ||
+                    String(row.Description || '').toLowerCase().includes(q) ||
+                    String(row.transactionId || '').toLowerCase().includes(q) ||
+                    String(row.accountsName || '').toLowerCase().includes(q) ||
+                    String(getRowVal(raw, ['bank name', 'Bank Name']) || '').toLowerCase().includes(q) ||
+                    row._rowErrors.some(err => err.toLowerCase().includes(q))
+                );
+                if (!matchRow) return false;
+            }
+            return true;
+        });
+    }, [errorRowsWithIndex, errorCategoryFilter, errorSearchQuery, getErrorCategory]);
+
+    const displayedRowsWithIndex = useMemo(() => {
+        return rows
+            .map((row, originalIndex) => ({ row, originalIndex }))
+            .filter(({ row }) => {
+                if (tableFilter === 'valid') return row._rowErrors.length === 0;
+                if (tableFilter === 'errors') return row._rowErrors.length > 0;
+                return true;
+            });
+    }, [rows, tableFilter]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [tableFilter, pageSize]);
+
+    const totalPages = pageSize === -1 ? 1 : Math.max(1, Math.ceil(displayedRowsWithIndex.length / pageSize));
+
+    const paginatedRowsWithIndex = useMemo(() => {
+        if (pageSize === -1) return displayedRowsWithIndex;
+        const start = (currentPage - 1) * pageSize;
+        return displayedRowsWithIndex.slice(start, start + pageSize);
+    }, [displayedRowsWithIndex, currentPage, pageSize]);
+
+    const downloadFailedRowsCSV = (failed: ParsedTransaction[], nameOfFile: string, customSuffix = '') => {
+        if (!failed || failed.length === 0) {
+            toast.error("No failed rows to download.");
+            return;
+        }
 
         const csvHeaders = ["DATE", "PREFIX", "NUMBER", "BANK NAME", "SUB ACCOUNT", "PARENT ACCOUNT", "RECEIPT", "PAYMENT", "DESCRIPTION", "REMARKS", "BRANCH", "DRIVER NAME", "SUPPLIER NAME", "CUSTOMER NAME", "Errors"];
         const csvRows = failed.map(r => {
@@ -1188,135 +1295,157 @@ interface SetOffPreview {
         const link = document.createElement('a');
         link.href = url;
         const name = nameOfFile ? nameOfFile.split('.')[0] : 'failed_transactions';
-        link.setAttribute('download', `failed_rows_${name}.csv`);
+        link.setAttribute('download', `failed_rows_${name}${customSuffix ? `_${customSuffix}` : ''}.csv`);
         document.body.appendChild(link);
         link.click();
         link.remove();
-        toast.success("Failed rows downloaded automatically.");
+        toast.success(`Downloaded ${failed.length} failed row(s) as CSV`);
     };
 
     const parseFile = (f: File) => {
+        setIsParsingFile(true);
         setResult(null);
         setFileName(f.name);
         const ext = f.name.split('.').pop()?.toLowerCase();
 
         const processData = (jsonData: any[]) => {
-            if (!jsonData || jsonData.length === 0) {
-                toast.error('The file is empty or has no rows.');
-                return;
+            try {
+                if (!jsonData || jsonData.length === 0) {
+                    toast.error('The file is empty or has no rows.');
+                    return;
+                }
+
+                let balanceAccum = selectedAccount ? (selectedAccount.currentBalance || selectedAccount.initialBalance || 0) : 0;
+                const isCreditCard = selectedAccount?.accountType === 'Credit Card';
+
+                const parsed = jsonData.map(row => {
+                    const rowErrors = validateRow(row);
+
+                    const dateVal = getRowVal(row, ['date', 'Date', 'DATE']);
+                    const prefixVal = getRowVal(row, ['prefix', 'Prefix', 'PREFIX']);
+                    const numberVal = getRowVal(row, ['number', 'Number', 'NUMBER']);
+                    const rawReceipt = getRowVal(row, ['receipt', 'Receipt', 'RECEIPT']);
+                    const rawPayment = getRowVal(row, ['payment', 'Payment', 'PAYMENT']);
+                    const descVal = getRowVal(row, ['description', 'Description', 'DESCRIPTION']) || '';
+                    const remarksVal = getRowVal(row, ['remarks', 'Remarks', 'REMARKS']) || '';
+                    const driverNameVal = getRowVal(row, ['driver name', 'driver_name', 'Driver Name', 'DRIVER NAME']);
+                    const supplierNameVal = getRowVal(row, ['supplier name', 'supplier_name', 'Supplier Name', 'SUPPLIER NAME']);
+                    const customerNameVal = getRowVal(row, ['customer name', 'customer_name', 'Customer Name', 'CUSTOMER NAME']);
+
+                    const isDriver = Boolean(driverNameVal && String(driverNameVal).trim());
+                    const isCustomer = Boolean(customerNameVal && String(customerNameVal).trim() && !isDriver);
+
+                    const matchedCustomer = matchCustomerHelper(driverNameVal ? String(driverNameVal) : (customerNameVal ? String(customerNameVal) : undefined), allCustomers);
+                    const matchedSupplier = matchSupplierHelper(supplierNameVal ? String(supplierNameVal) : undefined, allSuppliers);
+
+                    const receiptVal = cleanNumber(rawReceipt);
+                    const paymentVal = cleanNumber(rawPayment);
+                    let amountVal = receiptVal > 0 ? receiptVal : paymentVal;
+
+                    let resolvedType: 'DEBIT' | 'CREDIT' = 'DEBIT';
+                    if (receiptVal > 0 && paymentVal === 0) {
+                        resolvedType = 'DEBIT';
+                    } else if (paymentVal > 0 && receiptVal === 0) {
+                        resolvedType = 'CREDIT';
+                    }
+
+                    if (resolvedType === 'DEBIT') {
+                        balanceAccum = isCreditCard ? (balanceAccum - amountVal) : (balanceAccum + amountVal);
+                    } else if (resolvedType === 'CREDIT') {
+                        balanceAccum = isCreditCard ? (balanceAccum + amountVal) : (balanceAccum - amountVal);
+                    }
+
+                    const parsedDate = parseDateFlexible(dateVal);
+                    const isoDate = parsedDate
+                        ? `${parsedDate.getUTCFullYear()}-${String(parsedDate.getUTCMonth() + 1).padStart(2, '0')}-${String(parsedDate.getUTCDate()).padStart(2, '0')}`
+                        : '';
+
+                    const combinedTxId = (prefixVal !== undefined && numberVal !== undefined && prefixVal !== null && numberVal !== null)
+                        ? `${String(prefixVal).trim()}${String(numberVal).trim()}`
+                        : '';
+
+                    const accountsNameVal = getRowVal(row, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
+                    const accountsNameStr = String(accountsNameVal || '').trim();
+                    const matchedAccount = findAccountingCode(accountsNameStr, allAccountingCodes, accounts);
+
+                    return {
+                        Date: isoDate || String(dateVal || ''),
+                        Description: (() => {
+                            const rawDesc = descVal.trim() || remarksVal.trim();
+                            if (rawDesc) return rawDesc;
+                            const typeStr = resolvedType === 'DEBIT' ? 'Deposit' : 'Withdrawal';
+                            const partyStr = accountsNameStr ? ` for ${accountsNameStr}` : '';
+                            const refStr = (prefixVal && numberVal) ? ` (Ref: ${prefixVal}-${numberVal})` : '';
+                            return `${typeStr} of ${amountVal}${partyStr}${refStr}`.trim();
+                        })(),
+                        "Transaction Details": remarksVal.trim(),
+                        Debit: receiptVal,
+                        Credit: paymentVal,
+                        "Running Balance": balanceAccum,
+                        "Transaction Type": resolvedType,
+                        Amount: amountVal,
+                        transactionId: combinedTxId || undefined,
+                        customer: matchedCustomer,
+                        driverName: driverNameVal ? String(driverNameVal).trim() : undefined,
+                        customerName: customerNameVal ? String(customerNameVal).trim() : undefined,
+                        isDriver,
+                        isCustomer,
+                        supplier: matchedSupplier,
+                        supplierName: supplierNameVal ? String(supplierNameVal).trim() : undefined,
+
+                        accountsName: accountsNameStr || undefined,
+                        matchedAccount: matchedAccount,
+                        _rowErrors: rowErrors,
+                        _rawRow: row
+                    } as ParsedTransaction;
+                });
+
+                setRows(parsed);
+                toast.success(`Parsed ${parsed.length} row(s) from ${f.name}`);
+            } finally {
+                setIsParsingFile(false);
             }
-
-            let balanceAccum = selectedAccount ? (selectedAccount.currentBalance || selectedAccount.initialBalance || 0) : 0;
-            const isCreditCard = selectedAccount?.accountType === 'Credit Card';
-
-            const parsed = jsonData.map(row => {
-                const rowErrors = validateRow(row);
-
-                const dateVal = getRowVal(row, ['date', 'Date', 'DATE']);
-                const prefixVal = getRowVal(row, ['prefix', 'Prefix', 'PREFIX']);
-                const numberVal = getRowVal(row, ['number', 'Number', 'NUMBER']);
-                const rawReceipt = getRowVal(row, ['receipt', 'Receipt', 'RECEIPT']);
-                const rawPayment = getRowVal(row, ['payment', 'Payment', 'PAYMENT']);
-                const descVal = getRowVal(row, ['description', 'Description', 'DESCRIPTION']) || '';
-                const remarksVal = getRowVal(row, ['remarks', 'Remarks', 'REMARKS']) || '';
-                const driverNameVal = getRowVal(row, ['driver name', 'driver_name', 'Driver Name', 'DRIVER NAME']);
-                const supplierNameVal = getRowVal(row, ['supplier name', 'supplier_name', 'Supplier Name', 'SUPPLIER NAME']);
-                const customerNameVal = getRowVal(row, ['customer name', 'customer_name', 'Customer Name', 'CUSTOMER NAME']);
-
-                const isDriver = Boolean(driverNameVal && String(driverNameVal).trim());
-                const isCustomer = Boolean(customerNameVal && String(customerNameVal).trim() && !isDriver);
-
-                const matchedCustomer = matchCustomerHelper(driverNameVal ? String(driverNameVal) : (customerNameVal ? String(customerNameVal) : undefined), allCustomers);
-                const matchedSupplier = matchSupplierHelper(supplierNameVal ? String(supplierNameVal) : undefined, allSuppliers);
-
-                const receiptVal = cleanNumber(rawReceipt);
-                const paymentVal = cleanNumber(rawPayment);
-                let amountVal = receiptVal > 0 ? receiptVal : paymentVal;
-
-                let resolvedType: 'DEBIT' | 'CREDIT' = 'DEBIT';
-                if (receiptVal > 0 && paymentVal === 0) {
-                    resolvedType = 'DEBIT';
-                } else if (paymentVal > 0 && receiptVal === 0) {
-                    resolvedType = 'CREDIT';
-                }
-
-                if (resolvedType === 'DEBIT') {
-                    balanceAccum = isCreditCard ? (balanceAccum - amountVal) : (balanceAccum + amountVal);
-                } else if (resolvedType === 'CREDIT') {
-                    balanceAccum = isCreditCard ? (balanceAccum + amountVal) : (balanceAccum - amountVal);
-                }
-
-                const parsedDate = parseDateFlexible(dateVal);
-                const isoDate = parsedDate
-                    ? `${parsedDate.getUTCFullYear()}-${String(parsedDate.getUTCMonth() + 1).padStart(2, '0')}-${String(parsedDate.getUTCDate()).padStart(2, '0')}`
-                    : '';
-
-                const combinedTxId = (prefixVal !== undefined && numberVal !== undefined && prefixVal !== null && numberVal !== null)
-                    ? `${String(prefixVal).trim()}${String(numberVal).trim()}`
-                    : '';
-
-                const accountsNameVal = getRowVal(row, ['sub account', 'sub_account', 'Sub Account', 'SUB ACCOUNT', 'accounts name', 'accounts_name', 'Accounts Name', 'ACCOUNTS NAME']);
-                const accountsNameStr = String(accountsNameVal || '').trim();
-                const matchedAccount = findAccountingCode(accountsNameStr, allAccountingCodes, accounts);
-
-                return {
-                    Date: isoDate || String(dateVal || ''),
-                    Description: (() => {
-                        const rawDesc = descVal.trim() || remarksVal.trim();
-                        if (rawDesc) return rawDesc;
-                        const typeStr = resolvedType === 'DEBIT' ? 'Deposit' : 'Withdrawal';
-                        const partyStr = accountsNameStr ? ` for ${accountsNameStr}` : '';
-                        const refStr = (prefixVal && numberVal) ? ` (Ref: ${prefixVal}-${numberVal})` : '';
-                        return `${typeStr} of ${amountVal}${partyStr}${refStr}`.trim();
-                    })(),
-                    "Transaction Details": remarksVal.trim(),
-                    Debit: receiptVal,
-                    Credit: paymentVal,
-                    "Running Balance": balanceAccum,
-                    "Transaction Type": resolvedType,
-                    Amount: amountVal,
-                    transactionId: combinedTxId || undefined,
-                    customer: matchedCustomer,
-                    driverName: driverNameVal ? String(driverNameVal).trim() : undefined,
-                    customerName: customerNameVal ? String(customerNameVal).trim() : undefined,
-                    isDriver,
-                    isCustomer,
-                    supplier: matchedSupplier,
-                    supplierName: supplierNameVal ? String(supplierNameVal).trim() : undefined,
-
-                    accountsName: accountsNameStr || undefined,
-                    matchedAccount: matchedAccount,
-                    _rowErrors: rowErrors,
-                    _rawRow: row
-                } as ParsedTransaction;
-            });
-
-            setRows(parsed);
-            toast.success(`Parsed ${parsed.length} row(s) from ${f.name}`);
         };
 
-        if (ext === 'xlsx' || ext === 'xls') {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                    const wb = XLSX.read(data, { type: 'array' });
-                    const ws = wb.Sheets[wb.SheetNames[0]];
-                    processData(parseSheetToJSON(ws));
-                } catch { toast.error('Failed to parse Excel file.'); }
-            };
-            reader.readAsArrayBuffer(f);
-        } else {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const wb = XLSX.read(e.target?.result, { type: 'string' });
-                    const ws = wb.Sheets[wb.SheetNames[0]];
-                    processData(parseSheetToJSON(ws));
-                } catch { toast.error('Failed to parse CSV file.'); }
-            };
-            reader.readAsText(f);
-        }
+        // Render loading state before CPU work begins
+        setTimeout(() => {
+            if (ext === 'xlsx' || ext === 'xls') {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                        const wb = XLSX.read(data, { type: 'array' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        processData(parseSheetToJSON(ws));
+                    } catch {
+                        setIsParsingFile(false);
+                        toast.error('Failed to parse Excel file.');
+                    }
+                };
+                reader.onerror = () => {
+                    setIsParsingFile(false);
+                    toast.error('Failed to read file.');
+                };
+                reader.readAsArrayBuffer(f);
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const wb = XLSX.read(e.target?.result, { type: 'string' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        processData(parseSheetToJSON(ws));
+                    } catch {
+                        setIsParsingFile(false);
+                        toast.error('Failed to parse CSV file.');
+                    }
+                };
+                reader.onerror = () => {
+                    setIsParsingFile(false);
+                    toast.error('Failed to read file.');
+                };
+                reader.readAsText(f);
+            }
+        }, 40);
     };
 
     const handleSubmit = async () => {
@@ -1434,9 +1563,14 @@ interface SetOffPreview {
     const handleReset = () => {
         setRows([]);
         setFileName('');
+        setIsParsingFile(false);
         setResult(null);
         setAccountSearchQuery('');
         setIsAccountDropdownOpen(false);
+        setTableFilter('all');
+        setShowErrorsModal(false);
+        setErrorCategoryFilter('all');
+        setErrorSearchQuery('');
         if (fileRef.current) fileRef.current.value = '';
     };
 
@@ -1586,7 +1720,7 @@ interface SetOffPreview {
                     )}
 
                     {/* Template downloads */}
-                    {!result && !uploading && rows.length === 0 && (
+                    {!result && !uploading && !isParsingFile && rows.length === 0 && (
                         <div className={`flex flex-wrap items-center gap-3 p-4 rounded-xl border ${loadingData ? 'opacity-40 pointer-events-none' : ''}`} style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
                             <Info size={16} style={{ color: 'var(--brand-lime)' }} />
                             <span className="text-sm font-medium" style={{ color: 'var(--text-dim)' }}>Download upload template with specific columns:</span>
@@ -1601,8 +1735,29 @@ interface SetOffPreview {
                         </div>
                     )}
 
+                    {/* Parsing File Loading Phase */}
+                    {isParsingFile && !result && !uploading && (
+                        <div className="flex flex-col items-center justify-center gap-4 p-12 rounded-2xl border border-dashed animate-pulse" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.03)' }}>
+                            <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ backgroundColor: 'rgba(200,230,0,0.12)', color: 'var(--brand-lime)' }}>
+                                <Loader2 size={32} className="animate-spin" />
+                            </div>
+                            <div className="text-center space-y-1.5">
+                                <p className="text-base font-bold text-main">
+                                    Reading & Validating Transactions...
+                                </p>
+                                <p className="text-xs text-dim max-w-md mx-auto">
+                                    Parsing <span className="font-semibold text-main">{fileName || 'uploaded file'}</span>, validating chart of accounts, verifying balances, and matching customer & supplier accounts...
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] font-medium text-dim px-3 py-1 rounded-full border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
+                                <Zap size={13} style={{ color: 'var(--brand-lime)' }} />
+                                <span>Optimized high-speed parsing engine active</span>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Drop zone */}
-                    {rows.length === 0 && !result && !uploading && (
+                    {rows.length === 0 && !result && !uploading && !isParsingFile && (
                         <div
                             onDrop={(e) => {
                                 e.preventDefault();
@@ -1628,11 +1783,7 @@ interface SetOffPreview {
                             }}
                         >
                             <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'rgba(200,230,0,0.08)' }}>
-                                {loadingData ? (
-                                    <Loader2 size={28} className="animate-spin" style={{ color: 'var(--text-dim)' }} />
-                                ) : (
-                                    <Upload size={28} style={{ color: 'var(--brand-lime)' }} />
-                                )}
+                                <Upload size={28} style={{ color: 'var(--brand-lime)' }} />
                             </div>
                             <div className="text-center">
                                 <p className="text-sm font-bold text-main">
@@ -1666,15 +1817,28 @@ interface SetOffPreview {
                                     </div>
                                     <div>
                                         <p className="text-sm font-bold text-main">{fileName}</p>
-                                        <div className="flex gap-4 mt-1 text-xs">
-                                            <span className="text-emerald-500 font-bold">{validCount} valid transactions</span>
+                                        <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs">
+                                            <span className="inline-flex items-center gap-1 text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20">
+                                                <CheckCircle size={12} /> {validCount} valid transactions
+                                            </span>
                                             {errorCount > 0 && (
-                                                <button
-                                                    onClick={() => downloadFailedRowsCSV(rows.filter(r => r._rowErrors.length > 0), fileName)}
-                                                    className="text-rose-500 font-bold hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
-                                                >
-                                                    {errorCount} validation errors (Download CSV)
-                                                </button>
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowErrorsModal(true)}
+                                                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-bold text-rose-400 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 hover:text-rose-300 transition-all cursor-pointer shadow-sm"
+                                                    >
+                                                        <AlertTriangle size={12} /> {errorCount} validation errors (View Details)
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => downloadFailedRowsCSV(rows.filter(r => r._rowErrors.length > 0), fileName)}
+                                                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-bold text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-all cursor-pointer shadow-sm"
+                                                        title="Download CSV of only the failed rows with error reasons"
+                                                    >
+                                                        <Download size={12} /> Download Errors CSV
+                                                    </button>
+                                                </>
                                             )}
                                         </div>
                                     </div>
@@ -1737,6 +1901,74 @@ interface SetOffPreview {
                                 </div>
                             )}
 
+                            {/* View Filter Toolbar */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                                <div className="flex items-center gap-1 p-1 rounded-xl border bg-black/20" style={{ borderColor: 'var(--border-main)' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setTableFilter('all')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none cursor-pointer ${
+                                            tableFilter === 'all' ? 'bg-white/15 text-white shadow-sm' : 'text-dim hover:text-white hover:bg-white/5'
+                                        }`}
+                                    >
+                                        All Transactions ({rows.length})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setTableFilter('valid')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none cursor-pointer ${
+                                            tableFilter === 'valid' ? 'bg-emerald-500/20 text-emerald-400 shadow-sm' : 'text-dim hover:text-white hover:bg-white/5'
+                                        }`}
+                                    >
+                                        Valid Only ({validCount})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setTableFilter('errors')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none cursor-pointer flex items-center gap-1.5 ${
+                                            tableFilter === 'errors' ? 'bg-rose-500/20 text-rose-400 shadow-sm' : 'text-dim hover:text-white hover:bg-white/5'
+                                        }`}
+                                    >
+                                        <span>Validation Errors ({errorCount})</span>
+                                        {errorCount > 0 && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>}
+                                    </button>
+                                </div>
+
+                                {errorCount > 0 && (
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowErrorsModal(true)}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 transition-all cursor-pointer"
+                                        >
+                                            <Eye size={13} /> View Errors List ({errorCount})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => downloadFailedRowsCSV(rows.filter(r => r._rowErrors.length > 0), fileName)}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                                            title="Download CSV of error rows"
+                                        >
+                                            <Download size={13} /> Download CSV
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (window.confirm(`Are you sure you want to remove all ${errorCount} invalid rows from this upload?`)) {
+                                                    setRows(prev => prev.filter(r => r._rowErrors.length === 0));
+                                                    setTableFilter('all');
+                                                    toast.success(`Removed ${errorCount} invalid rows`);
+                                                }
+                                            }}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-dim hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all cursor-pointer"
+                                            title="Discard all rows with validation errors from this upload"
+                                        >
+                                            <Trash2 size={13} /> Purge Errors
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Table */}
                             <div className="border rounded-xl overflow-hidden relative z-1" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
@@ -1759,7 +1991,14 @@ interface SetOffPreview {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                                            {rows.map((row, idx) => (
+                                            {paginatedRowsWithIndex.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={13} className="py-8 text-center text-dim text-xs">
+                                                        {tableFilter === 'errors' ? 'No validation errors found!' : tableFilter === 'valid' ? 'No valid transactions found.' : 'No transactions to display.'}
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                paginatedRowsWithIndex.map(({ row, originalIndex: idx }) => (
                                                 <tr key={idx} className="relative hover:z-40" style={{ background: row._rowErrors.length > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
                                                     <td className="py-3 px-4 font-mono">{formatDateDMY(row.Date) || '-'}</td>
                                                     <td className="py-3 px-4 font-semibold">{row.Description || '-'}</td>
@@ -1837,7 +2076,7 @@ interface SetOffPreview {
                                                                                                                     <span className={`px-1 py-0.2 rounded text-[7px] font-black uppercase ${
                                                                                                                         detail.newStatus === 'PAID' 
                                                                                                                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                                                                                                                            : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                                                                                                             : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                                                                                                                     }`}>
                                                                                                                         {detail.newStatus}
                                                                                                                     </span>
@@ -2016,8 +2255,9 @@ interface SetOffPreview {
                                                                 <div className="relative group/errinfo">
                                                                     <button
                                                                         type="button"
+                                                                        onClick={() => setShowErrorsModal(true)}
                                                                         className="w-4 h-4 rounded-full bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/40 flex items-center justify-center text-[9px] font-black cursor-pointer transition-colors shadow-sm"
-                                                                        title="View Validation Error"
+                                                                        title="View Validation Error Details"
                                                                     >
                                                                         i
                                                                     </button>
@@ -2047,10 +2287,89 @@ interface SetOffPreview {
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            ))}
+                                            )))}
                                         </tbody>
                                     </table>
                                 </div>
+
+                                {/* Pagination Bar */}
+                                {displayedRowsWithIndex.length > 0 && (
+                                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t bg-black/10" style={{ borderColor: 'var(--border-main)' }}>
+                                        <div className="text-xs text-dim">
+                                            {pageSize === -1 ? (
+                                                <span>Showing all <strong>{displayedRowsWithIndex.length}</strong> transactions</span>
+                                            ) : (
+                                                <span>
+                                                    Showing <strong>{(currentPage - 1) * pageSize + 1}</strong> - <strong>{Math.min(currentPage * pageSize, displayedRowsWithIndex.length)}</strong> of <strong>{displayedRowsWithIndex.length}</strong> transactions
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-1.5 text-xs text-dim">
+                                                <span>Rows per page:</span>
+                                                <select
+                                                    value={pageSize}
+                                                    onChange={(e) => {
+                                                        setPageSize(Number(e.target.value));
+                                                        setCurrentPage(1);
+                                                    }}
+                                                    className="px-2 py-1 rounded-lg text-xs font-bold bg-white/10 border border-white/10 text-white outline-none cursor-pointer"
+                                                >
+                                                    <option value={25} className="bg-slate-900 text-white">25</option>
+                                                    <option value={50} className="bg-slate-900 text-white">50</option>
+                                                    <option value={100} className="bg-slate-900 text-white">100</option>
+                                                    <option value={200} className="bg-slate-900 text-white">200</option>
+                                                    <option value={-1} className="bg-slate-900 text-white">All</option>
+                                                </select>
+                                            </div>
+
+                                            {pageSize !== -1 && totalPages > 1 && (
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCurrentPage(1)}
+                                                        disabled={currentPage === 1}
+                                                        className="px-2 py-1 rounded-lg text-xs font-bold border border-white/10 bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                                                        title="First Page"
+                                                    >
+                                                        &laquo;
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                                        disabled={currentPage === 1}
+                                                        className="px-2 py-1 rounded-lg text-xs font-bold border border-white/10 bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1"
+                                                    >
+                                                        <ChevronLeft size={13} /> Prev
+                                                    </button>
+
+                                                    <span className="px-2.5 py-1 text-xs font-mono font-bold text-dim">
+                                                        Page <strong className="text-white">{currentPage}</strong> / {totalPages}
+                                                    </span>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                                        disabled={currentPage === totalPages}
+                                                        className="px-2 py-1 rounded-lg text-xs font-bold border border-white/10 bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1"
+                                                    >
+                                                        Next <ChevronRight size={13} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCurrentPage(totalPages)}
+                                                        disabled={currentPage === totalPages}
+                                                        className="px-2 py-1 rounded-lg text-xs font-bold border border-white/10 bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                                                        title="Last Page"
+                                                    >
+                                                        &raquo;
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -2281,6 +2600,275 @@ interface SetOffPreview {
                 </div>
             )}
 
+            {/* Dedicated Validation Errors Modal */}
+            {showErrorsModal && (
+                <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+                    <div
+                        className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden animate-scale-in"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                                    <AlertTriangle size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-bold text-main flex items-center gap-2">
+                                        Validation Errors Review
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-black bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                                            {errorRowsWithIndex.length} Failed Row{errorRowsWithIndex.length === 1 ? '' : 's'}
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-dim mt-0.5">
+                                        Review individual row validation failures, filter by error category, or download the error CSV report.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowErrorsModal(false)}
+                                className="p-2 rounded-lg text-dim hover:text-white hover:bg-white/10 transition-all border-none bg-transparent cursor-pointer"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Category Filter Chips & Search Bar */}
+                        <div className="p-4 border-b space-y-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
+                            {/* Category Filter Chips */}
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setErrorCategoryFilter('all')}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                                        errorCategoryFilter === 'all'
+                                            ? 'bg-white/15 text-white border-white/30 shadow-sm'
+                                            : 'bg-white/5 text-dim border-transparent hover:text-white hover:bg-white/10'
+                                    }`}
+                                >
+                                    All Failures ({errorCategoryCounts.all})
+                                </button>
+                                {errorCategoryCounts.duplicate > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setErrorCategoryFilter('duplicate')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                                            errorCategoryFilter === 'duplicate'
+                                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
+                                                : 'bg-amber-500/10 text-amber-400 border-transparent hover:bg-amber-500/15'
+                                        }`}
+                                    >
+                                        Duplicate / Existing IDs ({errorCategoryCounts.duplicate})
+                                    </button>
+                                )}
+                                {errorCategoryCounts.account > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setErrorCategoryFilter('account')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                                            errorCategoryFilter === 'account'
+                                                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-sm'
+                                                : 'bg-rose-500/10 text-rose-400 border-transparent hover:bg-rose-500/15'
+                                        }`}
+                                    >
+                                        Account / Bank Not Found ({errorCategoryCounts.account})
+                                    </button>
+                                )}
+                                {errorCategoryCounts.branch > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setErrorCategoryFilter('branch')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                                            errorCategoryFilter === 'branch'
+                                                ? 'bg-blue-500/20 text-blue-300 border-blue-500/40 shadow-sm'
+                                                : 'bg-blue-500/10 text-blue-400 border-transparent hover:bg-blue-500/15'
+                                        }`}
+                                    >
+                                        Branch Resolution ({errorCategoryCounts.branch})
+                                    </button>
+                                )}
+                                {errorCategoryCounts.missing > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setErrorCategoryFilter('missing')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                                            errorCategoryFilter === 'missing'
+                                                ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-sm'
+                                                : 'bg-purple-500/10 text-purple-400 border-transparent hover:bg-purple-500/15'
+                                        }`}
+                                    >
+                                        Missing Fields / Formats ({errorCategoryCounts.missing})
+                                    </button>
+                                )}
+                                {errorCategoryCounts.other > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setErrorCategoryFilter('other')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
+                                            errorCategoryFilter === 'other'
+                                                ? 'bg-gray-500/20 text-gray-300 border-gray-500/40 shadow-sm'
+                                                : 'bg-gray-500/10 text-gray-400 border-transparent hover:bg-gray-500/15'
+                                        }`}
+                                    >
+                                        Other ({errorCategoryCounts.other})
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Search Box */}
+                            <div className="relative">
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dim" />
+                                <input
+                                    type="text"
+                                    placeholder="Search by Row #, Description, Transaction ID, Account, or Error..."
+                                    value={errorSearchQuery}
+                                    onChange={(e) => setErrorSearchQuery(e.target.value)}
+                                    className="w-full pl-9 pr-8 py-2 rounded-xl text-xs font-semibold outline-none border transition-all focus:border-rose-500"
+                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                                {errorSearchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setErrorSearchQuery('')}
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-dim hover:text-white border-none bg-transparent cursor-pointer"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Error List Body */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar max-h-[450px]">
+                            {filteredErrorRows.length === 0 ? (
+                                <div className="py-12 text-center text-dim text-xs">
+                                    No validation errors match the selected filter or search.
+                                </div>
+                            ) : (
+                                filteredErrorRows.map(({ row, index: originalIdx }) => {
+                                    const raw = row._rawRow || {};
+                                    const bankName = String(getRowVal(raw, ['bank name', 'Bank Name']) || selectedAccount?.accountName || '-');
+                                    const accName = row.accountsName || String(getRowVal(raw, ['sub account', 'accounts name']) || '-');
+                                    const branch = String(getRowVal(raw, ['branch', 'Branch']) || '-');
+                                    const dateStr = formatDateDMY(row.Date);
+                                    const amountStr = row.Debit > 0 ? `Debit: $${row.Debit.toFixed(2)}` : row.Credit > 0 ? `Credit: $${row.Credit.toFixed(2)}` : `Amount: $${row.Amount.toFixed(2)}`;
+
+                                    return (
+                                        <div
+                                            key={originalIdx}
+                                            className="p-4 rounded-xl border border-rose-500/25 bg-rose-500/[0.04] space-y-2.5 transition-all hover:border-rose-500/40"
+                                        >
+                                            {/* Row Header */}
+                                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rose-500/10 pb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-500/20 text-rose-300 font-mono">
+                                                        Row #{originalIdx + 1}
+                                                    </span>
+                                                    {row.transactionId && (
+                                                        <span className="text-[11px] font-mono text-dim">
+                                                            Ref: <strong className="text-white">{row.transactionId}</strong>
+                                                        </span>
+                                                    )}
+                                                    <span className="text-[11px] font-mono text-dim">
+                                                        Date: <strong className="text-white">{dateStr}</strong>
+                                                    </span>
+                                                    <span className="text-[11px] font-bold text-dim">
+                                                        {amountStr}
+                                                    </span>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRows(prev => prev.filter((_, i) => i !== originalIdx))}
+                                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 px-2 py-1 rounded transition-colors border-none bg-transparent cursor-pointer"
+                                                    title="Discard this invalid row"
+                                                >
+                                                    <Trash2 size={12} /> Remove Row
+                                                </button>
+                                            </div>
+
+                                            {/* Row Context */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                                                <div>
+                                                    <span className="text-[10px] uppercase font-bold text-dim block">Description</span>
+                                                    <span className="text-main font-semibold truncate block" title={row.Description}>{row.Description || '-'}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[10px] uppercase font-bold text-dim block">Bank / Account</span>
+                                                    <span className="text-main font-semibold truncate block" title={`${bankName} -> ${accName}`}>{bankName} &rarr; {accName}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[10px] uppercase font-bold text-dim block">Branch</span>
+                                                    <span className="text-main font-semibold truncate block">{branch}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Error Badges */}
+                                            <div className="space-y-1 pt-1">
+                                                <span className="text-[10px] uppercase font-black tracking-wider text-rose-400 block">
+                                                    Failure Reasons:
+                                                </span>
+                                                <div className="space-y-1">
+                                                    {row._rowErrors.map((errMessage: string, eIdx: number) => (
+                                                        <div
+                                                            key={eIdx}
+                                                            className="flex items-start gap-1.5 p-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-200 text-xs font-medium"
+                                                        >
+                                                            <AlertCircle size={13} className="text-rose-400 shrink-0 mt-0.5" />
+                                                            <span>{errMessage}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                            <div className="text-xs text-dim">
+                                Showing <strong>{filteredErrorRows.length}</strong> of <strong>{errorRowsWithIndex.length}</strong> invalid row(s)
+                            </div>
+                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const exportRows = filteredErrorRows.map(e => e.row);
+                                        const suffix = errorCategoryFilter !== 'all' ? errorCategoryFilter : '';
+                                        downloadFailedRowsCSV(exportRows, fileName, suffix);
+                                    }}
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-rose-400 bg-rose-500/15 border border-rose-500/30 hover:bg-rose-500/25 transition-all cursor-pointer"
+                                >
+                                    <Download size={14} /> Download {errorCategoryFilter !== 'all' ? `${errorCategoryFilter} Errors` : 'All Errors'} (CSV)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (window.confirm(`Discard all ${errorRowsWithIndex.length} invalid rows?`)) {
+                                            setRows(prev => prev.filter(r => r._rowErrors.length === 0));
+                                            setShowErrorsModal(false);
+                                            setTableFilter('all');
+                                            toast.success(`Removed ${errorRowsWithIndex.length} invalid rows`);
+                                        }
+                                    }}
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-dim hover:text-rose-400 hover:bg-rose-500/10 border border-white/10 transition-all cursor-pointer"
+                                >
+                                    <Trash2 size={14} /> Purge All Errors
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowErrorsModal(false)}
+                                    className="px-5 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 text-white border-none transition-all cursor-pointer"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );
