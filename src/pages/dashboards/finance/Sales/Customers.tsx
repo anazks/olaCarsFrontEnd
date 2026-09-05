@@ -385,14 +385,28 @@ const Customers = () => {
     const [limit] = useState(25);
     const [pagination, setPagination] = useState<PaginationMetadata | null>(customersState.pagination);
 
-    const handleExportExcel = () => {
-        if (customers.length === 0) {
-            toast.error("No customers available to export.");
-            return;
-        }
-        const toastId = toast.loading("Generating Excel file...");
+    const fetchAllFilteredCustomers = async (): Promise<Customer[]> => {
+        const filters: any = { all: 'true', sortBy, sortOrder };
+        if (debouncedSearch.trim()) filters.search = debouncedSearch.trim();
+        if (statusFilter !== 'ALL') filters.status = statusFilter;
+        if (branchFilter !== 'ALL') filters.branch = branchFilter;
+        if (startDate) filters.startDate = startDate;
+        if (endDate) filters.endDate = endDate;
+
+        const res = await getAllCustomers(filters);
+        return res.data || [];
+    };
+
+    const handleExportExcel = async () => {
+        const toastId = toast.loading("Fetching all customers for Excel export...");
         try {
-            const exportData = customers.map((c, idx) => ({
+            const allCustomers = await fetchAllFilteredCustomers();
+            if (allCustomers.length === 0) {
+                toast.error("No customers available to export.", { id: toastId });
+                return;
+            }
+
+            const exportData = allCustomers.map((c, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Customer ID": c.customerId || 'N/A',
                 "Customer Name": c.name,
@@ -422,21 +436,23 @@ const Customers = () => {
 
             const dateStr = new Date().toISOString().split('T')[0];
             XLSX.writeFile(wb, `customers_export_${dateStr}.xlsx`);
-            toast.success("Excel file downloaded successfully!", { id: toastId });
+            toast.success(`Exported ${allCustomers.length} customer records to Excel!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export Excel file.", { id: toastId });
         }
     };
 
-    const handleExportCsv = () => {
-        if (customers.length === 0) {
-            toast.error("No customers available to export.");
-            return;
-        }
-        const toastId = toast.loading("Generating CSV file...");
+    const handleExportCsv = async () => {
+        const toastId = toast.loading("Fetching all customers for CSV export...");
         try {
-            const exportData = customers.map((c, idx) => ({
+            const allCustomers = await fetchAllFilteredCustomers();
+            if (allCustomers.length === 0) {
+                toast.error("No customers available to export.", { id: toastId });
+                return;
+            }
+
+            const exportData = allCustomers.map((c, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Customer ID": c.customerId || 'N/A',
                 "Customer Name": c.name,
@@ -464,20 +480,22 @@ const Customers = () => {
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            toast.success("CSV file downloaded successfully!", { id: toastId });
+            toast.success(`Exported ${allCustomers.length} customer records to CSV!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export CSV file.", { id: toastId });
         }
     };
 
-    const handleExportPdf = () => {
-        if (customers.length === 0) {
-            toast.error("No customers available to export.");
-            return;
-        }
-        const toastId = toast.loading("Generating PDF file...");
+    const handleExportPdf = async () => {
+        const toastId = toast.loading("Fetching all customers for PDF export...");
         try {
+            const allCustomers = await fetchAllFilteredCustomers();
+            if (allCustomers.length === 0) {
+                toast.error("No customers available to export.", { id: toastId });
+                return;
+            }
+
             const doc = new jsPDF();
             const dateStr = new Date().toISOString().split('T')[0];
             const title = "Customer Registry Report";
@@ -491,7 +509,7 @@ const Customers = () => {
             }
 
             const head = [["Sl No.", "Customer ID", "Customer Name", "Email", "Phone", "Branch", "Status", "Registered"]];
-            const body = customers.map((c, idx) => [
+            const body = allCustomers.map((c, idx) => [
                 String(idx + 1).padStart(2, '0'),
                 c.customerId || 'N/A',
                 c.name || 'N/A',
@@ -511,7 +529,7 @@ const Customers = () => {
             });
 
             doc.save(`customers_export_${dateStr}.pdf`);
-            toast.success("PDF file downloaded successfully!", { id: toastId });
+            toast.success(`Exported ${allCustomers.length} customer records to PDF!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export PDF file.", { id: toastId });

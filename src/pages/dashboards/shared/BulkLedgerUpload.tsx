@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, ChevronRight, ChevronLeft, Search, AlertCircle, Zap, ArrowLeft, Eye } from 'lucide-react';
+import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, ChevronRight, ChevronLeft, Search, AlertCircle, Zap, ArrowLeft, Eye, Layers, Activity, Database, Check, Link2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getAllBankAccounts, bulkUploadBankAccountTransactions, getBankAccountTransactions, type BankAccount } from '../../../services/bankAccountService';
+import { getAllBankAccounts, bulkUploadBankAccountTransactions, type BankAccount } from '../../../services/bankAccountService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
@@ -39,6 +39,23 @@ interface ParsedTransaction {
     matchedAccount?: AccountingCode;
     _rowErrors: string[];
     _rawRow?: any;
+}
+
+interface UploadLiveStats {
+    processedCount: number;
+    totalCount: number;
+    insertedCount: number;
+    skippedCount: number;
+    currentBatch: number;
+    totalBatches: number;
+    setOffCount: number;
+    recentActivities: Array<{
+        id: string;
+        type: 'SUCCESS' | 'WARNING' | 'SETOFF' | 'INFO';
+        title: string;
+        details?: string;
+        time: string;
+    }>;
 }
 
 const TEMPLATE_HEADERS = [
@@ -412,8 +429,8 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
     const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
     const [allInvoices, setAllInvoices] = useState<Invoice[]>([]);
     const [allBills, setAllBills] = useState<Bill[]>([]);
-    const [existingTxIdsSet, setExistingTxIdsSet] = useState<Set<string>>(new Set());
     const [expandedSetOffRows, setExpandedSetOffRows] = useState<Record<number, boolean>>({});
+    const [uploadLiveStats, setUploadLiveStats] = useState<UploadLiveStats | null>(null);
 
     const [tableFilter, setTableFilter] = useState<'all' | 'valid' | 'errors'>('all');
     const [currentPage, setCurrentPage] = useState(1);
@@ -422,25 +439,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
     const [showErrorsModal, setShowErrorsModal] = useState(false);
     const [errorCategoryFilter, setErrorCategoryFilter] = useState<string>('all');
     const [errorSearchQuery, setErrorSearchQuery] = useState('');
-
-    // Fetch existing transaction IDs when selected bank account changes
-    useEffect(() => {
-        if (!selectedAccountId) return;
-        const fetchTxIds = async () => {
-            try {
-                const res = await getBankAccountTransactions(selectedAccountId, { limit: 10000 });
-                const list = res.data || res.transactions || (Array.isArray(res) ? res : []);
-                const idsSet = new Set<string>();
-                list.forEach((tx: any) => {
-                    if (tx.transactionId) idsSet.add(String(tx.transactionId).trim());
-                });
-                setExistingTxIdsSet(idsSet);
-            } catch (err) {
-                console.error("Failed to fetch existing bank account transactions for ID validation", err);
-            }
-        };
-        fetchTxIds();
-    }, [selectedAccountId]);
+    const [resultActiveTab, setResultActiveTab] = useState<'entered' | 'skipped' | 'setoff'>('entered');
 
     // Load bank accounts, branches, customers, suppliers, invoices and supplier bills on mount
     useEffect(() => {
@@ -840,7 +839,11 @@ interface SetOffPreview {
         return `${day}-${month}-${year}`;
     };
 
-    const validateRow = useCallback((row: any, targetAccount?: BankAccount): string[] => {
+    const validateRow = useCallback((
+        row: any,
+        targetAccount?: BankAccount,
+        fileTxIdCounts?: Map<string, number>
+    ): string[] => {
         const errors: string[] = [];
 
         const dateVal = getRowVal(row, ['date', 'Date', 'DATE']);
@@ -871,8 +874,8 @@ interface SetOffPreview {
 
         if (prefixVal && numberVal) {
             const txIdStr = `${String(prefixVal).trim()}${String(numberVal).trim()}`;
-            if (existingTxIdsSet.has(txIdStr)) {
-                errors.push(`Invalid upload: Transaction ID "${txIdStr}" already exists in ledger entries`);
+            if (fileTxIdCounts && (fileTxIdCounts.get(txIdStr) || 0) > 1) {
+                errors.push(`Duplicate Transaction ID "${txIdStr}" appears in upload file`);
             } else if (rows && rows.length > 0) {
                 const count = rows.filter(r => {
                     const rRaw = r._rawRow || r;
@@ -983,7 +986,7 @@ interface SetOffPreview {
         }
 
         return errors;
-    }, [selectedAccount, branches, allAccountingCodes, existingTxIdsSet]);
+    }, [selectedAccount, branches, allAccountingCodes]);
 
     const matchCustomerHelper = useCallback((customerNameVal: string | undefined, customersList: Customer[]): Customer | undefined => {
         if (!customerNameVal || !String(customerNameVal).trim()) return undefined;
@@ -1097,15 +1100,29 @@ interface SetOffPreview {
         return undefined;
     }, []);
 
-    const revalidateAndRecalculateRows = useCallback((currentRows: ParsedTransaction[], targetAccount: BankAccount | undefined) => {
+    const revalidateAndRecalculateRows = useCallback((
+        currentRows: ParsedTransaction[],
+        targetAccount: BankAccount | undefined
+    ) => {
         if (!currentRows || currentRows.length === 0) return [];
 
         let balanceAccum = targetAccount ? (targetAccount.currentBalance || targetAccount.initialBalance || 0) : 0;
         const isCreditCard = targetAccount?.accountType === 'Credit Card';
 
+        const fileTxIdCounts = new Map<string, number>();
+        currentRows.forEach(r => {
+            const raw = r._rawRow || r;
+            const p = getRowVal(raw, ['prefix', 'Prefix', 'PREFIX']);
+            const n = getRowVal(raw, ['number', 'Number', 'NUMBER']);
+            if (p !== undefined && n !== undefined && p !== null && n !== null) {
+                const id = `${String(p).trim()}${String(n).trim()}`;
+                if (id) fileTxIdCounts.set(id, (fileTxIdCounts.get(id) || 0) + 1);
+            }
+        });
+
         return currentRows.map(row => {
             const raw = row._rawRow || row;
-            const errors = validateRow(raw, targetAccount);
+            const errors = validateRow(raw, targetAccount, fileTxIdCounts);
 
             const receiptVal = cleanNumber(getRowVal(raw, ['receipt', 'Receipt', 'RECEIPT']));
             const paymentVal = cleanNumber(getRowVal(raw, ['payment', 'Payment', 'PAYMENT']));
@@ -1153,11 +1170,12 @@ interface SetOffPreview {
                 _rowErrors: errors
             };
         });
-    }, [validateRow, allAccountingCodes, allCustomers, allSuppliers, matchCustomerHelper, matchSupplierHelper]);
+    }, [validateRow, allAccountingCodes, accounts, allCustomers, allSuppliers, matchCustomerHelper, matchSupplierHelper]);
 
     useEffect(() => {
-        if (rows.length > 0 && selectedAccountId) {
-            const targetAccount = accounts.find(acc => acc._id === selectedAccountId);
+        if (!selectedAccountId) return;
+        const targetAccount = accounts.find(acc => acc._id === selectedAccountId);
+        if (rows.length > 0) {
             setRows(prev => revalidateAndRecalculateRows(prev, targetAccount));
         }
     }, [selectedAccountId, accounts, revalidateAndRecalculateRows]);
@@ -1318,8 +1336,18 @@ interface SetOffPreview {
                 let balanceAccum = selectedAccount ? (selectedAccount.currentBalance || selectedAccount.initialBalance || 0) : 0;
                 const isCreditCard = selectedAccount?.accountType === 'Credit Card';
 
+                const fileTxIdCounts = new Map<string, number>();
+                jsonData.forEach(r => {
+                    const p = getRowVal(r, ['prefix', 'Prefix', 'PREFIX']);
+                    const n = getRowVal(r, ['number', 'Number', 'NUMBER']);
+                    if (p !== undefined && n !== undefined && p !== null && n !== null) {
+                        const id = `${String(p).trim()}${String(n).trim()}`;
+                        if (id) fileTxIdCounts.set(id, (fileTxIdCounts.get(id) || 0) + 1);
+                    }
+                });
+
                 const parsed = jsonData.map(row => {
-                    const rowErrors = validateRow(row);
+                    const rowErrors = validateRow(row, selectedAccount, fileTxIdCounts);
 
                     const dateVal = getRowVal(row, ['date', 'Date', 'DATE']);
                     const prefixVal = getRowVal(row, ['prefix', 'Prefix', 'PREFIX']);
@@ -1448,6 +1476,35 @@ interface SetOffPreview {
         }, 40);
     };
 
+    const downloadSkippedReportCSV = (skippedList: any[], nameOfFile: string) => {
+        if (!skippedList || skippedList.length === 0) {
+            toast.error("No skipped transactions to download.");
+            return;
+        }
+
+        const csvHeaders = ["Transaction ID", "Date", "Description", "Type", "Amount", "Reason For Skipping"];
+        const csvRows = skippedList.map(s => [
+            `"${String(s.transactionId || '-').replace(/"/g, '""')}"`,
+            `"${String(s.date ? formatDateDMY(s.date) : '-').replace(/"/g, '""')}"`,
+            `"${String(s.description || '-').replace(/"/g, '""')}"`,
+            `"${String(s.type || '-').replace(/"/g, '""')}"`,
+            String(Number(s.amount || 0).toFixed(2)),
+            `"${String(s.reason || 'Skipped').replace(/"/g, '""')}"`
+        ]);
+
+        const csvContent = [csvHeaders.join(","), ...csvRows.map(row => row.join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const name = nameOfFile ? nameOfFile.split('.')[0] : 'skipped_transactions';
+        link.setAttribute('download', `skipped_transactions_report_${name}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        toast.success(`Downloaded ${skippedList.length} skipped transaction(s) as CSV`);
+    };
+
     const handleSubmit = async () => {
         if (!selectedAccountId) {
             toast.error('Please select a target bank account');
@@ -1467,11 +1524,36 @@ interface SetOffPreview {
         const batchSize = 50;
         const totalBatches = Math.ceil(totalRows / batchSize);
 
+        setUploadLiveStats({
+            processedCount: 0,
+            totalCount: totalRows,
+            insertedCount: 0,
+            skippedCount: 0,
+            currentBatch: 1,
+            totalBatches,
+            setOffCount: 0,
+            recentActivities: [{
+                id: 'init-1',
+                type: 'INFO',
+                title: `Starting upload for ${totalRows.toLocaleString()} valid transactions across ${totalBatches} batch${totalBatches > 1 ? 'es' : ''}`,
+                details: `Target: ${selectedAccount?.accountName || selectedAccount?.bankName}`,
+                time: new Date().toLocaleTimeString()
+            }]
+        });
+
+        let totalInsertedAcrossBatches = 0;
+        let totalSkippedAcrossBatches = 0;
+        const allInsertedTransactions: any[] = [];
+        const allSkippedTransactions: any[] = [];
+        const allSetOffResults: any[] = [];
+        let finalNewBalance: number | undefined = undefined;
+
         try {
             for (let i = 0; i < totalBatches; i++) {
                 const start = i * batchSize;
                 const end = Math.min(start + batchSize, totalRows);
-                const batchTransactions = validRows.slice(start, end).map((row) => {
+                const currentBatchRows = validRows.slice(start, end);
+                const batchTransactions = currentBatchRows.map((row) => {
                     const rest: any = { ...row._rawRow };
                     for (const key in row) {
                         if (key !== '_rowErrors' && key !== '_rawRow') {
@@ -1499,7 +1581,6 @@ interface SetOffPreview {
                 const startPct = Math.round((i / totalBatches) * 100);
                 const targetPct = Math.round(((i + 1) / totalBatches) * 100);
 
-                // Smooth ticker interval incrementing up to 92% of current batch target while API is in-flight
                 let currentSimulatedPct = Math.max(startPct, 5);
                 const stepMax = Math.max(targetPct - 5, currentSimulatedPct);
 
@@ -1510,7 +1591,6 @@ interface SetOffPreview {
                     }
                 }, 100);
 
-                // Only clear existing on the first batch
                 const batchClearExisting = i === 0 ? clearExisting : false;
 
                 const payload = {
@@ -1525,20 +1605,115 @@ interface SetOffPreview {
                     clearInterval(progressInterval);
                 }
 
-                // Lock at exact batch completion percentage
                 setUploadProgress(targetPct);
+
+                const batchData = res.data || res;
+                const insertedInBatch = (batchData.insertedCount !== undefined ? batchData.insertedCount : (batchData.count || 0));
+                const skippedInBatch = (batchData.skippedCount || 0);
+                totalInsertedAcrossBatches += insertedInBatch;
+                totalSkippedAcrossBatches += skippedInBatch;
+
+                if (Array.isArray(batchData.insertedTransactions)) {
+                    allInsertedTransactions.push(...batchData.insertedTransactions);
+                } else {
+                    // Fallback to batch rows that were sent
+                    allInsertedTransactions.push(...currentBatchRows);
+                }
+
+                if (Array.isArray(batchData.skippedTransactions)) {
+                    allSkippedTransactions.push(...batchData.skippedTransactions);
+                }
+
+                if (Array.isArray(batchData.setOffResults)) {
+                    allSetOffResults.push(...batchData.setOffResults);
+                }
+
+                if (batchData.newBalance !== undefined) {
+                    finalNewBalance = batchData.newBalance;
+                }
+
+                // Append real-time activity events
+                const newItems: Array<{ id: string; type: 'SUCCESS' | 'WARNING' | 'SETOFF' | 'INFO'; title: string; details?: string; time: string }> = [];
+
+                if (batchData.setOffResults && batchData.setOffResults.length > 0) {
+                    batchData.setOffResults.forEach((so: any, sIdx: number) => {
+                        newItems.push({
+                            id: `so-${i}-${sIdx}-${Date.now()}`,
+                            type: 'SETOFF',
+                            title: `Auto Set-Off: $${Number(so.totalSetOff || so.amount || 0).toFixed(2)} applied for ${so.customerName || so.driverName || so.supplierName || 'Party'}`,
+                            details: so.invoicesSetOff && so.invoicesSetOff.length > 0 
+                                ? `Settled invoice(s): ${so.invoicesSetOff.map((inv: any) => inv.invoiceNumber || inv.invoiceId).join(', ')}`
+                                : `${so.invoiceCount || 1} invoice(s) settled`,
+                            time: new Date().toLocaleTimeString()
+                        });
+                    });
+                }
+
+                if (batchData.skippedTransactions && batchData.skippedTransactions.length > 0) {
+                    batchData.skippedTransactions.slice(0, 3).forEach((sk: any, skIdx: number) => {
+                        newItems.push({
+                            id: `sk-${i}-${skIdx}-${Date.now()}`,
+                            type: 'WARNING',
+                            title: `Skipped: ${sk.transactionId ? `Txn ${sk.transactionId}` : 'Row'} (${sk.reason || 'Duplicate in DB'})`,
+                            details: sk.description || '',
+                            time: new Date().toLocaleTimeString()
+                        });
+                    });
+                }
+
+                newItems.push({
+                    id: `batch-${i}-${Date.now()}`,
+                    type: 'SUCCESS',
+                    title: `Batch ${i + 1}/${totalBatches} saved: +${insertedInBatch} written to DB${skippedInBatch > 0 ? `, ${skippedInBatch} skipped` : ''}`,
+                    details: finalNewBalance !== undefined ? `Updated Account Balance: $${finalNewBalance.toFixed(2)}` : undefined,
+                    time: new Date().toLocaleTimeString()
+                });
+
+                setUploadLiveStats(prev => ({
+                    processedCount: Math.min((i + 1) * batchSize, totalRows),
+                    totalCount: totalRows,
+                    insertedCount: totalInsertedAcrossBatches,
+                    skippedCount: totalSkippedAcrossBatches,
+                    currentBatch: i + 1,
+                    totalBatches,
+                    setOffCount: allSetOffResults.length,
+                    recentActivities: [...newItems, ...(prev?.recentActivities || [])].slice(0, 12)
+                }));
 
                 if (i === totalBatches - 1) {
                     setUploadProgress(100);
-                    // Brief delay so user sees 100% completion before switching screens
                     await new Promise(resolve => setTimeout(resolve, 350));
 
-                    setResult(res.data || res);
-                    toast.success(res.message || 'Transactions uploaded successfully!');
+                    // Also aggregate pre-upload client-side excluded rows into the skipped transactions report
+                    const clientSideInvalidRows = rows.filter(r => r._rowErrors && r._rowErrors.length > 0);
+                    clientSideInvalidRows.forEach((r, idx) => {
+                        allSkippedTransactions.push({
+                            transactionId: r.transactionId || `Row #${idx + 1}`,
+                            date: r.Date || '-',
+                            description: r.Description || 'Row excluded pre-upload due to validation errors',
+                            amount: r.Amount || r.Debit || r.Credit || 0,
+                            type: r["Transaction Type"] || 'DEBIT',
+                            party: r.customer?.name || (r.supplier?.name || (r.supplier as any)?.companyName) || r.customerName || r.supplierName || r.accountsName || '-',
+                            reason: `Validation Error: ${r._rowErrors.join('; ')}`
+                        });
+                    });
 
-                    const failedRows = rows.filter(r => r._rowErrors && r._rowErrors.length > 0);
-                    if (failedRows.length > 0) {
-                        downloadFailedRowsCSV(failedRows, fileName);
+                    const finalSummary = {
+                        totalReceived: rows.length,
+                        insertedCount: totalInsertedAcrossBatches,
+                        skippedCount: allSkippedTransactions.length,
+                        newBalance: finalNewBalance !== undefined ? finalNewBalance : selectedAccount?.currentBalance,
+                        insertedTransactions: allInsertedTransactions,
+                        skippedTransactions: allSkippedTransactions,
+                        setOffResults: allSetOffResults
+                    };
+
+                    setResult(finalSummary);
+
+                    if (allSkippedTransactions.length > 0) {
+                        toast.success(`Processed ${rows.length} rows: ${totalInsertedAcrossBatches} entered DB, ${allSkippedTransactions.length} skipped.`);
+                    } else {
+                        toast.success(`All ${totalInsertedAcrossBatches} transactions uploaded successfully to DB!`);
                     }
                 }
             }
@@ -1558,8 +1733,6 @@ interface SetOffPreview {
         toast.success('Template downloaded!');
     };
 
-
-
     const handleReset = () => {
         setRows([]);
         setFileName('');
@@ -1571,6 +1744,7 @@ interface SetOffPreview {
         setShowErrorsModal(false);
         setErrorCategoryFilter('all');
         setErrorSearchQuery('');
+        setResultActiveTab('entered');
         if (fileRef.current) fileRef.current.value = '';
     };
 
@@ -1591,36 +1765,178 @@ interface SetOffPreview {
     const validCount = rows.filter(r => r._rowErrors.length === 0).length;
     const errorCount = rows.filter(r => r._rowErrors.length > 0).length;
 
+    const totalDebitAmount = useMemo(() => {
+        return rows.reduce((sum, r) => sum + (Number(r.Debit) || 0), 0);
+    }, [rows]);
+
+    const totalCreditAmount = useMemo(() => {
+        return rows.reduce((sum, r) => sum + (Number(r.Credit) || 0), 0);
+    }, [rows]);
+
     const renderMainBody = () => (
         <div className="space-y-5">
-                    {/* Percentage Loader */}
+                    {/* Real-time Uploading Dashboard & Loader */}
                     {uploading && (
-                        <div className="p-8 border rounded-2xl flex flex-col items-center justify-center space-y-6 shadow-[0_0_40px_rgba(200,230,0,0.06)]" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                            <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-lime/10" style={{ color: 'var(--brand-lime)' }}>
-                                <Loader2 className="animate-spin" size={28} />
+                        <div className="p-6 sm:p-8 border rounded-2xl flex flex-col space-y-6 shadow-2xl animate-fade-in" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
+                            {/* Header Status */}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center gap-3.5">
+                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-lime/10 text-lime shrink-0 shadow-[0_0_20px_rgba(200,230,0,0.2)]" style={{ color: 'var(--brand-lime)' }}>
+                                        <Loader2 className="animate-spin" size={24} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="text-base font-black tracking-wide text-main" style={{ color: 'var(--text-main)' }}>
+                                                Uploading & Processing Ledger
+                                            </h4>
+                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-lime/10 text-lime border border-lime/30 animate-pulse" style={{ color: 'var(--brand-lime)', borderColor: 'var(--brand-lime)' }}>
+                                                Live Processing
+                                            </span>
+                                        </div>
+                                        <p className="text-xs mt-0.5 text-dim" style={{ color: 'var(--text-dim)' }}>
+                                            Writing to <strong className="text-white">{selectedAccount?.accountName || selectedAccount?.bankName}</strong> • {uploadLiveStats ? `Batch ${uploadLiveStats.currentBatch} of ${uploadLiveStats.totalBatches}` : 'Initializing batches...'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <span className="text-2xl font-black font-mono" style={{ color: 'var(--brand-lime)' }}>{uploadProgress}%</span>
+                                    <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Completed</p>
+                                </div>
                             </div>
-                            <div className="text-center w-full max-w-md">
-                                <h4 className="text-md font-black uppercase tracking-wider text-main" style={{ color: 'var(--text-main)' }}>Uploading Ledger Entries</h4>
-                                <p className="text-xs mt-1.5 text-dim" style={{ color: 'var(--text-dim)' }}>
-                                    {uploadProgress < 25 && "Validating statement records and branch assignments..."}
-                                    {uploadProgress >= 25 && uploadProgress < 65 && "Matching customers & auto setting-off invoices..."}
-                                    {uploadProgress >= 65 && uploadProgress < 95 && "Writing ledger entries & updating running balances..."}
-                                    {uploadProgress >= 95 && "Finalizing bank account transaction records..."}
-                                </p>
 
-                                <div className="mt-8 flex justify-between text-xs font-bold text-dim mb-2">
-                                    <span className="uppercase tracking-widest text-[10px]">Processing {validCount} Transaction(s)</span>
-                                    <span className="text-lime font-black text-sm" style={{ color: 'var(--brand-lime)' }}>{uploadProgress}%</span>
-                                </div>
-                                <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden border" style={{ borderColor: 'var(--border-main)' }}>
+                            {/* Glowing Progress Bar */}
+                            <div className="space-y-1.5">
+                                <div className="w-full bg-white/10 rounded-full h-3.5 overflow-hidden border p-0.5" style={{ borderColor: 'var(--border-main)' }}>
                                     <div
-                                        className="bg-lime h-full rounded-full transition-all duration-300 shadow-[0_0_15px_rgba(200,230,0,0.6)]"
+                                        className="h-full rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(200,230,0,0.8)] relative overflow-hidden"
                                         style={{ width: `${uploadProgress}%`, backgroundColor: 'var(--brand-lime)' }}
-                                    />
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse" />
+                                    </div>
+                                </div>
+                                <div className="flex justify-between text-[11px] font-semibold text-dim">
+                                    <span>
+                                        Processed <strong className="text-white">{uploadLiveStats?.processedCount || 0}</strong> of <strong className="text-white">{uploadLiveStats?.totalCount || validCount}</strong> transactions
+                                    </span>
+                                    <span>
+                                        {uploadProgress < 30 ? "Validating & parsing batch..." : uploadProgress < 85 ? "Applying DB insertions & invoice set-offs..." : "Committing running balances..."}
+                                    </span>
                                 </div>
                             </div>
+
+                            {/* 4 Real-time Metrics Cards */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                {/* Total / Progress Card */}
+                                <div className="p-3.5 rounded-xl border bg-black/30 flex flex-col justify-between" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-center justify-between text-dim text-xs">
+                                        <span className="font-bold uppercase tracking-wider text-[10px]">Total Processed</span>
+                                        <Activity size={14} className="text-blue-400" />
+                                    </div>
+                                    <div className="mt-2">
+                                        <span className="text-xl font-black font-mono text-white">
+                                            {uploadLiveStats?.processedCount || 0}
+                                        </span>
+                                        <span className="text-xs text-dim font-bold ml-1">/ {uploadLiveStats?.totalCount || validCount}</span>
+                                    </div>
+                                    <div className="text-[10px] text-blue-400 font-bold mt-1">
+                                        {uploadLiveStats ? `${Math.round((uploadLiveStats.processedCount / (uploadLiveStats.totalCount || 1)) * 100)}% of sheet` : 'Starting...'}
+                                    </div>
+                                </div>
+
+                                {/* Entered DB Card */}
+                                <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex flex-col justify-between">
+                                    <div className="flex items-center justify-between text-emerald-300 text-xs">
+                                        <span className="font-bold uppercase tracking-wider text-[10px]">Entered In DB</span>
+                                        <Database size={14} className="text-emerald-400" />
+                                    </div>
+                                    <div className="mt-2">
+                                        <span className="text-xl font-black font-mono text-emerald-400">
+                                            {uploadLiveStats?.insertedCount || 0}
+                                        </span>
+                                    </div>
+                                    <div className="text-[10px] text-emerald-300/80 font-bold mt-1 flex items-center gap-1">
+                                        <Check size={10} /> Saved to Ledger
+                                    </div>
+                                </div>
+
+                                {/* Skipped Card */}
+                                <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex flex-col justify-between">
+                                    <div className="flex items-center justify-between text-amber-300 text-xs">
+                                        <span className="font-bold uppercase tracking-wider text-[10px]">Skipped</span>
+                                        <AlertTriangle size={14} className="text-amber-400" />
+                                    </div>
+                                    <div className="mt-2">
+                                        <span className="text-xl font-black font-mono text-amber-400">
+                                            {uploadLiveStats?.skippedCount || 0}
+                                        </span>
+                                    </div>
+                                    <div className="text-[10px] text-amber-300/80 font-bold mt-1">
+                                        DB duplicates / mismatch
+                                    </div>
+                                </div>
+
+                                {/* Set-Offs Card */}
+                                <div className="p-3.5 rounded-xl border border-purple-500/30 bg-purple-500/10 flex flex-col justify-between">
+                                    <div className="flex items-center justify-between text-purple-300 text-xs">
+                                        <span className="font-bold uppercase tracking-wider text-[10px]">Set-Offs Applied</span>
+                                        <Link2 size={14} className="text-purple-400" />
+                                    </div>
+                                    <div className="mt-2">
+                                        <span className="text-xl font-black font-mono text-purple-400">
+                                            {uploadLiveStats?.setOffCount || 0}
+                                        </span>
+                                    </div>
+                                    <div className="text-[10px] text-purple-300/80 font-bold mt-1">
+                                        Auto invoice settlements
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Live Streaming Feed / Activity Ticker */}
+                            {uploadLiveStats && uploadLiveStats.recentActivities.length > 0 && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-dim flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                                            Real-Time Execution Stream
+                                        </span>
+                                        <span className="text-[10px] font-bold text-dim">Streaming Live</span>
+                                    </div>
+                                    <div className="p-3 rounded-xl border bg-black/40 max-h-48 overflow-y-auto space-y-2 border-white/10 font-mono text-xs custom-scrollbar">
+                                        {uploadLiveStats.recentActivities.map((act) => (
+                                            <div
+                                                key={act.id}
+                                                className={`p-2 rounded-lg border flex items-start justify-between gap-3 text-[11px] animate-fade-in ${
+                                                    act.type === 'SUCCESS'
+                                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200'
+                                                        : act.type === 'SETOFF'
+                                                        ? 'bg-purple-500/10 border-purple-500/20 text-purple-200'
+                                                        : act.type === 'WARNING'
+                                                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-200'
+                                                        : 'bg-blue-500/10 border-blue-500/20 text-blue-200'
+                                                }`}
+                                            >
+                                                <div className="space-y-0.5 overflow-hidden">
+                                                    <div className="font-bold truncate flex items-center gap-1.5">
+                                                        {act.type === 'SUCCESS' && <CheckCircle size={12} className="text-emerald-400 shrink-0" />}
+                                                        {act.type === 'SETOFF' && <Link2 size={12} className="text-purple-400 shrink-0" />}
+                                                        {act.type === 'WARNING' && <AlertTriangle size={12} className="text-amber-400 shrink-0" />}
+                                                        {act.type === 'INFO' && <Info size={12} className="text-blue-400 shrink-0" />}
+                                                        <span>{act.title}</span>
+                                                    </div>
+                                                    {act.details && (
+                                                        <p className="text-[10px] text-white/60 truncate pl-4.5">{act.details}</p>
+                                                    )}
+                                                </div>
+                                                <span className="text-[9px] text-white/40 shrink-0 font-sans">{act.time}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="text-[10px] uppercase tracking-widest font-black text-white/30 text-center">
-                                Do not close this modal or refresh the window
+                                Do not close this modal or refresh the window while upload is in progress
                             </div>
                         </div>
                     )}
@@ -1844,16 +2160,87 @@ interface SetOffPreview {
                                     </div>
                                 </div>
                                 <div className="flex gap-2 w-full sm:w-auto">
-                                    <button onClick={handleReset} disabled={uploading} className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-xs font-bold border hover:bg-black/5 disabled:opacity-40" style={{ borderColor: 'var(--border-main)' }}>
+                                    <button onClick={handleReset} disabled={uploading} className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg text-xs font-bold border hover:bg-black/5 disabled:opacity-40 cursor-pointer bg-transparent" style={{ borderColor: 'var(--border-main)' }}>
                                         Clear File
                                     </button>
                                     <button onClick={handleSubmit} disabled={uploading || validCount === 0 || !selectedAccountId}
-                                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold disabled:opacity-50 border-none hover:scale-[1.02] active:scale-95 transition-all shadow-md"
+                                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold disabled:opacity-50 border-none hover:scale-[1.02] active:scale-95 transition-all shadow-md cursor-pointer disabled:cursor-not-allowed"
                                         style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
                                     >
                                         {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                                         {uploading ? 'Uploading...' : `Upload ${validCount} Transactions`}
                                     </button>
+                                </div>
+                            </div>
+
+                            {/* Live Sheet Metrics Summary Cards */}
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                <div className="p-3.5 rounded-xl border bg-black/20 flex flex-col justify-between" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-center justify-between text-dim text-xs">
+                                        <span className="font-bold uppercase tracking-wider text-[10px]">Total Parsed</span>
+                                        <FileText size={14} className="text-blue-400" />
+                                    </div>
+                                    <div className="mt-1">
+                                        <span className="text-xl font-black font-mono text-white">{rows.length.toLocaleString()}</span>
+                                        <span className="text-[10px] text-dim ml-1">rows</span>
+                                    </div>
+                                    <span className="text-[10px] text-blue-400/90 font-bold mt-1">From uploaded file</span>
+                                </div>
+
+                                <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex flex-col justify-between">
+                                    <div className="flex items-center justify-between text-emerald-300 text-xs">
+                                        <span className="font-bold uppercase tracking-wider text-[10px]">Valid Ready</span>
+                                        <CheckCircle size={14} className="text-emerald-400" />
+                                    </div>
+                                    <div className="mt-1">
+                                        <span className="text-xl font-black font-mono text-emerald-400">{validCount.toLocaleString()}</span>
+                                        <span className="text-[10px] text-emerald-300/70 ml-1">rows</span>
+                                    </div>
+                                    <span className="text-[10px] text-emerald-300 font-bold mt-1">{rows.length > 0 ? `${Math.round((validCount / rows.length) * 100)}% valid` : '0%'}</span>
+                                </div>
+
+                                <div className={`p-3.5 rounded-xl border flex flex-col justify-between ${errorCount > 0 ? 'border-rose-500/30 bg-rose-500/10' : 'border-white/10 bg-black/20'}`}>
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className={`font-bold uppercase tracking-wider text-[10px] ${errorCount > 0 ? 'text-rose-300' : 'text-dim'}`}>Errors Blocked</span>
+                                        <AlertTriangle size={14} className={errorCount > 0 ? 'text-rose-400' : 'text-dim'} />
+                                    </div>
+                                    <div className="mt-1">
+                                        <span className={`text-xl font-black font-mono ${errorCount > 0 ? 'text-rose-400' : 'text-white/60'}`}>{errorCount.toLocaleString()}</span>
+                                        <span className="text-[10px] text-dim ml-1">rows</span>
+                                    </div>
+                                    {errorCount > 0 ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowErrorsModal(true)}
+                                            className="text-[10px] text-rose-300 hover:text-rose-200 underline font-bold mt-1 text-left cursor-pointer bg-transparent border-none p-0"
+                                        >
+                                            View {errorCount} issue{errorCount === 1 ? '' : 's'} &rarr;
+                                        </button>
+                                    ) : (
+                                        <span className="text-[10px] text-emerald-400 font-bold mt-1">Clean dataset</span>
+                                    )}
+                                </div>
+
+                                <div className="p-3.5 rounded-xl border bg-black/20 flex flex-col justify-between" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-center justify-between text-dim text-xs">
+                                        <span className="font-bold uppercase tracking-wider text-[10px]">Total Inflow (Debit)</span>
+                                        <span className="text-[11px] font-bold text-emerald-400 font-mono">+$</span>
+                                    </div>
+                                    <div className="mt-1">
+                                        <span className="text-lg font-black font-mono text-emerald-400">${totalDebitAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <span className="text-[10px] text-dim font-bold mt-1">Receipts & Deposits</span>
+                                </div>
+
+                                <div className="p-3.5 rounded-xl border bg-black/20 flex flex-col justify-between" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-center justify-between text-dim text-xs">
+                                        <span className="font-bold uppercase tracking-wider text-[10px]">Total Outflow (Credit)</span>
+                                        <span className="text-[11px] font-bold text-rose-400 font-mono">-$</span>
+                                    </div>
+                                    <div className="mt-1">
+                                        <span className="text-lg font-black font-mono text-rose-400">${totalCreditAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <span className="text-[10px] text-dim font-bold mt-1">Payments & Transfers</span>
                                 </div>
                             </div>
 
@@ -2371,165 +2758,342 @@ interface SetOffPreview {
                                     </div>
                                 )}
                             </div>
+
+                            {/* Preview Footer Action Buttons */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={handleReset}
+                                    disabled={uploading}
+                                    className="px-4 py-2 rounded-xl text-xs font-bold border border-white/10 hover:bg-white/5 text-dim hover:text-white transition-all cursor-pointer bg-transparent disabled:opacity-40"
+                                >
+                                    Cancel & Re-upload
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSubmit}
+                                    disabled={uploading || validCount === 0}
+                                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold transition-all border-none hover:scale-105 active:scale-95 shadow-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none"
+                                    style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                                >
+                                    {uploading ? (
+                                        <>
+                                            <Loader2 size={15} className="animate-spin" />
+                                            <span>Processing Upload ({uploadProgress}%)...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Upload size={15} />
+                                            <span>Process & Upload {validCount} Transactions</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     )}
 
                     {/* Result Screen */}
                     {result && (
-                        <div className="space-y-6 animate-fade-in py-2">
-                            {/* Success Header Banner */}
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-2xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
-                                <div className="flex items-center gap-4 text-center sm:text-left">
-                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e' }}>
-                                        <CheckCircle size={28} />
+                        <div className="space-y-6 animate-fade-in">
+                            {/* Result Top Alert */}
+                            <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+                                (result.skippedCount || 0) > 0 ? 'bg-amber-500/10 border-amber-500/30' : 'bg-emerald-500/10 border-emerald-500/30'
+                            }`}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                                        (result.skippedCount || 0) > 0 ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-400'
+                                    }`}>
+                                        {(result.skippedCount || 0) > 0 ? <AlertTriangle size={20} /> : <CheckCircle size={20} />}
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-main">Import Successful!</h3>
+                                        <h3 className="text-base font-bold text-main">
+                                            {result.insertedCount > 0
+                                                ? (result.skippedCount > 0 ? 'Upload Completed with Skipped Items' : 'Upload Completed Successfully!')
+                                                : 'No Transactions Added'}
+                                        </h3>
                                         <p className="text-xs text-dim mt-0.5">
-                                            Successfully imported <span className="font-bold text-emerald-400">{result.createdCount || rows.filter(r => r._rowErrors.length === 0).length}</span> transaction(s) into <span className="font-bold text-main">{selectedAccount?.accountName || 'Bank Account'}</span>.
+                                            {result.message || `${result.insertedCount} transactions entered into database.`}
                                         </p>
                                     </div>
                                 </div>
-                                {result.newBalance !== undefined && (
-                                    <div className="px-4 py-2.5 rounded-xl border text-center sm:text-right shrink-0" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                                        <p className="text-[10px] uppercase font-bold tracking-wider text-dim">Updated Bank Balance</p>
-                                        <p className="text-base font-mono font-black text-brand-lime">${Number(result.newBalance).toFixed(2)}</p>
-                                    </div>
+                                {(result.skippedCount || 0) > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => downloadSkippedReportCSV(result.skippedTransactions || [], fileName)}
+                                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 transition-all cursor-pointer shrink-0"
+                                    >
+                                        <Download size={13} /> Download Skipped Log (CSV)
+                                    </button>
                                 )}
                             </div>
 
-                            {/* Basic Details Table of Imported Transactions */}
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between px-1">
-                                    <h4 className="text-xs font-bold uppercase tracking-wider text-dim flex items-center gap-1.5">
-                                        <FileText size={14} className="text-brand-lime" /> Imported Transactions Summary ({rows.filter(r => r._rowErrors.length === 0).length})
-                                    </h4>
+                            {/* Summary Metrics Cards */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div className="p-3.5 rounded-xl border bg-black/10 flex flex-col justify-between" style={{ borderColor: 'var(--border-main)' }}>
+                                    <span className="text-[11px] font-bold text-dim">Total Rows In File</span>
+                                    <span className="text-xl font-black text-main mt-1">
+                                        {result.totalProcessed || ((result.insertedCount || 0) + (result.skippedCount || 0))}
+                                    </span>
+                                    <span className="text-[10px] text-dim mt-0.5">Parsed file rows</span>
                                 </div>
-
-                                <div className="border rounded-2xl overflow-hidden" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
-                                    <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-                                        <table className="w-full text-left text-xs border-collapse">
-                                            <thead className="sticky top-0 z-10" style={{ background: 'var(--bg-input)', borderBottom: '1px solid var(--border-main)' }}>
-                                                <tr>
-                                                    <th className="py-3 px-4 w-10 text-center text-dim font-bold">#</th>
-                                                    <th className="py-3 px-4 font-bold">Date</th>
-                                                    <th className="py-3 px-4 font-bold">Description</th>
-                                                    <th className="py-3 px-4 font-bold">Connected Party / Account</th>
-                                                    <th className="py-3 px-4 font-bold">Type</th>
-                                                    <th className="py-3 px-4 font-bold text-right">Amount</th>
-                                                    <th className="py-3 px-4 font-bold">Ref ID</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                                                {rows.filter(r => r._rowErrors.length === 0).map((row, idx) => {
-                                                    const partyName = row.customer?.name || (row.supplier?.name || (row.supplier as any)?.companyName) || row.customerName || row.supplierName;
-                                                    const accountName = row.supplier ? (row.matchedAccount?.name || 'Accounts Payable') : row.customer ? (row.matchedAccount?.name || 'Accounts Receivable') : (row.matchedAccount?.name || row.accountsName || '-');
-
-                                                    return (
-                                                        <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                                                            <td className="py-3 px-4 text-center font-mono text-dim text-[11px]">{idx + 1}</td>
-                                                            <td className="py-3 px-4 font-mono font-medium">{formatDateDMY(row.Date)}</td>
-                                                            <td className="py-3 px-4 font-semibold text-main max-w-[200px] truncate" title={row.Description}>{row.Description || '-'}</td>
-                                                            <td className="py-3 px-4">
-                                                                <div className="flex flex-col gap-0.5">
-                                                                    <span className="font-bold text-main text-[11px]">{accountName}</span>
-                                                                    {partyName && (
-                                                                        <span className="text-[10px] text-dim flex items-center gap-1">
-                                                                            {row.supplier ? '🏢' : '👤'} {partyName}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                            <td className="py-3 px-4">
-                                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${row["Transaction Type"] === 'DEBIT' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
-                                                                    {row["Transaction Type"] === 'DEBIT' ? 'DEBIT (Deposit)' : 'CREDIT (Withdrawal)'}
-                                                                </span>
-                                                            </td>
-                                                            <td className="py-3 px-4 text-right font-mono font-bold">
-                                                                <span className={row["Transaction Type"] === 'DEBIT' ? 'text-emerald-400' : 'text-rose-400'}>
-                                                                    ${row.Amount.toFixed(2)}
-                                                                </span>
-                                                            </td>
-                                                            <td className="py-3 px-4 font-mono text-dim text-[11px]">{row.transactionId || '-'}</td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex flex-col justify-between">
+                                    <span className="text-[11px] font-bold text-emerald-400">Entered to DB</span>
+                                    <span className="text-xl font-black text-emerald-400 mt-1">
+                                        {result.insertedCount || 0}
+                                    </span>
+                                    <span className="text-[10px] text-emerald-500/80 mt-0.5">Successfully inserted</span>
+                                </div>
+                                <div className={`p-3.5 rounded-xl border flex flex-col justify-between ${
+                                    (result.skippedCount || 0) > 0 ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10 bg-black/10'
+                                }`}>
+                                    <span className={`text-[11px] font-bold ${(result.skippedCount || 0) > 0 ? 'text-amber-400' : 'text-dim'}`}>
+                                        Skipped / Not in DB
+                                    </span>
+                                    <span className={`text-xl font-black mt-1 ${(result.skippedCount || 0) > 0 ? 'text-amber-400' : 'text-dim'}`}>
+                                        {result.skippedCount || 0}
+                                    </span>
+                                    <span className="text-[10px] text-dim mt-0.5">Duplicates / Mismatches</span>
+                                </div>
+                                <div className="p-3.5 rounded-xl border border-blue-500/30 bg-blue-500/5 flex flex-col justify-between">
+                                    <span className="text-[11px] font-bold text-blue-400">Updated Bank Balance</span>
+                                    <span className="text-xl font-black text-blue-400 mt-1">
+                                        ${Number(result.newBalance || 0).toFixed(2)}
+                                    </span>
+                                    <span className="text-[10px] text-blue-500/80 mt-0.5">{selectedAccount?.accountName || selectedAccount?.bankName}</span>
                                 </div>
                             </div>
 
-                            {/* Auto Set-Off Summary */}
-                            {result.setOffResults && result.setOffResults.length > 0 && (
-                                <div className="space-y-2 mt-2">
-                                    <h4 className="text-[10px] uppercase tracking-widest font-black text-violet-400 flex items-center gap-1.5 px-1">
-                                        <Zap size={12} /> Auto Set-Off Summary ({result.setOffResults.length})
-                                    </h4>
-                                    <div className="border rounded-2xl overflow-hidden divide-y" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
-                                        {result.setOffResults.map((so: any, idx: number) => {
-                                            const partyName = so.supplierName || so.customerName || 'Connected Party';
-                                            const isSupplier = Boolean(so.supplierName);
-                                            const items = isSupplier ? (so.billsSetOff || []) : (so.invoicesSetOff || []);
+                            {/* Tabs Navigation */}
+                            <div className="flex items-center gap-1 p-1 rounded-xl border bg-black/20" style={{ borderColor: 'var(--border-main)' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setResultActiveTab('entered')}
+                                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border-none cursor-pointer flex items-center gap-2 ${
+                                        resultActiveTab === 'entered' ? 'bg-emerald-500/20 text-emerald-400 shadow-sm' : 'text-dim hover:text-white hover:bg-white/5'
+                                    }`}
+                                >
+                                    <CheckCircle size={14} />
+                                    <span>Entered into DB ({result.insertedTransactions?.length || result.insertedCount || 0})</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setResultActiveTab('skipped')}
+                                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border-none cursor-pointer flex items-center gap-2 ${
+                                        resultActiveTab === 'skipped' ? 'bg-amber-500/20 text-amber-300 shadow-sm' : 'text-dim hover:text-white hover:bg-white/5'
+                                    }`}
+                                >
+                                    <AlertTriangle size={14} />
+                                    <span>Skipped / Not in DB ({result.skippedTransactions?.length || result.skippedCount || 0})</span>
+                                </button>
+                                {result.setOffResults && result.setOffResults.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setResultActiveTab('setoff')}
+                                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border-none cursor-pointer flex items-center gap-2 ${
+                                            resultActiveTab === 'setoff' ? 'bg-violet-500/20 text-violet-300 shadow-sm' : 'text-dim hover:text-white hover:bg-white/5'
+                                        }`}
+                                    >
+                                        <Layers size={14} />
+                                        <span>Auto Set-Off ({result.setOffResults.length})</span>
+                                    </button>
+                                )}
+                            </div>
 
-                                            return (
-                                                <div key={idx} className="p-3.5 space-y-2">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-xs font-bold text-main flex items-center gap-1.5">
-                                                            {isSupplier ? '🏢' : '👤'} {partyName}
-                                                        </span>
-                                                        <span className={`text-xs font-mono font-bold ${isSupplier ? 'text-rose-400' : 'text-emerald-400'}`}>
-                                                            {isSupplier ? `Vendor Payment: $${Number(so.amount || 0).toFixed(2)}` : `Customer Receipt: $${Number(so.amount || 0).toFixed(2)}`}
-                                                        </span>
-                                                    </div>
-
-                                                    {items.length > 0 ? (
-                                                        <div className="space-y-1.5 bg-black/10 dark:bg-white/5 p-2.5 rounded-xl border border-white/5">
-                                                            {items.map((item: any, itemIdx: number) => {
-                                                                const docNum = item.billNumber || item.invoiceNumber;
-                                                                const status = item.newStatus || 'PAID';
-                                                                return (
-                                                                    <div key={itemIdx} className="flex justify-between items-center text-[11px]">
-                                                                        <span className={`font-bold flex items-center gap-1 ${isSupplier ? 'text-amber-300' : 'text-violet-300'}`}>
-                                                                            {isSupplier ? '📄' : '🧾'} {docNum}
-                                                                        </span>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className="font-mono text-white/70">${Number(item.amountApplied || 0).toFixed(2)}</span>
-                                                                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
-                                                                                {status}
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    ) : (
-                                                        <p className="text-[10px] text-white/40 pl-2">
-                                                            {isSupplier ? 'No unpaid bills to set off' : 'No unpaid invoices to set off'}
-                                                        </p>
-                                                    )}
-
-                                                    {so.excessAmount > 0.01 && (
-                                                        <p className="text-[10px] text-amber-400 pl-2 flex items-center gap-1 font-medium">
-                                                            ⚠️ Excess amount: ${Number(so.excessAmount).toFixed(2)} {isSupplier ? '(recorded as advance paid to vendor)' : '(recorded as advance received from customer)'}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                            {/* Tab 1: Entered Transactions */}
+                            {resultActiveTab === 'entered' && (
+                                <div className="space-y-3">
+                                    {(!result.insertedTransactions || result.insertedTransactions.length === 0) ? (
+                                        <div className="p-8 text-center text-dim text-xs border rounded-xl" style={{ borderColor: 'var(--border-main)' }}>
+                                            No transactions were entered into the database.
+                                        </div>
+                                    ) : (
+                                        <div className="border rounded-xl overflow-hidden" style={{ borderColor: 'var(--border-main)' }}>
+                                            <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                                                <table className="w-full text-left text-xs border-collapse">
+                                                    <thead className="sticky top-0 z-10" style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border-main)' }}>
+                                                        <tr>
+                                                            <th className="py-2.5 px-3 font-bold text-dim">Date</th>
+                                                            <th className="py-2.5 px-3 font-bold text-dim">Transaction ID</th>
+                                                            <th className="py-2.5 px-3 font-bold text-dim">Description</th>
+                                                            <th className="py-2.5 px-3 font-bold text-dim">Type</th>
+                                                            <th className="py-2.5 px-3 font-bold text-dim text-right">Amount</th>
+                                                            <th className="py-2.5 px-3 font-bold text-dim text-center">Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                                        {result.insertedTransactions.map((item: any, idx: number) => (
+                                                            <tr key={idx} className="hover:bg-white/[0.02]">
+                                                                <td className="py-2.5 px-3 font-mono text-dim">{item.date ? formatDateDMY(item.date) : '-'}</td>
+                                                                <td className="py-2.5 px-3 font-mono font-bold text-white">{item.transactionId || '-'}</td>
+                                                                <td className="py-2.5 px-3 font-medium text-main">{item.description || '-'}</td>
+                                                                <td className="py-2.5 px-3">
+                                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                                                        item.type === 'CREDIT' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400'
+                                                                    }`}>
+                                                                        {item.type || 'DEBIT'}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="py-2.5 px-3 font-mono font-bold text-right text-white">
+                                                                    ${Number(item.amount || 0).toFixed(2)}
+                                                                </td>
+                                                                <td className="py-2.5 px-3 text-center">
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                                        <CheckCircle size={10} /> Saved to DB
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
-                            {/* Action Buttons */}
-                            <div className="flex justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                                <button onClick={handleReset} className="px-5 py-2.5 rounded-xl text-xs font-bold transition-all border hover:bg-white/5 cursor-pointer bg-transparent" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
-                                    Upload Another File
-                                </button>
-                                <button onClick={handleClose} className="px-6 py-2.5 rounded-xl text-xs font-bold transition-all border-none hover:scale-105 active:scale-95 shadow-md cursor-pointer" style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}>
-                                    Done
-                                </button>
-                            </div>
+                            {/* Tab 2: Skipped Transactions */}
+                            {resultActiveTab === 'skipped' && (
+                                <div className="space-y-3">
+                                    {(!result.skippedTransactions || result.skippedTransactions.length === 0) ? (
+                                        <div className="p-8 text-center text-emerald-400 text-xs border border-emerald-500/20 rounded-xl bg-emerald-500/5">
+                                            🎉 0 transactions skipped! All valid records entered into the database.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between text-xs text-dim px-1">
+                                                <span>Showing <strong>{result.skippedTransactions.length}</strong> skipped transactions with reasons:</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => downloadSkippedReportCSV(result.skippedTransactions || [], fileName)}
+                                                    className="text-amber-300 hover:underline flex items-center gap-1 font-bold cursor-pointer"
+                                                >
+                                                    <Download size={12} /> Export CSV
+                                                </button>
+                                            </div>
+                                            <div className="max-h-[350px] overflow-y-auto space-y-2 custom-scrollbar pr-1">
+                                                {result.skippedTransactions.map((s: any, sIdx: number) => (
+                                                    <div
+                                                        key={sIdx}
+                                                        className="p-3.5 rounded-xl border border-amber-500/25 bg-amber-500/[0.04] space-y-2 transition-all"
+                                                    >
+                                                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/15 pb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-300 font-mono">
+                                                                    Item #{sIdx + 1}
+                                                                </span>
+                                                                {s.transactionId && (
+                                                                    <span className="text-[11px] font-mono text-dim">
+                                                                        Ref ID: <strong className="text-white">{s.transactionId}</strong>
+                                                                    </span>
+                                                                )}
+                                                                {s.date && (
+                                                                    <span className="text-[11px] font-mono text-dim">
+                                                                        Date: <strong className="text-white">{formatDateDMY(s.date)}</strong>
+                                                                    </span>
+                                                                )}
+                                                                {s.amount !== undefined && (
+                                                                    <span className="text-[11px] font-bold text-dim">
+                                                                        Amount: <strong className="text-white">${Number(s.amount).toFixed(2)}</strong> ({s.type || 'DEBIT'})
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                                                            <div className="text-dim">
+                                                                <span className="font-semibold text-main">{s.description || 'Transaction'}</span>
+                                                                {s.party && <span className="ml-2 text-[11px] text-dim">({s.party})</span>}
+                                                            </div>
+                                                            <div className="flex items-start gap-1.5 p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs font-semibold shrink-0">
+                                                                <AlertCircle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                                                                <span>{s.reason || 'Skipped due to validation'}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Tab 3: Auto Set-Off Details */}
+                            {resultActiveTab === 'setoff' && result.setOffResults && result.setOffResults.length > 0 && (
+                                            <div className="space-y-3">
+                                                <div className="border rounded-2xl overflow-hidden divide-y" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
+                                                    {result.setOffResults.map((so: any, idx: number) => {
+                                                        const partyName = so.supplierName || so.customerName || 'Connected Party';
+                                                        const isSupplier = Boolean(so.supplierName);
+                                                        const items = isSupplier ? (so.billsSetOff || []) : (so.invoicesSetOff || []);
+                                                        return (
+                                                            <div key={idx} className="p-3.5 space-y-2">
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-xs font-bold text-main flex items-center gap-1.5">
+                                                                        {isSupplier ? '🏢' : '👤'} {partyName}
+                                                                    </span>
+                                                                    <span className={`text-xs font-mono font-bold ${isSupplier ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                                                        {isSupplier ? `Vendor Payment: $${Number(so.amount || 0).toFixed(2)}` : `Customer Receipt: $${Number(so.amount || 0).toFixed(2)}`}
+                                                                    </span>
+                                                                </div>
+                                                                {items.length > 0 ? (
+                                                                    <div className="space-y-1.5 bg-black/10 dark:bg-white/5 p-2.5 rounded-xl border border-white/5">
+                                                                        {items.map((item: any, itemIdx: number) => {
+                                                                            const docNum = item.billNumber || item.invoiceNumber;
+                                                                            const status = item.newStatus || 'PAID';
+                                                                            return (
+                                                                                <div key={itemIdx} className="flex justify-between items-center text-[11px]">
+                                                                                    <span className={`font-bold flex items-center gap-1 ${isSupplier ? 'text-amber-300' : 'text-violet-300'}`}>
+                                                                                        {isSupplier ? '📄' : '🧾'} {docNum}
+                                                                                    </span>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <span className="font-mono text-white/70">${Number(item.amountApplied || 0).toFixed(2)}</span>
+                                                                                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                                                                                            {status}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-[10px] text-white/40 pl-2">
+                                                                        {isSupplier ? 'No unpaid bills to set off' : 'No unpaid invoices to set off'}
+                                                                    </p>
+                                                                )}
+                                                                {so.excessAmount > 0.01 && (
+                                                                    <p className="text-[10px] text-amber-400 pl-2 flex items-center gap-1 font-medium">
+                                                                        ⚠️ Excess amount: ${Number(so.excessAmount).toFixed(2)} {isSupplier ? '(recorded as advance paid to vendor)' : '(recorded as advance received from customer)'}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Action Buttons */}
+                                        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                            <div>
+                                                {(result.skippedCount || 0) > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => downloadSkippedReportCSV(result.skippedTransactions || [], fileName)}
+                                                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition-all cursor-pointer"
+                                                    >
+                                                        <Download size={14} /> Download Skipped Rows (CSV)
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <button onClick={handleReset} className="px-5 py-2.5 rounded-xl text-xs font-bold transition-all border hover:bg-white/5 cursor-pointer bg-transparent" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
+                                                    Upload Another File
+                                                </button>
+                                                <button onClick={handleClose} className="px-6 py-2.5 rounded-xl text-xs font-bold transition-all border-none hover:scale-105 active:scale-95 shadow-md cursor-pointer" style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}>
+                                                    Done
+                                                </button>
+                                            </div>
+                                        </div>
                         </div>
                     )}
         </div>
