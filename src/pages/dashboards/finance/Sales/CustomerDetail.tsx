@@ -1225,6 +1225,7 @@ function StatementsTab({ invoices, payments, creditNotes, customerId }: { invoic
     });
 
     const closingBalance = rows.length > 0 ? rows[rows.length - 1].balance : openingBalance;
+    const displayRows = [...rows].reverse();
 
     const handleDownloadPdf = async () => {
         setDownloading(true);
@@ -1314,30 +1315,25 @@ function StatementsTab({ invoices, payments, creditNotes, customerId }: { invoic
                             </tr>
                         </thead>
                         <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                            {/* Opening Balance Row - only when filtered */}
-                            {viewStart && (
-                                <tr style={{ borderBottom: '1px solid var(--border-main)', backgroundColor: 'rgba(200, 230, 0, 0.03)' }}>
-                                    <td className="px-6 py-4 text-xs font-bold" style={{ color: 'var(--text-dim)' }}>{fmtDate(viewStart)}</td>
-                                    <td className="px-6 py-4 text-xs font-black" style={{ color: 'var(--text-main)' }}>***Opening Balance***</td>
-                                    <td className="px-6 py-4"></td>
-                                    <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>
-                                        {openingBalance > 0 ? openingBalance.toFixed(2) : ''}
-                                    </td>
-                                    <td className="px-6 py-4"></td>
-                                    <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>
-                                        {openingBalance.toFixed(2)}
-                                    </td>
-                                </tr>
-                            )}
+                            {/* Balance Due at top */}
+                            <tr style={{ backgroundColor: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-main)' }}>
+                                <td colSpan={4}></td>
+                                <td className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>
+                                    Balance Due
+                                </td>
+                                <td className="px-6 py-4 text-right text-sm font-black" style={{ color: closingBalance > 0 ? '#EF4444' : '#10B981' }}>
+                                    $ {closingBalance.toFixed(2)}
+                                </td>
+                            </tr>
 
-                            {rows.length === 0 ? (
+                            {displayRows.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="p-12 text-center text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
                                         No transactions found{hasFilter ? ' for the selected date range' : ''}.
                                     </td>
                                 </tr>
                             ) : (
-                                rows.map((row, idx) => (
+                                displayRows.map((row, idx) => (
                                     <tr key={idx} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
                                         <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{fmtDate(row.date)}</td>
                                         <td className="px-6 py-4 text-xs font-bold" style={{ color: row.type === 'invoice' ? 'var(--text-main)' : 'var(--brand-lime)' }}>
@@ -1362,16 +1358,21 @@ function StatementsTab({ invoices, payments, creditNotes, customerId }: { invoic
                                 ))
                             )}
 
-                            {/* Closing Balance Due */}
-                            <tr style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
-                                <td colSpan={4}></td>
-                                <td className="px-6 py-5 text-right text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>
-                                    Balance Due
-                                </td>
-                                <td className="px-6 py-5 text-right text-sm font-black" style={{ color: closingBalance > 0 ? '#EF4444' : '#10B981' }}>
-                                    $ {closingBalance.toFixed(2)}
-                                </td>
-                            </tr>
+                            {/* Opening Balance Row at the bottom of the table when date filtered */}
+                            {viewStart && (
+                                <tr style={{ borderBottom: '1px solid var(--border-main)', backgroundColor: 'rgba(200, 230, 0, 0.03)' }}>
+                                    <td className="px-6 py-4 text-xs font-bold" style={{ color: 'var(--text-dim)' }}>{fmtDate(viewStart)}</td>
+                                    <td className="px-6 py-4 text-xs font-black" style={{ color: 'var(--text-main)' }}>***Opening Balance***</td>
+                                    <td className="px-6 py-4"></td>
+                                    <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>
+                                        {openingBalance > 0 ? openingBalance.toFixed(2) : ''}
+                                    </td>
+                                    <td className="px-6 py-4"></td>
+                                    <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>
+                                        {openingBalance.toFixed(2)}
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>

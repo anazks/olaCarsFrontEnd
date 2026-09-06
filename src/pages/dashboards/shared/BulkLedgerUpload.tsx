@@ -1560,7 +1560,7 @@ interface SetOffPreview {
                             rest[key] = row[key];
                         }
                     }
-                    if (row.customer?._id) {
+                    if (row.customer?._id && !row.isDriver && !row.driverName) {
                         rest.customerId = row.customer._id;
                     }
                     if (row.supplier?._id) {
