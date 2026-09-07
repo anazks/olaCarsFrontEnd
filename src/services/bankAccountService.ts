@@ -67,7 +67,7 @@ export const deleteAllTransactions = async (id: string) => {
 };
 
 export const bulkUploadBankAccountTransactions = async (id: string, data: { branchId?: string; transactions: any[]; clearExisting?: boolean }) => {
-    const response = await api.post(`/api/bank-accounts/${id}/bulk-upload`, data);
+    const response = await api.post(`/api/bank-accounts/${id}/bulk-upload`, data, { timeout: 120000 });
     return response.data;
 };
 

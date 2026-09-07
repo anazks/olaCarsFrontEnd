@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, ChevronRight, ChevronLeft, Search, AlertCircle, Zap, ArrowLeft, Eye, Layers, Activity, Database, Check, Link2 } from 'lucide-react';
+import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, ChevronRight, ChevronLeft, Search, AlertCircle, Zap, ArrowLeft, Eye, Layers, Activity, Database, Check, Link2, StopCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -431,6 +431,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
     const [allBills, setAllBills] = useState<Bill[]>([]);
     const [expandedSetOffRows, setExpandedSetOffRows] = useState<Record<number, boolean>>({});
     const [uploadLiveStats, setUploadLiveStats] = useState<UploadLiveStats | null>(null);
+    const uploadAbortRef = useRef<boolean>(false);
 
     const [tableFilter, setTableFilter] = useState<'all' | 'valid' | 'errors'>('all');
     const [currentPage, setCurrentPage] = useState(1);
@@ -1520,8 +1521,9 @@ interface SetOffPreview {
 
         setUploading(true);
         setUploadProgress(5);
+        uploadAbortRef.current = false;
 
-        const batchSize = 50;
+        const batchSize = 15;
         const totalBatches = Math.ceil(totalRows / batchSize);
 
         setUploadLiveStats({
@@ -1550,6 +1552,41 @@ interface SetOffPreview {
 
         try {
             for (let i = 0; i < totalBatches; i++) {
+                // Check if user requested to stop the upload
+                if (uploadAbortRef.current) {
+                    const stoppedActivity = {
+                        id: `stop-${Date.now()}`,
+                        type: 'WARNING' as const,
+                        title: `Upload stopped by user after batch ${i} of ${totalBatches}`,
+                        details: `${totalInsertedAcrossBatches} transactions saved, remaining batches cancelled`,
+                        time: new Date().toLocaleTimeString()
+                    };
+                    setUploadLiveStats(prev => ({
+                        processedCount: i * batchSize,
+                        totalCount: totalRows,
+                        insertedCount: totalInsertedAcrossBatches,
+                        skippedCount: totalSkippedAcrossBatches,
+                        currentBatch: i,
+                        totalBatches,
+                        setOffCount: allSetOffResults.length,
+                        recentActivities: [stoppedActivity, ...(prev?.recentActivities || [])].slice(0, 12)
+                    }));
+
+                    setResult({
+                        totalReceived: rows.length,
+                        insertedCount: totalInsertedAcrossBatches,
+                        skippedCount: allSkippedTransactions.length,
+                        newBalance: finalNewBalance !== undefined ? finalNewBalance : selectedAccount?.currentBalance,
+                        insertedTransactions: allInsertedTransactions,
+                        skippedTransactions: allSkippedTransactions,
+                        setOffResults: allSetOffResults,
+                        wasStopped: true
+                    });
+
+                    toast(`Upload stopped. ${totalInsertedAcrossBatches} transactions saved to DB.`, { icon: '??' });
+                    break;
+                }
+
                 const start = i * batchSize;
                 const end = Math.min(start + batchSize, totalRows);
                 const currentBatchRows = validRows.slice(start, end);
@@ -1600,7 +1637,30 @@ interface SetOffPreview {
 
                 let res: any;
                 try {
-                    res = await bulkUploadBankAccountTransactions(selectedAccountId, payload);
+                    const maxRetries = 2;
+                    let attempt = 0;
+                    while (attempt <= maxRetries) {
+                        try {
+                            res = await bulkUploadBankAccountTransactions(selectedAccountId, payload);
+                            break;
+                        } catch (batchErr: any) {
+                            attempt++;
+                            if (attempt > maxRetries || uploadAbortRef.current) {
+                                throw batchErr;
+                            }
+                            setUploadLiveStats(prev => ({
+                                ...(prev || {} as any),
+                                recentActivities: [{
+                                    id: `retry-${i}-${attempt}-${Date.now()}`,
+                                    type: 'WARNING',
+                                    title: `Batch ${i + 1}/${totalBatches} error (attempt ${attempt}/${maxRetries}). Retrying in ${attempt * 1.5}s...`,
+                                    details: batchErr?.response?.data?.message || batchErr?.message || 'Network blip or request timeout',
+                                    time: new Date().toLocaleTimeString()
+                                }, ...(prev?.recentActivities || [])].slice(0, 12)
+                            }));
+                            await new Promise(resolve => setTimeout(resolve, attempt * 1500));
+                        }
+                    }
                 } finally {
                     clearInterval(progressInterval);
                 }
@@ -1679,6 +1739,11 @@ interface SetOffPreview {
                     setOffCount: allSetOffResults.length,
                     recentActivities: [...newItems, ...(prev?.recentActivities || [])].slice(0, 12)
                 }));
+
+                // Add 500ms pacing delay between batches to allow backend/DB load to settle
+                if (i < totalBatches - 1 && !uploadAbortRef.current) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
 
                 if (i === totalBatches - 1) {
                     setUploadProgress(100);
@@ -1935,8 +2000,29 @@ interface SetOffPreview {
                                 </div>
                             )}
 
-                            <div className="text-[10px] uppercase tracking-widest font-black text-white/30 text-center">
-                                Do not close this modal or refresh the window while upload is in progress
+                            {/* Stop Upload Button */}
+                            <div className="flex flex-col items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (window.confirm('Are you sure you want to stop the upload? Transactions already saved to DB will NOT be rolled back.')) {
+                                            uploadAbortRef.current = true;
+                                            toast('Stopping upload after current batch completes...', { icon: '\u23F3' });
+                                        }
+                                    }}
+                                    className="group flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-95"
+                                    style={{
+                                        background: 'rgba(239, 68, 68, 0.12)',
+                                        borderColor: 'rgba(239, 68, 68, 0.35)',
+                                        color: '#f87171'
+                                    }}
+                                >
+                                    <StopCircle size={16} className="group-hover:animate-pulse" />
+                                    Stop Upload
+                                </button>
+                                <div className="text-[10px] uppercase tracking-widest font-black text-white/30 text-center">
+                                    Already-saved transactions will not be rolled back
+                                </div>
                             </div>
                         </div>
                     )}
