@@ -7,6 +7,55 @@ export interface Customer {
         _id: string;
         driverId?: string;
         status?: string;
+        activationDate?: string;
+        deactivationDate?: string;
+        activation?: {
+            activatedDate?: string;
+        };
+        emergencyContact?: {
+            name?: string;
+            relationship?: string;
+            phone?: string;
+        };
+        weeklyRent?: number;
+        currentVehicle?: {
+            _id?: string;
+            basicDetails?: {
+                make?: string;
+                model?: string;
+                year?: number;
+                vin?: string;
+                fleetNumber?: string;
+                colour?: string;
+                weeklyRent?: number;
+            };
+            legalDocs?: {
+                registrationNumber?: string;
+            };
+            fleet?: {
+                _id?: string;
+                fleetNumber?: string;
+                status?: string;
+            };
+            plateNumber?: string;
+            status?: string;
+        };
+        rentChangeHistory?: Array<{
+            _id?: string;
+            previousWeeklyRent?: number;
+            newWeeklyRent: number;
+            effectiveDate?: string;
+            remark: string;
+            vehicle?: string;
+            vehicleRegistrationNumber?: string;
+            vehicleModel?: string;
+            fleetNumber?: string;
+            vin?: string;
+            changedBy?: string;
+            changedByName?: string;
+            changedByRole?: string;
+            createdAt?: string;
+        }>;
         rentTracking?: any[];
     };
     name: string;
@@ -23,6 +72,14 @@ export interface Customer {
     city?: string;
     state?: string;
     country?: string;
+    cfFleetNo?: string;
+    cfActiveDate?: string;
+    cfVehicleNo?: string;
+    cfEndDate?: string;
+    cfSection?: string;
+    cfWeeklyRent?: number | string;
+    cfVehicleModel?: string;
+    cfVinNumber?: string;
     status: 'ACTIVE' | 'INACTIVE';
     isDeleted: boolean;
     createdAt: string;
@@ -78,4 +135,9 @@ export interface BulkCustomerUploadResult {
 export const bulkCreateCustomers = async (customers: any[], branch?: string): Promise<{ message: string; data: BulkCustomerUploadResult }> => {
     const response = await api.post('/api/customers/bulk', { customers, branch });
     return response.data;
+};
+
+export const updateCustomerWeeklyRent = async (id: string, payload: { weeklyRent: number; remark: string; effectiveDate?: string }) => {
+    const res = await api.put(`/api/customers/${id}/weekly-rent`, payload);
+    return res.data;
 };

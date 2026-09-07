@@ -5,9 +5,10 @@ import {
     RefreshCw, Calendar, FileSpreadsheet,
     Download, CheckCircle2, AlertCircle,
     ArrowLeft, Zap, Briefcase, Filter, X,
-    ChevronLeft, ChevronRight, Search, Eye
+    ChevronLeft, ChevronRight, Search, Eye,
+    Car, Hash, Tag, Pencil, History
 } from 'lucide-react';
-import { getCustomerById, updateCustomer, type Customer } from '../../../../services/customerService';
+import { getCustomerById, updateCustomer, updateCustomerWeeklyRent, type Customer } from '../../../../services/customerService';
 import { driverService } from '../../../../services/driverService';
 import { getInvoicesByCustomer, type Invoice } from '../../../../services/invoiceService';
 import { getAllCreditNotes, type CreditNote } from '../../../../services/creditNoteService';
@@ -520,6 +521,7 @@ const CustomerDetail = () => {
                         totalPaymentsReceived={totalPaymentsReceived}
                         totalApplied={totalApplied}
                         totalInvoiced={totalInvoiced}
+                        onRefresh={fetchData}
                     />
                 )}
                 {activeTab === 'emi' && <EMITab customer={customer} invoices={invoices} />}
@@ -645,90 +647,555 @@ const OverviewTab = ({
     prepaymentBalance, 
     totalPaymentsReceived, 
     totalApplied,
-    totalInvoiced
+    totalInvoiced,
+    onRefresh
 }: { 
     customer: Customer;
     prepaymentBalance: number;
     totalPaymentsReceived: number;
     totalApplied: number;
     totalInvoiced: number;
-}) => (
-    <div className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-2 duration-300">
-            {/* Personal Details */}
-            <SectionCard title="Contact Information" icon={<Phone size={18} />}>
-                <div className="space-y-4 pt-2">
-                    <InfoRow label="Email Address" value={customer.email} icon={<Mail size={14} />} />
-                    <InfoRow label="Phone Number" value={customer.phone} icon={<Phone size={14} />} />
-                    <InfoRow label="WhatsApp" value={customer.whatsappNumber || 'N/A'} icon={<Phone size={14} />} />
-                    <InfoRow label="Address" value={customer.address ? `${customer.address}, ${customer.city || ''}, ${customer.state || ''}, ${customer.country || ''}` : 'N/A'} icon={<MapPin size={14} />} />
-                </div>
-            </SectionCard>
+    onRefresh?: () => void;
+}) => {
+    const isDriver = !!customer.driver;
+    const driver = customer.driver as any;
+    const vehicle = driver?.currentVehicle;
 
-            {/* Double-Entry Ledger Summary Card */}
-            <SectionCard title="Balance Reconciliation" icon={<CreditCard size={18} />}>
-                <div className="space-y-4 pt-2">
-                    <InfoRow label="Total Invoiced" value={`$${totalInvoiced.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
-                    <InfoRow label="Total Payments Applied" value={`$${totalApplied.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
-                    <div className="pt-4 flex items-center justify-between border-t" style={{ borderColor: 'var(--border-main)' }}>
-                        <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Prepayment Credit (Extra)</span>
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${prepaymentBalance > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-white/5 text-dim border-white/10'}`}>
-                            ${prepaymentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+    // 1. Vehicle Plate Number
+    const plateNumber = vehicle?.legalDocs?.registrationNumber || vehicle?.plateNumber || customer.cfVehicleNo || '—';
+
+    // 2. Vehicle Model
+    const make = vehicle?.basicDetails?.make || '';
+    const model = vehicle?.basicDetails?.model || '';
+    const year = vehicle?.basicDetails?.year ? `(${vehicle.basicDetails.year})` : '';
+    const vehicleModel = [make, model, year].filter(Boolean).join(' ').trim() || (vehicle ? 'Model Unspecified' : 'No Vehicle Assigned');
+
+    // 3. VIN Number
+    const vinNumber = vehicle?.basicDetails?.vin || vehicle?.vin || '—';
+
+    // 4. Active Date
+    const rawActiveDate = driver?.activationDate || driver?.activation?.activatedDate || customer.cfActiveDate;
+    const activeDateFormatted = rawActiveDate 
+        ? new Date(rawActiveDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) 
+        : '—';
+
+    // 5. End Date
+    const rawEndDate = driver?.deactivationDate || customer.cfEndDate;
+    const endDateFormatted = rawEndDate 
+        ? new Date(rawEndDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) 
+        : (rawActiveDate ? 'Ongoing / Active' : '—');
+
+    // 6. Fleet Number (if assigned)
+    const fleetNo = vehicle?.basicDetails?.fleetNumber || vehicle?.fleet?.fleetNumber || (vehicle as any)?.fleetNumber || customer.cfFleetNo;
+
+    // 7. Weekly Rent
+    const activeTrackingRent = driver?.rentTracking?.find((t: any) => t.amount && Number(t.amount) > 0)?.amount;
+    const vehicleSellingPrice = vehicle ? (vehicle.basicDetails?.sellingValue || vehicle.purchaseDetails?.purchasePrice || 0) : 0;
+    const vehicleDurationWeeks = vehicle?.basicDetails?.leaseDurationWeeks || 260;
+    const calculatedVehicleWeeklyRent = vehicleSellingPrice > 0 && vehicleDurationWeeks > 0 
+        ? Math.ceil(vehicleSellingPrice / vehicleDurationWeeks) 
+        : null;
+
+    const rawWeeklyRent = driver?.weeklyRent ?? 
+        vehicle?.basicDetails?.weeklyRent ?? 
+        activeTrackingRent ?? 
+        (driver?.rentTracking && driver.rentTracking.length > 0 ? driver.rentTracking[0]?.amount : null) ??
+        customer.cfWeeklyRent ??
+        calculatedVehicleWeeklyRent;
+    const weeklyRentFormatted = rawWeeklyRent !== null && rawWeeklyRent !== undefined && !isNaN(Number(rawWeeklyRent)) && Number(rawWeeklyRent) > 0
+        ? `$${Number(rawWeeklyRent).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : '—';
+
+    // Modal state for changing weekly rent
+    const [isRentModalOpen, setIsRentModalOpen] = useState(false);
+    const [newRentAmount, setNewRentAmount] = useState('');
+    const [rentRemark, setRentRemark] = useState('');
+    const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().split('T')[0]);
+    const [isUpdatingRent, setIsUpdatingRent] = useState(false);
+
+    const handleRentSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const amt = parseFloat(newRentAmount);
+        if (isNaN(amt) || amt <= 0) {
+            toast.error("Please enter a valid weekly rent amount greater than 0");
+            return;
+        }
+        if (!rentRemark.trim()) {
+            toast.error("Please provide a remark/reason for the rent adjustment");
+            return;
+        }
+
+        setIsUpdatingRent(true);
+        const toastId = toast.loading("Updating weekly rent...");
+        try {
+            await updateCustomerWeeklyRent(customer._id, {
+                weeklyRent: amt,
+                remark: rentRemark.trim(),
+                effectiveDate: effectiveDate || undefined
+            });
+            toast.success("Weekly rent updated successfully!", { id: toastId });
+            setIsRentModalOpen(false);
+            setRentRemark('');
+            if (onRefresh) onRefresh();
+        } catch (err: any) {
+            console.error("Failed to update weekly rent:", err);
+            toast.error(err?.response?.data?.message || err.message || "Failed to update weekly rent", { id: toastId });
+        } finally {
+            setIsUpdatingRent(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-2 duration-300">
+                {/* Personal Details */}
+                <SectionCard title="Contact Information" icon={<Phone size={18} />}>
+                    <div className="space-y-4 pt-2">
+                        <InfoRow label="Email Address" value={customer.email} icon={<Mail size={14} />} />
+                        <InfoRow label="Phone Number" value={customer.phone} icon={<Phone size={14} />} />
+                        <InfoRow label="WhatsApp" value={customer.whatsappNumber || 'N/A'} icon={<Phone size={14} />} />
+                        <InfoRow label="Address" value={customer.address ? `${customer.address}, ${customer.city || ''}, ${customer.state || ''}, ${customer.country || ''}` : 'N/A'} icon={<MapPin size={14} />} />
+                    </div>
+                </SectionCard>
+
+                {/* Double-Entry Ledger Summary Card */}
+                <SectionCard title="Balance Reconciliation" icon={<CreditCard size={18} />}>
+                    <div className="space-y-4 pt-2">
+                        <InfoRow label="Total Invoiced" value={`$${totalInvoiced.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                        <InfoRow label="Total Payments Applied" value={`$${totalApplied.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                        <div className="pt-4 flex items-center justify-between border-t" style={{ borderColor: 'var(--border-main)' }}>
+                            <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Prepayment Credit (Extra)</span>
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${prepaymentBalance > 0 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-white/5 text-dim border-white/10'}`}>
+                                ${prepaymentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </span>
+                        </div>
+                    </div>
+                </SectionCard>
+
+                {/* Emergency & Driver details */}
+                <SectionCard title="Driver Association" icon={<User size={18} />}>
+                    <div className="space-y-4 pt-2">
+                        {isDriver ? (
+                            <>
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Driver ID</p>
+                                        <p className="text-xs font-mono font-bold text-white">{driver.driverId || 'TEMP-ID'}</p>
+                                    </div>
+                                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                        driver.status === 'ACTIVE' 
+                                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                    }`}>
+                                        {driver.status || 'ACTIVE'}
+                                    </span>
+                                </div>
+                                <div className="space-y-1 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Assigned Vehicle</p>
+                                    <p className="text-xs font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                                        {vehicleModel}
+                                    </p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="space-y-1">
+                                        <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Weekly Rent</p>
+                                        <p className="text-xs font-black text-emerald-400">
+                                            {weeklyRentFormatted !== '—' ? `${weeklyRentFormatted}/wk` : '—'}
+                                        </p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Emergency Contact</p>
+                                        <p className="text-xs font-bold truncate" style={{ color: 'var(--text-main)' }}>{driver.emergencyContact?.name || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <p className="text-xs font-medium text-dim">This customer is not registered as a driver and has no vehicle assignments.</p>
+                        )}
+                    </div>
+                </SectionCard>
+            </div>
+
+            {/* Vehicle & Assignment Details Overview (Shown if Customer is a Driver) */}
+            {isDriver && (
+                <div className="p-6 rounded-[2rem] border shadow-xl animate-in slide-in-from-bottom-2 duration-300 space-y-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b gap-3" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-xl bg-brand-lime/10 text-brand-lime shrink-0" style={{ color: 'var(--brand-lime)' }}>
+                                <Car size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-xs font-black uppercase tracking-widest text-white">
+                                    Assigned Vehicle & Contract Lifecycle
+                                </h3>
+                                <p className="text-[10px] font-medium text-dim mt-0.5">
+                                    Vehicle specifications, weekly rental rate, active license plate, identification, and contract dates
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {/* Button on left side of fleet tag */}
+                            <button
+                                onClick={() => {
+                                    setNewRentAmount(rawWeeklyRent ? String(rawWeeklyRent) : '');
+                                    setRentRemark('');
+                                    setEffectiveDate(new Date().toISOString().split('T')[0]);
+                                    setIsRentModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-brand-lime hover:bg-brand-lime/90 text-black shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                title="Change Weekly Rent"
+                            >
+                                <Pencil size={12} /> Change Rent
+                            </button>
+
+                            {fleetNo ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-brand-lime/10 text-brand-lime border border-brand-lime/20" style={{ color: 'var(--brand-lime)' }}>
+                                    <Hash size={12} /> Fleet #{fleetNo}
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-white/5 text-dim border border-white/10">
+                                    <Hash size={12} /> Fleet: Not Assigned
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+                        {/* 1. Vehicle Plate Number */}
+                        <div className="p-4 rounded-2xl border flex flex-col justify-between space-y-2.5" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                <CreditCard size={12} className="text-brand-lime" /> Plate Number
+                            </span>
+                            <div>
+                                <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-mono font-black tracking-wider bg-white/10 text-white border border-white/20">
+                                    {plateNumber}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* 2. Vehicle Model */}
+                        <div className="p-4 rounded-2xl border flex flex-col justify-between space-y-2.5" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                <Car size={12} className="text-brand-lime" /> Vehicle Model
+                            </span>
+                            <p className="text-xs font-bold text-white truncate" title={vehicleModel}>
+                                {vehicleModel}
+                            </p>
+                        </div>
+
+                        {/* 3. VIN Number */}
+                        <div className="p-4 rounded-2xl border flex flex-col justify-between space-y-2.5" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                <Tag size={12} className="text-brand-lime" /> VIN Number
+                            </span>
+                            <p className="text-xs font-mono font-bold text-white truncate" title={vinNumber}>
+                                {vinNumber}
+                            </p>
+                        </div>
+
+                        {/* 4. Weekly Rent */}
+                        <div className="p-4 rounded-2xl border flex flex-col justify-between space-y-2.5" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                <DollarSign size={12} className="text-emerald-400" /> Weekly Rent
+                            </span>
+                            <p className="text-xs font-black text-emerald-400">
+                                {weeklyRentFormatted}
+                            </p>
+                        </div>
+
+                        {/* 5. Active Date */}
+                        <div className="p-4 rounded-2xl border flex flex-col justify-between space-y-2.5" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                <Calendar size={12} className="text-emerald-400" /> Active Date
+                            </span>
+                            <p className="text-xs font-bold text-emerald-400">
+                                {activeDateFormatted}
+                            </p>
+                        </div>
+
+                        {/* 6. End Date */}
+                        <div className="p-4 rounded-2xl border flex flex-col justify-between space-y-2.5" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                <Calendar size={12} className="text-amber-400" /> End Date
+                            </span>
+                            <p className="text-xs font-bold text-amber-400">
+                                {endDateFormatted}
+                            </p>
+                        </div>
+
+                        {/* 7. Fleet Number */}
+                        <div className="p-4 rounded-2xl border flex flex-col justify-between space-y-2.5" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                <Hash size={12} className="text-brand-lime" /> Fleet Number
+                            </span>
+                            <p className="text-xs font-bold text-white">
+                                {fleetNo ? `#${fleetNo}` : 'Not Assigned'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Weekly Rent Adjustment History Section (Only shown when records exist) */}
+            {isDriver && driver.rentChangeHistory && driver.rentChangeHistory.length > 0 && (
+                <div className="p-6 rounded-[2rem] border shadow-xl animate-in slide-in-from-bottom-2 duration-300 space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400">
+                                <History size={18} />
+                            </div>
+                            <div>
+                                <h3 className="text-xs font-black uppercase tracking-widest text-white">
+                                    Weekly Rent Adjustment History
+                                </h3>
+                                <p className="text-[10px] font-medium text-dim mt-0.5">
+                                    Audit trail of rental rate modifications, changed by user details, and scenario remarks
+                                </p>
+                            </div>
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-dim px-2.5 py-1 rounded-lg bg-white/5 border border-white/10">
+                            {driver.rentChangeHistory.length} {driver.rentChangeHistory.length === 1 ? 'Record' : 'Records'}
+                        </span>
+                    </div>
+
+                    <div className="overflow-x-auto custom-scrollbar">
+                        <table className="w-full text-left border-collapse whitespace-nowrap">
+                            <thead>
+                                <tr className="border-b text-[9px] font-black uppercase tracking-widest" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                    <th className="pb-3 px-3">Date & Time</th>
+                                    <th className="pb-3 px-3">Vehicle</th>
+                                    <th className="pb-3 px-3">Adjustment</th>
+                                    <th className="pb-3 px-3">Effective Date</th>
+                                    <th className="pb-3 px-3">Changed By</th>
+                                    <th className="pb-3 px-3">Scenario / Remark</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y text-xs font-medium" style={{ borderColor: 'var(--border-main)' }}>
+                                {driver.rentChangeHistory.map((hist: any, index: number) => {
+                                    const prev = Number(hist.previousWeeklyRent) || 0;
+                                    const next = Number(hist.newWeeklyRent) || 0;
+                                    const diff = next - prev;
+                                    return (
+                                        <tr key={hist._id || index} className="hover:bg-white/[0.02] transition-all">
+                                            <td className="py-3 px-3 text-dim font-mono text-[11px]">
+                                                {hist.createdAt ? new Date(hist.createdAt).toLocaleString() : '—'}
+                                            </td>
+                                            <td className="py-3 px-3">
+                                                {(() => {
+                                                    const plate = hist.vehicleRegistrationNumber || vehicle?.legalDocs?.registrationNumber || vehicle?.basicDetails?.registrationNumber || customer.cfVehicleNo;
+                                                    const model = hist.vehicleModel || (vehicle?.basicDetails?.make ? `${vehicle.basicDetails.make} ${vehicle.basicDetails.model || ''}` : '') || customer.cfVehicleModel;
+                                                    const fleet = hist.fleetNumber || fleetNo;
+                                                    const vinNumber = hist.vin || vehicle?.basicDetails?.vin || customer.cfVinNumber;
+
+                                                    if (!plate && !model && !fleet) {
+                                                        return <span className="text-dim italic text-[11px]">Unassigned / Asset N/A</span>;
+                                                    }
+
+                                                    return (
+                                                        <div className="flex flex-col gap-0.5 max-w-[200px]">
+                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                <span className="font-black text-white flex items-center gap-1 text-[11.5px] bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/10">
+                                                                    <Car size={12} className="text-brand-lime shrink-0" />
+                                                                    {plate || 'No Plate'}
+                                                                </span>
+                                                                {fleet && (
+                                                                    <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                                        #{fleet}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {model && (
+                                                                <span className="text-[10.5px] font-bold text-gray-300 truncate" title={model}>
+                                                                    {model}
+                                                                </span>
+                                                            )}
+                                                            {vinNumber && (
+                                                                <span className="text-[9px] font-mono text-dim tracking-tight truncate" title={`VIN: ${vinNumber}`}>
+                                                                    VIN: {vinNumber}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </td>
+                                            <td className="py-3 px-3 font-bold">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-dim line-through">${prev.toFixed(2)}</span>
+                                                    <span className="text-dim">→</span>
+                                                    <span className="text-emerald-400 font-black">${next.toFixed(2)}</span>
+                                                    {prev > 0 && (
+                                                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-black ${
+                                                            diff > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                                                        }`}>
+                                                            {diff > 0 ? `+${diff.toFixed(2)}` : `${diff.toFixed(2)}`}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-3 text-white font-medium">
+                                                {hist.effectiveDate ? new Date(hist.effectiveDate).toLocaleDateString() : '—'}
+                                            </td>
+                                            <td className="py-3 px-3">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="font-bold text-white">{hist.changedByName || 'Staff'}</span>
+                                                    {hist.changedByRole && (
+                                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-white/5 text-dim border border-white/10">
+                                                            {hist.changedByRole}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-3 text-dim italic max-w-xs truncate" title={hist.remark}>
+                                                "{hist.remark}"
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Change Weekly Rent Modal */}
+            {isRentModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200">
+                    <div className="w-full max-w-lg p-6 sm:p-8 rounded-[2rem] border shadow-2xl relative animate-in zoom-in-95 duration-200 space-y-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-brand-lime/10 text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                                    <DollarSign size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-white">Adjust Weekly Rent</h3>
+                                    <p className="text-[10px] font-medium text-dim mt-0.5">Update future weekly rental rates and record audit remark</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setIsRentModalOpen(false)} 
+                                className="p-2 rounded-xl text-dim hover:text-white hover:bg-white/5 transition-all"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Current vs New preview */}
+                        <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                            <div>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-dim block mb-1">Current Rate</span>
+                                <span className="text-sm font-black text-white">{weeklyRentFormatted}</span>
+                            </div>
+                            <div>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-dim block mb-1">New Rate</span>
+                                <span className="text-sm font-black text-emerald-400">
+                                    {newRentAmount && !isNaN(Number(newRentAmount)) && Number(newRentAmount) > 0 ? `$${Number(newRentAmount).toFixed(2)} / wk` : '—'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleRentSubmit} className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-dim">
+                                    New Weekly Rent Amount ($) <span className="text-rose-500">*</span>
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dim text-xs font-bold">$</span>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="1"
+                                        required
+                                        placeholder="e.g. 280.00"
+                                        value={newRentAmount}
+                                        onChange={(e) => setNewRentAmount(e.target.value)}
+                                        className="w-full pl-8 pr-4 py-3 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-dim">
+                                    Effective From Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={effectiveDate}
+                                    onChange={(e) => setEffectiveDate(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                                <span className="text-[9px] text-dim block italic">
+                                    * Future installments starting from this date will be updated. Historical/paid installments remain unchanged.
+                                </span>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-dim">
+                                    Remark / Reason for Change <span className="text-rose-500">*</span>
+                                </label>
+                                <textarea
+                                    required
+                                    rows={3}
+                                    placeholder="Provide mandatory reason (e.g. contract renewal, rate revision addendum)..."
+                                    value={rentRemark}
+                                    onChange={(e) => setRentRemark(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all resize-none"
+                                    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsRentModalOpen(false)}
+                                    className="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/5 transition-all border border-white/10"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isUpdatingRent}
+                                    className="px-6 py-2.5 rounded-xl text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                                    style={{ background: 'var(--brand-lime)' }}
+                                >
+                                    {isUpdatingRent ? (
+                                        <>
+                                            <RefreshCw size={14} className="animate-spin" /> Updating...
+                                        </>
+                                    ) : (
+                                        'Confirm & Apply'
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Extra Payment Tally Alert */}
+            {prepaymentBalance > 0 ? (
+                <div className="p-5 rounded-[2rem] border flex items-start gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ background: 'rgba(200, 230, 0, 0.04)', borderColor: 'rgba(200, 230, 0, 0.2)' }}>
+                    <div className="w-10 h-10 rounded-xl bg-brand-lime/10 flex items-center justify-center shrink-0 border border-brand-lime/20">
+                        <CheckCircle2 className="text-brand-lime" size={18} />
+                    </div>
+                    <div className="space-y-1">
+                        <h4 className="text-xs font-black uppercase tracking-widest text-brand-lime">Extra Prepayment Advance Detected</h4>
+                        <p className="text-[10px] font-semibold text-white/90 leading-relaxed" style={{ color: 'var(--text-main)' }}>
+                            Tally Complete: The total payment received from this customer (${totalPaymentsReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}) exceeds the total amounts applied to their invoices (${totalApplied.toLocaleString(undefined, { minimumFractionDigits: 2 })}).
+                        </p>
+                        <p className="text-[11px] font-black text-[#C8E600] mt-1.5">
+                            Current Customer Prepayment Credit Balance (Extra): ${prepaymentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </p>
+                        <span className="text-[9px] font-bold text-dim block italic mt-1">
+                            * This advance balance is stored securely as a prepayment credit and is automatically applied to future invoices generated for this customer.
                         </span>
                     </div>
                 </div>
-            </SectionCard>
-
-            {/* Emergency & Bank details */}
-            <SectionCard title="Driver Association" icon={<User size={18} />}>
-                <div className="space-y-4 pt-2">
-                    {customer.driver ? (
-                        <>
-                            <div className="space-y-1">
-                                <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Driver ID</p>
-                                <p className="text-xs font-bold text-white">{(customer.driver as any).driverId || 'TEMP-ID'}</p>
-                            </div>
-                            <div className="space-y-1 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                                <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Emergency Contact</p>
-                                <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{(customer.driver as any).emergencyContact?.name || 'N/A'}</p>
-                                <p className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{(customer.driver as any).emergencyContact?.phone || 'N/A'} ({(customer.driver as any).emergencyContact?.relationship || 'Other'})</p>
-                            </div>
-                            <div className="space-y-1 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                                <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Active Vehicle Assignment</p>
-                                <p className="text-xs font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
-                                    {(customer.driver as any).currentVehicle?.basicDetails?.make} {(customer.driver as any).currentVehicle?.basicDetails?.model || 'No vehicle assigned'}
-                                </p>
-                            </div>
-                        </>
-                    ) : (
-                        <p className="text-xs font-medium text-dim">This customer is not registered as a driver and has no vehicle assignments.</p>
-                    )}
-                </div>
-            </SectionCard>
+            ) : null}
         </div>
-
-        {/* Extra Payment Tally Alert */}
-        {prepaymentBalance > 0 ? (
-            <div className="p-5 rounded-[2rem] border flex items-start gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ background: 'rgba(200, 230, 0, 0.04)', borderColor: 'rgba(200, 230, 0, 0.2)' }}>
-                <div className="w-10 h-10 rounded-xl bg-brand-lime/10 flex items-center justify-center shrink-0 border border-brand-lime/20">
-                    <CheckCircle2 className="text-brand-lime" size={18} />
-                </div>
-                <div className="space-y-1">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-brand-lime">Extra Prepayment Advance Detected</h4>
-                    <p className="text-[10px] font-semibold text-white/90 leading-relaxed" style={{ color: 'var(--text-main)' }}>
-                        Tally Complete: The total payment received from this customer (${totalPaymentsReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}) exceeds the total amounts applied to their invoices (${totalApplied.toLocaleString(undefined, { minimumFractionDigits: 2 })}).
-                    </p>
-                    <p className="text-[11px] font-black text-[#C8E600] mt-1.5">
-                        Current Customer Prepayment Credit Balance (Extra): ${prepaymentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </p>
-                    <span className="text-[9px] font-bold text-dim block italic mt-1">
-                        * This advance balance is stored securely as a prepayment credit and is automatically applied to future invoices generated for this customer.
-                    </span>
-                </div>
-            </div>
-        ) : null}
-    </div>
-);
+    );
+};
 
 const EMITab = ({ customer, invoices }: { customer: Customer, invoices: Invoice[] }) => {
     const rentTracking = customer.driver?.rentTracking || [];

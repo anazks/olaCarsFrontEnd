@@ -284,8 +284,28 @@ const DataMigrationUpload = ({ isOpen = true, onClose, onSuccess }: Props) => {
 
                 const payload = validChunk.map((item) => {
                     const { _rowErrors, migrationStatus, serverError, driverId, ...rest } = item;
+                    let cleanIdType = rest.idType ? String(rest.idType).trim() : undefined;
+                    let cleanIdNumber = rest.idNumber ? String(rest.idNumber).trim() : undefined;
+                    if (cleanIdType && !['National ID', 'Passport'].includes(cleanIdType)) {
+                        const lower = cleanIdType.toLowerCase();
+                        if (['national id', 'national_id', 'nationalid', 'cedula', 'cédula', 'dni', 'national', 'id'].includes(lower)) {
+                            cleanIdType = 'National ID';
+                        } else if (['passport', 'pasaporte'].includes(lower)) {
+                            cleanIdType = 'Passport';
+                        } else {
+                            if (!cleanIdNumber) {
+                                cleanIdNumber = cleanIdType;
+                            }
+                            cleanIdType = cleanIdNumber ? 'National ID' : undefined;
+                        }
+                    } else if (!cleanIdType && cleanIdNumber) {
+                        cleanIdType = 'National ID';
+                    }
+
                     return {
                         ...rest,
+                        idType: cleanIdType,
+                        idNumber: cleanIdNumber,
                         originalRow: parsedRows.indexOf(item) + 1,
                         activationDate: normalizeDate(rest.activationDate),
                         deactivationDate: normalizeDate(rest.deactivationDate),
