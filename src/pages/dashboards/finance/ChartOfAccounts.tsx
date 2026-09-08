@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, RefreshCw, BookMarked, AlertTriangle, X, Edit2, Trash2, List, Upload, ChevronDown, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { getAllAccountingCodes, createAccountingCode, updateAccountingCode, deleteAccountingCode } from '../../../services/accountingService';
 import type { AccountingCode, CreateAccountingCodePayload, AccountingCategory } from '../../../services/accountingService';
 import { getUserRole } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import SearchableSelect from '../../../components/common/SearchableSelect';
 import BulkAccountingCodeUpload from './BulkAccountingCodeUpload';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -42,6 +43,33 @@ const mapAccountTypeToCategory = (type: string): AccountingCategory => {
 
 const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     const [codes, setCodes] = useState<AccountingCode[]>([]);
+    // Full unfiltered list of accounting codes across all categories for Parent Account selection
+    const [allParentOptions, setAllParentOptions] = useState<AccountingCode[]>([]);
+
+    const fetchAllParentOptions = useCallback(async () => {
+        try {
+            const res = await getAllAccountingCodes();
+            const list = Array.isArray(res) ? res : (Array.isArray((res as any)?.data) ? (res as any).data : []);
+            list.sort((a: AccountingCode, b: AccountingCode) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true }));
+            setAllParentOptions(list);
+        } catch (err) {
+            console.error('Failed to load all parent options:', err);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchAllParentOptions();
+    }, [fetchAllParentOptions]);
+
+    
+    const parentMap = useMemo(() => {
+        const map = new Map<string, AccountingCode>();
+        allParentOptions.forEach(c => {
+            const id = c._id || (c as any).id;
+            if (id) map.set(String(id), c);
+        });
+        return map;
+    }, [allParentOptions]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isAddRouteActive, setIsAddRouteActive] = useState(false);
@@ -136,6 +164,35 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
         cuentaEspanol: ''
     });
     const [isEditing, setIsEditing] = useState(false);
+
+    const parentSelectOptions = useMemo(() => {
+        return [
+            { value: '', label: '- None -' },
+            ...allParentOptions.map(c => {
+                const id = c._id || (c as any).id;
+                return {
+                    value: id,
+                    label: `${c.code} - ${c.name} ${c.accountType ? `(${c.accountType})` : `(${c.category})`}`
+                };
+            })
+        ];
+    }, [allParentOptions]);
+
+    const editParentSelectOptions = useMemo(() => {
+        const currentId = editingCode ? (editingCode._id || (editingCode as any)?.id) : null;
+        return [
+            { value: '', label: '- None -' },
+            ...allParentOptions
+                .filter(c => (c._id || (c as any).id) !== currentId)
+                .map(c => {
+                    const id = c._id || (c as any).id;
+                    return {
+                        value: id,
+                        label: `${c.code} - ${c.name} ${c.accountType ? `(${c.accountType})` : `(${c.category})`}`
+                    };
+                })
+        ];
+    }, [allParentOptions, editingCode]);
 
     // Delete State
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -653,17 +710,12 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Parent Account</label>
-                                <select
+                                <SearchableSelect
+                                    options={parentSelectOptions}
                                     value={newCode.parentAccount || ''}
-                                    onChange={e => setNewCode({ ...newCode, parentAccount: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
-                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                >
-                                    <option value="">— None —</option>
-                                    {codes.map(c => (
-                                        <option key={c._id} value={c._id}>{c.code} - {c.name}</option>
-                                    ))}
-                                </select>
+                                    onChange={val => setNewCode({ ...newCode, parentAccount: val })}
+                                    placeholder="- None -"
+                                />
                             </div>
                         </div>
 
@@ -832,17 +884,12 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-main)' }}>Parent Account</label>
-                                <select
+                                <SearchableSelect
+                                    options={editParentSelectOptions}
                                     value={editPayload.parentAccount || ''}
-                                    onChange={e => setEditPayload({ ...editPayload, parentAccount: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl outline-none text-sm transition-colors focus:ring-2 focus:ring-lime"
-                                    style={{ background: 'var(--bg-sidebar)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                >
-                                    <option value="">— None —</option>
-                                    {codes.filter(c => c._id !== (editingCode?._id || (editingCode as any)?.id)).map(c => (
-                                        <option key={c._id} value={c._id}>{c.code} - {c.name}</option>
-                                    ))}
-                                </select>
+                                    onChange={val => setEditPayload({ ...editPayload, parentAccount: val })}
+                                    placeholder="- None -"
+                                />
                             </div>
                         </div>
 
@@ -1132,11 +1179,12 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                                 {filteredCodes.map((c) => {
                                     const style = CATEGORY_STYLES[c.category] || { bg: 'transparent', text: 'var(--text-main)', border: 'transparent' };
                                     const codeId = c._id || (c as any).id;
-                                    const parentVal = c.parentAccount
-                                        ? (typeof c.parentAccount === 'object' && 'name' in c.parentAccount
-                                            ? `${c.parentAccount.code} - ${c.parentAccount.name}`
-                                            : String(c.parentAccount))
-                                        : '—';
+                                    const parentDoc = c.parentAccount && typeof c.parentAccount === 'object' && 'name' in c.parentAccount
+                                        ? c.parentAccount
+                                        : (c.parentAccount ? parentMap.get(String(c.parentAccount)) : null);
+                                    const parentVal = parentDoc
+                                        ? `${parentDoc.code} - ${parentDoc.name}`
+                                        : (c.parentAccount ? String(c.parentAccount) : '-');
                                     const hasChildren = parentIdsWithChildren.has(codeId);
                                     const isCollapsed = !!collapsedAccountIds[codeId];
 
