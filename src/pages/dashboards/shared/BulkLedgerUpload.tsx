@@ -3,7 +3,7 @@ import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Inf
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getAllBankAccounts, bulkUploadBankAccountTransactions, type BankAccount } from '../../../services/bankAccountService';
+import { getAllBankAccounts, bulkUploadBankAccountTransactions, getBankAccountUploadStatus, type BankAccount } from '../../../services/bankAccountService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
@@ -393,6 +393,21 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
     const [branches, setBranches] = useState<Branch[]>([]);
     const [clearExisting] = useState(false);
 
+    // Real-time server active batch detection (persists across browser refreshes)
+    const [serverUploadStatus, setServerUploadStatus] = useState<{
+        isUploading: boolean;
+        activeBatch: any | null;
+        latestTransaction: any | null;
+        account: any | null;
+        lastChecked?: number;
+    } | null>(null);
+    const [justFinishedServerBatch, setJustFinishedServerBatch] = useState<{
+        completedAt: string;
+        latestTransaction: any;
+        balance: number;
+        activeBatchInfo?: any;
+    } | null>(null);
+
     const [accountSearchQuery, setAccountSearchQuery] = useState('');
     const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
     const accountDropdownRef = useRef<HTMLDivElement>(null);
@@ -432,10 +447,77 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
     const [expandedSetOffRows, setExpandedSetOffRows] = useState<Record<number, boolean>>({});
     const [uploadLiveStats, setUploadLiveStats] = useState<UploadLiveStats | null>(null);
     const uploadAbortRef = useRef<boolean>(false);
+    const isSubmittingRef = useRef<boolean>(false);
 
     const [tableFilter, setTableFilter] = useState<'all' | 'valid' | 'errors'>('all');
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState<number>(50);
+
+// Warn and prevent accidental page refresh / navigation while an upload is actively running
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (uploading) {
+                e.preventDefault();
+                e.returnValue = 'An upload is currently in progress. Refreshing the browser will lose track of your progress!';
+                return e.returnValue;
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [uploading]);
+
+    // Query and poll server upload status on mount or when account changes (handles refreshed screens)
+    useEffect(() => {
+        if (!selectedAccountId) {
+            setServerUploadStatus(null);
+            return;
+        }
+
+        let isMounted = true;
+        let pollTimer: any = null;
+
+        const checkStatus = async () => {
+            try {
+                const res = await getBankAccountUploadStatus(selectedAccountId);
+                if (!isMounted) return;
+
+                if (res.success) {
+                    setServerUploadStatus(prev => {
+                        // If it was previously uploading on server and now completed:
+                        if (prev?.isUploading && !res.isUploading && prev.activeBatch) {
+                            setJustFinishedServerBatch({
+                                completedAt: new Date().toLocaleTimeString(),
+                                latestTransaction: res.latestTransaction,
+                                balance: res.account?.currentBalance,
+                                activeBatchInfo: prev.activeBatch
+                            });
+                        }
+                        return {
+                            isUploading: res.isUploading,
+                            activeBatch: res.activeBatch,
+                            latestTransaction: res.latestTransaction,
+                            account: res.account,
+                            lastChecked: Date.now()
+                        };
+                    });
+
+                    // If server is actively processing a batch and frontend is not currently uploading, keep polling every 2.5s
+                    if (res.isUploading && !uploading) {
+                        pollTimer = setTimeout(checkStatus, 2500);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch server upload status:', err);
+            }
+        };
+
+        checkStatus();
+
+        return () => {
+            isMounted = false;
+            if (pollTimer) clearTimeout(pollTimer);
+        };
+    }, [selectedAccountId, uploading]);
     const [isParsingFile, setIsParsingFile] = useState(false);
     const [showErrorsModal, setShowErrorsModal] = useState(false);
     const [errorCategoryFilter, setErrorCategoryFilter] = useState<string>('all');
@@ -1507,6 +1589,12 @@ interface SetOffPreview {
     };
 
     const handleSubmit = async () => {
+        if (isSubmittingRef.current || uploading) {
+            console.warn('Upload submission already in progress, ignoring duplicate submit.');
+            return;
+        }
+        isSubmittingRef.current = true;
+
         if (!selectedAccountId) {
             toast.error('Please select a target bank account');
             return;
@@ -1523,7 +1611,7 @@ interface SetOffPreview {
         setUploadProgress(5);
         uploadAbortRef.current = false;
 
-        const batchSize = 15;
+        const batchSize = 10;
         const totalBatches = Math.ceil(totalRows / batchSize);
 
         setUploadLiveStats({
@@ -1637,28 +1725,29 @@ interface SetOffPreview {
 
                 let res: any;
                 try {
-                    const maxRetries = 2;
-                    let attempt = 0;
-                    while (attempt <= maxRetries) {
+                    let attempts = 0;
+                    while (attempts < 2) {
                         try {
                             res = await bulkUploadBankAccountTransactions(selectedAccountId, payload);
                             break;
                         } catch (batchErr: any) {
-                            attempt++;
-                            if (attempt > maxRetries || uploadAbortRef.current) {
+                            attempts++;
+                            // Only retry if server returned 409 Conflict (waiting for prior batch to finish lock)
+                            if (batchErr?.response?.status === 409 && attempts < 2 && !uploadAbortRef.current) {
+                                setUploadLiveStats(prev => ({
+                                    ...(prev || {} as any),
+                                    recentActivities: [{
+                                        id: `wait-lock-${i}-${Date.now()}`,
+                                        type: 'WARNING',
+                                        title: `Batch ${i + 1}/${totalBatches} waiting for server lock... Retrying in 2.5s`,
+                                        details: batchErr?.response?.data?.message || 'Server lock active',
+                                        time: new Date().toLocaleTimeString()
+                                    }, ...(prev?.recentActivities || [])].slice(0, 12)
+                                }));
+                                await new Promise(resolve => setTimeout(resolve, 2500));
+                            } else {
                                 throw batchErr;
                             }
-                            setUploadLiveStats(prev => ({
-                                ...(prev || {} as any),
-                                recentActivities: [{
-                                    id: `retry-${i}-${attempt}-${Date.now()}`,
-                                    type: 'WARNING',
-                                    title: `Batch ${i + 1}/${totalBatches} error (attempt ${attempt}/${maxRetries}). Retrying in ${attempt * 1.5}s...`,
-                                    details: batchErr?.response?.data?.message || batchErr?.message || 'Network blip or request timeout',
-                                    time: new Date().toLocaleTimeString()
-                                }, ...(prev?.recentActivities || [])].slice(0, 12)
-                            }));
-                            await new Promise(resolve => setTimeout(resolve, attempt * 1500));
                         }
                     }
                 } finally {
@@ -1786,6 +1875,7 @@ interface SetOffPreview {
             console.error(err);
             toast.error(err?.response?.data?.message || 'Bulk upload failed');
         } finally {
+            isSubmittingRef.current = false;
             setUploading(false);
         }
     };
@@ -1840,6 +1930,94 @@ interface SetOffPreview {
 
     const renderMainBody = () => (
         <div className="space-y-5">
+                    {/* Server Active Processing Banner (Visible on Refreshed Screen if server is still working on last batch) */}
+                    {serverUploadStatus?.isUploading && !uploading && (
+                        <div className="p-6 border-2 border-amber-500/40 bg-amber-500/[0.07] rounded-2xl flex flex-col space-y-4 shadow-xl animate-fade-in">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-amber-500/20">
+                                <div className="flex items-center gap-3.5">
+                                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-amber-500/20 text-amber-400 shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.25)]">
+                                        <Loader2 className="animate-spin" size={24} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                                Backend Server Active
+                                            </span>
+                                            <h4 className="text-base font-bold text-main" style={{ color: 'var(--text-main)' }}>
+                                                Last Upload Batch In Progress on Server
+                                            </h4>
+                                        </div>
+                                        <p className="text-xs text-dim mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                                            The page was refreshed, but the backend server is currently finishing processing your last uploaded batch. Please wait...
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-mono font-bold text-amber-300 bg-amber-500/15 px-3 py-1.5 rounded-lg border border-amber-500/25">
+                                        Elapsed: {serverUploadStatus.activeBatch?.elapsedSeconds || 0}s
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                <div className="p-3 rounded-xl border border-white/5 bg-black/20">
+                                    <div className="text-[10px] text-dim uppercase font-bold tracking-wider">Batch Info</div>
+                                    <div className="text-sm font-black text-main mt-0.5">
+                                        {serverUploadStatus.activeBatch?.batchIndex ? `Batch #${serverUploadStatus.activeBatch.batchIndex} of ${serverUploadStatus.activeBatch.totalBatches || '?'}` : 'Active Batch'}
+                                    </div>
+                                </div>
+                                <div className="p-3 rounded-xl border border-white/5 bg-black/20">
+                                    <div className="text-[10px] text-dim uppercase font-bold tracking-wider">Batch Size</div>
+                                    <div className="text-sm font-black text-amber-300 mt-0.5">
+                                        {serverUploadStatus.activeBatch?.batchSize || 10} rows
+                                    </div>
+                                </div>
+                                <div className="p-3 rounded-xl border border-white/5 bg-black/20">
+                                    <div className="text-[10px] text-dim uppercase font-bold tracking-wider">Processing Tx Range</div>
+                                    <div className="text-xs font-mono text-main truncate mt-0.5">
+                                        {serverUploadStatus.activeBatch?.firstTxId || '...'} → {serverUploadStatus.activeBatch?.lastTxId || '...'}
+                                    </div>
+                                </div>
+                                <div className="p-3 rounded-xl border border-white/5 bg-black/20">
+                                    <div className="text-[10px] text-dim uppercase font-bold tracking-wider">Latest Confirmed in DB</div>
+                                    <div className="text-xs font-mono text-emerald-400 font-bold truncate mt-0.5">
+                                        {serverUploadStatus.latestTransaction?.transactionId || 'Checking...'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="w-full bg-black/30 rounded-full h-1.5 overflow-hidden border border-white/5">
+                                <div className="bg-amber-400 h-full rounded-full animate-pulse" style={{ width: '100%' }} />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Completion Banner (When server finishes processing the batch that was active during refresh) */}
+                    {justFinishedServerBatch && !uploading && (
+                        <div className="p-5 border border-emerald-500/40 bg-emerald-500/[0.08] rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg animate-fade-in">
+                            <div className="flex items-center gap-3.5">
+                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-emerald-500/20 text-emerald-400 shrink-0">
+                                    <CheckCircle size={22} />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-bold text-emerald-300">
+                                        Last Upload Batch Finished Successfully on Server!
+                                    </h4>
+                                    <p className="text-xs text-dim mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                                        {justFinishedServerBatch.activeBatchInfo?.batchIndex ? `Batch #${justFinishedServerBatch.activeBatchInfo.batchIndex} completed at ${justFinishedServerBatch.completedAt}. ` : ''}
+                                        Latest saved transaction in DB: <span className="font-mono text-white font-bold">{justFinishedServerBatch.latestTransaction?.transactionId || 'Updated'}</span> | Account running balance: <span className="font-mono text-emerald-400 font-bold">${Number(justFinishedServerBatch.balance || 0).toLocaleString()}</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setJustFinishedServerBatch(null)}
+                                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer border border-white/10 shrink-0"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    )}
+
                     {/* Real-time Uploading Dashboard & Loader */}
                     {uploading && (
                         <div className="p-6 sm:p-8 border rounded-2xl flex flex-col space-y-6 shadow-2xl animate-fade-in" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>

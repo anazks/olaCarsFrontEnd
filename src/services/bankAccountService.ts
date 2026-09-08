@@ -66,8 +66,13 @@ export const deleteAllTransactions = async (id: string) => {
     return response.data;
 };
 
-export const bulkUploadBankAccountTransactions = async (id: string, data: { branchId?: string; transactions: any[]; clearExisting?: boolean }) => {
-    const response = await api.post(`/api/bank-accounts/${id}/bulk-upload`, data, { timeout: 120000 });
+export const getBankAccountUploadStatus = async (id: string) => {
+    const response = await api.get('/api/bank-accounts/' + id + '/upload-status');
+    return response.data;
+};
+
+export const bulkUploadBankAccountTransactions = async (id: string, data: { branchId?: string; transactions: any[]; clearExisting?: boolean; batchIndex?: number; totalBatches?: number; fileName?: string }) => {
+    const response = await api.post(`/api/bank-accounts/${id}/bulk-upload`, data, { timeout: 600000 });
     return response.data;
 };
 
