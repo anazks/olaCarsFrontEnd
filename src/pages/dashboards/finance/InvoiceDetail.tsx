@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     DollarSign, Calendar, CheckCircle2, Clock, AlertCircle, X,
     Printer, ArrowLeft, Edit3, FileSpreadsheet, Trash2,
-    User, Landmark, History, Package, Receipt, FileText
+    User, Landmark, History, Package, Receipt, FileText, ExternalLink
 } from 'lucide-react';
 import { getInvoiceById, payInvoice, updateInvoice, deleteInvoice, getInvoicesByDriver } from '../../../services/invoiceService';
 import { createCreditNote, getAllCreditNotes, applyCreditNote } from '../../../services/creditNoteService';
@@ -677,23 +677,66 @@ const InvoiceDetail = () => {
                         </div>
                         {invoice.payments && invoice.payments.length > 0 ? (
                             <div className="p-5 space-y-4">
-                                {invoice.payments.map((pay, i) => (
-                                    <div key={i} className="relative pl-6 before:absolute before:left-0 before:top-1.5 before:w-2 before:h-2 before:bg-[#C8E600] before:rounded-full before:shadow-[0_0_8px_#C8E600]">
-                                        {i !== invoice.payments.length - 1 && (
-                                            <div className="absolute left-[3px] top-4 w-[2px] h-[calc(100%+8px)] bg-white/10" />
-                                        )}
-                                        <p className="text-[10px] font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            {new Date(pay.paidAt).toLocaleDateString()}
-                                        </p>
-                                        <p className="text-sm mt-0.5 font-bold text-emerald-400">
-                                            ${pay.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </p>
-                                        <span className="text-[10px] uppercase font-bold tracking-wider text-dim block" style={{ color: 'var(--text-dim)' }}>
-                                            Method: {pay.paymentMethod}
-                                        </span>
-                                        {pay.note && <p className="text-xs italic mt-0.5" style={{ color: 'var(--text-dim)' }}>"{pay.note}"</p>}
-                                    </div>
-                                ))}
+                                {invoice.payments.map((pay, i) => {
+                                    // Extract the actual Payment Received receipt number (e.g. PR-1788500868008)
+                                    const notePrMatch = (pay.note?.match(/PR:\s*([A-Za-z0-9-_]+)/i)?.[1]) ||
+                                        (pay.note?.match(/PR-[\w-]+/i)?.[0]);
+                                    
+                                    const prNumber = notePrMatch ||
+                                        (pay.transactionId?.startsWith('PR') ? pay.transactionId : null) ||
+                                        pay.transactionId ||
+                                        (pay as any)._id;
+
+                                    // Check if there is a separate bank transaction/upload reference
+                                    const bankRef = pay.transactionId && pay.transactionId !== prNumber ? pay.transactionId : null;
+
+                                    const handleNavigateToPayment = (e: React.MouseEvent) => {
+                                        e.stopPropagation();
+                                        if (prNumber) {
+                                            navigate(`../payments-received?search=${encodeURIComponent(prNumber)}`);
+                                        } else {
+                                            navigate('../payments-received');
+                                        }
+                                    };
+
+                                    return (
+                                        <div key={i} className="relative pl-6 before:absolute before:left-0 before:top-1.5 before:w-2 before:h-2 before:bg-[#C8E600] before:rounded-full before:shadow-[0_0_8px_#C8E600]">
+                                            {i !== invoice.payments.length - 1 && (
+                                                <div className="absolute left-[3px] top-4 w-[2px] h-[calc(100%+8px)] bg-white/10" />
+                                            )}
+                                            <div className="flex items-center justify-between gap-2">
+                                                <p className="text-[10px] font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                                    {new Date(pay.paidAt).toLocaleDateString()}
+                                                </p>
+                                                {prNumber ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleNavigateToPayment}
+                                                        title={`View Payment ${prNumber} in Payments Received`}
+                                                        className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-brand-lime/10 text-brand-lime border border-brand-lime/30 tracking-wider hover:bg-brand-lime/20 hover:border-brand-lime transition-all cursor-pointer group"
+                                                    >
+                                                        <span>{prNumber}</span>
+                                                        <ExternalLink size={9} className="opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-transform" />
+                                                    </button>
+                                                ) : null}
+                                            </div>
+                                            <p className="text-sm mt-0.5 font-bold text-emerald-400">
+                                                ${pay.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </p>
+                                            <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                                                <span className="text-[10px] uppercase font-bold tracking-wider text-dim block" style={{ color: 'var(--text-dim)' }}>
+                                                    Method: {pay.paymentMethod}
+                                                </span>
+                                                {bankRef && (
+                                                    <span className="text-[9px] font-mono font-medium px-1.5 py-0.2 rounded bg-white/5 border border-white/10 text-dim" style={{ color: 'var(--text-dim)' }}>
+                                                        Bank Ref: {bankRef}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {pay.note && <p className="text-xs italic mt-0.5" style={{ color: 'var(--text-dim)' }}>"{pay.note}"</p>}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="p-5 text-center text-xs opacity-60" style={{ color: 'var(--text-dim)' }}>

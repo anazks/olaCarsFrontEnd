@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
+    RefreshCw,
     ArrowLeft,
     List,
     AlertTriangle,
@@ -22,7 +23,7 @@ import {
     Zap
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions, downloadBankAccountLedgerPdf } from '../../../services/bankAccountService';
+import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions, downloadBankAccountLedgerPdf, recalculateBankAccountBalances } from '../../../services/bankAccountService';
 import { type LedgerEntry } from '../../../services/ledgerService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
@@ -71,6 +72,26 @@ const BankAccountLedger = () => {
     const [openingBalance, setOpeningBalance] = useState(0);
     const [closingBalance, setClosingBalance] = useState<number | null>(null);
     const [downloading, setDownloading] = useState(false);
+
+    const [recalculating, setRecalculating] = useState(false);
+
+    const handleRecalculateBalances = async () => {
+        if (!id) return;
+        try {
+            setRecalculating(true);
+            const res = await recalculateBankAccountBalances(id);
+            if (res.success) {
+                toast.success('Running balances recalculated successfully!');
+                fetchData();
+            }
+        } catch (err: any) {
+            console.error('Failed to recalculate balances:', err);
+            toast.error(err.response?.data?.message || 'Failed to recalculate balances');
+        } finally {
+            setRecalculating(false);
+        }
+    };
+
     const [showDownloadModal, setShowDownloadModal] = useState(false);
     const [dlFrom, setDlFrom] = useState('');
     const [dlTo, setDlTo] = useState('');
@@ -2368,6 +2389,15 @@ const BankAccountLedger = () => {
                     >
                         <Upload size={14} strokeWidth={3} /> Import Statement
                     </button>
+                    <button
+                        onClick={handleRecalculateBalances}
+                        disabled={recalculating}
+                        title="Recalculate running balances for this account"
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 border border-blue-500/30 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <RefreshCw size={14} strokeWidth={3} className={recalculating ? "animate-spin" : ""} />
+                        {recalculating ? 'Recalculating...' : 'Recalculate Balances'}
+                    </button>
                 </div>
             </div>
 
@@ -2626,7 +2656,7 @@ const BankAccountLedger = () => {
                                             style={{ borderColor: 'var(--border-main)' }}
                                             onClick={() => {
                                                 const basePath = location.pathname.split('/bank-accounts/')[0];
-                                                navigate(`${basePath}/bank-transactions/${entry._id}`);
+                                                window.open(`${basePath}/bank-transactions/${entry._id}`, '_blank');
                                             }}
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>

@@ -912,10 +912,21 @@ interface SetOffPreview {
         return isNaN(parsed) ? 0 : parsed;
     };
 
-    const formatDateDMY = (dateStr: string): string => {
+    const formatDateDMY = (dateStr: any): string => {
         if (!dateStr) return '-';
+        if (typeof dateStr === 'string') {
+            const trimmed = dateStr.trim();
+            const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (isoMatch) {
+                return `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
+            }
+            const dmyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+            if (dmyMatch) {
+                return `${dmyMatch[1].padStart(2, '0')}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[3]}`;
+            }
+        }
         const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return dateStr;
+        if (isNaN(d.getTime())) return String(dateStr);
         const day = String(d.getUTCDate()).padStart(2, '0');
         const month = String(d.getUTCMonth() + 1).padStart(2, '0');
         const year = d.getUTCFullYear();

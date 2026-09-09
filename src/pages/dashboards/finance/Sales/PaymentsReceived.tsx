@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
     DollarSign, Search, Filter, RefreshCw, Calendar, X,
     ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, MoreHorizontal, Coins, FileText
@@ -62,10 +63,13 @@ interface PaymentReceived {
 
 const PaymentsReceived = () => {
     const userRole = getUserRole();
+    const [searchParams] = useSearchParams();
+    const urlSearch = searchParams.get('search') || '';
+
     const [payments, setPayments] = useState<PaymentReceived[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
-    const [searchQuery, setSearchQuery] = useState<string>('');
-    const [debouncedSearch, setDebouncedSearch] = useState<string>('');
+    const [searchQuery, setSearchQuery] = useState<string>(urlSearch);
+    const [debouncedSearch, setDebouncedSearch] = useState<string>(urlSearch);
     const [methodFilter, setMethodFilter] = useState<string>('ALL');
     const getDefaultStartDate = () => {
         const year = new Date().getFullYear();
@@ -78,8 +82,17 @@ const PaymentsReceived = () => {
         return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     };
 
-    const [startDate, setStartDate] = useState<string>(getDefaultStartDate());
-    const [endDate, setEndDate] = useState<string>(getDefaultEndDate());
+    const [startDate, setStartDate] = useState<string>(urlSearch ? '' : getDefaultStartDate());
+    const [endDate, setEndDate] = useState<string>(urlSearch ? '' : getDefaultEndDate());
+
+    useEffect(() => {
+        if (urlSearch) {
+            setSearchQuery(urlSearch);
+            setDebouncedSearch(urlSearch);
+            setStartDate('');
+            setEndDate('');
+        }
+    }, [urlSearch]);
 
     interface PaymentMetrics {
         totalReceived: number;

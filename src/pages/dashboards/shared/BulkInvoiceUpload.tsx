@@ -656,7 +656,25 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
             let processedInvoices = 0;
             for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
                 const rowBatch = chunks[chunkIdx];
-                const res = await bulkUploadInvoices({ rows: rowBatch, invoiceType });
+                
+                let res: any = null;
+                let attempts = 0;
+                const maxAttempts = 3;
+                
+                while (attempts < maxAttempts) {
+                    try {
+                        attempts++;
+                        res = await bulkUploadInvoices({ rows: rowBatch, invoiceType });
+                        break;
+                    } catch (batchErr: any) {
+                        console.warn(`[BulkUpload] Batch ${chunkIdx + 1} attempt ${attempts} failed:`, batchErr);
+                        if (attempts >= maxAttempts) {
+                            throw batchErr;
+                        }
+                        setUploadStatusText(`Batch ${chunkIdx + 1} retrying (attempt ${attempts + 1}/${maxAttempts})...`);
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                    }
+                }
                 
                 finalResult.successCount += res.successCount || 0;
                 finalResult.errorCount += res.errorCount || 0;
@@ -668,6 +686,9 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
                 processedInvoices += groupsArray.slice(chunkIdx * CHUNK_INVOICE_SIZE, (chunkIdx + 1) * CHUNK_INVOICE_SIZE).length;
                 setUploadProgress(Math.round((processedInvoices / totalInvoices) * 100));
                 setUploadStatusText(`Uploading invoices (${processedInvoices} / ${totalInvoices})...`);
+                if (chunkIdx < chunks.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                }
             }
 
             setResult(finalResult);

@@ -137,3 +137,8 @@ export const downloadBankAccountLedgerPdf = async (id: string, params?: any) => 
 };
 
 
+
+export const recalculateBankAccountBalances = async (id: string) => {
+    const response = await api.post(`/api/bank-accounts/${id}/recalculate-balances`);
+    return response.data;
+};
