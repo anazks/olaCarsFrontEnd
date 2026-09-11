@@ -357,16 +357,52 @@ export const FleetSummaryReportPage: React.FC = () => {
         );
     };
 
+    // Fetch All Fleet Units for Export
+    const fetchAllRowsForExport = async (): Promise<{ rows: FleetSummaryRow[]; totals: FleetSummaryTotals | null } | null> => {
+        if (reportRows.length >= totalRecords && totalRecords > 0) {
+            return { rows: reportRows, totals: reportTotals };
+        }
+
+        const apiStart = formatToApiDateTime(startTime, false);
+        const apiEnd = formatToApiDateTime(endTime, true);
+        const imeisParam = selectedImeis.length > 0 ? selectedImeis.join(',') : 'ALL';
+
+        const data = await getFleetSummaryReport({
+            imeis: imeisParam,
+            group: selectedGroup,
+            startTime: apiStart,
+            endTime: apiEnd,
+            reportType: reportType,
+            page: 1,
+            limit: totalRecords > 0 ? totalRecords : 3000,
+            search: debouncedSearch
+        });
+
+        if (data && Array.isArray(data.summaryRows) && data.summaryRows.length > 0) {
+            return { rows: data.summaryRows, totals: data.totals || reportTotals };
+        }
+        return { rows: reportRows, totals: reportTotals };
+    };
+
     // Export Handlers
-    const handleExportExcel = () => {
-        if (processedRows.length === 0) {
+    const handleExportExcel = async () => {
+        if (totalRecords === 0 && reportRows.length === 0) {
             toast.error("No data available to export.");
             return;
         }
-        const toastId = toast.loading("Generating Excel File...");
+        const toastId = toast.loading("Fetching all units and generating Excel file... (This may take a few moments/minutes for large fleets)");
         try {
+            const exportResult = await fetchAllRowsForExport();
+            const exportRows = exportResult?.rows || reportRows;
+            const exportTotals = exportResult?.totals || reportTotals;
+
+            if (exportRows.length === 0) {
+                toast.error("No data found for export.", { id: toastId });
+                return;
+            }
+
             const visibleCols = columns.filter(c => c.visible);
-            const exportData = processedRows.map(r => {
+            const exportData = exportRows.map(r => {
                 const rowObj: Record<string, any> = {};
                 visibleCols.forEach(col => {
                     rowObj[col.label] = col.format ? col.format(r[col.key], r) : r[col.key];
@@ -374,14 +410,14 @@ export const FleetSummaryReportPage: React.FC = () => {
                 return rowObj;
             });
 
-            if (reportTotals) {
+            if (exportTotals) {
                 const totalsRowObj: Record<string, any> = {};
                 visibleCols.forEach(col => {
-                    if (col.key === 'device') totalsRowObj[col.label] = `TOTALS (${reportTotals.totalDevices} Devices)`;
-                    else if (col.key === 'distance') totalsRowObj[col.label] = `${reportTotals.totalDistance} km`;
-                    else if (col.key === 'fuelConsumed') totalsRowObj[col.label] = `${reportTotals.totalFuel} L`;
-                    else if (col.key === 'averageSpeed') totalsRowObj[col.label] = `${reportTotals.averageSpeed} km/h`;
-                    else if (col.key === 'engineHoursFormatted') totalsRowObj[col.label] = reportTotals.totalEngineHoursFormatted;
+                    if (col.key === 'device') totalsRowObj[col.label] = `TOTALS (${exportTotals.totalDevices} Devices)`;
+                    else if (col.key === 'distance') totalsRowObj[col.label] = `${exportTotals.totalDistance} km`;
+                    else if (col.key === 'fuelConsumed') totalsRowObj[col.label] = `${exportTotals.totalFuel} L`;
+                    else if (col.key === 'averageSpeed') totalsRowObj[col.label] = `${exportTotals.averageSpeed} km/h`;
+                    else if (col.key === 'engineHoursFormatted') totalsRowObj[col.label] = exportTotals.totalEngineHoursFormatted;
                     else totalsRowObj[col.label] = '-';
                 });
                 exportData.push(totalsRowObj);
@@ -394,22 +430,30 @@ export const FleetSummaryReportPage: React.FC = () => {
 
             const dateStr = new Date().toISOString().split('T')[0];
             XLSX.writeFile(wb, `Fleet_Summary_Report_${dateStr}.xlsx`);
-            toast.success("Excel report exported successfully!", { id: toastId });
-        } catch (err) {
+            toast.success(`Exported all ${exportRows.length} units to Excel successfully!`, { id: toastId });
+        } catch (err: any) {
             console.error("Excel Export Error:", err);
-            toast.error("Failed to export Excel report.", { id: toastId });
+            toast.error(err.message || "Failed to export Excel report.", { id: toastId });
         }
     };
 
-    const handleExportCSV = () => {
-        if (processedRows.length === 0) {
+    const handleExportCSV = async () => {
+        if (totalRecords === 0 && reportRows.length === 0) {
             toast.error("No data available to export.");
             return;
         }
-        const toastId = toast.loading("Generating CSV File...");
+        const toastId = toast.loading("Fetching all units and generating CSV file... (This may take a few moments/minutes for large fleets)");
         try {
+            const exportResult = await fetchAllRowsForExport();
+            const exportRows = exportResult?.rows || reportRows;
+
+            if (exportRows.length === 0) {
+                toast.error("No data found for export.", { id: toastId });
+                return;
+            }
+
             const visibleCols = columns.filter(c => c.visible);
-            const exportData = processedRows.map(r => {
+            const exportData = exportRows.map(r => {
                 const rowObj: Record<string, any> = {};
                 visibleCols.forEach(col => {
                     rowObj[col.label] = col.format ? col.format(r[col.key], r) : r[col.key];
@@ -430,20 +474,29 @@ export const FleetSummaryReportPage: React.FC = () => {
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            toast.success("CSV report exported successfully!", { id: toastId });
-        } catch (err) {
+            toast.success(`Exported all ${exportRows.length} units to CSV successfully!`, { id: toastId });
+        } catch (err: any) {
             console.error("CSV Export Error:", err);
-            toast.error("Failed to export CSV report.", { id: toastId });
+            toast.error(err.message || "Failed to export CSV report.", { id: toastId });
         }
     };
 
-    const handleExportPDF = () => {
-        if (processedRows.length === 0) {
+    const handleExportPDF = async () => {
+        if (totalRecords === 0 && reportRows.length === 0) {
             toast.error("No data available to export.");
             return;
         }
-        const toastId = toast.loading("Generating PDF Report...");
+        const toastId = toast.loading("Fetching all units and generating PDF report... (This may take a few moments/minutes for large fleets)");
         try {
+            const exportResult = await fetchAllRowsForExport();
+            const exportRows = exportResult?.rows || reportRows;
+            const exportTotals = exportResult?.totals || reportTotals;
+
+            if (exportRows.length === 0) {
+                toast.error("No data found for export.", { id: toastId });
+                return;
+            }
+
             const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
             const visibleCols = columns.filter(c => c.visible);
 
@@ -453,17 +506,17 @@ export const FleetSummaryReportPage: React.FC = () => {
             doc.text(`Generated on: ${new Date().toLocaleString()} | Period: ${period.toUpperCase()}`, 40, 58);
 
             const head = [visibleCols.map(c => c.label)];
-            const body = processedRows.map(r =>
+            const body = exportRows.map(r =>
                 visibleCols.map(col => (col.format ? col.format(r[col.key], r) : String(r[col.key] || '')))
             );
 
-            if (reportTotals) {
+            if (exportTotals) {
                 const footRow = visibleCols.map(col => {
-                    if (col.key === 'device') return `TOTALS (${reportTotals.totalDevices} Devices)`;
-                    if (col.key === 'distance') return `${reportTotals.totalDistance} km`;
-                    if (col.key === 'fuelConsumed') return `${reportTotals.totalFuel} L`;
-                    if (col.key === 'averageSpeed') return `${reportTotals.averageSpeed} km/h`;
-                    if (col.key === 'engineHoursFormatted') return reportTotals.totalEngineHoursFormatted;
+                    if (col.key === 'device') return `TOTALS (${exportTotals.totalDevices} Devices)`;
+                    if (col.key === 'distance') return `${exportTotals.totalDistance} km`;
+                    if (col.key === 'fuelConsumed') return `${exportTotals.totalFuel} L`;
+                    if (col.key === 'averageSpeed') return `${exportTotals.averageSpeed} km/h`;
+                    if (col.key === 'engineHoursFormatted') return exportTotals.totalEngineHoursFormatted;
                     return '-';
                 });
                 body.push(footRow);
@@ -481,72 +534,83 @@ export const FleetSummaryReportPage: React.FC = () => {
 
             const dateStr = new Date().toISOString().split('T')[0];
             doc.save(`Fleet_Summary_Report_${dateStr}.pdf`);
-            toast.success("PDF report exported successfully!", { id: toastId });
-        } catch (err) {
+            toast.success(`Exported all ${exportRows.length} units to PDF successfully!`, { id: toastId });
+        } catch (err: any) {
             console.error("PDF Export Error:", err);
-            toast.error("Failed to export PDF report.", { id: toastId });
+            toast.error(err.message || "Failed to export PDF report.", { id: toastId });
         }
     };
 
-    const handlePrint = () => {
-        if (processedRows.length === 0) {
+    const handlePrint = async () => {
+        if (totalRecords === 0 && reportRows.length === 0) {
             toast.error("No data available to print.");
             return;
         }
-        const visibleCols = columns.filter(c => c.visible);
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
+        const toastId = toast.loading("Preparing print view for all units... (This may take a few moments/minutes for large fleets)");
+        try {
+            const exportResult = await fetchAllRowsForExport();
+            const exportRows = exportResult?.rows || reportRows;
+            const exportTotals = exportResult?.totals || reportTotals;
 
-        const tableHeaders = visibleCols.map(c => `<th style="padding:10px; border:1px solid #ddd; background:#f4f6f8; font-size:12px; font-weight:bold; text-align:${c.align || 'left'};">${c.label}</th>`).join('');
+            const visibleCols = columns.filter(c => c.visible);
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) return;
 
-        const tableRows = processedRows.map(r => `
-            <tr>
-                ${visibleCols.map(c => {
-            const val = c.format ? c.format(r[c.key], r) : r[c.key];
-            return `<td style="padding:8px; border:1px solid #eee; font-size:11px; text-align:${c.align || 'left'};">${val}</td>`;
-        }).join('')}
-            </tr>
-        `).join('');
+            const tableHeaders = visibleCols.map(c => `<th style="padding:10px; border:1px solid #ddd; background:#f4f6f8; font-size:12px; font-weight:bold; text-align:${c.align || 'left'};">${c.label}</th>`).join('');
 
-        const footerRow = reportTotals ? `
-            <tr style="background:#eef2f7; font-weight:bold;">
-                ${visibleCols.map(c => {
-            let val = '-';
-            if (c.key === 'device') val = `TOTALS (${reportTotals.totalDevices} Devices)`;
-            else if (c.key === 'distance') val = `${reportTotals.totalDistance} km`;
-            else if (c.key === 'fuelConsumed') val = `${reportTotals.totalFuel} L`;
-            else if (c.key === 'averageSpeed') val = `${reportTotals.averageSpeed} km/h`;
-            else if (c.key === 'engineHoursFormatted') val = reportTotals.totalEngineHoursFormatted;
-            return `<td style="padding:10px; border:1px solid #ccc; font-size:11px; text-align:${c.align || 'left'};">${val}</td>`;
-        }).join('')}
-            </tr>
-        ` : '';
+            const tableRows = exportRows.map(r => `
+                <tr>
+                    ${visibleCols.map(c => {
+                const val = c.format ? c.format(r[c.key], r) : r[c.key];
+                return `<td style="padding:8px; border:1px solid #eee; font-size:11px; text-align:${c.align || 'left'};">${val}</td>`;
+            }).join('')}
+                </tr>
+            `).join('');
 
-        printWindow.document.write(`
-            <html>
-                <head>
-                    <title>Fleet Summary Report</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; padding: 20px; color: #111; }
-                        h2 { margin-bottom: 4px; }
-                        p { margin-top: 0; font-size: 12px; color: #666; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-                    </style>
-                </head>
-                <body>
-                    <h2>Fleet Summary Report (Tracksolid Style)</h2>
-                    <p>Generated on: ${new Date().toLocaleString()} | Period: ${period.toUpperCase()}</p>
-                    <table>
-                        <thead><tr>${tableHeaders}</tr></thead>
-                        <tbody>${tableRows}${footerRow}</tbody>
-                    </table>
-                    <script>
-                        window.onload = function() { window.print(); window.close(); }
-                    </script>
-                </body>
-            </html>
-        `);
-        printWindow.document.close();
+            const footerRow = exportTotals ? `
+                <tr style="background:#eef2f7; font-weight:bold;">
+                    ${visibleCols.map(c => {
+                let val = '-';
+                if (c.key === 'device') val = `TOTALS (${exportTotals.totalDevices} Devices)`;
+                else if (c.key === 'distance') val = `${exportTotals.totalDistance} km`;
+                else if (c.key === 'fuelConsumed') val = `${exportTotals.totalFuel} L`;
+                else if (c.key === 'averageSpeed') val = `${exportTotals.averageSpeed} km/h`;
+                else if (c.key === 'engineHoursFormatted') val = exportTotals.totalEngineHoursFormatted;
+                return `<td style="padding:10px; border:1px solid #ccc; font-size:11px; text-align:${c.align || 'left'};">${val}</td>`;
+            }).join('')}
+                </tr>
+            ` : '';
+
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Fleet Summary Report</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; padding: 20px; color: #111; }
+                            h2 { margin-bottom: 4px; }
+                            p { margin-top: 0; font-size: 12px; color: #666; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                        </style>
+                    </head>
+                    <body>
+                        <h2>Fleet Summary Report (Tracksolid Style)</h2>
+                        <p>Generated on: ${new Date().toLocaleString()} | Period: ${period.toUpperCase()}</p>
+                        <table>
+                            <thead><tr>${tableHeaders}</tr></thead>
+                            <tbody>${tableRows}${footerRow}</tbody>
+                        </table>
+                        <script>
+                            window.onload = function() { window.print(); window.close(); }
+                        </script>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            toast.success("Print view ready!", { id: toastId });
+        } catch (err: any) {
+            console.error("Print Error:", err);
+            toast.error("Failed to generate print view.", { id: toastId });
+        }
     };
 
     return (
