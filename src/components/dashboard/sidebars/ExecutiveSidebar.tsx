@@ -368,6 +368,10 @@ const ExecutiveSidebar = ({
         {
           label: t("sidebar.items.gpsVehicles", "Connected Vehicles"),
           path: "/admin/admin/gps-vehicles",
+        },
+        {
+          label: t("sidebar.items.fleetSummaryReport", "Fleet Summary Report"),
+          path: "/admin/admin/fleet-summary-report",
         }
       ],
     },

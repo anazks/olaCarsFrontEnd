@@ -216,18 +216,35 @@ export interface FleetSummaryTotals {
     totalEngineHoursFormatted: string;
 }
 
+export interface FleetSummaryPagination {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
 export interface FleetSummaryReportData {
     summaryRows: FleetSummaryRow[];
     totals: FleetSummaryTotals;
+    pagination?: FleetSummaryPagination;
 }
 
-export const getFleetSummaryReport = async (params: {
-    imeis?: string;
-    group?: string;
-    startTime?: string;
-    endTime?: string;
-    reportType?: string;
-}): Promise<FleetSummaryReportData> => {
-    const response = await api.get('/api/gps/fleet-summary-report', { params });
+export const getFleetSummaryReport = async (
+    params: {
+        imeis?: string;
+        group?: string;
+        startTime?: string;
+        endTime?: string;
+        reportType?: string;
+        page?: number;
+        limit?: number;
+        search?: string;
+    },
+    options?: { signal?: AbortSignal }
+): Promise<FleetSummaryReportData> => {
+    const response = await api.get('/api/gps/fleet-summary-report', {
+        params,
+        signal: options?.signal
+    });
     return response.data.data;
 };

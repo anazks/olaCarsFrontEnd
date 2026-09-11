@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { useTheme } from '../../../context/ThemeContext';
 import {
@@ -36,6 +36,7 @@ const GpsVehicles = () => {
     const { theme } = useTheme();
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const location = useLocation();
     const [vehicles, setVehicles] = useState<GpsVehicle[]>([]);
     const [locations, setLocations] = useState<GpsLocation[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -1010,7 +1011,7 @@ const GpsVehicles = () => {
                     {activeView !== 'track' && (
                         <>
                             <button
-                                onClick={() => setShowFleetReportModal(true)}
+                                onClick={() => navigate(location.pathname.includes('/admin/admin') ? '/admin/admin/fleet-summary-report' : '/admin/financial-admin/fleet-summary-report')}
                                 className="px-4 py-2.5 rounded-xl border border-[var(--brand-dynamic-border)] bg-[var(--brand-dynamic-light)] text-[var(--brand-dynamic)] hover:bg-[var(--brand-dynamic)] hover:text-[var(--bg-main)] transition-all font-bold text-xs flex items-center gap-2 cursor-pointer shadow-sm"
                             >
                                 <FileText size={16} /> Fleet Summary Report

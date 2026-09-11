@@ -107,7 +107,24 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     };
 
-    const formatDateForApi = (d: Date): string => {
+    const formatToApiDateTime = (val: string | Date | undefined): string | undefined => {
+        if (!val) return undefined;
+        if (typeof val === 'string') {
+            const trimmed = val.trim();
+            if (!trimmed) return undefined;
+            // If already formatted as YYYY-MM-DD HH:mm:ss
+            if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+                return trimmed;
+            }
+            // If datetime-local format YYYY-MM-DDTHH:mm or YYYY-MM-DDTHH:mm:ss
+            if (trimmed.includes('T')) {
+                const [datePart, timePart] = trimmed.split('T');
+                const timeWithSec = timePart.length === 5 ? `${timePart}:00` : timePart;
+                return `${datePart} ${timeWithSec}`;
+            }
+        }
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return undefined;
         const pad = (n: number) => String(n).padStart(2, '0');
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     };
@@ -195,8 +212,8 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
     const fetchReport = async () => {
         setLoading(true);
         try {
-            const apiStart = startTime ? formatDateForApi(new Date(startTime)) : undefined;
-            const apiEnd = endTime ? formatDateForApi(new Date(endTime)) : undefined;
+            const apiStart = formatToApiDateTime(startTime);
+            const apiEnd = formatToApiDateTime(endTime);
 
             const imeisParam = selectedImeis.length > 0 ? selectedImeis.join(',') : 'ALL';
             const data = await getFleetSummaryReport({
