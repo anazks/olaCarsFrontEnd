@@ -1622,7 +1622,7 @@ interface SetOffPreview {
         setUploadProgress(5);
         uploadAbortRef.current = false;
 
-        const batchSize = 10;
+        const batchSize = 50;
         const totalBatches = Math.ceil(totalRows / batchSize);
 
         setUploadLiveStats({
@@ -1682,7 +1682,7 @@ interface SetOffPreview {
                         wasStopped: true
                     });
 
-                    toast(`Upload stopped. ${totalInsertedAcrossBatches} transactions saved to DB.`, { icon: '??' });
+                    toast(`Upload stopped. ${totalInsertedAcrossBatches} transactions saved to DB.`, { icon: '⚠️' });
                     break;
                 }
 
@@ -1728,10 +1728,15 @@ interface SetOffPreview {
                 }, 100);
 
                 const batchClearExisting = i === 0 ? clearExisting : false;
+                const isLastBatch = i === totalBatches - 1;
 
                 const payload = {
                     clearExisting: batchClearExisting,
-                    transactions: batchTransactions
+                    transactions: batchTransactions,
+                    batchIndex: i,
+                    totalBatches,
+                    isLastBatch,
+                    skipRecalculate: !isLastBatch
                 };
 
                 let res: any;
@@ -1942,7 +1947,7 @@ interface SetOffPreview {
     const renderMainBody = () => (
         <div className="space-y-5">
                     {/* Server Active Processing Banner (Visible on Refreshed Screen if server is still working on last batch) */}
-                    {serverUploadStatus?.isUploading && !uploading && (
+                    {serverUploadStatus?.isUploading && !uploading && (serverUploadStatus.activeBatch?.elapsedSeconds === undefined || serverUploadStatus.activeBatch.elapsedSeconds < 60) && (
                         <div className="p-6 border-2 border-amber-500/40 bg-amber-500/[0.07] rounded-2xl flex flex-col space-y-4 shadow-xl animate-fade-in">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-amber-500/20">
                                 <div className="flex items-center gap-3.5">

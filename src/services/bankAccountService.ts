@@ -67,11 +67,23 @@ export const deleteAllTransactions = async (id: string) => {
 };
 
 export const getBankAccountUploadStatus = async (id: string) => {
-    const response = await api.get('/api/bank-accounts/' + id + '/upload-status');
+    const response = await api.get(`/api/bank-accounts/${id}/upload-status?_t=${Date.now()}`);
     return response.data;
 };
 
-export const bulkUploadBankAccountTransactions = async (id: string, data: { branchId?: string; transactions: any[]; clearExisting?: boolean; batchIndex?: number; totalBatches?: number; fileName?: string }) => {
+export const bulkUploadBankAccountTransactions = async (
+    id: string, 
+    data: { 
+        branchId?: string; 
+        transactions: any[]; 
+        clearExisting?: boolean; 
+        batchIndex?: number; 
+        totalBatches?: number; 
+        fileName?: string;
+        isLastBatch?: boolean;
+        skipRecalculate?: boolean;
+    }
+) => {
     const response = await api.post(`/api/bank-accounts/${id}/bulk-upload`, data, { timeout: 600000 });
     return response.data;
 };
@@ -135,8 +147,6 @@ export const downloadBankAccountLedgerPdf = async (id: string, params?: any) => 
     });
     return response.data;
 };
-
-
 
 export const recalculateBankAccountBalances = async (id: string) => {
     const response = await api.post(`/api/bank-accounts/${id}/recalculate-balances`);
