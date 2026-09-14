@@ -391,7 +391,6 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
     const [accounts, setAccounts] = useState<BankAccount[]>([]);
     const [selectedAccountId, setSelectedAccountId] = useState('');
     const [branches, setBranches] = useState<Branch[]>([]);
-    const [clearExisting] = useState(false);
 
     // Real-time server active batch detection (persists across browser refreshes)
     const [serverUploadStatus, setServerUploadStatus] = useState<{
@@ -1827,7 +1826,7 @@ interface SetOffPreview {
             setResult(finalSummary);
 
             if (uploadAborted) {
-                toast.warning(`Upload stopped. ${accumulatedInsertedCount} transactions saved to DB.`);
+                toast(`Upload stopped. ${accumulatedInsertedCount} transactions saved to DB.`, { icon: '⚠️' });
             } else if (allSkippedTransactions.length > 0) {
                 toast.success(`Processed ${rows.length} rows: ${accumulatedInsertedCount} entered DB, ${allSkippedTransactions.length} skipped.`);
             } else {
