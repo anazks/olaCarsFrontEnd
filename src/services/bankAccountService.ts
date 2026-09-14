@@ -71,21 +71,110 @@ export const getBankAccountUploadStatus = async (id: string) => {
     return response.data;
 };
 
+export interface BulkUploadProgressEvent {
+    type: 'progress';
+    processedCount: number;
+    totalCount: number;
+    percentage: number;
+    insertedCount: number;
+    skippedCount: number;
+    setOffCount: number;
+    estimatedSecondsRemaining: number;
+    statusMessage: string;
+    stage?: string;
+}
+
 export const bulkUploadBankAccountTransactions = async (
-    id: string, 
+    id: string,
     data: { 
-        branchId?: string; 
-        transactions: any[]; 
         clearExisting?: boolean; 
+        transactions: any[]; 
         batchIndex?: number; 
         totalBatches?: number; 
         fileName?: string;
         isLastBatch?: boolean;
         skipRecalculate?: boolean;
-    }
+    },
+    onProgress?: (progress: BulkUploadProgressEvent) => void
 ) => {
-    const response = await api.post(`/api/bank-accounts/${id}/bulk-upload`, data, { timeout: 600000 });
-    return response.data;
+    const baseURL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const token = localStorage.getItem('token');
+
+    const response = await fetch(`${baseURL}/api/bank-accounts/${id}/bulk-upload`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+        let errMessage = 'Bulk upload failed';
+        try {
+            const errData = await response.json();
+            errMessage = errData.message || errMessage;
+        } catch (_) {}
+        throw new Error(errMessage);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+        throw new Error('ReadableStream not supported by browser');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalResult: any = null;
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (parsed.type === 'progress') {
+                    if (onProgress) onProgress(parsed);
+                } else if (parsed.type === 'complete') {
+                    finalResult = parsed;
+                } else if (parsed.type === 'error') {
+                    throw new Error(parsed.message || 'Upload failed');
+                }
+            } catch (e: any) {
+                if (e.message && e.message !== 'Upload failed' && !e.message.startsWith('Unexpected')) {
+                    throw e;
+                }
+            }
+        }
+    }
+
+    if (buffer.trim()) {
+        try {
+            const parsed = JSON.parse(buffer.trim());
+            if (parsed.type === 'complete') {
+                finalResult = parsed;
+            } else if (parsed.type === 'error') {
+                throw new Error(parsed.message || 'Upload failed');
+            }
+        } catch (e: any) {
+            if (e.message && e.message !== 'Upload failed' && !e.message.startsWith('Unexpected')) {
+                throw e;
+            }
+        }
+    }
+
+    if (!finalResult) {
+        throw new Error('Upload completed without a final response from server');
+    }
+
+    return finalResult;
 };
 
 export const getBankAccountTransactions = async (id: string, params?: any) => {

@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, ChevronRight, ChevronLeft, Search, AlertCircle, Zap, ArrowLeft, Eye, Layers, Activity, Database, Check, Link2, StopCircle } from 'lucide-react';
+import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, ChevronRight, ChevronLeft, Search, AlertCircle, Zap, ArrowLeft, Eye, Layers } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getAllBankAccounts, bulkUploadBankAccountTransactions, getBankAccountUploadStatus, type BankAccount } from '../../../services/bankAccountService';
+import { getAllBankAccounts, bulkUploadBankAccountTransactions, type BankAccount } from '../../../services/bankAccountService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../services/accountingService';
 import { getAllCustomers, type Customer } from '../../../services/customerService';
@@ -41,22 +41,6 @@ interface ParsedTransaction {
     _rawRow?: any;
 }
 
-interface UploadLiveStats {
-    processedCount: number;
-    totalCount: number;
-    insertedCount: number;
-    skippedCount: number;
-    currentBatch: number;
-    totalBatches: number;
-    setOffCount: number;
-    recentActivities: Array<{
-        id: string;
-        type: 'SUCCESS' | 'WARNING' | 'SETOFF' | 'INFO';
-        title: string;
-        details?: string;
-        time: string;
-    }>;
-}
 
 const TEMPLATE_HEADERS = [
     'DATE', 'PREFIX', 'NUMBER', 'BANK NAME', 'ACCOUNTS NAME', 'RECEIPT', 'PAYMENT', 'DESCRIPTION', 'REMARKS', 'BRANCH', 'DRIVER NAME', 'SUPPLIER NAME', 'CUSTOMER NAME'
@@ -392,21 +376,6 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
     const [selectedAccountId, setSelectedAccountId] = useState('');
     const [branches, setBranches] = useState<Branch[]>([]);
 
-    // Real-time server active batch detection (persists across browser refreshes)
-    const [serverUploadStatus, setServerUploadStatus] = useState<{
-        isUploading: boolean;
-        activeBatch: any | null;
-        latestTransaction: any | null;
-        account: any | null;
-        lastChecked?: number;
-    } | null>(null);
-    const [justFinishedServerBatch, setJustFinishedServerBatch] = useState<{
-        completedAt: string;
-        latestTransaction: any;
-        balance: number;
-        activeBatchInfo?: any;
-    } | null>(null);
-
     const [accountSearchQuery, setAccountSearchQuery] = useState('');
     const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
     const accountDropdownRef = useRef<HTMLDivElement>(null);
@@ -435,7 +404,6 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
     const [rows, setRows] = useState<ParsedTransaction[]>([]);
     const [fileName, setFileName] = useState('');
     const [uploading, setUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
     const [result, setResult] = useState<any>(null);
     const [dragOver, setDragOver] = useState(false);
     const [allAccountingCodes, setAllAccountingCodes] = useState<AccountingCode[]>([]);
@@ -444,7 +412,6 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
     const [allInvoices, setAllInvoices] = useState<Invoice[]>([]);
     const [allBills, setAllBills] = useState<Bill[]>([]);
     const [expandedSetOffRows, setExpandedSetOffRows] = useState<Record<number, boolean>>({});
-    const [uploadLiveStats, setUploadLiveStats] = useState<UploadLiveStats | null>(null);
     const uploadAbortRef = useRef<boolean>(false);
     const isSubmittingRef = useRef<boolean>(false);
 
@@ -465,58 +432,7 @@ const BulkLedgerUpload = ({ isOpen, onClose, onSuccess }: BulkLedgerUploadProps 
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [uploading]);
 
-    // Query and poll server upload status on mount or when account changes (handles refreshed screens)
-    useEffect(() => {
-        if (!selectedAccountId) {
-            setServerUploadStatus(null);
-            return;
-        }
 
-        let isMounted = true;
-        let pollTimer: any = null;
-
-        const checkStatus = async () => {
-            try {
-                const res = await getBankAccountUploadStatus(selectedAccountId);
-                if (!isMounted) return;
-
-                if (res.success) {
-                    setServerUploadStatus(prev => {
-                        // If it was previously uploading on server and now completed:
-                        if (prev?.isUploading && !res.isUploading && prev.activeBatch) {
-                            setJustFinishedServerBatch({
-                                completedAt: new Date().toLocaleTimeString(),
-                                latestTransaction: res.latestTransaction,
-                                balance: res.account?.currentBalance,
-                                activeBatchInfo: prev.activeBatch
-                            });
-                        }
-                        return {
-                            isUploading: res.isUploading,
-                            activeBatch: res.activeBatch,
-                            latestTransaction: res.latestTransaction,
-                            account: res.account,
-                            lastChecked: Date.now()
-                        };
-                    });
-
-                    // If server is actively processing a batch and frontend is not currently uploading, keep polling every 2.5s
-                    if (res.isUploading && !uploading) {
-                        pollTimer = setTimeout(checkStatus, 2500);
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to fetch server upload status:', err);
-            }
-        };
-
-        checkStatus();
-
-        return () => {
-            isMounted = false;
-            if (pollTimer) clearTimeout(pollTimer);
-        };
-    }, [selectedAccountId, uploading]);
     const [isParsingFile, setIsParsingFile] = useState(false);
     const [showErrorsModal, setShowErrorsModal] = useState(false);
     const [errorCategoryFilter, setErrorCategoryFilter] = useState<string>('all');
@@ -1620,25 +1536,7 @@ interface SetOffPreview {
         }
 
         setUploading(true);
-        setUploadProgress(0);
         uploadAbortRef.current = false;
-
-        setUploadLiveStats({
-            processedCount: 0,
-            totalCount: totalRows,
-            insertedCount: 0,
-            skippedCount: 0,
-            currentBatch: 1,
-            totalBatches: 1,
-            setOffCount: 0,
-            recentActivities: [{
-                id: `init-${Date.now()}`,
-                type: 'INFO',
-                title: `Starting upload for ${totalRows.toLocaleString()} valid transactions`,
-                details: `Target: ${selectedAccount?.accountName || selectedAccount?.bankName}`,
-                time: new Date().toLocaleTimeString()
-            }]
-        });
 
         // Map all valid rows to single API payload
         const allTransactions = validRows.map((row) => {
@@ -1676,97 +1574,21 @@ interface SetOffPreview {
             fileName: fileName || undefined
         };
 
-        const liveActivities: Array<{ id: string; type: 'SUCCESS' | 'WARNING' | 'SETOFF' | 'INFO'; title: string; details?: string; time: string }> = [
-            {
-                id: `init-${Date.now()}`,
-                type: 'INFO',
-                title: `Processing ${totalRows.toLocaleString()} transactions on backend`,
-                details: `Target Account: ${selectedAccount?.accountName || selectedAccount?.bankName}`,
-                time: new Date().toLocaleTimeString()
-            }
-        ];
-
-        // Status tracking reference for the 10-second toast interval
-        const currentLiveStatus = {
-            percentage: 0,
-            processedCount: 0,
-            totalCount: totalRows,
-            insertedCount: 0,
-            skippedCount: 0,
-            setOffCount: 0,
-            estimatedSecondsRemaining: 0,
-            statusMessage: `Processing 0 of ${totalRows} transactions (0%)...`
-        };
-
-        // 1. Live Poll Backend Status every 1000ms
-        const statusPollInterval = setInterval(async () => {
-            if (!selectedAccountId) return;
-            try {
-                const statusRes = await getBankAccountUploadStatus(selectedAccountId);
-                const active = statusRes?.activeBatch;
-                if (active) {
-                    const pct = active.percentage !== undefined ? active.percentage : currentLiveStatus.percentage;
-                    const processed = active.processedCount !== undefined ? active.processedCount : currentLiveStatus.processedCount;
-                    const inserted = active.insertedCount !== undefined ? active.insertedCount : currentLiveStatus.insertedCount;
-                    const skipped = active.skippedCount !== undefined ? active.skippedCount : currentLiveStatus.skippedCount;
-                    const setOffs = active.setOffCount !== undefined ? active.setOffCount : currentLiveStatus.setOffCount;
-                    const estSecs = active.estimatedSecondsRemaining !== undefined ? active.estimatedSecondsRemaining : 0;
-                    const msg = active.statusMessage || `Processing ${processed} of ${totalRows} transactions (${pct}%)...`;
-
-                    currentLiveStatus.percentage = pct;
-                    currentLiveStatus.processedCount = processed;
-                    currentLiveStatus.insertedCount = inserted;
-                    currentLiveStatus.skippedCount = skipped;
-                    currentLiveStatus.setOffCount = setOffs;
-                    currentLiveStatus.estimatedSecondsRemaining = estSecs;
-                    currentLiveStatus.statusMessage = msg;
-
-                    setUploadProgress(pct);
-                    setUploadLiveStats(prev => ({
-                        processedCount: processed,
-                        totalCount: totalRows,
-                        insertedCount: inserted,
-                        skippedCount: skipped,
-                        currentBatch: 1,
-                        totalBatches: 1,
-                        setOffCount: setOffs,
-                        recentActivities: prev?.recentActivities || liveActivities
-                    }));
-                }
-            } catch (pollErr) {
-                console.warn('Status poll warning:', pollErr);
-            }
-        }, 1000);
-
-        // 2. 10-Second Toast Interval: shows progress toast every 10 seconds
-        const toast10sInterval = setInterval(() => {
-            const { percentage, processedCount, totalCount, estimatedSecondsRemaining } = currentLiveStatus;
-            const timeStr = estimatedSecondsRemaining >= 60 
-                ? `${Math.ceil(estimatedSecondsRemaining / 60)} min` 
-                : `${estimatedSecondsRemaining || 5}s`;
-            
-            toast(
-                `Backend Uploading: ${processedCount} / ${totalCount} transactions (${percentage}%) • ~${timeStr} for completion`,
-                {
-                    id: 'backend-upload-toast',
-                    icon: '⏳',
-                    duration: 9500
-                }
-            );
-        }, 10000);
-
-        // Initial immediate toast on start
-        toast(
-            `Upload initiated on backend: 0 / ${totalRows} transactions (0%) • Connecting...`,
-            { id: 'backend-upload-toast', icon: '🚀', duration: 9500 }
+        // Initial loading feedback toast while backend processes
+        toast.loading(
+            `⏳ Uploading & processing ${totalRows.toLocaleString()} transactions on backend...`,
+            { id: 'backend-upload-toast' }
         );
 
         try {
-            const res = await bulkUploadBankAccountTransactions(selectedAccountId, payload);
-            clearInterval(statusPollInterval);
-            clearInterval(toast10sInterval);
+            const res = await bulkUploadBankAccountTransactions(selectedAccountId, payload, (progress) => {
+                toast(progress.statusMessage, {
+                    id: 'backend-upload-toast',
+                    icon: progress.stage === 'RECALCULATING_BALANCES' ? '📊' : '⏳',
+                    duration: 10000
+                });
+            });
             toast.dismiss('backend-upload-toast');
-            setUploadProgress(100);
 
             const batchData = res.data || res;
             const insertedCount = (batchData.insertedCount !== undefined ? batchData.insertedCount : (batchData.count || 0));
@@ -1789,41 +1611,6 @@ interface SetOffPreview {
                 });
             });
 
-            const newActivities: Array<{ id: string; type: 'SUCCESS' | 'WARNING' | 'SETOFF' | 'INFO'; title: string; details?: string; time: string }> = [];
-
-            if (allSetOffResults.length > 0) {
-                allSetOffResults.slice(0, 5).forEach((so: any, sIdx: number) => {
-                    newActivities.push({
-                        id: `so-${sIdx}-${Date.now()}`,
-                        type: 'SETOFF',
-                        title: `Auto Set-Off ($${Number(so.totalSetOff || so.amount || 0).toFixed(2)}): ${so.customerName || so.driverName || so.supplierName || 'Party'}`,
-                        details: so.invoicesSetOff && so.invoicesSetOff.length > 0 
-                            ? `Settled: ${so.invoicesSetOff.map((inv: any) => inv.invoiceNumber || inv.invoiceId).join(', ')}`
-                            : `${so.invoiceCount || 1} invoice(s) settled`,
-                        time: new Date().toLocaleTimeString()
-                    });
-                });
-            }
-
-            newActivities.push({
-                id: `success-${Date.now()}`,
-                type: 'SUCCESS',
-                title: `Upload finished: ${insertedCount} transactions saved to DB${allSkippedTransactions.length > 0 ? `, ${allSkippedTransactions.length} skipped` : ''}`,
-                details: finalNewBalance !== undefined ? `Updated Account Running Balance: $${Number(finalNewBalance).toLocaleString()}` : undefined,
-                time: new Date().toLocaleTimeString()
-            });
-
-            setUploadLiveStats({
-                processedCount: totalRows,
-                totalCount: totalRows,
-                insertedCount,
-                skippedCount: allSkippedTransactions.length,
-                currentBatch: 1,
-                totalBatches: 1,
-                setOffCount: allSetOffResults.length,
-                recentActivities: newActivities
-            });
-
             const finalSummary = {
                 totalReceived: rows.length,
                 totalProcessed: totalRows,
@@ -1837,18 +1624,18 @@ interface SetOffPreview {
 
             setResult(finalSummary);
 
-            if (allSkippedTransactions.length > 0) {
-                toast.success(`Processed ${rows.length} rows: ${insertedCount} entered DB, ${allSkippedTransactions.length} skipped.`);
-            } else {
-                toast.success(`All ${insertedCount} transactions uploaded successfully to DB!`);
-            }
+            // Display crisp and clear message returned directly from backend res.status(200)
+            const backendMsg = res.message || batchData.message || (
+                allSkippedTransactions.length > 0
+                    ? `✅ Processed ${rows.length} transactions: ${insertedCount} inserted into DB, ${allSkippedTransactions.length} skipped. Balance: ₹${Number(finalNewBalance || 0).toLocaleString()}`
+                    : `✅ Processed ${rows.length} transactions: All ${insertedCount} inserted into DB! Balance: ₹${Number(finalNewBalance || 0).toLocaleString()}`
+            );
+            toast.success(backendMsg, { id: 'backend-finish-toast', duration: 10000 });
         } catch (err: any) {
-            clearInterval(statusPollInterval);
-            clearInterval(toast10sInterval);
             toast.dismiss('backend-upload-toast');
             console.error('Upload error:', err);
             const errMessage = err?.response?.data?.message || err?.message || 'Bulk upload failed';
-            toast.error(errMessage);
+            toast.error(errMessage, { duration: 8000 });
         } finally {
             isSubmittingRef.current = false;
             setUploading(false);
@@ -1905,277 +1692,17 @@ interface SetOffPreview {
 
     const renderMainBody = () => (
         <div className="space-y-5">
-                    {/* Server Active Processing Banner (Visible on Refreshed Screen if server is still working on last batch) */}
-                    {serverUploadStatus?.isUploading && !uploading && (serverUploadStatus.activeBatch?.elapsedSeconds === undefined || serverUploadStatus.activeBatch.elapsedSeconds < 60) && (
-                        <div className="p-6 border-2 border-amber-500/40 bg-amber-500/[0.07] rounded-2xl flex flex-col space-y-4 shadow-xl animate-fade-in">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-amber-500/20">
-                                <div className="flex items-center gap-3.5">
-                                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-amber-500/20 text-amber-400 shrink-0 shadow-[0_0_15px_rgba(245,158,11,0.25)]">
-                                        <Loader2 className="animate-spin" size={24} />
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                                Backend Server Active
-                                            </span>
-                                            <h4 className="text-base font-bold text-main" style={{ color: 'var(--text-main)' }}>
-                                                Last Upload Batch In Progress on Server
-                                            </h4>
-                                        </div>
-                                        <p className="text-xs text-dim mt-0.5" style={{ color: 'var(--text-dim)' }}>
-                                            The page was refreshed, but the backend server is currently finishing processing your last uploaded batch. Please wait...
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs font-mono font-bold text-amber-300 bg-amber-500/15 px-3 py-1.5 rounded-lg border border-amber-500/25">
-                                        Elapsed: {serverUploadStatus.activeBatch?.elapsedSeconds || 0}s
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                                <div className="p-3 rounded-xl border border-white/5 bg-black/20">
-                                    <div className="text-[10px] text-dim uppercase font-bold tracking-wider">Batch Info</div>
-                                    <div className="text-sm font-black text-main mt-0.5">
-                                        {serverUploadStatus.activeBatch?.batchIndex ? `Batch #${serverUploadStatus.activeBatch.batchIndex} of ${serverUploadStatus.activeBatch.totalBatches || '?'}` : 'Active Batch'}
-                                    </div>
-                                </div>
-                                <div className="p-3 rounded-xl border border-white/5 bg-black/20">
-                                    <div className="text-[10px] text-dim uppercase font-bold tracking-wider">Batch Size</div>
-                                    <div className="text-sm font-black text-amber-300 mt-0.5">
-                                        {serverUploadStatus.activeBatch?.batchSize || 10} rows
-                                    </div>
-                                </div>
-                                <div className="p-3 rounded-xl border border-white/5 bg-black/20">
-                                    <div className="text-[10px] text-dim uppercase font-bold tracking-wider">Processing Tx Range</div>
-                                    <div className="text-xs font-mono text-main truncate mt-0.5">
-                                        {serverUploadStatus.activeBatch?.firstTxId || '...'} → {serverUploadStatus.activeBatch?.lastTxId || '...'}
-                                    </div>
-                                </div>
-                                <div className="p-3 rounded-xl border border-white/5 bg-black/20">
-                                    <div className="text-[10px] text-dim uppercase font-bold tracking-wider">Latest Confirmed in DB</div>
-                                    <div className="text-xs font-mono text-emerald-400 font-bold truncate mt-0.5">
-                                        {serverUploadStatus.latestTransaction?.transactionId || 'Checking...'}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="w-full bg-black/30 rounded-full h-1.5 overflow-hidden border border-white/5">
-                                <div className="bg-amber-400 h-full rounded-full animate-pulse" style={{ width: '100%' }} />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Completion Banner (When server finishes processing the batch that was active during refresh) */}
-                    {justFinishedServerBatch && !uploading && (
-                        <div className="p-5 border border-emerald-500/40 bg-emerald-500/[0.08] rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg animate-fade-in">
-                            <div className="flex items-center gap-3.5">
-                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-emerald-500/20 text-emerald-400 shrink-0">
-                                    <CheckCircle size={22} />
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-bold text-emerald-300">
-                                        Last Upload Batch Finished Successfully on Server!
-                                    </h4>
-                                    <p className="text-xs text-dim mt-0.5" style={{ color: 'var(--text-dim)' }}>
-                                        {justFinishedServerBatch.activeBatchInfo?.batchIndex ? `Batch #${justFinishedServerBatch.activeBatchInfo.batchIndex} completed at ${justFinishedServerBatch.completedAt}. ` : ''}
-                                        Latest saved transaction in DB: <span className="font-mono text-white font-bold">{justFinishedServerBatch.latestTransaction?.transactionId || 'Updated'}</span> | Account running balance: <span className="font-mono text-emerald-400 font-bold">${Number(justFinishedServerBatch.balance || 0).toLocaleString()}</span>
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setJustFinishedServerBatch(null)}
-                                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer border border-white/10 shrink-0"
-                            >
-                                Dismiss
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Real-time Uploading Dashboard & Loader */}
+                    {/* Uploading indicator - simple inline notice, progress tracked via toasts */}
                     {uploading && (
-                        <div className="p-6 sm:p-8 border rounded-2xl flex flex-col space-y-6 shadow-2xl animate-fade-in" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-input)' }}>
-                            {/* Header Status */}
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
-                                <div className="flex items-center gap-3.5">
-                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-lime/10 text-lime shrink-0 shadow-[0_0_20px_rgba(200,230,0,0.2)]" style={{ color: 'var(--brand-lime)' }}>
-                                        <Loader2 className="animate-spin" size={24} />
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <h4 className="text-base font-black tracking-wide text-main" style={{ color: 'var(--text-main)' }}>
-                                                Uploading & Processing Ledger
-                                            </h4>
-                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-lime/10 text-lime border border-lime/30 animate-pulse" style={{ color: 'var(--brand-lime)', borderColor: 'var(--brand-lime)' }}>
-                                                Live Processing
-                                            </span>
-                                        </div>
-                                        <p className="text-xs mt-0.5 text-dim" style={{ color: 'var(--text-dim)' }}>
-                                            Writing to <strong className="text-white">{selectedAccount?.accountName || selectedAccount?.bankName}</strong> • {uploadLiveStats ? `Batch ${uploadLiveStats.currentBatch} of ${uploadLiveStats.totalBatches}` : 'Initializing batches...'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-right shrink-0">
-                                    <span className="text-2xl font-black font-mono" style={{ color: 'var(--brand-lime)' }}>{uploadProgress}%</span>
-                                    <p className="text-[10px] font-bold text-dim uppercase tracking-wider">Completed</p>
-                                </div>
-                            </div>
-
-                            {/* Glowing Progress Bar */}
-                            <div className="space-y-1.5">
-                                <div className="w-full bg-white/10 rounded-full h-3.5 overflow-hidden border p-0.5" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div
-                                        className="h-full rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(200,230,0,0.8)] relative overflow-hidden"
-                                        style={{ width: `${uploadProgress}%`, backgroundColor: 'var(--brand-lime)' }}
-                                    >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse" />
-                                    </div>
-                                </div>
-                                <div className="flex justify-between text-[11px] font-semibold text-dim">
-                                    <span>
-                                        Processed <strong className="text-white">{uploadLiveStats?.processedCount || 0}</strong> of <strong className="text-white">{uploadLiveStats?.totalCount || validCount}</strong> transactions
-                                    </span>
-                                    <span>
-                                        {uploadProgress < 30 ? "Validating & parsing batch..." : uploadProgress < 85 ? "Applying DB insertions & invoice set-offs..." : "Committing running balances..."}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* 4 Real-time Metrics Cards */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                {/* Total / Progress Card */}
-                                <div className="p-3.5 rounded-xl border bg-black/30 flex flex-col justify-between" style={{ borderColor: 'var(--border-main)' }}>
-                                    <div className="flex items-center justify-between text-dim text-xs">
-                                        <span className="font-bold uppercase tracking-wider text-[10px]">Total Processed</span>
-                                        <Activity size={14} className="text-blue-400" />
-                                    </div>
-                                    <div className="mt-2">
-                                        <span className="text-xl font-black font-mono text-white">
-                                            {uploadLiveStats?.processedCount || 0}
-                                        </span>
-                                        <span className="text-xs text-dim font-bold ml-1">/ {uploadLiveStats?.totalCount || validCount}</span>
-                                    </div>
-                                    <div className="text-[10px] text-blue-400 font-bold mt-1">
-                                        {uploadLiveStats ? `${Math.round((uploadLiveStats.processedCount / (uploadLiveStats.totalCount || 1)) * 100)}% of sheet` : 'Starting...'}
-                                    </div>
-                                </div>
-
-                                {/* Entered DB Card */}
-                                <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex flex-col justify-between">
-                                    <div className="flex items-center justify-between text-emerald-300 text-xs">
-                                        <span className="font-bold uppercase tracking-wider text-[10px]">Entered In DB</span>
-                                        <Database size={14} className="text-emerald-400" />
-                                    </div>
-                                    <div className="mt-2">
-                                        <span className="text-xl font-black font-mono text-emerald-400">
-                                            {uploadLiveStats?.insertedCount || 0}
-                                        </span>
-                                    </div>
-                                    <div className="text-[10px] text-emerald-300/80 font-bold mt-1 flex items-center gap-1">
-                                        <Check size={10} /> Saved to Ledger
-                                    </div>
-                                </div>
-
-                                {/* Skipped Card */}
-                                <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex flex-col justify-between">
-                                    <div className="flex items-center justify-between text-amber-300 text-xs">
-                                        <span className="font-bold uppercase tracking-wider text-[10px]">Skipped</span>
-                                        <AlertTriangle size={14} className="text-amber-400" />
-                                    </div>
-                                    <div className="mt-2">
-                                        <span className="text-xl font-black font-mono text-amber-400">
-                                            {uploadLiveStats?.skippedCount || 0}
-                                        </span>
-                                    </div>
-                                    <div className="text-[10px] text-amber-300/80 font-bold mt-1">
-                                        DB duplicates / mismatch
-                                    </div>
-                                </div>
-
-                                {/* Set-Offs Card */}
-                                <div className="p-3.5 rounded-xl border border-purple-500/30 bg-purple-500/10 flex flex-col justify-between">
-                                    <div className="flex items-center justify-between text-purple-300 text-xs">
-                                        <span className="font-bold uppercase tracking-wider text-[10px]">Set-Offs Applied</span>
-                                        <Link2 size={14} className="text-purple-400" />
-                                    </div>
-                                    <div className="mt-2">
-                                        <span className="text-xl font-black font-mono text-purple-400">
-                                            {uploadLiveStats?.setOffCount || 0}
-                                        </span>
-                                    </div>
-                                    <div className="text-[10px] text-purple-300/80 font-bold mt-1">
-                                        Auto invoice settlements
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Live Streaming Feed / Activity Ticker */}
-                            {uploadLiveStats && uploadLiveStats.recentActivities.length > 0 && (
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-dim flex items-center gap-1.5">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                                            Real-Time Execution Stream
-                                        </span>
-                                        <span className="text-[10px] font-bold text-dim">Streaming Live</span>
-                                    </div>
-                                    <div className="p-3 rounded-xl border bg-black/40 max-h-48 overflow-y-auto space-y-2 border-white/10 font-mono text-xs custom-scrollbar">
-                                        {uploadLiveStats.recentActivities.map((act) => (
-                                            <div
-                                                key={act.id}
-                                                className={`p-2 rounded-lg border flex items-start justify-between gap-3 text-[11px] animate-fade-in ${
-                                                    act.type === 'SUCCESS'
-                                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-200'
-                                                        : act.type === 'SETOFF'
-                                                        ? 'bg-purple-500/10 border-purple-500/20 text-purple-200'
-                                                        : act.type === 'WARNING'
-                                                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-200'
-                                                        : 'bg-blue-500/10 border-blue-500/20 text-blue-200'
-                                                }`}
-                                            >
-                                                <div className="space-y-0.5 overflow-hidden">
-                                                    <div className="font-bold truncate flex items-center gap-1.5">
-                                                        {act.type === 'SUCCESS' && <CheckCircle size={12} className="text-emerald-400 shrink-0" />}
-                                                        {act.type === 'SETOFF' && <Link2 size={12} className="text-purple-400 shrink-0" />}
-                                                        {act.type === 'WARNING' && <AlertTriangle size={12} className="text-amber-400 shrink-0" />}
-                                                        {act.type === 'INFO' && <Info size={12} className="text-blue-400 shrink-0" />}
-                                                        <span>{act.title}</span>
-                                                    </div>
-                                                    {act.details && (
-                                                        <p className="text-[10px] text-white/60 truncate pl-4.5">{act.details}</p>
-                                                    )}
-                                                </div>
-                                                <span className="text-[9px] text-white/40 shrink-0 font-sans">{act.time}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Stop Upload Button */}
-                            <div className="flex flex-col items-center gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (window.confirm('Are you sure you want to stop the upload? Transactions already saved to DB will NOT be rolled back.')) {
-                                            uploadAbortRef.current = true;
-                                            toast('Stopping upload after current batch completes...', { icon: '\u23F3' });
-                                        }
-                                    }}
-                                    className="group flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all duration-300 cursor-pointer hover:scale-[1.02] active:scale-95"
-                                    style={{
-                                        background: 'rgba(239, 68, 68, 0.12)',
-                                        borderColor: 'rgba(239, 68, 68, 0.35)',
-                                        color: '#f87171'
-                                    }}
-                                >
-                                    <StopCircle size={16} className="group-hover:animate-pulse" />
-                                    Stop Upload
-                                </button>
-                                <div className="text-[10px] uppercase tracking-widest font-black text-white/30 text-center">
-                                    Already-saved transactions will not be rolled back
-                                </div>
+                        <div className="p-5 border rounded-2xl flex items-center gap-4 animate-fade-in" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.06)' }}>
+                            <Loader2 className="animate-spin shrink-0" size={22} style={{ color: 'var(--brand-lime)' }} />
+                            <div>
+                                <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                                    Backend is processing your upload...
+                                </p>
+                                <p className="text-xs mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                                    You will receive toast notifications every ~5 seconds with live progress from the server. You can safely navigate away — the backend will continue processing.
+                                </p>
                             </div>
                         </div>
                     )}
@@ -3018,7 +2545,7 @@ interface SetOffPreview {
                                     {uploading ? (
                                         <>
                                             <Loader2 size={15} className="animate-spin" />
-                                            <span>Processing Upload ({uploadProgress}%)...</span>
+                                            <span>Processing Upload...</span>
                                         </>
                                     ) : (
                                         <>
