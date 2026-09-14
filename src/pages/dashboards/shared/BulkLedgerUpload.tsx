@@ -1690,7 +1690,6 @@ interface SetOffPreview {
 
             const batchData = res.data || res;
             const insertedCount = (batchData.insertedCount !== undefined ? batchData.insertedCount : (batchData.count || 0));
-            const skippedInBackend = (batchData.skippedCount || 0);
             const allInsertedTransactions = Array.isArray(batchData.insertedTransactions) ? batchData.insertedTransactions : validRows;
             const allSkippedTransactions = Array.isArray(batchData.skippedTransactions) ? [...batchData.skippedTransactions] : [];
             const allSetOffResults = Array.isArray(batchData.setOffResults) ? batchData.setOffResults : [];
