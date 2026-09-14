@@ -1608,6 +1608,7 @@ interface SetOffPreview {
 
         if (!selectedAccountId) {
             toast.error('Please select a target bank account');
+            isSubmittingRef.current = false;
             return;
         }
 
@@ -1615,11 +1616,15 @@ interface SetOffPreview {
         const totalRows = validRows.length;
         if (totalRows === 0) {
             toast.error('No valid rows to upload. Fix errors first.');
+            isSubmittingRef.current = false;
             return;
         }
 
+        const BATCH_SIZE = 50;
+        const totalBatches = Math.ceil(totalRows / BATCH_SIZE);
+
         setUploading(true);
-        setUploadProgress(15);
+        setUploadProgress(0);
         uploadAbortRef.current = false;
 
         setUploadLiveStats({
@@ -1628,19 +1633,19 @@ interface SetOffPreview {
             insertedCount: 0,
             skippedCount: 0,
             currentBatch: 1,
-            totalBatches: 1,
+            totalBatches: totalBatches,
             setOffCount: 0,
             recentActivities: [{
-                id: 'init-1',
+                id: `init-${Date.now()}`,
                 type: 'INFO',
-                title: `Starting single-click upload for ${totalRows.toLocaleString()} valid transactions`,
+                title: `Starting batch upload for ${totalRows.toLocaleString()} valid transactions (${totalBatches} batch${totalBatches > 1 ? 'es' : ''})`,
                 details: `Target: ${selectedAccount?.accountName || selectedAccount?.bankName}`,
                 time: new Date().toLocaleTimeString()
             }]
         });
 
-        // Map all valid rows to API payload
-        const batchTransactions = validRows.map((row) => {
+        // Map all valid rows to API transaction format
+        const allTransactions = validRows.map((row) => {
             const rest: any = { ...row._rawRow };
             for (const key in row) {
                 if (key !== '_rowErrors' && key !== '_rawRow') {
@@ -1665,37 +1670,117 @@ interface SetOffPreview {
             return rest;
         });
 
-        const payload = {
-            clearExisting,
-            transactions: batchTransactions,
-            batchIndex: 0,
-            totalBatches: 1,
-            isLastBatch: true,
-            skipRecalculate: false,
-            fileName: fileName || undefined
-        };
-
-        let currentSimulatedPct = 15;
-        const progressInterval = setInterval(() => {
-            if (currentSimulatedPct < 90) {
-                currentSimulatedPct = Math.min(currentSimulatedPct + Math.floor(Math.random() * 8) + 4, 90);
-                setUploadProgress(currentSimulatedPct);
+        let accumulatedInsertedCount = 0;
+        const allInsertedTransactions: any[] = [];
+        const allSkippedTransactions: any[] = [];
+        const allSetOffResults: any[] = [];
+        let finalNewBalance = selectedAccount?.currentBalance;
+        const liveActivities: Array<{ id: string; type: 'SUCCESS' | 'WARNING' | 'SETOFF' | 'INFO'; title: string; details?: string; time: string }> = [
+            {
+                id: `init-${Date.now()}`,
+                type: 'INFO',
+                title: `Starting upload for ${totalRows.toLocaleString()} transactions across ${totalBatches} batch(es)`,
+                details: `Target Account: ${selectedAccount?.accountName || selectedAccount?.bankName}`,
+                time: new Date().toLocaleTimeString()
             }
-        }, 150);
+        ];
+
+        let processedRowsCount = 0;
+        let uploadAborted = false;
 
         try {
-            const res = await bulkUploadBankAccountTransactions(selectedAccountId, payload);
-            clearInterval(progressInterval);
-            setUploadProgress(100);
+            for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
+                if (uploadAbortRef.current) {
+                    uploadAborted = true;
+                    liveActivities.unshift({
+                        id: `abort-${Date.now()}`,
+                        type: 'WARNING',
+                        title: `Upload stopped by user at batch ${batchIdx + 1} of ${totalBatches}`,
+                        details: `${accumulatedInsertedCount} transactions saved before abort`,
+                        time: new Date().toLocaleTimeString()
+                    });
+                    break;
+                }
 
-            const batchData = res.data || res;
-            const insertedCount = (batchData.insertedCount !== undefined ? batchData.insertedCount : (batchData.count || 0));
-            const allInsertedTransactions = Array.isArray(batchData.insertedTransactions) ? batchData.insertedTransactions : validRows;
-            const allSkippedTransactions = Array.isArray(batchData.skippedTransactions) ? [...batchData.skippedTransactions] : [];
-            const allSetOffResults = Array.isArray(batchData.setOffResults) ? batchData.setOffResults : [];
-            const finalNewBalance = batchData.newBalance !== undefined ? batchData.newBalance : selectedAccount?.currentBalance;
+                const startIdx = batchIdx * BATCH_SIZE;
+                const endIdx = Math.min(startIdx + BATCH_SIZE, totalRows);
+                const currentBatchRows = allTransactions.slice(startIdx, endIdx);
+                const isLastBatch = (batchIdx === totalBatches - 1);
 
-            // Also aggregate pre-upload client-side excluded rows into skipped transactions report
+                const payload = {
+                    clearExisting: false,
+                    transactions: currentBatchRows,
+                    batchIndex: batchIdx,
+                    totalBatches: totalBatches,
+                    isLastBatch: isLastBatch,
+                    skipRecalculate: !isLastBatch,
+                    fileName: fileName || undefined
+                };
+
+                const res = await bulkUploadBankAccountTransactions(selectedAccountId, payload);
+                const batchData = res.data || res;
+
+                const batchInserted = (batchData.insertedCount !== undefined ? batchData.insertedCount : (batchData.count || 0));
+                accumulatedInsertedCount += batchInserted;
+
+                if (Array.isArray(batchData.insertedTransactions)) {
+                    allInsertedTransactions.push(...batchData.insertedTransactions);
+                } else if (batchInserted > 0) {
+                    allInsertedTransactions.push(...validRows.slice(startIdx, endIdx));
+                }
+
+                if (Array.isArray(batchData.skippedTransactions) && batchData.skippedTransactions.length > 0) {
+                    allSkippedTransactions.push(...batchData.skippedTransactions);
+                }
+
+                if (Array.isArray(batchData.setOffResults) && batchData.setOffResults.length > 0) {
+                    allSetOffResults.push(...batchData.setOffResults);
+                    batchData.setOffResults.slice(0, 2).forEach((so: any, sIdx: number) => {
+                        liveActivities.unshift({
+                            id: `so-${batchIdx}-${sIdx}-${Date.now()}`,
+                            type: 'SETOFF',
+                            title: `Auto Set-Off ($${Number(so.totalSetOff || so.amount || 0).toFixed(2)}): ${so.customerName || so.driverName || so.supplierName || 'Party'}`,
+                            details: so.invoicesSetOff && so.invoicesSetOff.length > 0 
+                                ? `Settled: ${so.invoicesSetOff.map((inv: any) => inv.invoiceNumber || inv.invoiceId).join(', ')}`
+                                : `${so.invoiceCount || 1} invoice(s) settled`,
+                            time: new Date().toLocaleTimeString()
+                        });
+                    });
+                }
+
+                if (batchData.newBalance !== undefined) {
+                    finalNewBalance = batchData.newBalance;
+                }
+
+                processedRowsCount += currentBatchRows.length;
+                const currentProgressPct = Math.round((processedRowsCount / totalRows) * 100);
+                setUploadProgress(currentProgressPct);
+
+                liveActivities.unshift({
+                    id: `batch-${batchIdx}-${Date.now()}`,
+                    type: (batchData.skippedTransactions?.length > 0) ? 'WARNING' : 'SUCCESS',
+                    title: `Batch ${batchIdx + 1}/${totalBatches} complete: +${batchInserted} saved${batchData.skippedTransactions?.length > 0 ? `, ${batchData.skippedTransactions.length} skipped` : ''}`,
+                    details: `Processed ${processedRowsCount} of ${totalRows} rows (${currentProgressPct}%)`,
+                    time: new Date().toLocaleTimeString()
+                });
+
+                if (liveActivities.length > 30) {
+                    liveActivities.length = 30;
+                }
+
+                setUploadLiveStats({
+                    processedCount: processedRowsCount,
+                    totalCount: totalRows,
+                    insertedCount: accumulatedInsertedCount,
+                    skippedCount: allSkippedTransactions.length,
+                    currentBatch: Math.min(batchIdx + 1, totalBatches),
+                    totalBatches: totalBatches,
+                    setOffCount: allSetOffResults.length,
+                    recentActivities: [...liveActivities]
+                });
+            }
+
+            // Include client-side pre-excluded validation error rows in skipped summary
             const clientSideInvalidRows = rows.filter(r => r._rowErrors && r._rowErrors.length > 0);
             clientSideInvalidRows.forEach((r, idx) => {
                 allSkippedTransactions.push({
@@ -1709,44 +1794,29 @@ interface SetOffPreview {
                 });
             });
 
-            const newActivities: Array<{ id: string; type: 'SUCCESS' | 'WARNING' | 'SETOFF' | 'INFO'; title: string; details?: string; time: string }> = [];
-
-            if (allSetOffResults.length > 0) {
-                allSetOffResults.slice(0, 5).forEach((so: any, sIdx: number) => {
-                    newActivities.push({
-                        id: `so-${sIdx}-${Date.now()}`,
-                        type: 'SETOFF',
-                        title: `Auto Set-Off: $${Number(so.totalSetOff || so.amount || 0).toFixed(2)} applied for ${so.customerName || so.driverName || so.supplierName || 'Party'}`,
-                        details: so.invoicesSetOff && so.invoicesSetOff.length > 0 
-                            ? `Settled: ${so.invoicesSetOff.map((inv: any) => inv.invoiceNumber || inv.invoiceId).join(', ')}`
-                            : `${so.invoiceCount || 1} invoice(s) settled`,
-                        time: new Date().toLocaleTimeString()
-                    });
-                });
-            }
-
-            newActivities.push({
-                id: `success-${Date.now()}`,
+            liveActivities.unshift({
+                id: `finish-${Date.now()}`,
                 type: 'SUCCESS',
-                title: `Upload completed: ${insertedCount} transactions saved to DB${allSkippedTransactions.length > 0 ? `, ${allSkippedTransactions.length} skipped` : ''}`,
+                title: uploadAborted ? `Upload stopped: ${accumulatedInsertedCount} transactions saved` : `Upload finished: ${accumulatedInsertedCount} transactions saved to DB`,
                 details: finalNewBalance !== undefined ? `Updated Account Running Balance: $${Number(finalNewBalance).toLocaleString()}` : undefined,
                 time: new Date().toLocaleTimeString()
             });
 
             setUploadLiveStats({
-                processedCount: totalRows,
+                processedCount: processedRowsCount,
                 totalCount: totalRows,
-                insertedCount,
+                insertedCount: accumulatedInsertedCount,
                 skippedCount: allSkippedTransactions.length,
-                currentBatch: 1,
-                totalBatches: 1,
+                currentBatch: totalBatches,
+                totalBatches: totalBatches,
                 setOffCount: allSetOffResults.length,
-                recentActivities: newActivities
+                recentActivities: [...liveActivities]
             });
 
             const finalSummary = {
                 totalReceived: rows.length,
-                insertedCount,
+                totalProcessed: processedRowsCount,
+                insertedCount: accumulatedInsertedCount,
                 skippedCount: allSkippedTransactions.length,
                 newBalance: finalNewBalance,
                 insertedTransactions: allInsertedTransactions,
@@ -1756,15 +1826,40 @@ interface SetOffPreview {
 
             setResult(finalSummary);
 
-            if (allSkippedTransactions.length > 0) {
-                toast.success(`Processed ${rows.length} rows: ${insertedCount} entered DB, ${allSkippedTransactions.length} skipped.`);
+            if (uploadAborted) {
+                toast.warning(`Upload stopped. ${accumulatedInsertedCount} transactions saved to DB.`);
+            } else if (allSkippedTransactions.length > 0) {
+                toast.success(`Processed ${rows.length} rows: ${accumulatedInsertedCount} entered DB, ${allSkippedTransactions.length} skipped.`);
             } else {
-                toast.success(`All ${insertedCount} transactions uploaded successfully to DB!`);
+                toast.success(`All ${accumulatedInsertedCount} transactions uploaded successfully to DB!`);
             }
         } catch (err: any) {
-            clearInterval(progressInterval);
             console.error('Upload error:', err);
             const errMessage = err?.response?.data?.message || err?.message || 'Bulk upload failed';
+
+            liveActivities.unshift({
+                id: `err-${Date.now()}`,
+                type: 'WARNING',
+                title: `Batch upload interrupted by error`,
+                details: errMessage,
+                time: new Date().toLocaleTimeString()
+            });
+
+            if (accumulatedInsertedCount > 0) {
+                const partialSummary = {
+                    totalReceived: rows.length,
+                    totalProcessed: processedRowsCount,
+                    insertedCount: accumulatedInsertedCount,
+                    skippedCount: allSkippedTransactions.length,
+                    newBalance: finalNewBalance,
+                    insertedTransactions: allInsertedTransactions,
+                    skippedTransactions: allSkippedTransactions,
+                    setOffResults: allSetOffResults,
+                    message: `Interrupted: ${accumulatedInsertedCount} saved before error: ${errMessage}`
+                };
+                setResult(partialSummary);
+            }
+
             toast.error(errMessage);
         } finally {
             isSubmittingRef.current = false;
