@@ -235,7 +235,8 @@ const BankAccountLedger = () => {
 
                         return {
                             id: e._id,
-                            entryDate: e.entryDate ? new Date(e.entryDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+                            entryDate: e.entryDate ? new Date(e.entryDate).toISOString().slice(0, 16) : (e.date ? new Date(e.date).toISOString().slice(0, 16) : ''),
+                            originalEntryDate: e.entryDate || e.date,
                             description: e.description || '',
                             type: e.type || 'DEBIT',
                             amount: e.amount || 0,
@@ -1341,7 +1342,7 @@ const BankAccountLedger = () => {
 
                 return {
                     id: entry.id,
-                    entryDate: entry.entryDate ? new Date(entry.entryDate).toISOString() : new Date().toISOString(),
+                    entryDate: entry.entryDate ? new Date(entry.entryDate).toISOString() : (entry.originalEntryDate ? new Date(entry.originalEntryDate).toISOString() : undefined),
                     description: entry.description,
                     type: entry.type,
                     amount: entry.amount,
