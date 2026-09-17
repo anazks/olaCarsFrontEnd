@@ -229,6 +229,16 @@ export const updateLinkedAccountingCode = async (transactionId: string, data: { 
     return response.data;
 };
 
+export const updateTransactionDate = async (transactionId: string, data: { date: string }) => {
+    const response = await api.put(`/api/bank-accounts/transactions/${transactionId}/date`, data);
+    return response.data;
+};
+
+export const updateTransactionDescription = async (transactionId: string, data: { description: string }) => {
+    const response = await api.put(`/api/bank-accounts/transactions/${transactionId}/description`, data);
+    return response.data;
+};
+
 export const downloadBankAccountLedgerPdf = async (id: string, params?: any) => {
     const response = await api.get(`/api/bank-accounts/${id}/ledger/pdf`, {
         params,

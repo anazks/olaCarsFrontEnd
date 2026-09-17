@@ -23,13 +23,16 @@ import {
     Zap,
     Receipt,
     Repeat,
-    Search
+    Search,
+    Pencil
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getBankTransactionById, updateLinkedAccountingCode } from '../../../services/bankAccountService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import { TransactionEditModal } from './modals/TransactionEditModal';
+import { TransactionDateEditModal } from './modals/TransactionDateEditModal';
+import { TransactionDescriptionEditModal } from './modals/TransactionDescriptionEditModal';
 import type { TxClassification, EditMode } from './modals/TransactionEditModal';
 
 const CUTOFF_DATE_STR = '2026-06-15';
@@ -714,6 +717,8 @@ const BankTransactionDetailPage = () => {
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [activeEditMode, setActiveEditMode] = useState<EditMode>('AMOUNT');
+    const [isDateEditModalOpen, setIsDateEditModalOpen] = useState(false);
+    const [isDescriptionEditModalOpen, setIsDescriptionEditModalOpen] = useState(false);
 
     // Ledger Entry Detail Modal state
     const [isLedgerDetailOpen, setIsLedgerDetailOpen] = useState(false);
@@ -952,12 +957,68 @@ const BankTransactionDetailPage = () => {
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
                             <div className="col-span-1 sm:col-span-2">
-                                <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-dim)' }}>Description</p>
-                                <p className="font-semibold text-lg" style={{ color: 'var(--text-main)' }}>{transaction.description}</p>
+                                <div className="flex items-center justify-between mb-1">
+                                    <p className="text-xs font-semibold" style={{ color: 'var(--text-dim)' }}>Description</p>
+                                    <button
+                                        type="button"
+                                        disabled={isCutoffDisabled}
+                                        onClick={() => !isCutoffDisabled && setIsDescriptionEditModalOpen(true)}
+                                        title={isCutoffDisabled ? "Transactions till 15/06/2026 cannot be edited" : "Edit Description"}
+                                        className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border rounded-lg transition-all flex items-center gap-1 ${
+                                            isCutoffDisabled 
+                                                ? 'bg-white/5 text-white/40 border-white/10 opacity-40 cursor-not-allowed' 
+                                                : 'bg-[#C8E600]/10 hover:bg-[#C8E600]/20 border-[#C8E600]/30 text-[#C8E600] hover:scale-105 cursor-pointer'
+                                        }`}
+                                    >
+                                        <Pencil size={10} /> Edit Description
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-lg" style={{ color: 'var(--text-main)' }}>{transaction.description}</p>
+                                    {!isCutoffDisabled && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsDescriptionEditModalOpen(true)}
+                                            title="Edit Description"
+                                            className="p-1 rounded-md hover:bg-white/10 text-white/60 hover:text-[#C8E600] transition-colors cursor-pointer"
+                                        >
+                                            <Pencil size={13} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             <div>
-                                <p className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-dim)' }}><Clock size={12}/> Time of Transaction</p>
-                                <p className="font-mono text-sm" style={{ color: 'var(--text-main)' }}>{formattedDate}</p>
+                                <div className="flex items-center justify-between mb-1">
+                                    <p className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                        <Clock size={12}/> Time of Transaction
+                                    </p>
+                                    <button
+                                        type="button"
+                                        disabled={isCutoffDisabled}
+                                        onClick={() => !isCutoffDisabled && setIsDateEditModalOpen(true)}
+                                        title={isCutoffDisabled ? "Transactions till 15/06/2026 cannot be edited" : "Edit Transaction Date"}
+                                        className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border rounded-lg transition-all flex items-center gap-1 ${
+                                            isCutoffDisabled 
+                                                ? 'bg-white/5 text-white/40 border-white/10 opacity-40 cursor-not-allowed' 
+                                                : 'bg-[#C8E600]/10 hover:bg-[#C8E600]/20 border-[#C8E600]/30 text-[#C8E600] hover:scale-105 cursor-pointer'
+                                        }`}
+                                    >
+                                        <Pencil size={10} /> Edit Date
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <p className="font-mono text-sm" style={{ color: 'var(--text-main)' }}>{formattedDate}</p>
+                                    {!isCutoffDisabled && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsDateEditModalOpen(true)}
+                                            title="Edit Transaction Date"
+                                            className="p-1 rounded-md hover:bg-white/10 text-white/60 hover:text-[#C8E600] transition-colors cursor-pointer"
+                                        >
+                                            <Pencil size={13} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             <div>
                                 <p className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-dim)' }}><Hash size={12}/> Transaction Reference ID</p>
@@ -1310,6 +1371,22 @@ const BankTransactionDetailPage = () => {
                 transaction={transaction}
                 classification={classification}
                 initialMode={activeEditMode}
+            />
+
+            {/* Transaction Date Edit Modal */}
+            <TransactionDateEditModal
+                isOpen={isDateEditModalOpen}
+                onClose={() => setIsDateEditModalOpen(false)}
+                onSuccess={fetchTransaction}
+                transaction={transaction}
+            />
+
+            {/* Transaction Description Edit Modal */}
+            <TransactionDescriptionEditModal
+                isOpen={isDescriptionEditModalOpen}
+                onClose={() => setIsDescriptionEditModalOpen(false)}
+                onSuccess={fetchTransaction}
+                transaction={transaction}
             />
 
             {/* Ledger Entry Detail Modal */}
