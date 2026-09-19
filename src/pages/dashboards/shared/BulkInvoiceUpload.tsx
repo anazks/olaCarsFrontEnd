@@ -570,8 +570,8 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
             const invNo = getRowVal(row, ['Invoice Number', 'invoiceNumber']);
             const invId = getRowVal(row, ['Invoice ID', 'invoiceId']);
             const key = (invNo || invId || '').toString().trim();
-            if (key) {
-                const isBackendError = finalResult.errors && finalResult.errors.some((err: string) =>
+            if (key && finalResult.errors && finalResult.errors.length > 0) {
+                const isBackendError = finalResult.errors.some((err: string) =>
                     err.toLowerCase().includes(`invoice group "${key.toLowerCase()}"`) ||
                     err.toLowerCase().includes(`invoice number "${key.toLowerCase()}"`) ||
                     err.toLowerCase().includes(`key "${key.toLowerCase()}"`) ||
@@ -585,7 +585,28 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
         if (failedRows.length === 0) return;
 
         const exportData = failedRows.map(row => {
-            const cleanRow: any = {};
+            let errorReason = '';
+            if (row._rowErrors && row._rowErrors.length > 0) {
+                errorReason = row._rowErrors.join(' | ');
+            } else {
+                const invNo = getRowVal(row, ['Invoice Number', 'invoiceNumber']);
+                const invId = getRowVal(row, ['Invoice ID', 'invoiceId']);
+                const key = (invNo || invId || '').toString().trim();
+                if (key && finalResult.errors) {
+                    const matchedErr = finalResult.errors.find((err: string) =>
+                        err.toLowerCase().includes(`invoice group "${key.toLowerCase()}"`) ||
+                        err.toLowerCase().includes(`invoice number "${key.toLowerCase()}"`) ||
+                        err.toLowerCase().includes(`key "${key.toLowerCase()}"`) ||
+                        err.toLowerCase().includes(key.toLowerCase())
+                    );
+                    if (matchedErr) errorReason = matchedErr;
+                }
+                if (!errorReason) errorReason = 'Failed during backend processing';
+            }
+
+            const cleanRow: any = {
+                'Error Reason': errorReason
+            };
             for (const key in row) {
                 if (key !== '_rowErrors') {
                     cleanRow[key] = row[key];
@@ -594,11 +615,11 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
             return cleanRow;
         });
 
-        const worksheet = XLSX.utils.json_to_sheet(exportData, { header: CSV_COLUMNS });
+        const worksheet = XLSX.utils.json_to_sheet(exportData, { header: ['Error Reason', ...CSV_COLUMNS] });
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Failed Invoices");
         XLSX.writeFile(workbook, `failed_invoice_rows_${Date.now()}.xlsx`);
-        toast.success(`Automatically downloaded ${failedRows.length} failed rows.`);
+        toast.success(`Automatically downloaded ${failedRows.length} failed rows with error details.`);
     };
 
     const handleSubmit = async () => {
@@ -608,108 +629,67 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
             return;
         }
 
-        // Group rows by Invoice Number / Invoice ID to keep line items of the same invoice together
-        const invoiceGroupsMap = new Map<string, any[]>();
+        // Count unique invoices
+        const invoiceKeys = new Set();
         validRows.forEach(row => {
             const invNo = getRowVal(row, ['Invoice Number', 'invoiceNumber']);
             const invId = getRowVal(row, ['Invoice ID', 'invoiceId']);
             const key = (invNo || invId || `TEMP-${Date.now()}-${Math.random()}`).toString().trim();
-            if (!invoiceGroupsMap.has(key)) {
-                invoiceGroupsMap.set(key, []);
-            }
-            invoiceGroupsMap.get(key)!.push(row);
+            invoiceKeys.add(key);
         });
-
-        const groupsArray = Array.from(invoiceGroupsMap.values());
-        const totalInvoices = groupsArray.length;
+        const totalUniqueInvoices = invoiceKeys.size;
 
         setUploading(true);
         setUploadProgress(0);
-        setUploadStatusText(`Uploading invoices (0 / ${totalInvoices})...`);
+        setUploadStatusText(`Preparing to upload ${totalUniqueInvoices} invoices...`);
 
-        const CHUNK_INVOICE_SIZE = 50; // Send 50 unique invoices at a time
-        const chunks: any[][] = [];
-        for (let i = 0; i < groupsArray.length; i += CHUNK_INVOICE_SIZE) {
-            const groupBatch = groupsArray.slice(i, i + CHUNK_INVOICE_SIZE);
-            const rowBatch = groupBatch.flat().map((row) => {
-                const rest: any = {};
-                for (const key in row) {
-                    if (key !== '_rowErrors') {
-                        rest[key] = row[key];
-                    }
+        // Strip _rowErrors from payload rows
+        const cleanPayloadRows = validRows.map(row => {
+            const rest: any = {};
+            for (const key in row) {
+                if (key !== '_rowErrors') {
+                    rest[key] = row[key];
                 }
-                return rest;
-            });
-            chunks.push(rowBatch);
-        }
-
-        const finalResult = {
-            successCount: 0,
-            errorCount: 0,
-            skippedCount: 0,
-            errors: [] as string[],
-            skipped: [] as string[],
-            createdInvoices: [] as string[]
-        };
+            }
+            return rest;
+        });
 
         try {
-            let processedInvoices = 0;
-            for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
-                const rowBatch = chunks[chunkIdx];
-                
-                let res: any = null;
-                let attempts = 0;
-                const maxAttempts = 3;
-                
-                while (attempts < maxAttempts) {
-                    try {
-                        attempts++;
-                        res = await bulkUploadInvoices({ rows: rowBatch, invoiceType });
-                        break;
-                    } catch (batchErr: any) {
-                        console.warn(`[BulkUpload] Batch ${chunkIdx + 1} attempt ${attempts} failed:`, batchErr);
-                        if (attempts >= maxAttempts) {
-                            throw batchErr;
-                        }
-                        setUploadStatusText(`Batch ${chunkIdx + 1} retrying (attempt ${attempts + 1}/${maxAttempts})...`);
-                        await new Promise(resolve => setTimeout(resolve, 1500));
-                    }
+            const result = await bulkUploadInvoices(
+                { rows: cleanPayloadRows, invoiceType, stream: true },
+                (progress) => {
+                    setUploadProgress(progress.percentage);
+                    setUploadStatusText(progress.statusMessage);
+                    // Provide toast on every interval (like bulk bank transaction upload)
+                    toast(progress.statusMessage, {
+                        id: 'bulk-invoice-upload-toast',
+                        icon: '⚡',
+                        duration: 10000
+                    });
                 }
-                
-                finalResult.successCount += res.successCount || 0;
-                finalResult.errorCount += res.errorCount || 0;
-                finalResult.skippedCount += res.skippedCount || 0;
-                if (res.errors) finalResult.errors.push(...res.errors);
-                if (res.skipped) finalResult.skipped.push(...res.skipped);
-                if (res.createdInvoices) finalResult.createdInvoices.push(...res.createdInvoices);
+            );
 
-                processedInvoices += groupsArray.slice(chunkIdx * CHUNK_INVOICE_SIZE, (chunkIdx + 1) * CHUNK_INVOICE_SIZE).length;
-                setUploadProgress(Math.round((processedInvoices / totalInvoices) * 100));
-                setUploadStatusText(`Uploading invoices (${processedInvoices} / ${totalInvoices})...`);
-                if (chunkIdx < chunks.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 800));
-                }
-            }
-
-            setResult(finalResult);
+            toast.dismiss('bulk-invoice-upload-toast');
+            setResult(result);
 
             if (autoDownloadFailed) {
-                downloadFailedRowsExcel(finalResult);
+                downloadFailedRowsExcel(result);
             }
 
-            if (finalResult.successCount > 0) {
-                toast.success(`${finalResult.successCount} invoices created successfully.`);
-                if (finalResult.skippedCount > 0) {
-                    toast(`${finalResult.skippedCount} duplicate invoices skipped.`, { icon: 'ℹ️', duration: 4000 });
+            if (result.successCount > 0) {
+                toast.success(`${result.successCount} invoices created successfully.`);
+                if (result.skippedCount > 0) {
+                    toast(`${result.skippedCount} duplicate invoices skipped.`, { icon: 'ℹ️', duration: 4000 });
                 }
-            } else if (finalResult.skippedCount > 0) {
-                toast(`All ${finalResult.skippedCount} duplicate invoices were skipped (already exist).`, { icon: 'ℹ️', duration: 4000 });
-            } else if (finalResult.errorCount > 0) {
-                toast.error(`Completed with ${finalResult.errorCount} errors.`);
+            } else if (result.skippedCount > 0) {
+                toast(`All ${result.skippedCount} duplicate invoices were skipped (already exist).`, { icon: 'ℹ️', duration: 4000 });
+            } else if (result.errorCount > 0) {
+                toast.error(`Completed with ${result.errorCount} errors.`);
             } else {
                 toast.success('Upload complete.');
             }
         } catch (err: any) {
+            toast.dismiss('bulk-invoice-upload-toast');
             toast.error(err?.response?.data?.message || err?.message || 'Bulk upload failed.');
         } finally {
             setUploading(false);
@@ -751,17 +731,27 @@ const BulkInvoiceUpload = ({ isOpen = true, onClose, onSuccess }: BulkInvoiceUpl
     };
 
     const handleDownloadInvalid = () => {
-        const invalidRows = parsedRows.filter(row => row._rowErrors.length > 0);
+        const invalidRows = parsedRows.filter(row => row._rowErrors && row._rowErrors.length > 0);
         if (invalidRows.length === 0) {
             toast.error('No invalid rows found.');
             return;
         }
-        const cleanedRows = invalidRows.map(({ _rowErrors, ...rest }) => rest);
-        const worksheet = XLSX.utils.json_to_sheet(cleanedRows, { header: CSV_COLUMNS });
+        const exportData = invalidRows.map(row => {
+            const cleanRow: any = {
+                'Error Reason': (row._rowErrors || []).join(' | ')
+            };
+            for (const key in row) {
+                if (key !== '_rowErrors') {
+                    cleanRow[key] = row[key];
+                }
+            }
+            return cleanRow;
+        });
+        const worksheet = XLSX.utils.json_to_sheet(exportData, { header: ['Error Reason', ...CSV_COLUMNS] });
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Invalid Invoices");
-        XLSX.writeFile(workbook, "invalid_invoices_reupload.xlsx");
-        toast.success("Downloaded invalid invoices template.");
+        XLSX.writeFile(workbook, `invalid_invoices_${Date.now()}.xlsx`);
+        toast.success(`Downloaded ${invalidRows.length} invalid invoices with error details.`);
     };
 
     const validCount = parsedRows.filter(r => r._rowErrors.length === 0).length;

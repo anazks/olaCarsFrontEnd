@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2 } from 'lucide-react';
+import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, Search } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
@@ -202,6 +202,9 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
     const [availableTaxes, setAvailableTaxes] = useState<Tax[]>([]);
     const [loadingSuppliers, setLoadingSuppliers] = useState(false);
+    const [rowFilter, setRowFilter] = useState<'all' | 'valid' | 'invalid'>('all');
+    const [searchBillNo, setSearchBillNo] = useState('');
+    const [autoDownloadFailed, setAutoDownloadFailed] = useState(true);
 
     useEffect(() => {
         if (isOpen) {
@@ -236,6 +239,8 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
             setParsedRows([]);
             setFileName('');
             setResult(null);
+            setRowFilter('all');
+            setSearchBillNo('');
         }
     }, [isOpen]);
 
@@ -380,6 +385,8 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
     const parseFile = (file: File) => {
         setResult(null);
         setFileName(file.name);
+        setRowFilter('all');
+        setSearchBillNo('');
         const extension = file.name.split('.').pop()?.toLowerCase();
 
         if (extension === 'xlsx' || extension === 'xls') {
@@ -479,7 +486,15 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
         const CHUNK_SIZE = 50;
         const chunks: any[][] = [];
         for (let i = 0; i < validRows.length; i += CHUNK_SIZE) {
-            const chunk = validRows.slice(i, i + CHUNK_SIZE).map(({ _rowErrors, ...rest }) => rest);
+            const chunk = validRows.slice(i, i + CHUNK_SIZE).map(({ _rowErrors, ...rest }) => {
+                const clean: any = {};
+                for (const key in rest) {
+                    if (key.toLowerCase() !== 'error reason' && key.toLowerCase() !== 'error_reason') {
+                        clean[key] = rest[key];
+                    }
+                }
+                return clean;
+            });
             chunks.push(chunk);
         }
 
@@ -515,6 +530,10 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
 
             setResult(finalResult);
 
+            if (autoDownloadFailed && (finalResult.errorCount > 0 || errorRowsCount > 0)) {
+                downloadFailedRowsExcel(finalResult);
+            }
+
             if (finalResult.successCount > 0 || finalResult.updatedCount > 0) {
                 const parts = [];
                 if (finalResult.successCount > 0) parts.push(`${finalResult.successCount} created`);
@@ -538,10 +557,112 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
         }
     };
 
+    const handleDownloadInvalid = () => {
+        const invalidRows = parsedRows.filter(row => row._rowErrors && row._rowErrors.length > 0);
+        if (invalidRows.length === 0) {
+            toast.error('No invalid rows found.');
+            return;
+        }
+        const exportData = invalidRows.map(row => {
+            const cleanRow: any = {
+                'Error Reason': (row._rowErrors || []).join(' | ')
+            };
+            for (const key in row) {
+                if (key !== '_rowErrors') {
+                    cleanRow[key] = row[key];
+                }
+            }
+            return cleanRow;
+        });
+
+        const allHeaders = new Set<string>(['Error Reason']);
+        CSV_COLUMNS.forEach(col => allHeaders.add(col));
+        invalidRows.forEach(r => {
+            Object.keys(r).forEach(k => {
+                if (k !== '_rowErrors') allHeaders.add(k);
+            });
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData, { header: Array.from(allHeaders) });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Invalid Bills');
+        XLSX.writeFile(workbook, `invalid_bills_${Date.now()}.xlsx`);
+        toast.success(`Downloaded ${invalidRows.length} invalid bills with error details.`);
+    };
+
+    const handleRemoveInvalid = () => {
+        setParsedRows(prev => prev.filter(row => !row._rowErrors || row._rowErrors.length === 0));
+        toast.success('Removed all invalid rows');
+    };
+
+    const downloadFailedRowsExcel = (finalResult: any) => {
+        const failedRows = parsedRows.filter(row => {
+            if (row._rowErrors && row._rowErrors.length > 0) return true;
+            const billNo = getRowVal(row, ['Bill Number', 'billNumber']);
+            const key = (billNo || '').toString().trim();
+            if (key && finalResult.errors && finalResult.errors.length > 0) {
+                const isBackendError = finalResult.errors.some((err: string) =>
+                    err.toLowerCase().includes(`bill "${key.toLowerCase()}"`) ||
+                    err.toLowerCase().includes(`bill number "${key.toLowerCase()}"`) ||
+                    err.toLowerCase().includes(key.toLowerCase())
+                );
+                if (isBackendError) return true;
+            }
+            return false;
+        });
+
+        if (failedRows.length === 0) return;
+
+        const exportData = failedRows.map(row => {
+            let errorReason = '';
+            if (row._rowErrors && row._rowErrors.length > 0) {
+                errorReason = row._rowErrors.join(' | ');
+            } else {
+                const billNo = getRowVal(row, ['Bill Number', 'billNumber']);
+                const key = (billNo || '').toString().trim();
+                if (key && finalResult.errors) {
+                    const matchedErr = finalResult.errors.find((err: string) =>
+                        err.toLowerCase().includes(`bill "${key.toLowerCase()}"`) ||
+                        err.toLowerCase().includes(`bill number "${key.toLowerCase()}"`) ||
+                        err.toLowerCase().includes(key.toLowerCase())
+                    );
+                    if (matchedErr) errorReason = matchedErr;
+                }
+                if (!errorReason) errorReason = 'Failed during backend processing';
+            }
+
+            const cleanRow: any = {
+                'Error Reason': errorReason
+            };
+            for (const key in row) {
+                if (key !== '_rowErrors') {
+                    cleanRow[key] = row[key];
+                }
+            }
+            return cleanRow;
+        });
+
+        const allHeaders = new Set<string>(['Error Reason']);
+        CSV_COLUMNS.forEach(col => allHeaders.add(col));
+        failedRows.forEach(r => {
+            Object.keys(r).forEach(k => {
+                if (k !== '_rowErrors') allHeaders.add(k);
+            });
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData, { header: Array.from(allHeaders) });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Failed Bills');
+        XLSX.writeFile(workbook, `failed_bill_rows_${Date.now()}.xlsx`);
+        toast.success(`Automatically downloaded ${failedRows.length} failed bill rows with error details.`);
+    };
+
     const handleReset = () => {
         setParsedRows([]);
         setFileName('');
         setResult(null);
+        setRowFilter('all');
+        setSearchBillNo('');
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -551,8 +672,28 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
 
     if (!isOpen) return null;
 
-    const errorRowsCount = parsedRows.filter(r => r._rowErrors.length > 0).length;
+    const errorRowsCount = parsedRows.filter(r => r._rowErrors && r._rowErrors.length > 0).length;
     const validRowsCount = parsedRows.length - errorRowsCount;
+
+    const uniqueBillsCount = new Set(parsedRows.map(r => {
+        const billNo = getRowVal(r, ['Bill Number', 'billNumber']);
+        return (billNo || '').toString().trim();
+    }).filter(Boolean)).size;
+
+    const filteredRows = parsedRows
+        .map((row, originalIndex) => ({ row, originalIndex }))
+        .filter(({ row }) => {
+            if (rowFilter === 'valid' && row._rowErrors && row._rowErrors.length > 0) return false;
+            if (rowFilter === 'invalid' && (!row._rowErrors || row._rowErrors.length === 0)) return false;
+            if (searchBillNo.trim()) {
+                const query = searchBillNo.trim().toLowerCase();
+                const billNo = String(getRowVal(row, ['Bill Number', 'billNumber']) || '').toLowerCase();
+                const vendorName = String(getRowVal(row, ['Vendor Name', 'vendorName', 'supplier']) || '').toLowerCase();
+                const itemName = String(getRowVal(row, ['Item Name', 'itemName', 'Item', 'item', 'Description', 'description']) || '').toLowerCase();
+                return billNo.includes(query) || vendorName.includes(query) || itemName.includes(query);
+            }
+            return true;
+        });
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
@@ -666,24 +807,90 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                     ) : (
                         /* Step 2: Data Review and Summary */
                         <div className="space-y-4">
-                            {/* Summary Status Bar */}
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl border" 
+                            {/* Summary Status Bar & Filters */}
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 rounded-xl border" 
                                  style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
-                                <div className="flex flex-wrap items-center gap-4 text-xs font-bold">
-                                    <span className="text-dim">File: <strong className="text-main">{fileName}</strong></span>
-                                    <span className="text-dim">Total Rows: <strong className="text-main">{parsedRows.length}</strong></span>
-                                    <span className="text-green-500">Valid Rows: {validRowsCount}</span>
-                                    {errorRowsCount > 0 && <span className="text-red-500">Errors: {errorRowsCount}</span>}
+                                <div className="flex items-center gap-3">
+                                    <FileText className="h-8 w-8 text-dim shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-bold text-main">{fileName}</p>
+                                        <div className="flex flex-wrap gap-3 mt-1 text-xs">
+                                            <span className="text-emerald-500 font-bold">{validRowsCount} valid rows ({uniqueBillsCount} bills)</span>
+                                            {errorRowsCount > 0 && <span className="text-rose-500 font-bold">{errorRowsCount} errors</span>}
+                                            {loadingSuppliers && (
+                                                <span className="text-blue-500 font-bold flex items-center gap-1">
+                                                    <Loader2 size={12} className="animate-spin" /> Verifying data...
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={handleReset}
-                                        disabled={uploading}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-bold border hover:bg-input cursor-pointer transition-colors bg-transparent text-main"
-                                        style={{ borderColor: 'var(--border-main)' }}
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <div className="relative min-w-[220px]">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-dim pointer-events-none" size={14} />
+                                        <input
+                                            type="text"
+                                            value={searchBillNo}
+                                            onChange={(e) => setSearchBillNo(e.target.value)}
+                                            placeholder="Filter by Bill No. / Vendor..."
+                                            className="w-full pl-9 pr-7 py-2 rounded-lg text-xs font-medium border outline-none transition-all focus:border-brand-lime"
+                                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                        {searchBillNo && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSearchBillNo('')}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-dim hover:text-main cursor-pointer"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
+                                    <select
+                                        value={rowFilter}
+                                        onChange={(e) => setRowFilter(e.target.value as 'all' | 'valid' | 'invalid')}
+                                        className="text-xs font-bold px-3 py-2 rounded-lg border focus:outline-none cursor-pointer"
+                                        style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)', color: 'var(--text-main)' }}
                                     >
-                                        Clear and Restart
-                                    </button>
+                                        <option value="all">All Statuses ({parsedRows.length})</option>
+                                        <option value="valid">Valid Rows ({validRowsCount})</option>
+                                        <option value="invalid">Invalid Rows ({errorRowsCount})</option>
+                                    </select>
+                                    <div className="flex flex-wrap gap-2 items-center">
+                                        <label className="flex items-center gap-1.5 text-xs text-main font-bold cursor-pointer select-none mr-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={autoDownloadFailed}
+                                                onChange={(e) => setAutoDownloadFailed(e.target.checked)}
+                                                className="rounded border-gray-300 text-lime-500 focus:ring-lime-500 cursor-pointer accent-lime-500"
+                                            />
+                                            <span>Auto-download Failed Rows</span>
+                                        </label>
+                                        {errorRowsCount > 0 && !uploading && (
+                                            <>
+                                                <button 
+                                                    onClick={handleDownloadInvalid} 
+                                                    className="px-4 py-2 rounded-lg text-xs font-bold border border-amber-500 text-amber-500 hover:bg-amber-500/5 transition-colors cursor-pointer"
+                                                >
+                                                    Download Invalid Rows
+                                                </button>
+                                                <button 
+                                                    onClick={handleRemoveInvalid} 
+                                                    className="px-4 py-2 rounded-lg text-xs font-bold border border-rose-500 text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                                                >
+                                                    Remove All Invalid
+                                                </button>
+                                            </>
+                                        )}
+                                        <button
+                                            onClick={handleReset}
+                                            disabled={uploading}
+                                            className="px-3 py-2 rounded-lg text-xs font-bold border hover:bg-input cursor-pointer transition-colors bg-transparent text-main"
+                                            style={{ borderColor: 'var(--border-main)' }}
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -768,8 +975,15 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                                            {parsedRows.map((row, idx) => {
-                                                const hasErrors = row._rowErrors.length > 0;
+                                            {filteredRows.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={12} className="p-8 text-center text-dim font-medium">
+                                                        No bills match the selected filter or search query.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                filteredRows.map(({ row, originalIndex }) => {
+                                                    const hasErrors = row._rowErrors && row._rowErrors.length > 0;
                                                 const billNumber = getRowVal(row, ['Bill Number', 'billNumber']);
                                                 const vName = getRowVal(row, ['Vendor Name', 'vendorName', 'supplier']);
                                                 const itemNameVal = getRowVal(row, ['Item Name', 'itemName', 'Item', 'item']);
@@ -787,8 +1001,8 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                                                 const pTypeBadgeStyle = pTypeNorm === 'Cash' ? { background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.3)' } : pTypeNorm === 'Bank' ? { background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)' } : { background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' };
 
                                                 return (
-                                                    <tr key={idx} className={`transition-colors hover:bg-input/20 ${hasErrors ? 'bg-red-500/5' : ''}`}>
-                                                        <td className="p-3 text-dim font-medium">{idx + 1}</td>
+                                                    <tr key={originalIndex} className={`transition-colors hover:bg-input/20 ${hasErrors ? 'bg-red-500/5' : ''}`}>
+                                                        <td className="p-3 text-dim font-medium">{originalIndex + 1}</td>
                                                         <td className="p-3 font-bold text-main">{billNumber || 'Auto-generated'}</td>
                                                         <td className="p-3 text-main font-bold">{vName || <span className="text-dim/60 italic">Fallback (captured in notes)</span>}</td>
                                                         <td className="p-3 text-main">
@@ -840,7 +1054,7 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                                                         </td>
                                                         <td className="p-3 text-center">
                                                             <button 
-                                                                onClick={() => handleRemoveRow(idx)}
+                                                                onClick={() => handleRemoveRow(originalIndex)}
                                                                 disabled={uploading}
                                                                 className="p-1 rounded bg-transparent hover:bg-input text-dim hover:text-red-500 transition-colors border-none cursor-pointer disabled:opacity-50"
                                                                 title="Remove row"
@@ -850,7 +1064,7 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                                                         </td>
                                                     </tr>
                                                 );
-                                            })}
+                                            }))}
                                         </tbody>
                                     </table>
                                 </div>

@@ -11,6 +11,7 @@ import {
     type Supplier,
     type CreateSupplierPayload,
     type UpdateSupplierPayload,
+    type SupplierFilters,
 } from '../../../services/supplierService';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -82,19 +83,46 @@ const ManageSuppliers = () => {
     // Bulk upload modal state
     const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
 
-    const handleExportExcel = () => {
+    const fetchAllSuppliersForExport = async (): Promise<Supplier[]> => {
+        try {
+            const exportFilters: SupplierFilters = {
+                search: filters.search ? filters.search.trim() : undefined,
+                category: filters.category || undefined,
+                isActive: filters.isActive,
+                page: 1,
+                limit: 100000
+            };
+            const response = await getAllSuppliers(exportFilters);
+            if (response.success && Array.isArray(response.data) && response.data.length > 0) {
+                return response.data;
+            }
+        } catch (err) {
+            console.error("Failed to fetch all suppliers for export, falling back to loaded page:", err);
+        }
+        return suppliers;
+    };
+
+    const handleExportExcel = async () => {
         if (suppliers.length === 0) {
             toast.error("No suppliers available to export.");
             return;
         }
-        const toastId = toast.loading("Generating Excel file...");
+        const toastId = toast.loading("Fetching all vendors for Excel export...");
         try {
-            const exportData = suppliers.map((s, idx) => ({
+            const allSuppliers = await fetchAllSuppliersForExport();
+            if (allSuppliers.length === 0) {
+                toast.error("No suppliers available to export.", { id: toastId });
+                return;
+            }
+            toast.loading(`Generating Excel file for ${allSuppliers.length} vendors...`, { id: toastId });
+
+            const exportData = allSuppliers.map((s, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Vendor Number": s.vendorNumber || 'N/A',
                 "Supplier Name": s.name || 'N/A',
                 "Contact Person": s.contactPerson || 'N/A',
                 "Email": s.email || 'N/A',
-                "Phone": s.phone || 'N/A',
+                "Phone": s.phone || s.mobilePhone || 'N/A',
                 "Category": s.category || 'N/A',
                 "Address": s.address || 'N/A',
                 "Status": s.isActive ? 'Active' : 'Inactive'
@@ -115,26 +143,34 @@ const ManageSuppliers = () => {
 
             const dateStr = new Date().toISOString().split('T')[0];
             XLSX.writeFile(wb, `suppliers_export_${dateStr}.xlsx`);
-            toast.success("Excel file downloaded successfully!", { id: toastId });
+            toast.success(`Exported all ${allSuppliers.length} vendors successfully!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export Excel file.", { id: toastId });
         }
     };
 
-    const handleExportCsv = () => {
+    const handleExportCsv = async () => {
         if (suppliers.length === 0) {
             toast.error("No suppliers available to export.");
             return;
         }
-        const toastId = toast.loading("Generating CSV file...");
+        const toastId = toast.loading("Fetching all vendors for CSV export...");
         try {
-            const exportData = suppliers.map((s, idx) => ({
+            const allSuppliers = await fetchAllSuppliersForExport();
+            if (allSuppliers.length === 0) {
+                toast.error("No suppliers available to export.", { id: toastId });
+                return;
+            }
+            toast.loading(`Generating CSV file for ${allSuppliers.length} vendors...`, { id: toastId });
+
+            const exportData = allSuppliers.map((s, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Vendor Number": s.vendorNumber || 'N/A',
                 "Supplier Name": s.name || 'N/A',
                 "Contact Person": s.contactPerson || 'N/A',
                 "Email": s.email || 'N/A',
-                "Phone": s.phone || 'N/A',
+                "Phone": s.phone || s.mobilePhone || 'N/A',
                 "Category": s.category || 'N/A',
                 "Address": s.address || 'N/A',
                 "Status": s.isActive ? 'Active' : 'Inactive'
@@ -153,20 +189,27 @@ const ManageSuppliers = () => {
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            toast.success("CSV file downloaded successfully!", { id: toastId });
+            toast.success(`Exported all ${allSuppliers.length} vendors successfully!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export CSV file.", { id: toastId });
         }
     };
 
-    const handleExportPdf = () => {
+    const handleExportPdf = async () => {
         if (suppliers.length === 0) {
             toast.error("No suppliers available to export.");
             return;
         }
-        const toastId = toast.loading("Generating PDF file...");
+        const toastId = toast.loading("Fetching all vendors for PDF export...");
         try {
+            const allSuppliers = await fetchAllSuppliersForExport();
+            if (allSuppliers.length === 0) {
+                toast.error("No suppliers available to export.", { id: toastId });
+                return;
+            }
+            toast.loading(`Generating PDF file for ${allSuppliers.length} vendors...`, { id: toastId });
+
             const doc = new jsPDF();
             const dateStr = new Date().toISOString().split('T')[0];
             const title = "Suppliers / Vendors Registry";
@@ -176,13 +219,14 @@ const ManageSuppliers = () => {
             doc.setFontSize(10);
             doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
 
-            const head = [["Sl No.", "Supplier Name", "Contact Person", "Email", "Phone", "Category", "Status"]];
-            const body = suppliers.map((s, idx) => [
+            const head = [["Sl No.", "Vendor No.", "Supplier Name", "Contact Person", "Email", "Phone", "Category", "Status"]];
+            const body = allSuppliers.map((s, idx) => [
                 String(idx + 1).padStart(2, '0'),
+                s.vendorNumber || 'N/A',
                 s.name || 'N/A',
                 s.contactPerson || 'N/A',
                 s.email || 'N/A',
-                s.phone || 'N/A',
+                s.phone || s.mobilePhone || 'N/A',
                 s.category || 'N/A',
                 s.isActive ? 'Active' : 'Inactive'
             ]);
@@ -196,7 +240,7 @@ const ManageSuppliers = () => {
             });
 
             doc.save(`suppliers_export_${dateStr}.pdf`);
-            toast.success("PDF file downloaded successfully!", { id: toastId });
+            toast.success(`Exported all ${allSuppliers.length} vendors to PDF!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export PDF file.", { id: toastId });
