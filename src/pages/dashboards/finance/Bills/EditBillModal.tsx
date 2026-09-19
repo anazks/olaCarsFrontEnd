@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Plus, Trash2, Calendar, FileText, Tag, AlertCircle } from 'lucide-react';
+import { X, Plus, Trash2, AlertCircle } from 'lucide-react';
 import { updateBill, type Bill } from '../../../../services/billService';
 import { getAllAccountingCodes, type AccountingCode } from '../../../../services/accountingService';
 import { getAllTaxes, type Tax } from '../../../../services/taxService';
