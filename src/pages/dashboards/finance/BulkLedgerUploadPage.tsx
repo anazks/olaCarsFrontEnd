@@ -37,6 +37,17 @@ interface ValidEntry {
     transactionType: string;
 }
 
+interface DuplicateEntry {
+    rowNum: number;
+    duplicateOfRow?: number;
+    date: string;
+    accountName: string;
+    type: string;
+    amount: number;
+    description: string;
+    transactionType: string;
+}
+
 interface LocalValidationResult {
     totalRows: number;
     validRows: number;
@@ -44,6 +55,7 @@ interface LocalValidationResult {
     duplicateRows: number;
     errors: LocalError[];
     validEntries?: ValidEntry[];
+    duplicateEntries?: DuplicateEntry[];
     rows: any[];
 }
 
@@ -103,7 +115,7 @@ const BulkLedgerUploadPage = () => {
     const [isValidating, setIsValidating] = useState(false);
     const [validationProgress, setValidationProgress] = useState(0);
     const [validationResult, setValidationResult] = useState<LocalValidationResult | null>(null);
-    const [activeTab, setActiveTab] = useState<'errors' | 'valid' | 'accounts_summary'>('errors');
+    const [activeTab, setActiveTab] = useState<'errors' | 'valid' | 'accounts_summary' | 'duplicates'>('errors');
     const [excelAccountsSummary, setExcelAccountsSummary] = useState<AccountSummaryItem[]>([]);
 
     // Import states
@@ -123,6 +135,9 @@ const BulkLedgerUploadPage = () => {
 
     // Virtual list scroll state for valid entries
     const [validScrollTop, setValidScrollTop] = useState(0);
+
+    // Virtual list scroll state for duplicate entries
+    const [dupScrollTop, setDupScrollTop] = useState(0);
 
     // Load validation metadata & history
     const loadMetadataAndHistory = useCallback(async () => {
@@ -258,7 +273,7 @@ const BulkLedgerUploadPage = () => {
     };
 
     // Client-side row validator wrapper
-    const validateRowData = (row: any, localDups: Record<string, boolean>) => {
+    const validateRowData = (row: any, localDups: Record<string, number>, rowNum: number) => {
         const errorsList: string[] = [];
 
         // Fetch flex values matching standard names
@@ -335,18 +350,22 @@ const BulkLedgerUploadPage = () => {
 
         // Validate duplicates internally in the file
         let isDuplicate = false;
+        let duplicateOfRow: number | undefined = undefined;
         if (accName && dateStr(dateVal)) {
             const key = `${dateStr(dateVal)}_${String(accName).toLowerCase().trim()}_${amount}_${String(desc).toLowerCase().trim()}`;
-            if (localDups[key]) {
+            if (localDups[key] !== undefined) {
                 isDuplicate = true;
+                duplicateOfRow = localDups[key];
+            } else {
+                localDups[key] = rowNum;
             }
-            localDups[key] = true;
         }
 
         return {
             isValid: errorsList.length === 0,
             errors: errorsList.join(" "),
-            isDuplicate
+            isDuplicate,
+            duplicateOfRow
         };
     };
 
@@ -393,79 +412,81 @@ const BulkLedgerUploadPage = () => {
 
         const collectedErrors: LocalError[] = [];
         const collectedValid: ValidEntry[] = [];
+        const collectedDuplicates: DuplicateEntry[] = [];
         let validRowsCount = 0;
         let duplicateRowsCount = 0;
 
-        const localDups: Record<string, boolean> = {};
+        const localDups: Record<string, number> = {};
 
         const processValidationBatch = () => {
             const limit = Math.min(index + batchSize, total);
             for (let i = index; i < limit; i++) {
                 const row = rows[i];
-                const res = validateRowData(row, localDups);
+                const res = validateRowData(row, localDups, i + 2);
+
+                // Extract values matching standard names
+                const getVal = (possibleKeys: string[]) => {
+                    for (const key of possibleKeys) {
+                        if (row[key] !== undefined && row[key] !== null && row[key] !== "") {
+                            return row[key];
+                        }
+                        const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+                        for (const k of Object.keys(row)) {
+                            const normK = k.toLowerCase().replace(/[^a-z0-9]/g, "");
+                            if (normK === normKey) {
+                                if (row[k] !== undefined && row[k] !== null && row[k] !== "") {
+                                    return row[k];
+                                }
+                            }
+                        }
+                    }
+                    return undefined;
+                };
+
+                const accName = getVal(["Account Name", "account_name", "Account"]) || "";
+                const accCode = getVal(["accountingCode", "Account Code", "account_code", "Accounting Code", "accounting_code", "Account ID", "account_id"]) || "";
+                const foundAcc = findAccount(accName, accCode);
+                const finalAccountName = foundAcc ? foundAcc.name : (accName || accCode || "");
+
+                const dateVal = getVal(["Entry Date", "entry_date", "date"]);
+                const desc = getVal(["Description", "description", "transaction_details"]) || "";
+                const txnType = getVal(["Transaction Type", "transaction_type"]) || "";
+
+                let type = "DEBIT";
+                let amount = 0;
+                const amountStr = getVal(["Amount", "amount"]);
+                const typeStr = getVal(["Type (Debit/Credit)", "type", "debit_credit"]);
+
+                const debitVal = getVal(["debit", "debit_amount", "dr"]);
+                const creditVal = getVal(["credit", "credit_amount", "cr"]);
+
+                if (debitVal !== undefined && debitVal !== null && debitVal !== "") {
+                    const parsed = parseFloat(debitVal);
+                    if (!isNaN(parsed)) {
+                        type = "DEBIT";
+                        amount = parsed;
+                    }
+                } else if (creditVal !== undefined && creditVal !== null && creditVal !== "") {
+                    const parsed = parseFloat(creditVal);
+                    if (!isNaN(parsed)) {
+                        type = "CREDIT";
+                        amount = parsed;
+                    }
+                } else if (amountStr !== undefined && amountStr !== null && amountStr !== "") {
+                    const parsed = parseFloat(amountStr);
+                    amount = isNaN(parsed) ? 0 : parsed;
+                    if (typeStr) {
+                        const normType = String(typeStr).toUpperCase().trim();
+                        if (["CREDIT", "CR"].includes(normType)) {
+                            type = "CREDIT";
+                        }
+                    }
+                }
+
                 if (!res.isValid) {
                     collectedErrors.push({ row: i + 2, error: res.errors });
                 } else {
                     validRowsCount++;
-
-                    // Extract values matching standard names
-                    const getVal = (possibleKeys: string[]) => {
-                        for (const key of possibleKeys) {
-                            if (row[key] !== undefined && row[key] !== null && row[key] !== "") {
-                                return row[key];
-                            }
-                            const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
-                            for (const k of Object.keys(row)) {
-                                const normK = k.toLowerCase().replace(/[^a-z0-9]/g, "");
-                                if (normK === normKey) {
-                                    if (row[k] !== undefined && row[k] !== null && row[k] !== "") {
-                                        return row[k];
-                                    }
-                                }
-                            }
-                        }
-                        return undefined;
-                    };
-
-                    const accName = getVal(["Account Name", "account_name", "Account"]) || "";
-                    const accCode = getVal(["accountingCode", "Account Code", "account_code", "Accounting Code", "accounting_code", "Account ID", "account_id"]) || "";
-                    const foundAcc = findAccount(accName, accCode);
-                    const finalAccountName = foundAcc ? foundAcc.name : (accName || accCode || "");
-
-                    const dateVal = getVal(["Entry Date", "entry_date", "date"]);
-                    const desc = getVal(["Description", "description", "transaction_details"]) || "";
-                    const txnType = getVal(["Transaction Type", "transaction_type"]) || "";
-
-                    let type = "DEBIT";
-                    let amount = 0;
-                    const amountStr = getVal(["Amount", "amount"]);
-                    const typeStr = getVal(["Type (Debit/Credit)", "type", "debit_credit"]);
-
-                    const debitVal = getVal(["debit", "debit_amount", "dr"]);
-                    const creditVal = getVal(["credit", "credit_amount", "cr"]);
-
-                    if (debitVal !== undefined && debitVal !== null && debitVal !== "") {
-                        const parsed = parseFloat(debitVal);
-                        if (!isNaN(parsed)) {
-                            type = "DEBIT";
-                            amount = parsed;
-                        }
-                    } else if (creditVal !== undefined && creditVal !== null && creditVal !== "") {
-                        const parsed = parseFloat(creditVal);
-                        if (!isNaN(parsed)) {
-                            type = "CREDIT";
-                            amount = parsed;
-                        }
-                    } else if (amountStr !== undefined && amountStr !== null && amountStr !== "") {
-                        const parsed = parseFloat(amountStr);
-                        amount = isNaN(parsed) ? 0 : parsed;
-                        if (typeStr) {
-                            const normType = String(typeStr).toUpperCase().trim();
-                            if (["CREDIT", "CR"].includes(normType)) {
-                                type = "CREDIT";
-                            }
-                        }
-                    }
 
                     collectedValid.push({
                         rowNum: i + 2,
@@ -477,8 +498,19 @@ const BulkLedgerUploadPage = () => {
                         transactionType: String(txnType)
                     });
                 }
+
                 if (res.isDuplicate) {
                     duplicateRowsCount++;
+                    collectedDuplicates.push({
+                        rowNum: i + 2,
+                        duplicateOfRow: res.duplicateOfRow,
+                        date: dateStr(dateVal),
+                        accountName: String(finalAccountName || accName || accCode || "Unknown"),
+                        type,
+                        amount,
+                        description: String(desc),
+                        transactionType: String(txnType)
+                    });
                 }
             }
 
@@ -499,6 +531,7 @@ const BulkLedgerUploadPage = () => {
                     duplicateRows: duplicateRowsCount,
                     errors: collectedErrors,
                     validEntries: collectedValid,
+                    duplicateEntries: collectedDuplicates,
                     rows: prev?.rows || []
                 }));
 
@@ -630,6 +663,46 @@ const BulkLedgerUploadPage = () => {
         toast.success("Import error report downloaded.");
     };
 
+    const downloadDuplicatesCSV = (duplicates: DuplicateEntry[], nameOfFile: string) => {
+        if (!duplicates || duplicates.length === 0) return;
+
+        const originalKeys = validationResult?.rows?.length 
+            ? Object.keys(validationResult.rows[0]) 
+            : [];
+
+        const csvHeaders = ["Row Number", "Duplicate Of Row", ...originalKeys, "Duplicate Status"];
+        const csvRows = duplicates.map(d => {
+            const originalRow = validationResult?.rows?.[d.rowNum - 2] || {};
+            const rowValues = [
+                String(d.rowNum),
+                String(d.duplicateOfRow ? `Row ${d.duplicateOfRow}` : "Earlier row"),
+                ...originalKeys.map(key => {
+                    const val = originalRow[key] !== undefined && originalRow[key] !== null ? originalRow[key] : "";
+                    return `"${String(val).replace(/"/g, '""')}"`;
+                }),
+                `"Duplicate (Matches row ${d.duplicateOfRow || 'earlier'})"`
+            ];
+            return rowValues.join(",");
+        });
+
+        const csvContent = [csvHeaders.join(","), ...csvRows].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const name = nameOfFile ? nameOfFile.split('.')[0] : 'ledger';
+        link.setAttribute('download', `duplicate_rows_${name}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        toast.success("Duplicate rows report downloaded.");
+    };
+
+    const handleDownloadDuplicatesCSV = () => {
+        if (!validationResult || !validationResult.duplicateEntries?.length) return;
+        downloadDuplicatesCSV(validationResult.duplicateEntries, fileName);
+    };
+
     // Client-side CSV generator for invalid rows
     const handleDownloadErrorsCSV = () => {
         if (!validationResult || validationResult.errors.length === 0) return;
@@ -757,6 +830,7 @@ const BulkLedgerUploadPage = () => {
         setIsImporting(false);
         setErrorScrollTop(0);
         setValidScrollTop(0);
+        setDupScrollTop(0);
         setExcelAccountsSummary([]);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
@@ -937,9 +1011,22 @@ const BulkLedgerUploadPage = () => {
                                         <div className="text-xl font-black text-red-500">{validationResult.invalidRows}</div>
                                         <div className="text-[10px] uppercase font-bold tracking-wider mt-1 text-red-500/70">Invalid Rows</div>
                                     </div>
-                                    <div className="p-4 rounded-xl border border-orange-500/20 text-center bg-orange-500/5">
+                                    <div
+                                        className={`p-4 rounded-xl border border-orange-500/20 text-center bg-orange-500/5 transition-all ${
+                                            validationResult.duplicateRows > 0
+                                                ? 'cursor-pointer hover:bg-orange-500/10 hover:border-orange-500/40 hover:scale-[1.02]'
+                                                : ''
+                                        }`}
+                                        onClick={() => validationResult.duplicateRows > 0 && setActiveTab('duplicates')}
+                                        title={validationResult.duplicateRows > 0 ? "Click to view duplicate rows" : undefined}
+                                    >
                                         <div className="text-xl font-black text-orange-500">{validationResult.duplicateRows}</div>
-                                        <div className="text-[10px] uppercase font-bold tracking-wider mt-1 text-orange-500/70">Duplicates</div>
+                                        <div className="text-[10px] uppercase font-bold tracking-wider mt-1 text-orange-500/70 flex items-center justify-center gap-1">
+                                            <span>Duplicates</span>
+                                            {validationResult.duplicateRows > 0 && (
+                                                <span className="text-[9px] underline font-black text-orange-400">View</span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -969,6 +1056,17 @@ const BulkLedgerUploadPage = () => {
                                                     }`}
                                             >
                                                 Parsed Valid Rows ({validationResult.validRows})
+                                            </button>
+                                        )}
+                                        {validationResult.duplicateRows > 0 && (
+                                            <button
+                                                onClick={() => setActiveTab('duplicates')}
+                                                className={`px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${activeTab === 'duplicates'
+                                                        ? 'border-orange-500 text-orange-500'
+                                                        : 'border-transparent text-dim hover:text-white'
+                                                    }`}
+                                            >
+                                                Duplicate Rows ({validationResult.duplicateRows})
                                             </button>
                                         )}
                                         {excelAccountsSummary.length > 0 && (
@@ -1087,6 +1185,83 @@ const BulkLedgerUploadPage = () => {
                                                                             </div>
                                                                             <div className="w-[15%] text-white font-mono">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                                                             <div className="w-[30%] text-white truncate pr-2" title={item.description}>{item.description}</div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Duplicate Entries Preview Tab Content */}
+                                    {activeTab === 'duplicates' && validationResult.duplicateEntries && validationResult.duplicateEntries.length > 0 && (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2 text-xs font-bold text-orange-400">
+                                                    <AlertTriangle size={14} />
+                                                    <span>
+                                                        Found {validationResult.duplicateEntries.length} duplicate record{validationResult.duplicateEntries.length > 1 ? 's' : ''} in spreadsheet.
+                                                        {skipDuplicates ? ' These rows will be skipped during import.' : ' Skip duplicate option is OFF; these will be imported.'}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    onClick={handleDownloadDuplicatesCSV}
+                                                    className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-orange-400 bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 rounded-lg hover:bg-orange-500/20 transition-all cursor-pointer"
+                                                >
+                                                    <Download size={11} /> Download Duplicates (CSV)
+                                                </button>
+                                            </div>
+
+                                            {/* Duplicate entries virtual table */}
+                                            <div
+                                                className="rounded-xl border overflow-hidden"
+                                                style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}
+                                            >
+                                                <div className="flex border-b text-xs font-bold uppercase tracking-wider p-3" style={{ background: 'var(--bg-topbar)', borderColor: 'var(--border-main)' }}>
+                                                    <div className="w-[10%] pl-2" style={{ color: 'var(--text-dim)' }}>Row</div>
+                                                    <div className="w-[12%]" style={{ color: 'var(--text-dim)' }}>Duplicate Of</div>
+                                                    <div className="w-[14%]" style={{ color: 'var(--text-dim)' }}>Date</div>
+                                                    <div className="w-[20%]" style={{ color: 'var(--text-dim)' }}>Account</div>
+                                                    <div className="w-[10%]" style={{ color: 'var(--text-dim)' }}>Type</div>
+                                                    <div className="w-[14%]" style={{ color: 'var(--text-dim)' }}>Amount</div>
+                                                    <div className="w-[20%]" style={{ color: 'var(--text-dim)' }}>Description</div>
+                                                </div>
+
+                                                <div
+                                                    key={`dup-scroll-${validationResult.duplicateEntries?.length || 0}`}
+                                                    style={{ height: '350px', overflowY: 'auto', position: 'relative' }}
+                                                    onScroll={(e) => setDupScrollTop(e.currentTarget.scrollTop)}
+                                                >
+                                                    {(() => {
+                                                        const totalDups = validationResult.duplicateEntries.length;
+                                                        const dupStartIndex = Math.max(0, Math.floor(dupScrollTop / 44) - 3);
+                                                        const dupEndIndex = Math.min(totalDups - 1, Math.floor((dupScrollTop + 350) / 44) + 3);
+                                                        const visibleDups = validationResult.duplicateEntries.slice(dupStartIndex, dupEndIndex + 1);
+                                                        return (
+                                                            <div style={{ height: `${totalDups * 44}px`, width: '100%' }}>
+                                                                <div style={{ transform: `translateY(${dupStartIndex * 44}px)`, position: 'absolute', top: 0, left: 0, right: 0 }}>
+                                                                    {visibleDups.map((item, idx) => (
+                                                                        <div
+                                                                            key={dupStartIndex + idx}
+                                                                            className="flex border-b items-center text-xs p-3 hover:bg-white/5"
+                                                                            style={{ height: '44px', borderColor: 'var(--border-main)' }}
+                                                                        >
+                                                                            <div className="w-[10%] font-black text-orange-400 pl-2">Row {item.rowNum}</div>
+                                                                            <div className="w-[12%] text-xs font-semibold text-orange-300/80">
+                                                                                {item.duplicateOfRow ? `Row ${item.duplicateOfRow}` : 'Earlier row'}
+                                                                            </div>
+                                                                            <div className="w-[14%] text-white">{item.date}</div>
+                                                                            <div className="w-[20%] text-white truncate" title={item.accountName}>{item.accountName}</div>
+                                                                            <div className="w-[10%]">
+                                                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${item.type === 'DEBIT' ? 'bg-blue-500/10 text-blue-400' : 'bg-green-500/10 text-green-400'}`}>
+                                                                                    {item.type}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="w-[14%] text-white font-mono">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                                            <div className="w-[20%] text-white truncate pr-2" title={item.description}>{item.description}</div>
                                                                         </div>
                                                                     ))}
                                                                 </div>
@@ -1225,7 +1400,7 @@ const BulkLedgerUploadPage = () => {
                                             </>
                                         )}
                                     </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-1">
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-1">
                                         <div className="p-3 bg-white/5 rounded-lg border text-center" style={{ borderColor: 'var(--border-main)' }}>
                                             <div className="text-lg font-black text-white">{importProgress.totalRows}</div>
                                             <div className="text-[9px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>Total Records</div>
@@ -1238,11 +1413,35 @@ const BulkLedgerUploadPage = () => {
                                             <div className="text-lg font-black text-red-400">{importProgress.failedRows}</div>
                                             <div className="text-[9px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>Failed</div>
                                         </div>
+                                        <div className="p-3 bg-white/5 rounded-lg border text-center border-orange-500/20 bg-orange-500/5">
+                                            <div className="text-lg font-black text-orange-400">{importProgress.duplicateRows || 0}</div>
+                                            <div className="text-[9px] uppercase font-bold tracking-wider text-orange-400/80">Duplicates</div>
+                                        </div>
                                         <div className="p-3 bg-white/5 rounded-lg border text-center" style={{ borderColor: 'var(--border-main)' }}>
                                             <div className="text-lg font-black text-blue-400">{importProgress.duration}s</div>
                                             <div className="text-[9px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>Execution Time</div>
                                         </div>
                                     </div>
+
+                                    {/* Skipped duplicates notice if any */}
+                                    {((importProgress.duplicateRows && importProgress.duplicateRows > 0) || (validationResult?.duplicateRows && validationResult.duplicateRows > 0)) && (
+                                        <div className="flex items-center justify-between p-3 rounded-xl border border-orange-500/20 bg-orange-500/5 text-xs">
+                                            <div className="flex items-center gap-2 text-orange-400 font-bold">
+                                                <AlertTriangle size={14} />
+                                                <span>
+                                                    {importProgress.duplicateRows || validationResult?.duplicateRows || 0} duplicate row(s) were identified and skipped during import.
+                                                </span>
+                                            </div>
+                                            {validationResult?.duplicateEntries && validationResult.duplicateEntries.length > 0 && (
+                                                <button
+                                                    onClick={handleDownloadDuplicatesCSV}
+                                                    className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 rounded-lg hover:bg-orange-500/20 transition-all cursor-pointer"
+                                                >
+                                                    <Download size={11} /> Download Skipped Duplicates (CSV)
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* Backend Execution Errors list */}
                                     {importProgress.errors && importProgress.errors.length > 0 && (
