@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Receipt,
+    Edit2,
+    Trash2,
     Search,
     Filter,
     ChevronLeft,
@@ -20,6 +22,8 @@ import {
 import * as billService from '../../../../services/billService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import CreateBillModal from './CreateBillModal';
+import DeleteBillModal from './DeleteBillModal';
+import EditBillModal from './EditBillModal';
 import BulkBillUpload from '../../shared/BulkBillUpload';
 import DateRangeReportModal from '../../shared/DateRangeReportModal';
 import { downloadExcelReport } from '../../../../services/reportingService';
@@ -37,6 +41,8 @@ const BillList = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [selectedBillForEdit, setSelectedBillForEdit] = useState<any | null>(null);
+    const [selectedBillForDelete, setSelectedBillForDelete] = useState<any | null>(null);
     const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
@@ -747,13 +753,29 @@ const BillList = () => {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-5 text-center" onClick={(e) => e.stopPropagation()}>
-                                                <button
-                                                    onClick={() => navigate(`${bill._id}`)}
-                                                    className="p-2 bg-white/5 border border-white/10 text-dim hover:text-[#C8E600] hover:border-[#C8E600]/30 rounded-xl cursor-pointer hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center justify-center mx-auto"
-                                                    title="View Details"
-                                                >
-                                                    <Eye size={14} strokeWidth={2.5} />
-                                                </button>
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    <button
+                                                        onClick={() => navigate(`${bill._id}`)}
+                                                        className="p-2 bg-white/5 border border-white/10 text-dim hover:text-[#C8E600] hover:border-[#C8E600]/30 rounded-xl cursor-pointer hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center justify-center"
+                                                        title="View Details"
+                                                    >
+                                                        <Eye size={14} strokeWidth={2.5} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setSelectedBillForEdit(bill)}
+                                                        className="p-2 bg-white/5 border border-white/10 text-dim hover:text-blue-400 hover:border-blue-400/30 rounded-xl cursor-pointer hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center justify-center"
+                                                        title="Edit Bill"
+                                                    >
+                                                        <Edit2 size={14} strokeWidth={2.5} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setSelectedBillForDelete(bill)}
+                                                        className="p-2 bg-white/5 border border-white/10 text-dim hover:text-red-400 hover:border-red-400/30 rounded-xl cursor-pointer hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center justify-center"
+                                                        title="Delete Bill"
+                                                    >
+                                                        <Trash2 size={14} strokeWidth={2.5} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -831,6 +853,18 @@ const BillList = () => {
                     setIsBulkUploadOpen(false);
                     fetchBills();
                 }}
+            />
+            <EditBillModal
+                isOpen={!!selectedBillForEdit}
+                bill={selectedBillForEdit}
+                onClose={() => setSelectedBillForEdit(null)}
+                onSuccess={fetchBills}
+            />
+            <DeleteBillModal
+                isOpen={!!selectedBillForDelete}
+                bill={selectedBillForDelete}
+                onClose={() => setSelectedBillForDelete(null)}
+                onSuccess={fetchBills}
             />
             <DateRangeReportModal
                 isOpen={isReportModalOpen}

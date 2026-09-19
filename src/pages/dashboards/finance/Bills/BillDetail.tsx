@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
     ArrowLeft,
+    Edit2,
+    Trash2,
     Receipt,
     Calendar,
     Landmark,
@@ -19,6 +21,8 @@ import * as billService from '../../../../services/billService';
 import type { Bill } from '../../../../services/billService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import RecordPaymentModal from './RecordPaymentModal';
+import DeleteBillModal from './DeleteBillModal';
+import EditBillModal from './EditBillModal';
 import type { RootState } from '../../../../store';
 import { setFinanceDashboardData } from '../../../../store/dashboardSlice';
 
@@ -38,6 +42,8 @@ const BillDetail = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
     const fetchBill = useCallback(async () => {
         if (!id) return;
@@ -137,15 +143,29 @@ const BillDetail = () => {
                     </div>
                 </div>
 
-                {bill.status !== 'PAID' && bill.status !== 'VOID' && (
+                <div className="flex items-center gap-3">
                     <button
-                        onClick={() => setIsPaymentModalOpen(true)}
-                        className="flex items-center gap-2 px-8 py-3 rounded-2xl font-bold shadow-xl transition-all hover:scale-105 active:scale-95"
-                        style={{ background: '#C8E600', color: '#111' }}
+                        onClick={() => setIsEditModalOpen(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold border border-white/10 hover:border-[#C8E600]/50 hover:text-[#C8E600] bg-white/5 transition-all hover:scale-105 active:scale-95 text-xs cursor-pointer"
                     >
-                        <CreditCard size={18} /> Record Payment
+                        <Edit2 size={16} /> Edit Bill
                     </button>
-                )}
+                    <button
+                        onClick={() => setIsDeleteModalOpen(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold border border-red-500/20 hover:border-red-500/50 text-red-400 hover:bg-red-500/10 bg-white/5 transition-all hover:scale-105 active:scale-95 text-xs cursor-pointer"
+                    >
+                        <Trash2 size={16} /> Delete Bill
+                    </button>
+                    {bill.status !== 'PAID' && bill.status !== 'VOID' && (
+                        <button
+                            onClick={() => setIsPaymentModalOpen(true)}
+                            className="flex items-center gap-2 px-7 py-2.5 rounded-2xl font-bold shadow-xl transition-all hover:scale-105 active:scale-95 text-xs cursor-pointer"
+                            style={{ background: '#C8E600', color: '#111' }}
+                        >
+                            <CreditCard size={16} /> Record Payment
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -451,6 +471,20 @@ const BillDetail = () => {
                 </div>
             </div>
 
+            <EditBillModal
+                isOpen={isEditModalOpen}
+                bill={bill}
+                onClose={() => setIsEditModalOpen(false)}
+                onSuccess={fetchBill}
+            />
+            <DeleteBillModal
+                isOpen={isDeleteModalOpen}
+                bill={bill}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onSuccess={() => {
+                    navigate('/admin/financial-admin/bills');
+                }}
+            />
             <RecordPaymentModal
                 isOpen={isPaymentModalOpen}
                 onClose={() => setIsPaymentModalOpen(false)}

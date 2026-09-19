@@ -105,3 +105,17 @@ export const bulkUploadBills = async (payload: { rows: any[] }): Promise<any> =>
     const response = await api.post('/api/bills/bulk-upload', payload);
     return response.data;
 };
+
+
+export const updateBill = async (id: string, payload: any): Promise<{ success: boolean; data: Bill; message: string }> => {
+    const response = await api.put(`/api/bills/${id}`, payload);
+    return response.data;
+};
+
+export const deleteBill = async (id: string, payload: { paymentAction?: string; targetBillId?: string } = {}): Promise<any> => {
+    const response = await api.delete(`/api/bills/${id}`, {
+        data: payload,
+        headers: { 'X-Skip-Toast': 'true' }
+    });
+    return response.data;
+};
