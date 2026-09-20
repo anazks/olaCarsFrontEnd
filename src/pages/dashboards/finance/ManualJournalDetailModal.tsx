@@ -11,7 +11,6 @@ import {
     Check, 
     AlertTriangle, 
     Building2, 
-    DollarSign,
     RefreshCw,
     Scale,
     Search,
@@ -255,8 +254,8 @@ const ManualJournalDetailModal: React.FC<ManualJournalDetailModalProps> = ({
 
         // Fetch accounts for edit dropdown
         getAllAccountingCodes()
-            .then(res => {
-                const list = Array.isArray(res) ? res : (res.data || []);
+            .then((res: any) => {
+                const list = Array.isArray(res) ? res : (res?.data || []);
                 setAccounts(list);
             })
             .catch(err => console.error("Failed to load accounting codes:", err));
