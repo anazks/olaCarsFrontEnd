@@ -102,7 +102,14 @@ export const getLedgerEntryById = async (id: string): Promise<LedgerEntry> => {
 
 export const updateLedgerEntry = async (
     id: string,
-    data: { description?: string; accountingCode?: string; existingAttachments?: any[]; files?: File[] }
+    data: { 
+        description?: string; 
+        accountingCode?: string; 
+        amount?: number;
+        type?: 'DEBIT' | 'CREDIT';
+        existingAttachments?: any[]; 
+        files?: File[] 
+    }
 ): Promise<LedgerEntry> => {
     const formData = new FormData();
     if (data.description !== undefined) {
@@ -110,6 +117,12 @@ export const updateLedgerEntry = async (
     }
     if (data.accountingCode !== undefined) {
         formData.append("accountingCode", data.accountingCode);
+    }
+    if (data.amount !== undefined) {
+        formData.append("amount", String(data.amount));
+    }
+    if (data.type !== undefined) {
+        formData.append("type", data.type);
     }
     if (data.existingAttachments !== undefined) {
         formData.append("existingAttachments", JSON.stringify(data.existingAttachments));
@@ -124,6 +137,11 @@ export const updateLedgerEntry = async (
         headers: { 'Content-Type': 'multipart/form-data' }
     });
     return response.data.data;
+};
+
+export const deleteSingleLedgerEntry = async (id: string): Promise<any> => {
+    const response = await api.delete(`/api/ledger/entries/${id}`);
+    return response.data;
 };
 
 export const clearLedgerEntriesByCode = async (
@@ -162,6 +180,16 @@ export const getManualJournals = async (filters: Record<string, any> = {}): Prom
         data: response.data.data,
         pagination: response.data.pagination
     };
+};
+
+export const getManualJournalById = async (id: string): Promise<{ journal: ManualJournal; lines: LedgerEntry[] }> => {
+    const response = await api.get(`/api/ledger/journals/${id}`);
+    return response.data.data;
+};
+
+export const deleteManualJournal = async (id: string): Promise<any> => {
+    const response = await api.delete(`/api/ledger/journals/${id}`);
+    return response.data;
 };
 
 // --- Voucher System ---

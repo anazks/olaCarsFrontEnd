@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
-import { Plus, Search, Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, BookOpen, AlertCircle, CheckCircle2, RefreshCw, FileText } from 'lucide-react';
+import { Plus, Search, Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, BookOpen, AlertCircle, CheckCircle2, RefreshCw, FileText, Eye } from 'lucide-react';
 import { getManualJournals, getLedgerEntries } from '../../../services/ledgerService';
 import type { ManualJournal, LedgerEntry } from '../../../services/ledgerService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -8,10 +8,12 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import toast from 'react-hot-toast';
+import ManualJournalDetailModal from './ManualJournalDetailModal';
 
 const ManualJournals = () => {
     const navigate = useNavigate();
     const [journals, setJournals] = useState<ManualJournal[]>([]);
+    const [selectedJournalId, setSelectedJournalId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [expandedJournal, setExpandedJournal] = useState<string | null>(null);
@@ -356,6 +358,7 @@ const ManualJournals = () => {
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Narration / Notes</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest opacity-40">Status</th>
                                     <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-right">Total Debit/Credit</th>
+                                    <th className="px-6 py-5 text-[10px] font-black uppercase tracking-widest opacity-40 text-center w-24">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
@@ -395,10 +398,19 @@ const ManualJournals = () => {
                                                 <td className="px-6 py-5 text-right text-sm font-bold font-mono text-[var(--text-main)]">
                                                     ${Number(journal.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </td>
+                                                <td className="px-6 py-5 text-center">
+                                                    <button
+                                                        onClick={() => setSelectedJournalId(journal._id)}
+                                                        className="p-2 rounded-xl bg-white/5 border border-white/10 hover:border-brand-lime/50 hover:bg-brand-lime/10 text-dim hover:text-brand-lime transition-all cursor-pointer inline-flex items-center justify-center shadow-sm active:scale-90"
+                                                        title="View & Edit Journal Details"
+                                                    >
+                                                        <Eye size={15} />
+                                                    </button>
+                                                </td>
                                             </tr>
                                             {isExpanded && (
                                                 <tr>
-                                                    <td colSpan={6} className="px-6 py-5 bg-white/[0.01] border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                                    <td colSpan={7} className="px-6 py-5 bg-white/[0.01] border-b" style={{ borderColor: 'var(--border-main)' }}>
                                                         <div className="bg-[var(--bg-card)] border rounded-[20px] p-5 shadow-lg relative overflow-hidden animate-in fade-in duration-300" style={{ borderColor: 'var(--border-main)' }}>
                                                             <div className="flex justify-between items-center mb-3">
                                                                 <div className="flex items-center gap-2">
@@ -505,6 +517,21 @@ const ManualJournals = () => {
                         </div>
                     )}
                 </div>
+            )}
+
+            {/* Manual Journal Detail & LE Edit/Delete Modal */}
+            {selectedJournalId && (
+                <ManualJournalDetailModal
+                    journalId={selectedJournalId}
+                    onClose={() => setSelectedJournalId(null)}
+                    onJournalUpdated={() => {
+                        fetchJournals();
+                    }}
+                    onJournalDeleted={() => {
+                        setSelectedJournalId(null);
+                        fetchJournals();
+                    }}
+                />
             )}
 
         </div>
