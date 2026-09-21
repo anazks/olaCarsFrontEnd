@@ -201,23 +201,63 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     const userRole = getUserRole() || '';
     const canManageCodes = ['admin', 'financeadmin'].includes(userRole);
 
-    const handleExportExcel = () => {
-        if (codes.length === 0) {
-            toast.error("No accounting codes available to export.");
-            return;
-        }
-        const toastId = toast.loading("Generating Excel file...");
+    const fetchCodesForExport = useCallback(async (): Promise<AccountingCode[]> => {
         try {
-            const exportData = codes.map((c, idx) => ({
-                "Sl No.": String(idx + 1).padStart(2, '0'),
-                "Account Code": c.code || 'N/A',
-                "Account Name": c.name || 'N/A',
-                "Category": c.category || 'N/A',
-                "Account Type": c.accountType || 'N/A',
-                "Description": c.description || '—',
-                "Parent Account": typeof c.parentAccount === 'object' ? (c.parentAccount as any)?.name : c.parentAccount || '—',
-                "Status": c.accountStatus || 'Active'
-            }));
+            const params: any = {
+                page: 1,
+                limit: 10000,
+                sortBy,
+                sortOrder,
+            };
+            if (searchQuery.trim()) {
+                params.search = searchQuery.trim();
+            }
+            if (activeCategoryFilter !== 'ALL') {
+                params.category = activeCategoryFilter;
+            }
+            if (activeAccountTypeFilter) {
+                params.accountType = activeAccountTypeFilter;
+            }
+            const response = await getAllAccountingCodes(params);
+            const dataList: AccountingCode[] = Array.isArray(response)
+                ? response
+                : (Array.isArray(response?.data) ? response.data : []);
+            return dataList;
+        } catch (err) {
+            console.error('Failed to fetch full accounting codes list for export:', err);
+            return [];
+        }
+    }, [sortBy, sortOrder, searchQuery, activeCategoryFilter, activeAccountTypeFilter]);
+
+    const handleExportExcel = async () => {
+        const toastId = toast.loading("Fetching all chart of accounts from database...");
+        try {
+            const dataToExport = isEmbedded ? codes : await fetchCodesForExport();
+            if (!dataToExport || dataToExport.length === 0) {
+                toast.error("No accounting codes available to export.", { id: toastId });
+                return;
+            }
+
+            const exportData = dataToExport.map((c, idx) => {
+                const parentDoc = c.parentAccount && typeof c.parentAccount === 'object' && 'name' in c.parentAccount
+                    ? c.parentAccount
+                    : (c.parentAccount ? parentMap.get(String(c.parentAccount)) : null);
+                const parentVal = parentDoc
+                    ? `${parentDoc.code} - ${parentDoc.name}`
+                    : (c.parentAccount ? String(c.parentAccount) : '—');
+
+                return {
+                    "Sl No.": String(idx + 1).padStart(2, '0'),
+                    "Account Code": c.code || 'N/A',
+                    "Account Name": c.name || 'N/A',
+                    "Spanish Name": c.cuentaEspanol || '—',
+                    "Category": c.category || 'N/A',
+                    "Account Type": c.accountType || 'N/A',
+                    "Parent Account": parentVal,
+                    "Description": c.description || '—',
+                    "Status": c.accountStatus || 'Active'
+                };
+            });
 
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
@@ -229,35 +269,47 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                     key.length,
                     ...exportData.map(row => String((row as any)[key] || "").length)
                 );
-                return { wch: maxLen + 2 };
+                return { wch: Math.min(maxLen + 4, 60) };
             });
 
             const dateStr = new Date().toISOString().split('T')[0];
-            XLSX.writeFile(wb, `chart_of_accounts_export_${dateStr}.xlsx`);
-            toast.success("Excel file downloaded successfully!", { id: toastId });
+            XLSX.writeFile(wb, `chart_of_accounts_all_${dateStr}.xlsx`);
+            toast.success(`Exported all ${exportData.length} accounts to Excel successfully!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export Excel file.", { id: toastId });
         }
     };
 
-    const handleExportCsv = () => {
-        if (codes.length === 0) {
-            toast.error("No accounting codes available to export.");
-            return;
-        }
-        const toastId = toast.loading("Generating CSV file...");
+    const handleExportCsv = async () => {
+        const toastId = toast.loading("Fetching all chart of accounts from database...");
         try {
-            const exportData = codes.map((c, idx) => ({
-                "Sl No.": String(idx + 1).padStart(2, '0'),
-                "Account Code": c.code || 'N/A',
-                "Account Name": c.name || 'N/A',
-                "Category": c.category || 'N/A',
-                "Account Type": c.accountType || 'N/A',
-                "Description": c.description || '—',
-                "Parent Account": typeof c.parentAccount === 'object' ? (c.parentAccount as any)?.name : c.parentAccount || '—',
-                "Status": c.accountStatus || 'Active'
-            }));
+            const dataToExport = isEmbedded ? codes : await fetchCodesForExport();
+            if (!dataToExport || dataToExport.length === 0) {
+                toast.error("No accounting codes available to export.", { id: toastId });
+                return;
+            }
+
+            const exportData = dataToExport.map((c, idx) => {
+                const parentDoc = c.parentAccount && typeof c.parentAccount === 'object' && 'name' in c.parentAccount
+                    ? c.parentAccount
+                    : (c.parentAccount ? parentMap.get(String(c.parentAccount)) : null);
+                const parentVal = parentDoc
+                    ? `${parentDoc.code} - ${parentDoc.name}`
+                    : (c.parentAccount ? String(c.parentAccount) : '—');
+
+                return {
+                    "Sl No.": String(idx + 1).padStart(2, '0'),
+                    "Account Code": c.code || 'N/A',
+                    "Account Name": c.name || 'N/A',
+                    "Spanish Name": c.cuentaEspanol || '—',
+                    "Category": c.category || 'N/A',
+                    "Account Type": c.accountType || 'N/A',
+                    "Parent Account": parentVal,
+                    "Description": c.description || '—',
+                    "Status": c.accountStatus || 'Active'
+                };
+            });
 
             const ws = XLSX.utils.json_to_sheet(exportData);
             const csvContent = XLSX.utils.sheet_to_csv(ws);
@@ -267,54 +319,68 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
             const link = document.createElement("a");
             link.setAttribute("href", url);
             const dateStr = new Date().toISOString().split('T')[0];
-            link.setAttribute("download", `chart_of_accounts_export_${dateStr}.csv`);
+            link.setAttribute("download", `chart_of_accounts_all_${dateStr}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            toast.success("CSV file downloaded successfully!", { id: toastId });
+            toast.success(`Exported all ${exportData.length} accounts to CSV successfully!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export CSV file.", { id: toastId });
         }
     };
 
-    const handleExportPdf = () => {
-        if (codes.length === 0) {
-            toast.error("No accounting codes available to export.");
-            return;
-        }
-        const toastId = toast.loading("Generating PDF file...");
+    const handleExportPdf = async () => {
+        const toastId = toast.loading("Fetching all chart of accounts from database...");
         try {
-            const doc = new jsPDF();
-            const dateStr = new Date().toISOString().split('T')[0];
-            const title = "Chart of Accounts Report";
-            
-            doc.setFontSize(18);
-            doc.text(title, 14, 22);
-            doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            const dataToExport = isEmbedded ? codes : await fetchCodesForExport();
+            if (!dataToExport || dataToExport.length === 0) {
+                toast.error("No accounting codes available to export.", { id: toastId });
+                return;
+            }
 
-            const head = [["Sl No.", "Code", "Name", "Category", "Account Type", "Status"]];
-            const body = codes.map((c, idx) => [
-                String(idx + 1).padStart(2, '0'),
-                c.code || 'N/A',
-                c.name || 'N/A',
-                c.category || 'N/A',
-                c.accountType || 'N/A',
-                c.accountStatus || 'Active'
-            ]);
+            const doc = new jsPDF('landscape');
+            const dateStr = new Date().toISOString().split('T')[0];
+            const title = "Chart of Accounts Report (All Accounts)";
+            
+            doc.setFontSize(16);
+            doc.text(title, 14, 18);
+            doc.setFontSize(9);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()} | Total Accounts: ${dataToExport.length}`, 14, 25);
+
+            const head = [["Sl No.", "Code", "Name", "Spanish Name", "Category", "Account Type", "Parent Account", "Status"]];
+            const body = dataToExport.map((c, idx) => {
+                const parentDoc = c.parentAccount && typeof c.parentAccount === 'object' && 'name' in c.parentAccount
+                    ? c.parentAccount
+                    : (c.parentAccount ? parentMap.get(String(c.parentAccount)) : null);
+                const parentVal = parentDoc
+                    ? `${parentDoc.code} - ${parentDoc.name}`
+                    : (c.parentAccount ? String(c.parentAccount) : '—');
+
+                return [
+                    String(idx + 1).padStart(2, '0'),
+                    c.code || 'N/A',
+                    c.name || 'N/A',
+                    c.cuentaEspanol || '—',
+                    c.category || 'N/A',
+                    c.accountType || 'N/A',
+                    parentVal,
+                    c.accountStatus || 'Active'
+                ];
+            });
 
             autoTable(doc, {
                 head,
                 body,
-                startY: 34,
+                startY: 30,
                 theme: 'striped',
-                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0], fontStyle: 'bold' },
+                styles: { fontSize: 8, cellPadding: 2 },
             });
 
-            doc.save(`chart_of_accounts_export_${dateStr}.pdf`);
-            toast.success("PDF file downloaded successfully!", { id: toastId });
+            doc.save(`chart_of_accounts_all_${dateStr}.pdf`);
+            toast.success(`Exported all ${dataToExport.length} accounts to PDF successfully!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export PDF file.", { id: toastId });
