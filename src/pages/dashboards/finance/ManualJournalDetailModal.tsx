@@ -14,7 +14,9 @@ import {
     RefreshCw,
     Scale,
     Search,
-    ChevronDown
+    ChevronDown,
+    FileText,
+    Layers
 } from 'lucide-react';
 import { 
     getManualJournalById, 
@@ -487,6 +489,34 @@ const ManualJournalDetailModal: React.FC<ManualJournalDetailModalProps> = ({
                                 </div>
                             </div>
 
+                            {/* Linked Party & Auto Set-Off Banner */}
+                            {journal.contactModel && (
+                                <div className="p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/[0.02]" style={{ borderColor: 'var(--border-main, rgba(255,255,255,0.06))' }}>
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-xl text-xs font-bold uppercase tracking-wider ${journal.contactModel === 'Customer' ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                                            {journal.contactModel === 'Customer' ? 'Customer (Driver)' : 'Vendor (Supplier)'}
+                                        </div>
+                                        <div>
+                                            <p className="text-xs sm:text-sm font-bold text-[var(--text-main, #fff)]">
+                                                {typeof journal.contact === 'object' && journal.contact !== null
+                                                    ? (journal.contact.name || journal.contact.companyName || journal.contact.driver?.name || journal.contact.email || 'Party')
+                                                    : (journal.contact || 'Party')}
+                                            </p>
+                                            {typeof journal.contact === 'object' && journal.contact?.phone && (
+                                                <p className="text-[11px] text-dim">{journal.contact.phone}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {journal.autoSetOff && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/30">
+                                                <CheckCircle2 size={12} /> Auto Set-Off Applied
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Narration Memo Card */}
                             <div className="p-4 rounded-2xl border bg-white/[0.015]" style={{ borderColor: 'var(--border-main, rgba(255,255,255,0.06))' }}>
                                 <span className="text-[10px] font-black uppercase tracking-wider text-dim block mb-1">
@@ -760,6 +790,86 @@ const ManualJournalDetailModal: React.FC<ManualJournalDetailModalProps> = ({
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Settled Invoices or Bills Section */}
+                            {((journal.invoices && journal.invoices.length > 0) || (journal.bills && journal.bills.length > 0)) && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-dim flex items-center gap-2">
+                                            <FileText size={14} className="text-[#C8E600]" />
+                                            Auto Set-Off Applied Documents ({journal.contactModel === 'Customer' ? 'Invoices' : 'Bills'})
+                                        </h4>
+                                        {journal.setOffSummary?.totalSettled !== undefined && (
+                                            <span className="text-xs font-bold font-mono text-[#C8E600]">
+                                                Total Settled: ${Number(journal.setOffSummary.totalSettled).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border-main, rgba(255,255,255,0.06))' }}>
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b bg-white/[0.02]" style={{ borderColor: 'var(--border-main, rgba(255,255,255,0.06))' }}>
+                                                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-dim">Document #</th>
+                                                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-dim text-right">Total Amount</th>
+                                                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-dim text-right">Remaining Balance</th>
+                                                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-dim text-right">Amount Applied</th>
+                                                    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-dim text-center">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y" style={{ borderColor: 'var(--border-main, rgba(255,255,255,0.04))' }}>
+                                                {journal.invoices && journal.invoices.map((inv: any, idx: number) => {
+                                                    const doc = typeof inv.invoiceId === 'object' && inv.invoiceId !== null ? inv.invoiceId : {};
+                                                    return (
+                                                        <tr key={idx} className="hover:bg-white/[0.01]">
+                                                            <td className="px-4 py-3 text-xs font-mono font-bold text-white">
+                                                                {doc.invoiceNumber || (typeof inv.invoiceId === 'string' ? inv.invoiceId : `Invoice #${idx+1}`)}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-xs font-mono text-right text-dim">
+                                                                {doc.totalAmount !== undefined ? `$${Number(doc.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-xs font-mono text-right text-dim">
+                                                                {doc.balance !== undefined ? `$${Number(doc.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-xs font-mono font-bold text-right text-emerald-400">
+                                                                ${Number(inv.amountApplied || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-center">
+                                                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                                    {doc.status || 'SETTLED'}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                                {journal.bills && journal.bills.map((bill: any, idx: number) => {
+                                                    const doc = typeof bill.billId === 'object' && bill.billId !== null ? bill.billId : {};
+                                                    return (
+                                                        <tr key={idx} className="hover:bg-white/[0.01]">
+                                                            <td className="px-4 py-3 text-xs font-mono font-bold text-white">
+                                                                {doc.billNumber || (typeof bill.billId === 'string' ? bill.billId : `Bill #${idx+1}`)}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-xs font-mono text-right text-dim">
+                                                                {doc.totalAmount !== undefined ? `$${Number(doc.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-xs font-mono text-right text-dim">
+                                                                {doc.balanceDue !== undefined ? `$${Number(doc.balanceDue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-xs font-mono font-bold text-right text-emerald-400">
+                                                                ${Number(bill.amountApplied || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-center">
+                                                                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                                    {doc.status || 'SETTLED'}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>

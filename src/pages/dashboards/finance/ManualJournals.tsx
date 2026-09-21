@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
-import { Plus, Search, Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, BookOpen, AlertCircle, CheckCircle2, RefreshCw, FileText, Eye } from 'lucide-react';
+import { Plus, Search, Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, BookOpen, AlertCircle, CheckCircle2, RefreshCw, FileText, Eye, Upload } from 'lucide-react';
 import { getManualJournals, getLedgerEntries } from '../../../services/ledgerService';
 import type { ManualJournal, LedgerEntry } from '../../../services/ledgerService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -9,6 +9,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import toast from 'react-hot-toast';
 import ManualJournalDetailModal from './ManualJournalDetailModal';
+import BulkUploadJournal from './BulkUploadJournal';
 
 const ManualJournals = () => {
     const navigate = useNavigate();
@@ -17,6 +18,7 @@ const ManualJournals = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [expandedJournal, setExpandedJournal] = useState<string | null>(null);
+    const [showBulkUpload, setShowBulkUpload] = useState(false);
 
     // Expandable journal lines cache
     const [journalLines, setJournalLines] = useState<Record<string, LedgerEntry[]>>({});
@@ -277,6 +279,14 @@ const ManualJournals = () => {
                         <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                     </button>
                     <button
+                        onClick={() => setShowBulkUpload(true)}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        <Upload size={14} className="text-[#C8E600]" />
+                        Bulk Upload
+                    </button>
+                    <button
                         onClick={() => navigate('new')}
                         className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all shadow-lg hover:shadow-xl active:scale-95 cursor-pointer"
                         style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
@@ -532,6 +542,19 @@ const ManualJournals = () => {
                         fetchJournals();
                     }}
                 />
+            )}
+
+            {/* Bulk Upload Journal Modal */}
+            {showBulkUpload && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+                    <BulkUploadJournal
+                        onClose={() => setShowBulkUpload(false)}
+                        onSuccess={() => {
+                            setShowBulkUpload(false);
+                            fetchJournals();
+                        }}
+                    />
+                </div>
             )}
 
         </div>

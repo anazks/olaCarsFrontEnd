@@ -1,12 +1,19 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Save, X, AlertCircle, Calculator, Building2, UserPlus, Search, ChevronDown, Check, User } from 'lucide-react';
+import { 
+    Plus, Trash2, Save, X, AlertCircle, Calculator, Building2, UserPlus, 
+    Search, ChevronDown, Check, User, Layers, CheckCircle2, ShieldAlert, 
+    Building, FileText, RefreshCw 
+} from 'lucide-react';
 import { getAllAccountingCodes, createAccountingCode } from '../../../services/accountingService';
 import { createManualJournal } from '../../../services/ledgerService';
 import { getAllBranches, createBranch } from '../../../services/branchService';
 import { getAllTaxes, createTax } from '../../../services/taxService';
 import { getAllCustomers, createCustomer } from '../../../services/customerService';
 import { getAllCountryManagers, createCountryManager } from '../../../services/countryManagerService';
+import { getAllSuppliers, type Supplier } from '../../../services/supplierService';
+import { getInvoicesByCustomer } from '../../../services/invoiceService';
+import { getAllBills } from '../../../services/billService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -273,14 +280,14 @@ const AccountSelector = ({
     );
 };
 
-// 3. Contact Selector
-const ContactSelector = ({
-    contacts,
+// 3. Customer (Driver) Party Selector
+const CustomerPartySelector = ({
+    customers,
     selectedId,
     onSelect,
     onAddNew
 }: {
-    contacts: Customer[];
+    customers: Customer[];
     selectedId: string;
     onSelect: (id: string) => void;
     onAddNew: () => void;
@@ -290,39 +297,47 @@ const ContactSelector = ({
     const ref = useRef<HTMLDivElement>(null);
     useClickOutside(ref, () => setIsOpen(false));
 
-    const selectedContact = contacts.find(c => c._id === selectedId);
-    const filtered = contacts.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        (c.email && c.email.toLowerCase().includes(search.toLowerCase())) ||
-        (c.customerId && c.customerId.toLowerCase().includes(search.toLowerCase()))
-    );
+    const selectedCustomer = customers.find(c => c._id === selectedId);
+    const filtered = customers.filter(c => {
+        const q = search.toLowerCase();
+        return (
+            c.name?.toLowerCase().includes(q) ||
+            c.email?.toLowerCase().includes(q) ||
+            c.customerId?.toLowerCase().includes(q) ||
+            c.phone?.toLowerCase().includes(q) ||
+            (c.driver?.driverId && c.driver.driverId.toLowerCase().includes(q))
+        );
+    });
 
     return (
-        <div className={`relative w-full ${isOpen ? 'z-50' : ''}`} ref={ref}>
+        <div className="relative w-full" ref={ref}>
             <div
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] cursor-pointer hover:brightness-110 transition-all text-xs text-[var(--text-main)]"
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] cursor-pointer hover:brightness-110 transition-all text-xs text-[var(--text-main)]"
             >
-                <span className="truncate">
-                    {selectedContact ? selectedContact.name : 'Select Contact'}
-                </span>
-                <ChevronDown size={14} className={`opacity-40 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <div className="flex items-center gap-2 truncate">
+                    <User size={14} className="text-[#C8E600] shrink-0" />
+                    <span className="truncate font-semibold">
+                        {selectedCustomer ? `${selectedCustomer.name} (${selectedCustomer.customerId || selectedCustomer.driver?.driverId || 'Customer'})` : 'Select Customer / Driver...'}
+                    </span>
+                </div>
+                <ChevronDown size={14} className={`opacity-40 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 w-[280px] mt-2 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl shadow-2xl z-[9999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full left-0 w-full mt-2 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl shadow-2xl z-[9999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-3 border-b border-[var(--border-main)] bg-[var(--bg-input)] flex items-center gap-2">
                         <Search size={14} className="text-dim" />
                         <input
                             autoFocus
                             type="text"
-                            placeholder="Search contact..."
+                            placeholder="Search by customer name, ID, driver ID, phone..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             className="bg-transparent border-none text-xs text-[var(--text-main)] focus:ring-0 outline-none w-full"
                         />
                     </div>
-                    <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
+                    <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
                         <div
                             onClick={() => {
                                 setIsOpen(false);
@@ -341,17 +356,19 @@ const ContactSelector = ({
                                         setIsOpen(false);
                                         setSearch('');
                                     }}
-                                    className={`px-4 py-2 hover:bg-[#C8E600] group cursor-pointer transition-colors border-b border-[var(--border-main)]/10 last:border-0 flex justify-between items-center ${selectedId === c._id ? 'bg-white/[0.03]' : ''}`}
+                                    className={`px-4 py-2.5 hover:bg-[#C8E600] group cursor-pointer transition-colors border-b border-[var(--border-main)]/10 last:border-0 flex justify-between items-center ${selectedId === c._id ? 'bg-white/[0.03]' : ''}`}
                                 >
                                     <div className="truncate pr-2">
                                         <p className="text-xs font-bold text-[var(--text-main)] group-hover:text-black">{c.name}</p>
-                                        <span className="text-[10px] text-dim group-hover:text-black/70 truncate block">{c.customerId}</span>
+                                        <span className="text-[10px] text-dim group-hover:text-black/70 truncate block">
+                                            ID: {c.customerId || 'N/A'}{c.driver?.driverId ? ` • Driver: ${c.driver.driverId}` : ''}{c.phone ? ` • ${c.phone}` : ''}
+                                        </span>
                                     </div>
-                                    {selectedId === c._id && <Check size={12} className="text-[#C8E600] group-hover:text-black flex-shrink-0" />}
+                                    {selectedId === c._id && <Check size={14} className="text-[#C8E600] group-hover:text-black flex-shrink-0" />}
                                 </div>
                             ))
                         ) : (
-                            <p className="p-4 text-center text-xs text-dim italic">No contacts found</p>
+                            <p className="p-4 text-center text-xs text-dim italic">No customers found</p>
                         )}
                     </div>
                 </div>
@@ -360,54 +377,103 @@ const ContactSelector = ({
     );
 };
 
-// 4. Transaction Type Selector
-const TransactionTypeSelector = ({
-    selectedType,
+// 4. Supplier / Vendor Selector
+const SupplierPartySelector = ({
+    suppliers,
+    selectedId,
     onSelect
 }: {
-    selectedType: string;
-    onSelect: (type: string) => void;
+    suppliers: Supplier[];
+    selectedId: string;
+    onSelect: (id: string) => void;
 }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
     const ref = useRef<HTMLDivElement>(null);
     useClickOutside(ref, () => setIsOpen(false));
 
-    const types = ['Sales', 'Purchase', 'Payment', 'Receipt', 'Expense', 'Adjustment', 'Other'];
+    const selectedSupplier = suppliers.find(s => s._id === selectedId);
+    const filtered = suppliers.filter(s => {
+        const q = search.toLowerCase();
+        return (
+            (s.name && s.name.toLowerCase().includes(q)) ||
+            (s.companyName && s.companyName.toLowerCase().includes(q)) ||
+            (s.phone && s.phone.toLowerCase().includes(q)) ||
+            ((s as any).category && (s as any).category.toLowerCase().includes(q))
+        );
+    });
 
     return (
-        <div className={`relative w-full ${isOpen ? 'z-50' : ''}`} ref={ref}>
+        <div className="relative w-full" ref={ref}>
             <div
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] cursor-pointer hover:brightness-110 transition-all text-xs text-[var(--text-main)]"
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-[var(--bg-input)] border border-[var(--border-main)] cursor-pointer hover:brightness-110 transition-all text-xs text-[var(--text-main)]"
             >
-                <span className="truncate">
-                    {selectedType || 'Select Type'}
-                </span>
-                <ChevronDown size={14} className={`opacity-40 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <div className="flex items-center gap-2 truncate">
+                    <Building size={14} className="text-[#C8E600] shrink-0" />
+                    <span className="truncate font-semibold">
+                        {selectedSupplier ? `${selectedSupplier.name || selectedSupplier.companyName}` : 'Select Vendor / Supplier...'}
+                    </span>
+                </div>
+                <ChevronDown size={14} className={`opacity-40 transition-transform shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             {isOpen && (
                 <div className="absolute top-full left-0 w-full mt-2 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl shadow-2xl z-[9999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
-                        {types.map(t => (
-                            <div
-                                key={t}
-                                onClick={() => {
-                                    onSelect(t);
-                                    setIsOpen(false);
-                                }}
-                                className={`px-4 py-2.5 hover:bg-[#C8E600] group cursor-pointer transition-colors border-b border-[var(--border-main)]/10 last:border-0 flex justify-between items-center ${selectedType === t ? 'bg-white/[0.03]' : ''}`}
-                            >
-                                <span className="text-xs text-[var(--text-main)] group-hover:text-black font-semibold">{t}</span>
-                                {selectedType === t && <Check size={12} className="text-[#C8E600] group-hover:text-black" />}
-                            </div>
-                        ))}
+                    <div className="p-3 border-b border-[var(--border-main)] bg-[var(--bg-input)] flex items-center gap-2">
+                        <Search size={14} className="text-dim" />
+                        <input
+                            autoFocus
+                            type="text"
+                            placeholder="Search by vendor name, company, phone..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            className="bg-transparent border-none text-xs text-[var(--text-main)] focus:ring-0 outline-none w-full"
+                        />
+                    </div>
+                    <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
+                        {filtered.length > 0 ? (
+                            filtered.map(s => (
+                                <div
+                                    key={s._id}
+                                    onClick={() => {
+                                        onSelect(s._id);
+                                        setIsOpen(false);
+                                        setSearch('');
+                                    }}
+                                    className={`px-4 py-2.5 hover:bg-[#C8E600] group cursor-pointer transition-colors border-b border-[var(--border-main)]/10 last:border-0 flex justify-between items-center ${selectedId === s._id ? 'bg-white/[0.03]' : ''}`}
+                                >
+                                    <div className="truncate pr-2">
+                                        <p className="text-xs font-bold text-[var(--text-main)] group-hover:text-black">{s.name || s.companyName}</p>
+                                        <span className="text-[10px] text-dim group-hover:text-black/70 truncate block">
+                                            {s.companyName ? `${s.companyName} • ` : ''}{s.phone || 'No phone'}
+                                        </span>
+                                    </div>
+                                    {selectedId === s._id && <Check size={14} className="text-[#C8E600] group-hover:text-black flex-shrink-0" />}
+                                </div>
+                            ))
+                        ) : (
+                            <p className="p-4 text-center text-xs text-dim italic">No vendors found</p>
+                        )}
                     </div>
                 </div>
             )}
         </div>
     );
 };
+
+// Open Document interface for auto set-off simulation
+interface OpenDoc {
+    id: string;
+    docNumber: string;
+    date: string;
+    dueDate?: string;
+    totalAmount: number;
+    amountPaid: number;
+    balanceDue: number;
+    status: string;
+    isOverdue: boolean;
+}
 
 // 5. Tax Selector
 const TaxSelector = ({
@@ -495,9 +561,17 @@ const CreateJournalPage = () => {
     const [countryManagers, setCountryManagers] = useState<CountryManager[]>([]);
     const [taxes, setTaxes] = useState<any[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
+    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Entity Set-off Mode State
+    const [entityType, setEntityType] = useState<'NONE' | 'CUSTOMER' | 'SUPPLIER'>('NONE');
+    const [selectedPartyId, setSelectedPartyId] = useState<string>('');
+    const [autoSetOff, setAutoSetOff] = useState<boolean>(true);
+    const [openDocs, setOpenDocs] = useState<OpenDoc[]>([]);
+    const [loadingDocs, setLoadingDocs] = useState<boolean>(false);
 
     // Modal view triggers
     const [showBranchModal, setShowBranchModal] = useState(false);
@@ -544,19 +618,20 @@ const CreateJournalPage = () => {
     });
 
     const [lines, setLines] = useState<any[]>([
-        { accountingCode: '', type: 'DEBIT', amount: '', description: '', contact: '', transactionType: '', taxInfo: { taxApplied: '' } },
-        { accountingCode: '', type: 'CREDIT', amount: '', description: '', contact: '', transactionType: '', taxInfo: { taxApplied: '' } }
+        { accountingCode: '', type: 'DEBIT', amount: '', description: '', taxInfo: { taxApplied: '' } },
+        { accountingCode: '', type: 'CREDIT', amount: '', description: '', taxInfo: { taxApplied: '' } }
     ]);
 
     // Initial resources load
     const fetchData = useCallback(async () => {
         try {
-            const [codesRes, branchesRes, taxesRes, managersRes, customersRes] = await Promise.allSettled([
+            const [codesRes, branchesRes, taxesRes, managersRes, customersRes, suppliersRes] = await Promise.allSettled([
                 getAllAccountingCodes({ limit: 1000 }),
                 getAllBranches(),
                 getAllTaxes(),
                 getAllCountryManagers(),
-                getAllCustomers()
+                getAllCustomers(),
+                getAllSuppliers({ limit: 1000 })
             ]);
 
             if (codesRes.status === 'fulfilled') {
@@ -573,6 +648,10 @@ const CreateJournalPage = () => {
             if (taxesRes.status === 'fulfilled') setTaxes(taxesRes.value);
             if (managersRes.status === 'fulfilled') setCountryManagers(managersRes.value.data || []);
             if (customersRes.status === 'fulfilled') setCustomers(customersRes.value.data || []);
+            if (suppliersRes.status === 'fulfilled') {
+                const sData = suppliersRes.value as any;
+                setSuppliers(Array.isArray(sData) ? sData : (sData.data || []));
+            }
 
             if (codesRes.status === 'rejected' || branchesRes.status === 'rejected') {
                 setError('Failed to load critical initial data.');
@@ -588,6 +667,103 @@ const CreateJournalPage = () => {
         fetchData();
     }, [fetchData]);
 
+    // Fetch open invoices or bills when party or entity mode changes
+    useEffect(() => {
+        if (entityType === 'NONE' || !selectedPartyId) {
+            setOpenDocs([]);
+            return;
+        }
+
+        let isMounted = true;
+        setLoadingDocs(true);
+
+        const loadOpenDocs = async () => {
+            try {
+                if (entityType === 'CUSTOMER') {
+                    const invoices = await getInvoicesByCustomer(selectedPartyId);
+                    if (!isMounted) return;
+                    const now = new Date();
+                    const openList: OpenDoc[] = (invoices || [])
+                        .filter(inv => {
+                            const tot = Number(inv.totalAmountDue ?? (inv as any).totalAmount ?? inv.baseAmount ?? 0);
+                            const paid = Number(inv.amountPaid || 0);
+                            const bal = Number(inv.balance ?? (inv as any).balanceDue ?? (tot - paid));
+                            return bal > 0.01 && (inv.status as string) !== 'PAID' && (inv.status as string) !== 'CANCELLED' && (inv.status as string) !== 'VOID';
+                        })
+                        .sort((a, b) => {
+                            const priority = (s: string) => s === 'OVERDUE' ? 1 : s === 'PARTIAL' ? 2 : 3;
+                            if (priority(a.status) !== priority(b.status)) return priority(a.status) - priority(b.status);
+                            return new Date(a.dueDate || a.generatedAt || a.createdAt || 0).getTime() - new Date(b.dueDate || b.generatedAt || b.createdAt || 0).getTime();
+                        })
+                        .map(inv => {
+                            const tot = Number(inv.totalAmountDue ?? (inv as any).totalAmount ?? inv.baseAmount ?? 0);
+                            const paid = Number(inv.amountPaid || 0);
+                            const bal = Number(inv.balance ?? (inv as any).balanceDue ?? (tot - paid));
+                            const due = inv.dueDate ? new Date(inv.dueDate) : null;
+                            return {
+                                id: inv._id,
+                                docNumber: inv.invoiceNumber || 'INV',
+                                date: inv.invoiceDate || inv.generatedAt || inv.createdAt || '',
+                                dueDate: inv.dueDate,
+                                totalAmount: tot,
+                                amountPaid: paid,
+                                balanceDue: bal,
+                                status: inv.status,
+                                isOverdue: due ? due < now && inv.status !== 'PAID' : false
+                            };
+                        });
+                    setOpenDocs(openList);
+                } else if (entityType === 'SUPPLIER') {
+                    const res = await getAllBills({ supplier: selectedPartyId, limit: 1000 });
+                    if (!isMounted) return;
+                    const bills = res.data || [];
+                    const now = new Date();
+                    const openList: OpenDoc[] = bills
+                        .filter(bill => {
+                            const tot = Number(bill.totalAmount ?? (bill as any).totalAmountDue ?? 0);
+                            const paid = Number(bill.amountPaid || 0);
+                            const bal = Number(bill.balanceDue ?? (bill as any).balance ?? (tot - paid));
+                            return bal > 0.01 && (bill.status as string) !== 'PAID' && (bill.status as string) !== 'VOID' && (bill.status as string) !== 'CANCELLED';
+                        })
+                        .sort((a, b) => {
+                            return new Date(a.dueDate || a.createdAt).getTime() - new Date(b.dueDate || b.createdAt).getTime();
+                        })
+                        .map(bill => {
+                            const tot = Number(bill.totalAmount ?? (bill as any).totalAmountDue ?? 0);
+                            const paid = Number(bill.amountPaid || 0);
+                            const bal = Number(bill.balanceDue ?? (bill as any).balance ?? (tot - paid));
+                            const due = bill.dueDate ? new Date(bill.dueDate) : null;
+                            return {
+                                id: bill._id,
+                                docNumber: bill.billNumber || 'BILL',
+                                date: bill.billDate || bill.createdAt,
+                                dueDate: bill.dueDate,
+                                totalAmount: tot,
+                                amountPaid: paid,
+                                balanceDue: bal,
+                                status: bill.status,
+                                isOverdue: due ? due < now && bill.status !== 'PAID' : false
+                            };
+                        });
+                    setOpenDocs(openList);
+                } else {
+                    setOpenDocs([]);
+                }
+            } catch (err) {
+                console.error('Failed to fetch open documents for party', err);
+                setOpenDocs([]);
+            } finally {
+                if (isMounted) setLoadingDocs(false);
+            }
+        };
+
+        loadOpenDocs();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [entityType, selectedPartyId]);
+
     const handleCreateBranch = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newBranch.phone || newBranch.phone.length < 5) {
@@ -598,10 +774,10 @@ const CreateJournalPage = () => {
         setQuickCreateLoading(true);
         setQuickCreateError(null);
         try {
-            const res = await createBranch({ ...newBranch, status: newBranch.status as any });
-            const branchesData = await getAllBranches();
-            setBranches(branchesData.data || []);
-            setHeader(prev => ({ ...prev, branch: res._id }));
+            const res = await createBranch(newBranch);
+            const branchList = await getAllBranches();
+            setBranches(branchList.data || []);
+            setHeader(prev => ({ ...prev, branch: res.data._id }));
             setShowBranchModal(false);
             setNewBranch({ name: '', code: '', address: '', city: '', state: '', phone: '', email: '', country: '', countryManager: '', status: 'ACTIVE' });
         } catch (err: any) {
@@ -616,14 +792,13 @@ const CreateJournalPage = () => {
         setQuickCreateLoading(true);
         setQuickCreateError(null);
         try {
-            const res = await createCountryManager({ ...newCountryManager, status: 'ACTIVE' });
-            const managersData = await getAllCountryManagers();
-            setCountryManagers(managersData.data || []);
-            setNewBranch(prev => ({ ...prev, countryManager: res._id, country: res.country }));
+            await createCountryManager(newCountryManager);
+            const managersRes = await getAllCountryManagers();
+            setCountryManagers(managersRes.data || []);
             setShowCountryManagerModal(false);
             setNewCountryManager({ fullName: '', email: '', password: '', phone: '', country: '' });
         } catch (err: any) {
-            setQuickCreateError(err.response?.data?.message || err.message || 'Failed to create country manager');
+            setQuickCreateError(err.response?.data?.message || err.message || 'Failed to create manager');
         } finally {
             setQuickCreateLoading(false);
         }
@@ -635,7 +810,7 @@ const CreateJournalPage = () => {
         setQuickCreateError(null);
         try {
             const res = await createAccountingCode(newAccountingCode);
-            const codesData = (await getAllAccountingCodes({ limit: 1000 })) as any;
+            const codesData = await getAllAccountingCodes({ limit: 1000 });
             setAccountingCodes(Array.isArray(codesData) ? codesData : (codesData.data || []));
 
             if (targetLineIndex !== null) {
@@ -657,8 +832,8 @@ const CreateJournalPage = () => {
         setQuickCreateError(null);
         try {
             const res = await createTax(newTax);
-            const taxData = await getAllTaxes();
-            setTaxes(taxData);
+            const taxesData = await getAllTaxes();
+            setTaxes(taxesData);
 
             if (targetLineIndex !== null) {
                 updateLine(targetLineIndex, 'taxInfo', { taxApplied: res._id });
@@ -667,7 +842,7 @@ const CreateJournalPage = () => {
             setNewTax({ name: '', rate: 0 });
             setTargetLineIndex(null);
         } catch (err: any) {
-            setQuickCreateError(err.response?.data?.message || err.message || 'Failed to create tax profile');
+            setQuickCreateError(err.response?.data?.message || err.message || 'Failed to create tax');
         } finally {
             setQuickCreateLoading(false);
         }
@@ -690,9 +865,7 @@ const CreateJournalPage = () => {
             const customersData = await getAllCustomers();
             setCustomers(customersData.data || []);
 
-            if (targetLineIndex !== null) {
-                updateLine(targetLineIndex, 'contact', res._id);
-            }
+            setSelectedPartyId(res._id);
             setShowCustomerModal(false);
             setNewCustomer({ name: '', email: '', phone: '', address: '', city: '', state: '', country: '', status: 'ACTIVE' });
             setTargetLineIndex(null);
@@ -704,7 +877,7 @@ const CreateJournalPage = () => {
     };
 
     const handleAddLine = () => {
-        setLines([...lines, { accountingCode: '', type: 'DEBIT', amount: '', description: '', contact: '', transactionType: '', taxInfo: { taxApplied: '' } }]);
+        setLines([...lines, { accountingCode: '', type: 'DEBIT', amount: '', description: '', taxInfo: { taxApplied: '' } }]);
     };
 
     const handleRemoveLine = (index: number) => {
@@ -752,10 +925,83 @@ const CreateJournalPage = () => {
         return acc;
     }, { debit: 0, credit: 0 });
 
+    // Live Set-off Simulation
+    const simulatedSetOff = useMemo(() => {
+        const effectiveAmount = totals.debit;
+        let remaining = effectiveAmount;
+        let totalSettled = 0;
+
+        const items = openDocs.map(doc => {
+            const applied = Math.min(doc.balanceDue, Math.max(0, remaining));
+            remaining -= applied;
+            totalSettled += applied;
+            return {
+                ...doc,
+                applied,
+                projectedBalance: Math.max(0, doc.balanceDue - applied),
+                projectedStatus: (doc.balanceDue - applied) <= 0.01 ? 'PAID' : (applied > 0 ? 'PARTIAL' : doc.status)
+            };
+        });
+
+        const totalOutstanding = openDocs.reduce((sum, d) => sum + d.balanceDue, 0);
+        const excessAdvance = Math.max(0, effectiveAmount - totalSettled);
+
+        return {
+            items,
+            totalOutstanding,
+            totalSettled,
+            excessAdvance
+        };
+    }, [openDocs, totals.debit]);
+
+    // Live Cross-Category Accounting Code Validation
+    const categoryViolation = useMemo(() => {
+        if (entityType === 'CUSTOMER') {
+            for (let i = 0; i < lines.length; i++) {
+                const code = accountingCodes.find(c => c._id === lines[i].accountingCode);
+                if (code) {
+                    const cat = String(code.category || '').toUpperCase();
+                    if (cat === 'ACCOUNTS PAYABLE' || (cat.includes('PAYABLE') && !cat.includes('TAX'))) {
+                        return {
+                            lineIndex: i,
+                            accountName: code.name,
+                            message: `Line #${i + 1} uses "${code.name}" (Accounts Payable). Accounts Payable accounts cannot be used when Customer is selected. For customer set-off, use Accounts Receivable or standard income/asset/bank accounts.`
+                        };
+                    }
+                }
+            }
+        } else if (entityType === 'SUPPLIER') {
+            for (let i = 0; i < lines.length; i++) {
+                const code = accountingCodes.find(c => c._id === lines[i].accountingCode);
+                if (code) {
+                    const cat = String(code.category || '').toUpperCase();
+                    if (cat === 'ACCOUNTS RECEIVABLE' || cat.includes('RECEIVABLE')) {
+                        return {
+                            lineIndex: i,
+                            accountName: code.name,
+                            message: `Line #${i + 1} uses "${code.name}" (Accounts Receivable). Accounts Receivable accounts cannot be used when Vendor is selected. For vendor set-off, use Accounts Payable or standard expense/asset/bank accounts.`
+                        };
+                    }
+                }
+            }
+        }
+        return null;
+    }, [entityType, lines, accountingCodes]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!header.branch) {
             setError('Please select a branch');
+            return;
+        }
+
+        if (entityType !== 'NONE' && !selectedPartyId) {
+            setError(`Please select a ${entityType === 'CUSTOMER' ? 'Customer / Driver' : 'Vendor / Supplier'} or switch mode to General Journal.`);
+            return;
+        }
+
+        if (categoryViolation) {
+            setError(categoryViolation.message);
             return;
         }
 
@@ -788,12 +1034,6 @@ const CreateJournalPage = () => {
                     amount: Number(line.amount || 0),
                     description: line.description || ''
                 };
-                if (line.contact && line.contact !== '') {
-                    cleaned.contact = line.contact;
-                }
-                if (line.transactionType && line.transactionType !== '') {
-                    cleaned.transactionType = line.transactionType;
-                }
                 if (line.taxInfo && line.taxInfo.taxApplied && line.taxInfo.taxApplied !== '') {
                     cleaned.taxInfo = {
                         taxApplied: line.taxInfo.taxApplied
@@ -803,6 +1043,9 @@ const CreateJournalPage = () => {
             });
             await createManualJournal({
                 ...header,
+                contact: entityType !== 'NONE' ? selectedPartyId : undefined,
+                contactModel: entityType === 'CUSTOMER' ? 'Customer' : entityType === 'SUPPLIER' ? 'Supplier' : undefined,
+                autoSetOff: entityType !== 'NONE' ? autoSetOff : false,
                 lines: sanitizedLines
             });
             // Go back to the manual journals list page
@@ -889,119 +1132,448 @@ const CreateJournalPage = () => {
                     </div>
                 </div>
 
+                {/* Entity Link & Auto Set-Off Configuration */}
+                <div className="p-6 rounded-3xl border bg-white/[0.01] space-y-5" style={{ borderColor: 'var(--border-main)' }}>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <Layers size={18} className="text-[#C8E600]" />
+                                <h3 className="text-sm font-bold text-[var(--text-main)]">Auto Set-Off & Party Link</h3>
+                            </div>
+                            <p className="text-xs text-dim mt-0.5">
+                                Link this manual journal to a Driver or Vendor to automatically set off pending invoices or bills.
+                            </p>
+                        </div>
+
+                        {/* Mode Selector */}
+                        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-main)] self-stretch sm:self-auto">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setEntityType('NONE');
+                                    setSelectedPartyId('');
+                                }}
+                                className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                                    entityType === 'NONE' 
+                                        ? 'bg-[#C8E600] text-black shadow-md' 
+                                        : 'text-dim hover:text-[var(--text-main)]'
+                                }`}
+                            >
+                                None (General)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setEntityType('CUSTOMER');
+                                    setSelectedPartyId('');
+                                }}
+                                className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                                    entityType === 'CUSTOMER' 
+                                        ? 'bg-[#C8E600] text-black shadow-md' 
+                                        : 'text-dim hover:text-[var(--text-main)]'
+                                }`}
+                            >
+                                Customer (Driver)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setEntityType('SUPPLIER');
+                                    setSelectedPartyId('');
+                                }}
+                                className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                                    entityType === 'SUPPLIER' 
+                                        ? 'bg-[#C8E600] text-black shadow-md' 
+                                        : 'text-dim hover:text-[var(--text-main)]'
+                                }`}
+                            >
+                                Vendor (Supplier)
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Customer Selection View */}
+                    {entityType === 'CUSTOMER' && (
+                        <div className="pt-4 border-t border-[var(--border-main)]/40 space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">
+                                        Select Customer / Driver for Invoices Set-off
+                                    </label>
+                                    <CustomerPartySelector
+                                        customers={customers}
+                                        selectedId={selectedPartyId}
+                                        onSelect={id => setSelectedPartyId(id)}
+                                        onAddNew={() => setShowCustomerModal(true)}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-3 pb-3">
+                                    <label className="relative flex items-center gap-2.5 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={autoSetOff}
+                                            onChange={e => setAutoSetOff(e.target.checked)}
+                                            className="w-4 h-4 rounded border-[var(--border-main)] text-[#C8E600] focus:ring-0 bg-[var(--bg-input)]"
+                                        />
+                                        <span className="text-xs font-bold text-[var(--text-main)]">
+                                            Auto Set-off Open Invoices (FIFO / Overdue Priority)
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Open Invoices Table / Live Simulation */}
+                            {selectedPartyId && (
+                                <div className="space-y-3 pt-2">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-bold text-[var(--text-main)] flex items-center gap-2">
+                                            <FileText size={15} className="text-[#C8E600]" />
+                                            Available Open Invoices
+                                        </span>
+                                        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-white/5 font-mono text-dim">
+                                            {loadingDocs ? 'Loading...' : `${openDocs.length} unpaid`}
+                                        </span>
+                                    </div>
+
+                                    {loadingDocs ? (
+                                        <div className="p-6 text-center text-xs text-dim flex items-center justify-center gap-2 border border-[var(--border-main)] rounded-2xl">
+                                            <RefreshCw size={14} className="animate-spin text-[#C8E600]" /> Fetching driver invoices...
+                                        </div>
+                                    ) : openDocs.length === 0 ? (
+                                        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2">
+                                            <CheckCircle2 size={16} /> No outstanding invoices found for this driver.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {/* KPI Bar */}
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-main)] text-xs">
+                                                <div>
+                                                    <p className="text-[9px] font-bold uppercase tracking-wider text-dim">Total Unpaid Debt</p>
+                                                    <p className="text-sm font-bold font-mono text-rose-400">${simulatedSetOff.totalOutstanding.toFixed(2)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-bold uppercase tracking-wider text-dim">Journal Amount</p>
+                                                    <p className="text-sm font-bold font-mono text-[#C8E600]">${totals.debit.toFixed(2)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-bold uppercase tracking-wider text-dim">To Be Settled</p>
+                                                    <p className="text-sm font-bold font-mono text-emerald-400">${simulatedSetOff.totalSettled.toFixed(2)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-bold uppercase tracking-wider text-dim">Excess / Advance</p>
+                                                    <p className="text-sm font-bold font-mono text-blue-400">${simulatedSetOff.excessAdvance.toFixed(2)}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Documents List */}
+                                            <div className="rounded-2xl border border-[var(--border-main)] overflow-hidden">
+                                                <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
+                                                    <table className="w-full text-left border-collapse text-xs">
+                                                        <thead className="border-b border-[var(--border-main)] bg-white/[0.02]">
+                                                            <tr>
+                                                                <th className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-dim">Doc #</th>
+                                                                <th className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-dim">Due Date</th>
+                                                                <th className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-right text-dim">Total</th>
+                                                                <th className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-right text-dim">Balance Due</th>
+                                                                <th className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-right text-emerald-400">Applied Now</th>
+                                                                <th className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-center text-dim">Projected Status</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y border-[var(--border-main)]">
+                                                            {simulatedSetOff.items.map(doc => (
+                                                                <tr key={doc.id} className={doc.applied > 0 ? 'bg-emerald-500/5' : ''}>
+                                                                    <td className="px-3.5 py-2.5 font-bold font-mono text-[var(--text-main)] flex items-center gap-1.5">
+                                                                        {doc.docNumber}
+                                                                        {doc.isOverdue && (
+                                                                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold uppercase">
+                                                                                Overdue
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="px-3.5 py-2.5 text-dim">
+                                                                        {doc.dueDate ? new Date(doc.dueDate).toLocaleDateString() : 'N/A'}
+                                                                    </td>
+                                                                    <td className="px-3.5 py-2.5 text-right font-mono text-dim">
+                                                                        ${doc.totalAmount.toFixed(2)}
+                                                                    </td>
+                                                                    <td className="px-3.5 py-2.5 text-right font-mono font-bold text-rose-400">
+                                                                        ${doc.balanceDue.toFixed(2)}
+                                                                    </td>
+                                                                    <td className="px-3.5 py-2.5 text-right font-mono font-black text-emerald-400">
+                                                                        ${doc.applied.toFixed(2)}
+                                                                    </td>
+                                                                    <td className="px-3.5 py-2.5 text-center">
+                                                                        <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                                                                            doc.projectedStatus === 'PAID'
+                                                                                ? 'bg-emerald-500/20 text-emerald-400'
+                                                                                : doc.projectedStatus === 'PARTIAL'
+                                                                                ? 'bg-amber-500/20 text-amber-400'
+                                                                                : 'bg-rose-500/20 text-rose-400'
+                                                                        }`}>
+                                                                            {doc.projectedStatus}
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Supplier Selection View */}
+                    {entityType === 'SUPPLIER' && (
+                        <div className="pt-4 border-t border-[var(--border-main)]/40 space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">
+                                        Select Vendor / Supplier for Bills Set-off
+                                    </label>
+                                    <SupplierPartySelector
+                                        suppliers={suppliers}
+                                        selectedId={selectedPartyId}
+                                        onSelect={id => setSelectedPartyId(id)}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-3 pb-3">
+                                    <label className="relative flex items-center gap-2.5 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={autoSetOff}
+                                            onChange={e => setAutoSetOff(e.target.checked)}
+                                            className="w-4 h-4 rounded border-[var(--border-main)] text-[#C8E600] focus:ring-0 bg-[var(--bg-input)]"
+                                        />
+                                        <span className="text-xs font-bold text-[var(--text-main)]">
+                                            Auto Set-off Open Bills (FIFO / Overdue Priority)
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Open Bills Table / Live Simulation */}
+                            {selectedPartyId && (
+                                <div className="space-y-3 pt-2">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-bold text-[var(--text-main)] flex items-center gap-2">
+                                            <FileText size={15} className="text-[#C8E600]" />
+                                            Available Open Bills
+                                        </span>
+                                        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-white/5 font-mono text-dim">
+                                            {loadingDocs ? 'Loading...' : `${openDocs.length} unpaid`}
+                                        </span>
+                                    </div>
+
+                                    {loadingDocs ? (
+                                        <div className="p-6 text-center text-xs text-dim flex items-center justify-center gap-2 border border-[var(--border-main)] rounded-2xl">
+                                            <RefreshCw size={14} className="animate-spin text-[#C8E600]" /> Fetching vendor bills...
+                                        </div>
+                                    ) : openDocs.length === 0 ? (
+                                        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2">
+                                            <CheckCircle2 size={16} /> No outstanding bills found for this vendor.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {/* KPI Bar */}
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-2xl bg-[var(--bg-input)] border border-[var(--border-main)] text-xs">
+                                                <div>
+                                                    <p className="text-[9px] font-bold uppercase tracking-wider text-dim">Total Unpaid Debt</p>
+                                                    <p className="text-sm font-bold font-mono text-rose-400">${simulatedSetOff.totalOutstanding.toFixed(2)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-bold uppercase tracking-wider text-dim">Journal Amount</p>
+                                                    <p className="text-sm font-bold font-mono text-[#C8E600]">${totals.debit.toFixed(2)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-bold uppercase tracking-wider text-dim">To Be Settled</p>
+                                                    <p className="text-sm font-bold font-mono text-emerald-400">${simulatedSetOff.totalSettled.toFixed(2)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[9px] font-bold uppercase tracking-wider text-dim">Excess / Advance</p>
+                                                    <p className="text-sm font-bold font-mono text-blue-400">${simulatedSetOff.excessAdvance.toFixed(2)}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Documents List */}
+                                            <div className="rounded-2xl border border-[var(--border-main)] overflow-hidden">
+                                                <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
+                                                    <table className="w-full text-left border-collapse text-xs">
+                                                        <thead className="border-b border-[var(--border-main)] bg-white/[0.02]">
+                                                            <tr>
+                                                                <th className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-dim">Doc #</th>
+                                                                <th className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-dim">Due Date</th>
+                                                                <th className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-right text-dim">Total</th>
+                                                                <th className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-right text-dim">Balance Due</th>
+                                                                <th className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-right text-emerald-400">Applied Now</th>
+                                                                <th className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-center text-dim">Projected Status</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y border-[var(--border-main)]">
+                                                            {simulatedSetOff.items.map(doc => (
+                                                                <tr key={doc.id} className={doc.applied > 0 ? 'bg-emerald-500/5' : ''}>
+                                                                    <td className="px-3.5 py-2.5 font-bold font-mono text-[var(--text-main)] flex items-center gap-1.5">
+                                                                        {doc.docNumber}
+                                                                        {doc.isOverdue && (
+                                                                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold uppercase">
+                                                                                Overdue
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="px-3.5 py-2.5 text-dim">
+                                                                        {doc.dueDate ? new Date(doc.dueDate).toLocaleDateString() : 'N/A'}
+                                                                    </td>
+                                                                    <td className="px-3.5 py-2.5 text-right font-mono text-dim">
+                                                                        ${doc.totalAmount.toFixed(2)}
+                                                                    </td>
+                                                                    <td className="px-3.5 py-2.5 text-right font-mono font-bold text-rose-400">
+                                                                        ${doc.balanceDue.toFixed(2)}
+                                                                    </td>
+                                                                    <td className="px-3.5 py-2.5 text-right font-mono font-black text-emerald-400">
+                                                                        ${doc.applied.toFixed(2)}
+                                                                    </td>
+                                                                    <td className="px-3.5 py-2.5 text-center">
+                                                                        <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                                                                            doc.projectedStatus === 'PAID'
+                                                                                ? 'bg-emerald-500/20 text-emerald-400'
+                                                                                : doc.projectedStatus === 'PARTIAL'
+                                                                                ? 'bg-amber-500/20 text-amber-400'
+                                                                                : 'bg-rose-500/20 text-rose-400'
+                                                                        }`}>
+                                                                            {doc.projectedStatus}
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Real-time Category Violation Alert */}
+                {categoryViolation && (
+                    <div className="p-4 rounded-3xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-3 animate-in fade-in duration-200">
+                        <ShieldAlert size={22} className="text-rose-400 shrink-0" />
+                        <div>
+                            <p className="font-bold text-sm text-rose-400">Accounting Code Category Restriction</p>
+                            <p className="mt-0.5 text-rose-300/90 leading-relaxed">{categoryViolation.message}</p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Double Entry Lines Table */}
                 <div className="rounded-3xl border border-[var(--border-main)] bg-white/[0.01]">
                     <div className="min-h-[300px]">
-                        <table className="w-full text-left border-collapse min-w-[950px]">
+                        <table className="w-full text-left border-collapse min-w-[850px]">
                             <thead>
                                 <tr className="bg-white/5 border-b" style={{ borderColor: 'var(--border-main)' }}>
-                                    <th className="w-1/4 px-4 py-4 text-[10px] font-black uppercase tracking-widest opacity-40">Account</th>
-                                    <th className="w-1/4 px-4 py-4 text-[10px] font-black uppercase tracking-widest opacity-40">Description (Memo)</th>
-                                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest opacity-40">Contact (Customer)</th>
-                                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest opacity-40">Transaction Type</th>
-                                    <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest opacity-40">Tax</th>
-                                    <th className="w-48 min-w-[200px] px-4 py-4 text-right text-[10px] font-black uppercase tracking-widest opacity-40">Debits</th>
-                                    <th className="w-48 min-w-[200px] px-4 py-4 text-right text-[10px] font-black uppercase tracking-widest opacity-40">Credits</th>
+                                    <th className="w-1/3 px-4 py-4 text-[10px] font-black uppercase tracking-widest opacity-40">Account</th>
+                                    <th className="w-1/3 px-4 py-4 text-[10px] font-black uppercase tracking-widest opacity-40">Description (Memo)</th>
+                                    <th className="w-48 px-4 py-4 text-[10px] font-black uppercase tracking-widest opacity-40">Tax</th>
+                                    <th className="w-48 min-w-[180px] px-4 py-4 text-right text-[10px] font-black uppercase tracking-widest opacity-40">Debits</th>
+                                    <th className="w-48 min-w-[180px] px-4 py-4 text-right text-[10px] font-black uppercase tracking-widest opacity-40">Credits</th>
                                     <th className="w-12 px-4 py-4"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                                {lines.map((line, index) => (
-                                    <tr key={index} className="hover:bg-white/[0.01] transition-all">
-                                        <td className="p-3">
-                                            <AccountSelector
-                                                codes={accountingCodes}
-                                                selectedId={line.accountingCode}
-                                                onSelect={id => updateLine(index, 'accountingCode', id)}
-                                                onAddNew={() => {
-                                                    setTargetLineIndex(index);
-                                                    setShowAccountingCodeModal(true);
-                                                }}
-                                            />
-                                        </td>
-                                        
-                                        <td className="p-3">
-                                            <input
-                                                type="text"
-                                                placeholder="Enter memo..."
-                                                value={line.description}
-                                                onChange={e => updateLine(index, 'description', e.target.value)}
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-3 py-2 text-xs text-[var(--text-main)] focus:border-[#C8E600] outline-none transition-all"
-                                            />
-                                        </td>
+                                {lines.map((line, index) => {
+                                    const isViolatingRow = categoryViolation?.lineIndex === index;
+                                    return (
+                                        <tr 
+                                            key={index} 
+                                            className={`transition-all ${
+                                                isViolatingRow 
+                                                    ? 'bg-rose-500/10 border-l-4 border-rose-500' 
+                                                    : 'hover:bg-white/[0.01]'
+                                            }`}
+                                        >
+                                            <td className="p-3">
+                                                <AccountSelector
+                                                    codes={accountingCodes}
+                                                    selectedId={line.accountingCode}
+                                                    onSelect={id => updateLine(index, 'accountingCode', id)}
+                                                    onAddNew={() => {
+                                                        setTargetLineIndex(index);
+                                                        setShowAccountingCodeModal(true);
+                                                    }}
+                                                />
+                                            </td>
+                                            
+                                            <td className="p-3">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Enter memo..."
+                                                    value={line.description}
+                                                    onChange={e => updateLine(index, 'description', e.target.value)}
+                                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-3 py-2 text-xs text-[var(--text-main)] focus:border-[#C8E600] outline-none transition-all"
+                                                />
+                                            </td>
 
-                                        <td className="p-3">
-                                            <ContactSelector
-                                                contacts={customers}
-                                                selectedId={line.contact}
-                                                onSelect={id => updateLine(index, 'contact', id)}
-                                                onAddNew={() => {
-                                                    setTargetLineIndex(index);
-                                                    setShowCustomerModal(true);
-                                                }}
-                                            />
-                                        </td>
+                                            <td className="p-3">
+                                                <TaxSelector
+                                                    taxes={taxes}
+                                                    selectedId={line.taxInfo?.taxApplied}
+                                                    onSelect={id => updateLine(index, 'taxInfo', { taxApplied: id })}
+                                                    onAddNew={() => {
+                                                        setTargetLineIndex(index);
+                                                        setShowTaxModal(true);
+                                                    }}
+                                                />
+                                            </td>
 
-                                        <td className="p-3">
-                                            <TransactionTypeSelector
-                                                selectedType={line.transactionType}
-                                                onSelect={type => updateLine(index, 'transactionType', type)}
-                                            />
-                                        </td>
+                                            <td className="p-3 w-48 min-w-[180px]">
+                                                <input
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    placeholder="0.00"
+                                                    value={line.type === 'DEBIT' ? line.amount : ''}
+                                                    onChange={e => handleDebitChange(index, e.target.value)}
+                                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-3 py-2 text-sm text-right font-mono text-emerald-600 dark:text-emerald-400 font-bold focus:border-[#C8E600] outline-none"
+                                                />
+                                            </td>
 
-                                        <td className="p-3">
-                                            <TaxSelector
-                                                taxes={taxes}
-                                                selectedId={line.taxInfo?.taxApplied}
-                                                onSelect={id => updateLine(index, 'taxInfo', { taxApplied: id })}
-                                                onAddNew={() => {
-                                                    setTargetLineIndex(index);
-                                                    setShowTaxModal(true);
-                                                }}
-                                            />
-                                        </td>
+                                            <td className="p-3 w-48 min-w-[180px]">
+                                                <input
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    placeholder="0.00"
+                                                    value={line.type === 'CREDIT' ? line.amount : ''}
+                                                    onChange={e => handleCreditChange(index, e.target.value)}
+                                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-3 py-2 text-sm text-right font-mono text-rose-600 dark:text-rose-400 font-bold focus:border-[#C8E600] outline-none"
+                                                />
+                                            </td>
 
-                                        <td className="p-3 w-48 min-w-[200px]">
-                                            <input
-                                                type="text"
-                                                inputMode="decimal"
-                                                placeholder="0.00"
-                                                value={line.type === 'DEBIT' ? line.amount : ''}
-                                                onChange={e => handleDebitChange(index, e.target.value)}
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-3 py-2 text-sm text-right font-mono text-emerald-600 dark:text-emerald-400 font-bold focus:border-[#C8E600] outline-none"
-                                            />
-                                        </td>
-
-                                        <td className="p-3 w-48 min-w-[200px]">
-                                            <input
-                                                type="text"
-                                                inputMode="decimal"
-                                                placeholder="0.00"
-                                                value={line.type === 'CREDIT' ? line.amount : ''}
-                                                onChange={e => handleCreditChange(index, e.target.value)}
-                                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-3 py-2 text-sm text-right font-mono text-rose-600 dark:text-rose-400 font-bold focus:border-[#C8E600] outline-none"
-                                            />
-                                        </td>
-
-                                        <td className="p-3 text-center">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRemoveLine(index)}
-                                                className="p-2 rounded-xl bg-rose-500/5 hover:bg-rose-500/20 text-rose-500/40 hover:text-rose-500 transition-all"
-                                                disabled={lines.length <= 2}
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            <td className="p-3 text-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveLine(index)}
+                                                    className="p-2 rounded-xl bg-rose-500/5 hover:bg-rose-500/20 text-rose-500/40 hover:text-rose-500 transition-all cursor-pointer"
+                                                    disabled={lines.length <= 2}
+                                                    title={lines.length <= 2 ? "A manual journal must have at least 2 lines" : "Remove line"}
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
                     <button
                         type="button"
                         onClick={handleAddLine}
-                        className="w-full py-4 bg-white/[0.01] hover:bg-white/[0.03] text-dim hover:text-[var(--text-main)] text-xs font-bold transition-all flex items-center justify-center gap-2 border-t"
+                        className="w-full py-4 bg-white/[0.01] hover:bg-white/[0.03] text-dim hover:text-[var(--text-main)] text-xs font-bold transition-all flex items-center justify-center gap-2 border-t cursor-pointer"
                         style={{ borderColor: 'var(--border-main)' }}
                     >
                         <Plus size={14} /> Add Another Line
@@ -1059,8 +1631,8 @@ const CreateJournalPage = () => {
                         </button>
                         <button
                             type="submit"
-                            disabled={submitting}
-                            className="flex-1 sm:flex-none px-10 py-3.5 rounded-xl text-xs font-black uppercase tracking-wider bg-[#C8E600] text-black disabled:opacity-30 disabled:grayscale transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(200,230,0,0.25)]"
+                            disabled={submitting || !!categoryViolation}
+                            className="flex-1 sm:flex-none px-10 py-3.5 rounded-xl text-xs font-black uppercase tracking-wider bg-[#C8E600] text-black disabled:opacity-30 disabled:grayscale transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(200,230,0,0.25)] cursor-pointer disabled:cursor-not-allowed"
                         >
                             {submitting ? 'Posting...' : <><Save size={14} /> Post Journal</>}
                         </button>

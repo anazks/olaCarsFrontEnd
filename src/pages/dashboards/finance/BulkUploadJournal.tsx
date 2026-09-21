@@ -1,20 +1,28 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, Upload, Download, AlertTriangle, CheckCircle, FileSpreadsheet, Loader2, Play } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+    X, Upload, Download, AlertTriangle, CheckCircle, FileSpreadsheet, 
+    Loader2, Play, User, Building, CheckCircle2, ShieldAlert 
+} from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import { getAllBranches } from '../../../services/branchService';
 import { getAllTaxes } from '../../../services/taxService';
-import { createManualJournal } from '../../../services/ledgerService';
+import { getAllCustomers, type Customer } from '../../../services/customerService';
+import { getAllSuppliers, type Supplier } from '../../../services/supplierService';
+import { bulkUploadManualJournals } from '../../../services/ledgerService';
 import toast from 'react-hot-toast';
 
 import type { AccountingCode } from '../../../services/accountingService';
 
 interface ParsedRow {
+    reference: string;
     date: string;
     journalDescription: string;
     branch: string;
-    accountCode: string;
+    driver?: string;
+    vendor?: string;
+    accountName: string;
     debit: number;
     credit: number;
     lineDescription: string;
@@ -25,6 +33,7 @@ interface ValidationLine {
     accountingCodeId: string;
     accountingCodeStr: string;
     accountingCodeName: string;
+    accountingCodeCategory?: string;
     type: 'DEBIT' | 'CREDIT';
     amount: number;
     description: string;
@@ -34,10 +43,17 @@ interface ValidationLine {
 
 interface ValidationEntry {
     index: number;
+    reference: string;
     date: string;
     description: string;
     branchId: string;
     branchStr: string;
+    driverStr?: string;
+    vendorStr?: string;
+    contactId?: string;
+    contactModel?: 'Customer' | 'Supplier';
+    contactName?: string;
+    autoSetOff: boolean;
     lines: ValidationLine[];
     isValid: boolean;
     errors: string[];
@@ -48,6 +64,8 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
     const [taxes, setTaxes] = useState<any[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [loadingMetadata, setLoadingMetadata] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
@@ -59,24 +77,44 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
     useEffect(() => {
         const fetchMetadata = async () => {
             try {
-                const [codesRes, branchesRes, taxesRes] = await Promise.allSettled([
-                    getAllAccountingCodes(),
+                const [codesRes, branchesRes, taxesRes, customersRes, suppliersRes] = await Promise.allSettled([
+                    getAllAccountingCodes({ limit: 1000 }),
                     getAllBranches(),
-                    getAllTaxes()
+                    getAllTaxes(),
+                    getAllCustomers(),
+                    getAllSuppliers({ limit: 1000 })
                 ]);
 
                 if (codesRes.status === 'fulfilled') {
-                    setAccountingCodes(codesRes.value);
+                    const rawVal = codesRes.value as any;
+                    const list = Array.isArray(rawVal) 
+                        ? rawVal 
+                        : (Array.isArray(rawVal?.data) ? rawVal.data : (Array.isArray(rawVal?.data?.data) ? rawVal.data.data : []));
+                    setAccountingCodes(list);
                 }
                 if (branchesRes.status === 'fulfilled') {
-                    setBranches(branchesRes.value.data || []);
+                    const rawVal = branchesRes.value as any;
+                    const list = Array.isArray(rawVal) ? rawVal : (Array.isArray(rawVal?.data) ? rawVal.data : []);
+                    setBranches(list);
                 }
                 if (taxesRes.status === 'fulfilled') {
-                    setTaxes(taxesRes.value);
+                    const rawVal = taxesRes.value as any;
+                    const list = Array.isArray(rawVal) ? rawVal : (Array.isArray(rawVal?.data) ? rawVal.data : []);
+                    setTaxes(list);
+                }
+                if (customersRes.status === 'fulfilled') {
+                    const rawVal = customersRes.value as any;
+                    const list = Array.isArray(rawVal) ? rawVal : (Array.isArray(rawVal?.data) ? rawVal.data : []);
+                    setCustomers(list);
+                }
+                if (suppliersRes.status === 'fulfilled') {
+                    const rawVal = suppliersRes.value as any;
+                    const list = Array.isArray(rawVal) ? rawVal : (Array.isArray(rawVal?.data) ? rawVal.data : []);
+                    setSuppliers(list);
                 }
             } catch (err) {
                 console.error("Failed to load metadata for validation", err);
-                toast.error("Failed to load account validation metadata");
+                toast.error("Failed to load validation metadata");
             } finally {
                 setLoadingMetadata(false);
             }
@@ -90,10 +128,13 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
 
     const parseHeaderMapping = (headers: string[]): Record<keyof ParsedRow, number> => {
         const mapping: Record<keyof ParsedRow, number> = {
+            reference: -1,
             date: -1,
             journalDescription: -1,
             branch: -1,
-            accountCode: -1,
+            driver: -1,
+            vendor: -1,
+            accountName: -1,
             debit: -1,
             credit: -1,
             lineDescription: -1,
@@ -102,14 +143,20 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
 
         headers.forEach((h, idx) => {
             const normalized = normalizeHeader(h);
-            if (['date', 'journaldate', 'entrydate'].includes(normalized)) {
+            if (['reference', 'referencenumber', 'journalnumber', 'journalid', 'entryid', 'id'].includes(normalized)) {
+                mapping.reference = idx;
+            } else if (['date', 'journaldate', 'entrydate'].includes(normalized)) {
                 mapping.date = idx;
-            } else if (['journaldescription', 'entryreference', 'reference', 'description', 'journalref', 'entryref'].includes(normalized)) {
+            } else if (['journaldescription', 'description', 'narration', 'notes'].includes(normalized)) {
                 mapping.journalDescription = idx;
-            } else if (['branch', 'branchcode', 'branchname'].includes(normalized)) {
+            } else if (['branch', 'branchcode', 'branchname', 'location'].includes(normalized)) {
                 mapping.branch = idx;
-            } else if (['accountcode', 'account', 'accountnumber', 'code'].includes(normalized)) {
-                mapping.accountCode = idx;
+            } else if (['driver', 'drivername', 'customer', 'customername', 'drivercode'].includes(normalized)) {
+                mapping.driver = idx;
+            } else if (['vendor', 'vendorname', 'supplier', 'suppliername', 'vendornumber'].includes(normalized)) {
+                mapping.vendor = idx;
+            } else if (['accountname', 'account', 'accounttitle', 'accountdescription', 'accountcode', 'code'].includes(normalized)) {
+                mapping.accountName = idx;
             } else if (['debit', 'dr', 'debitamount'].includes(normalized)) {
                 mapping.debit = idx;
             } else if (['credit', 'cr', 'creditamount'].includes(normalized)) {
@@ -164,6 +211,39 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
         }
     };
 
+    /**
+     * Finds an accounting code by account name (case-insensitive substring and exact name match,
+     * with fallback to code/combo format).
+     */
+    const findAccountByName = (rawName: string, codesList: AccountingCode[]): AccountingCode | null => {
+        if (!rawName || !Array.isArray(codesList) || codesList.length === 0) return null;
+        const term = rawName.trim().toLowerCase();
+
+        // 1. Exact name match
+        let found = codesList.find(c => c.name?.toLowerCase().trim() === term);
+        if (found) return found;
+
+        // 2. Exact code match
+        found = codesList.find(c => c.code?.toLowerCase().trim() === term);
+        if (found) return found;
+
+        // 3. Format "1.1.03 - Accounts Receivable" match
+        found = codesList.find(c => {
+            const fullCombo = `${c.code} - ${c.name}`.toLowerCase();
+            return fullCombo === term;
+        });
+        if (found) return found;
+
+        // 4. Case-insensitive substring match
+        found = codesList.find(c => {
+            const cName = c.name?.toLowerCase().trim() || '';
+            return cName.includes(term) || term.includes(cName);
+        });
+        if (found) return found;
+
+        return null;
+    };
+
     const processRawData = (rows: string[][]) => {
         if (!rows || rows.length < 2) {
             toast.error("The file is empty or contains no data rows.");
@@ -174,12 +254,10 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
         const headers = rows[0].map(h => String(h || '').trim());
         const mapping = parseHeaderMapping(headers);
 
-        // Check required fields
+        // Required check
         const missingFields: string[] = [];
         if (mapping.date === -1) missingFields.push('Date');
-        if (mapping.journalDescription === -1) missingFields.push('Journal Description / Reference');
-        if (mapping.branch === -1) missingFields.push('Branch');
-        if (mapping.accountCode === -1) missingFields.push('Account Code');
+        if (mapping.accountName === -1) missingFields.push('Account Name');
         if (mapping.debit === -1) missingFields.push('Debit');
         if (mapping.credit === -1) missingFields.push('Credit');
 
@@ -193,16 +271,21 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
 
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
-            // Skip empty rows
             if (!row || row.length === 0 || row.every(val => val === null || val === undefined || String(val).trim() === '')) {
                 continue;
             }
 
+            const refVal = mapping.reference !== -1 ? String(row[mapping.reference] || '').trim() : '';
+            const descVal = mapping.journalDescription !== -1 ? String(row[mapping.journalDescription] || '').trim() : '';
+
             const parsedRow: ParsedRow = {
+                reference: refVal || descVal || `Row-${i}`,
                 date: String(row[mapping.date] || '').trim(),
-                journalDescription: String(row[mapping.journalDescription] || '').trim(),
-                branch: String(row[mapping.branch] || '').trim(),
-                accountCode: String(row[mapping.accountCode] || '').trim(),
+                journalDescription: descVal || refVal || 'Manual Journal',
+                branch: mapping.branch !== -1 ? String(row[mapping.branch] || '').trim() : '',
+                driver: mapping.driver !== -1 ? String(row[mapping.driver] || '').trim() : '',
+                vendor: mapping.vendor !== -1 ? String(row[mapping.vendor] || '').trim() : '',
+                accountName: String(row[mapping.accountName] || '').trim(),
                 debit: Number(row[mapping.debit]) || 0,
                 credit: Number(row[mapping.credit]) || 0,
                 lineDescription: mapping.lineDescription !== -1 ? String(row[mapping.lineDescription] || '').trim() : '',
@@ -212,10 +295,10 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
             rawRows.push(parsedRow);
         }
 
-        // Group rows into journal entries by JournalDescription + Date
+        // Group rows into journal entries by Reference + Date + Branch
         const grouped: Record<string, ParsedRow[]> = {};
         rawRows.forEach(row => {
-            const groupKey = `${row.journalDescription}__${row.date}__${row.branch}`;
+            const groupKey = `${row.reference}__${row.date}__${row.branch}`;
             if (!grouped[groupKey]) {
                 grouped[groupKey] = [];
             }
@@ -233,45 +316,107 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
             const warnings: string[] = [];
 
             // Match branch
-            let matchedBranch = branches.find(b => 
+            let matchedBranch = (branches || []).find(b => 
                 b._id === first.branch || 
                 b.code?.toLowerCase() === first.branch.toLowerCase() || 
                 b.name?.toLowerCase() === first.branch.toLowerCase()
             );
 
-            if (!matchedBranch) {
-                errors.push(`Branch "${first.branch}" not found in system.`);
+            if (!matchedBranch && branches.length > 0) {
+                if (first.branch) {
+                    errors.push(`Branch "${first.branch}" not found in system.`);
+                } else {
+                    matchedBranch = branches[0];
+                }
             }
 
-            // Parse lines
+            // Match Driver vs Vendor
+            const hasDriver = Boolean(first.driver && first.driver.trim());
+            const hasVendor = Boolean(first.vendor && first.vendor.trim());
+
+            if (hasDriver && hasVendor) {
+                errors.push("Conflicting party assignment: Row has both Driver and Vendor specified. Choose one.");
+            }
+
+            let contactId: string | undefined = undefined;
+            let contactModel: 'Customer' | 'Supplier' | undefined = undefined;
+            let contactName: string | undefined = undefined;
+
+            if (hasDriver) {
+                const searchD = first.driver!.trim().toLowerCase();
+                const matchedCust = (customers || []).find(c => 
+                    c._id === first.driver ||
+                    c.customerId?.toLowerCase() === searchD ||
+                    c.name?.toLowerCase() === searchD ||
+                    c.name?.toLowerCase().includes(searchD) ||
+                    (c.driver && (
+                        c.driver.name?.toLowerCase() === searchD ||
+                        c.driver.name?.toLowerCase().includes(searchD) ||
+                        c.driver.driverId?.toLowerCase() === searchD
+                    )) ||
+                    c.phone?.trim() === first.driver!.trim() ||
+                    c.email?.toLowerCase() === searchD
+                );
+
+                if (matchedCust) {
+                    contactId = matchedCust._id;
+                    contactModel = 'Customer';
+                    contactName = matchedCust.name || matchedCust.driver?.name || first.driver;
+                } else {
+                    errors.push(`Driver / Customer "${first.driver}" not found in system.`);
+                }
+            } else if (hasVendor) {
+                const searchV = first.vendor!.trim().toLowerCase();
+                const matchedSupp = (suppliers || []).find(s => 
+                    s._id === first.vendor ||
+                    s.name?.toLowerCase() === searchV ||
+                    s.name?.toLowerCase().includes(searchV) ||
+                    s.companyName?.toLowerCase() === searchV ||
+                    s.companyName?.toLowerCase().includes(searchV) ||
+                    s.vendorNumber?.toLowerCase() === searchV ||
+                    s.supplierNumber?.toLowerCase() === searchV ||
+                    s.phone?.trim() === first.vendor!.trim() ||
+                    s.email?.toLowerCase() === searchV
+                );
+
+                if (matchedSupp) {
+                    contactId = matchedSupp._id;
+                    contactModel = 'Supplier';
+                    contactName = matchedSupp.name || matchedSupp.companyName || first.vendor;
+                } else {
+                    errors.push(`Vendor / Supplier "${first.vendor}" not found in system.`);
+                }
+            }
+
+            // Auto Set-off: Automatically true if Driver or Vendor is filled!
+            const autoSetOff = Boolean(contactModel);
+
+            // Parse lines & match accounts by Name
             const entryLines: ValidationLine[] = [];
             let totalDebit = 0;
             let totalCredit = 0;
 
             items.forEach((item, lineIdx) => {
-                // Match account code
-                const matchedCode = accountingCodes.find(c => 
-                    c._id === item.accountCode || 
-                    c.code?.toLowerCase() === item.accountCode.toLowerCase() || 
-                    c.name?.toLowerCase() === item.accountCode.toLowerCase()
-                );
+                const matchedCode = findAccountByName(item.accountName, accountingCodes);
 
                 let codeId = '';
-                let codeStr = item.accountCode;
-                let codeName = 'Unknown Account';
+                let codeStr = '—';
+                let codeName = item.accountName;
+                let codeCat = '';
 
                 if (!matchedCode) {
-                    errors.push(`Row ${lineIdx + 2}: Account "${item.accountCode}" not found.`);
+                    errors.push(`Row ${lineIdx + 2}: Account "${item.accountName}" not found in Chart of Accounts.`);
                 } else {
                     codeId = matchedCode._id;
                     codeStr = matchedCode.code;
                     codeName = matchedCode.name;
+                    codeCat = String(matchedCode.category || '').toUpperCase();
                 }
 
                 // Match tax if specified
                 let taxId = undefined;
                 if (item.taxName) {
-                    const matchedTax = taxes.find(t => 
+                    const matchedTax = (taxes || []).find(t => 
                         t._id === item.taxName || 
                         t.name?.toLowerCase() === item.taxName?.toLowerCase()
                     );
@@ -294,10 +439,22 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                 if (type === 'DEBIT') totalDebit += amount;
                 else totalCredit += amount;
 
+                // Cross-category validation check
+                if (contactModel === 'Customer') {
+                    if (codeCat === 'ACCOUNTS PAYABLE' || (codeCat.includes('PAYABLE') && !codeCat.includes('TAX')) || codeStr === '2.1.01') {
+                        errors.push(`Cross-Category Violation: Line ${lineIdx + 1} uses Accounts Payable account ("${codeName}") for Customer (Driver) "${contactName}". Must use Accounts Receivable or asset/bank accounts.`);
+                    }
+                } else if (contactModel === 'Supplier') {
+                    if (codeCat === 'ACCOUNTS RECEIVABLE' || codeCat.includes('RECEIVABLE') || codeStr === '1.1.03') {
+                        errors.push(`Cross-Category Violation: Line ${lineIdx + 1} uses Accounts Receivable account ("${codeName}") for Vendor "${contactName}". Must use Accounts Payable or expense/bank accounts.`);
+                    }
+                }
+
                 entryLines.push({
                     accountingCodeId: codeId,
                     accountingCodeStr: codeStr,
                     accountingCodeName: codeName,
+                    accountingCodeCategory: codeCat,
                     type,
                     amount,
                     description: item.lineDescription || first.journalDescription,
@@ -330,10 +487,17 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
 
             validationEntries.push({
                 index: index++,
+                reference: first.reference || `REF-${index}`,
                 date: formattedDate,
                 description: first.journalDescription || 'Manual Bulk Adjustment',
                 branchId: matchedBranch?._id || '',
-                branchStr: matchedBranch ? `${matchedBranch.name} (${matchedBranch.country})` : first.branch,
+                branchStr: matchedBranch ? `${matchedBranch.name} (${matchedBranch.country || ''})` : first.branch,
+                driverStr: first.driver,
+                vendorStr: first.vendor,
+                contactId,
+                contactModel,
+                contactName,
+                autoSetOff,
                 lines: entryLines,
                 isValid: errors.length === 0,
                 errors,
@@ -346,18 +510,68 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
     };
 
     const downloadTemplate = (format: 'csv' | 'xlsx') => {
-        // Generate template headers and sample rows
-        const headers = ['Date', 'Journal Description', 'Branch', 'Account Code', 'Debit', 'Credit', 'Line Description', 'Tax Name'];
+        const headers = [
+            'Reference',
+            'Date',
+            'Branch',
+            'Driver',
+            'Vendor',
+            'Account Name',
+            'Debit',
+            'Credit',
+            'Line Description',
+            'Tax Name'
+        ];
+
         const sampleRows = [
-            ['2026-05-21', 'Bulk Rent Adjustment', 'Panama Branch', '1010', '150.00', '0.00', 'Rent collection setup', ''],
-            ['2026-05-21', 'Bulk Rent Adjustment', 'Panama Branch', '4000', '0.00', '150.00', 'Rental Income Account', '']
+            // Example 1: Customer (Driver) Invoices Auto Set-Off
+            [
+                'MJ-DRV-001', '2026-06-15', 'Panama Branch',
+                'SAMUEL ALEJANDRO LLORENTE LEFRANC', '',
+                'Banco General CT 600', '285.71', '0.00',
+                'Driver invoice settlement', ''
+            ],
+            [
+                'MJ-DRV-001', '2026-06-15', 'Panama Branch',
+                'SAMUEL ALEJANDRO LLORENTE LEFRANC', '',
+                'Accounts Receivable', '0.00', '285.71',
+                'Driver invoice settlement', ''
+            ],
+
+            // Example 2: Vendor (Supplier) Bills Auto Set-Off
+            [
+                'MJ-VND-002', '2026-06-16', 'Panama Branch',
+                '', 'Acme Fleet Supplies',
+                'Accounts Payable', '450.00', '0.00',
+                'Supplier bill payment set-off', ''
+            ],
+            [
+                'MJ-VND-002', '2026-06-16', 'Panama Branch',
+                '', 'Acme Fleet Supplies',
+                'Banco General CT 600', '0.00', '450.00',
+                'Supplier bill payment set-off', ''
+            ],
+
+            // Example 3: General Journal (Adjustment / Provision)
+            [
+                'MJ-GEN-003', '2026-06-17', 'Panama Branch',
+                '', '',
+                'Office Expense', '150.00', '0.00',
+                'Monthly office supply provision', ''
+            ],
+            [
+                'MJ-GEN-003', '2026-06-17', 'Panama Branch',
+                '', '',
+                'Petty Cash', '0.00', '150.00',
+                'Monthly office supply provision', ''
+            ]
         ];
 
         if (format === 'xlsx') {
             const worksheet = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Journal Entries");
-            XLSX.writeFile(workbook, 'journal_bulk_upload_template.xlsx');
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Manual Journals Template");
+            XLSX.writeFile(workbook, 'manual_journal_bulk_template.xlsx');
             toast.success("Excel template downloaded!");
             return;
         }
@@ -371,7 +585,7 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', 'journal_bulk_upload_template.csv');
+        link.setAttribute('download', 'manual_journal_bulk_template.csv');
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -388,48 +602,43 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
         setProcessing(true);
         setUploadProgress({ current: 0, total: validEntries.length });
 
-        let successCount = 0;
-        let failCount = 0;
+        try {
+            const journalsPayload = validEntries.map(entry => ({
+                reference: entry.reference,
+                description: entry.description,
+                date: entry.date,
+                branch: entry.branchId,
+                driver: entry.contactModel === 'Customer' ? entry.contactId : undefined,
+                vendor: entry.contactModel === 'Supplier' ? entry.contactId : undefined,
+                autoSetOff: entry.autoSetOff,
+                lines: entry.lines.map(line => ({
+                    accountingCode: line.accountingCodeId,
+                    type: line.type,
+                    amount: line.amount,
+                    description: line.description,
+                    taxInfo: line.taxAppliedId ? { taxApplied: line.taxAppliedId } : undefined
+                }))
+            }));
 
-        for (let i = 0; i < validEntries.length; i++) {
-            const entry = validEntries[i];
-            try {
-                const payload = {
-                    description: entry.description,
-                    date: entry.date,
-                    branch: entry.branchId,
-                    lines: entry.lines.map(line => ({
-                        accountingCode: line.accountingCodeId,
-                        type: line.type,
-                        amount: line.amount,
-                        description: line.description,
-                        ...(line.taxAppliedId ? { taxInfo: { taxApplied: line.taxAppliedId } } : {})
-                    }))
-                };
+            const result = await bulkUploadManualJournals({ journals: journalsPayload });
 
-                await createManualJournal(payload);
-                successCount++;
-            } catch (err: any) {
-                console.error(`Failed to import journal ${entry.description}:`, err);
-                failCount++;
+            if (result.data?.createdCount > 0) {
+                toast.success(`Successfully posted ${result.data.createdCount} journal entries.`);
+            }
+            if (result.data?.failedCount > 0) {
+                toast.error(`${result.data.failedCount} journal entries failed to post.`);
             }
 
-            setUploadProgress({ current: i + 1, total: validEntries.length });
-        }
-
-        setProcessing(false);
-        setUploadProgress(null);
-
-        if (successCount > 0) {
-            toast.success(`Successfully imported ${successCount} journal entries.`);
-        }
-        if (failCount > 0) {
-            toast.error(`Failed to import ${failCount} journal entries.`);
-        }
-
-        if (successCount > 0) {
-            onSuccess();
-            onClose();
+            if (result.data?.createdCount > 0) {
+                onSuccess();
+                onClose();
+            }
+        } catch (err: any) {
+            console.error("Bulk upload manual journals failed:", err);
+            toast.error(err.response?.data?.message || err.message || "Failed to process bulk upload.");
+        } finally {
+            setProcessing(false);
+            setUploadProgress(null);
         }
     };
 
@@ -440,9 +649,11 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                 <div>
                     <h2 className="text-xl font-bold text-[var(--text-main)] flex items-center gap-2">
                         <Upload size={24} className="text-[#C8E600]" />
-                        Bulk Upload Journal Entries
+                        Bulk Upload Manual Journals
                     </h2>
-                    <p className="text-xs text-dim mt-1">Upload multiple manual journal adjustments via CSV or Excel sheets</p>
+                    <p className="text-xs text-dim mt-1">
+                        Upload multi-line double-entry manual journals by Account Name with Driver & Vendor Auto Set-Off
+                    </p>
                 </div>
                 <button onClick={onClose} className="p-2 rounded-lg hover:bg-[var(--bg-input)] text-dim hover:text-[var(--text-main)] transition-colors">
                     <X size={20} />
@@ -454,7 +665,7 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                 {loadingMetadata ? (
                     <div className="flex flex-col items-center justify-center p-12">
                         <Loader2 className="animate-spin text-[#C8E600] mb-2" size={32} />
-                        <span className="text-xs text-dim">Loading matching metadata...</span>
+                        <span className="text-xs text-dim">Loading chart of accounts, customers & suppliers...</span>
                     </div>
                 ) : parsedEntries.length === 0 ? (
                     /* Initial Upload Box */
@@ -479,19 +690,22 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
 
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-4 rounded-xl border border-[var(--border-main)] bg-[var(--bg-input)]/20">
                             <div className="text-xs text-dim space-y-1">
-                                <p className="font-bold text-[var(--text-main)]">Template Headers Format:</p>
-                                <p>Date, Journal Description, Branch, Account Code, Debit, Credit, Line Description, Tax Name</p>
+                                <p className="font-bold text-[var(--text-main)]">Excel Template Columns:</p>
+                                <p>Reference, Date, Branch, Driver, Vendor, Account Name, Debit, Credit, Line Description, Tax Name</p>
+                                <p className="text-[11px] text-[#C8E600]/80">
+                                    • If Driver or Vendor is specified, Auto Set-Off against open invoices/bills is automatically enabled.
+                                </p>
                             </div>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => downloadTemplate('xlsx')}
-                                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-[var(--bg-input)] hover:brightness-110 text-[var(--text-main)] rounded-xl border border-[var(--border-main)] transition-all"
+                                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-[var(--bg-input)] hover:brightness-110 text-[var(--text-main)] rounded-xl border border-[var(--border-main)] transition-all cursor-pointer"
                                 >
                                     <Download size={14} /> Excel Template
                                 </button>
                                 <button
                                     onClick={() => downloadTemplate('csv')}
-                                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-[var(--bg-input)] hover:brightness-110 text-[var(--text-main)] rounded-xl border border-[var(--border-main)] transition-all"
+                                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-[var(--bg-input)] hover:brightness-110 text-[var(--text-main)] rounded-xl border border-[var(--border-main)] transition-all cursor-pointer"
                                 >
                                     <Download size={14} /> CSV Template
                                 </button>
@@ -505,7 +719,7 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                             <div className="text-sm">
                                 File: <span className="font-bold text-[var(--text-main)]">{fileName}</span>
                                 <span className="mx-2 text-dim">•</span>
-                                Found <span className="font-bold text-[#C8E600]">{parsedEntries.length}</span> entries
+                                Found <span className="font-bold text-[#C8E600]">{parsedEntries.length}</span> journals
                                 <span className="mx-2 text-dim">•</span>
                                 <span className="text-emerald-400 font-semibold">{parsedEntries.filter(e => e.isValid).length} Valid</span>
                                 {parsedEntries.some(e => !e.isValid) && (
@@ -517,7 +731,7 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                             </div>
                             <button 
                                 onClick={() => { setParsedEntries([]); setFileName(null); }}
-                                className="text-xs text-rose-400 font-bold hover:underline"
+                                className="text-xs text-rose-400 font-bold hover:underline cursor-pointer"
                             >
                                 Clear & Upload Another
                             </button>
@@ -534,26 +748,54 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                                             : 'border-rose-500/20 shadow-[0_0_15px_rgba(239,68,68,0.05)]'
                                     }`}
                                 >
-                                    {/* Header */}
+                                    {/* Header with Entity Badges */}
                                     <div className="px-4 py-3 bg-[var(--bg-input)]/40 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-main)]/50">
                                         <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="font-mono font-bold text-xs text-[#C8E600] bg-[#C8E600]/10 px-2 py-0.5 rounded border border-[#C8E600]/20">
+                                                    {entry.reference}
+                                                </span>
                                                 <span className="font-bold text-sm text-[var(--text-main)]">{entry.description}</span>
                                                 <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--bg-input)] text-dim font-bold uppercase tracking-wider">
                                                     {entry.date}
                                                 </span>
                                             </div>
-                                            <div className="text-xs text-dim">Branch: {entry.branchStr}</div>
+                                            <div className="flex flex-wrap items-center gap-2 text-xs text-dim">
+                                                <span>Branch: {entry.branchStr}</span>
+                                                <span>•</span>
+
+                                                {/* Entity Recognition Pill */}
+                                                {entry.contactModel === 'Customer' ? (
+                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-400 bg-sky-400/10 border border-sky-400/20 px-2 py-0.5 rounded-full">
+                                                        <User size={11} /> Driver: {entry.contactName}
+                                                    </span>
+                                                ) : entry.contactModel === 'Supplier' ? (
+                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full">
+                                                        <Building size={11} /> Vendor: {entry.contactName}
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 bg-slate-400/10 border border-slate-400/20 px-2 py-0.5 rounded-full">
+                                                        General Journal
+                                                    </span>
+                                                )}
+
+                                                {/* Auto Set-off Pill */}
+                                                {entry.autoSetOff && (
+                                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#C8E600] bg-[#C8E600]/10 border border-[#C8E600]/30 px-2 py-0.5 rounded-full">
+                                                        <CheckCircle2 size={10} /> Auto Set-Off Active
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
 
                                         <div className="flex items-center gap-2">
                                             {entry.isValid ? (
-                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">
-                                                    <CheckCircle size={10} /> Valid
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-full border border-emerald-400/20">
+                                                    <CheckCircle size={11} /> Ready to Post
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded-full">
-                                                    <AlertTriangle size={10} /> Errors
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-400 bg-rose-400/10 px-2.5 py-1 rounded-full border border-rose-400/20">
+                                                    <AlertTriangle size={11} /> Validation Errors
                                                 </span>
                                             )}
                                         </div>
@@ -563,15 +805,15 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                                     <div className="p-4 space-y-3">
                                         {/* Errors list */}
                                         {entry.errors.map((err, idx) => (
-                                            <div key={idx} className="flex items-start gap-1.5 text-xs text-rose-400 bg-rose-500/5 p-2 rounded-lg border border-rose-500/10">
-                                                <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
-                                                <span>{err}</span>
+                                            <div key={idx} className="flex items-start gap-1.5 text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">
+                                                <ShieldAlert size={14} className="mt-0.5 flex-shrink-0" />
+                                                <span className="font-medium">{err}</span>
                                             </div>
                                         ))}
 
                                         {/* Warnings list */}
                                         {entry.warnings.map((warn, idx) => (
-                                            <div key={idx} className="flex items-start gap-1.5 text-xs text-amber-400 bg-amber-500/5 p-2 rounded-lg border border-amber-500/10">
+                                            <div key={idx} className="flex items-start gap-1.5 text-xs text-amber-400 bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
                                                 <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
                                                 <span>{warn}</span>
                                             </div>
@@ -581,7 +823,7 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                                         <table className="w-full text-left border-collapse text-xs">
                                             <thead>
                                                 <tr className="border-b border-[var(--border-main)]/50 text-dim">
-                                                    <th className="pb-2 font-bold uppercase">Account</th>
+                                                    <th className="pb-2 font-bold uppercase">Account Name</th>
                                                     <th className="pb-2 font-bold uppercase">Line Description</th>
                                                     <th className="pb-2 font-bold uppercase text-right">Debits</th>
                                                     <th className="pb-2 font-bold uppercase text-right">Credits</th>
@@ -592,8 +834,12 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                                                 {entry.lines.map((line, lineIdx) => (
                                                     <tr key={lineIdx} className="hover:bg-[var(--bg-input)]/25">
                                                         <td className="py-2 pr-4">
-                                                            <span className="font-bold text-[var(--text-main)]">{line.accountingCodeStr}</span>
-                                                            <span className="text-dim block text-[10px]">{line.accountingCodeName}</span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="font-bold text-[var(--text-main)]">{line.accountingCodeName}</span>
+                                                                {line.accountingCodeStr && line.accountingCodeStr !== '—' && (
+                                                                    <span className="text-dim font-mono text-[10px]">({line.accountingCodeStr})</span>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                         <td className="py-2 text-dim pr-4">{line.description}</td>
                                                         <td className="py-2 text-right pr-4 font-mono font-bold text-emerald-400">
@@ -621,7 +867,7 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                     {uploadProgress ? (
                         <div className="flex items-center gap-2">
                             <Loader2 className="animate-spin text-[#C8E600]" size={16} />
-                            <span>Importing: {uploadProgress.current} / {uploadProgress.total} journals posted...</span>
+                            <span>Posting journals...</span>
                         </div>
                     ) : processing ? (
                         <span>Validating rows...</span>
@@ -630,7 +876,7 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                             Ready to import <span className="font-bold text-[#C8E600]">{parsedEntries.filter(e => e.isValid).length}</span> valid journal entries.
                         </span>
                     ) : (
-                        <span>Please select a valid CSV or Excel file to get started.</span>
+                        <span>Please select an Excel (.xlsx) or CSV file to get started.</span>
                     )}
                 </div>
 
@@ -638,7 +884,7 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                     <button
                         onClick={onClose}
                         disabled={processing}
-                        className="px-6 py-2.5 rounded-xl text-xs font-bold bg-[var(--bg-input)] text-[var(--text-main)] hover:brightness-110 transition-all disabled:opacity-50"
+                        className="px-6 py-2.5 rounded-xl text-xs font-bold bg-[var(--bg-input)] text-[var(--text-main)] hover:brightness-110 transition-all disabled:opacity-50 cursor-pointer"
                     >
                         Cancel
                     </button>
@@ -646,7 +892,7 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                         <button
                             onClick={handleImport}
                             disabled={processing || parsedEntries.filter(e => e.isValid).length === 0}
-                            className="px-8 py-2.5 rounded-xl text-xs font-bold bg-[#C8E600] text-black disabled:opacity-30 disabled:grayscale transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(200,230,0,0.2)]"
+                            className="px-8 py-2.5 rounded-xl text-xs font-bold bg-[#C8E600] text-black disabled:opacity-30 disabled:grayscale transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(200,230,0,0.2)] cursor-pointer"
                         >
                             {processing ? (
                                 <>

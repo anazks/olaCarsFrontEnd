@@ -54,6 +54,24 @@ export interface ManualJournal {
     branch: string;
     totalAmount: number;
     status: 'DRAFT' | 'POSTED' | 'CANCELLED';
+    contact?: any;
+    contactModel?: 'Customer' | 'Supplier';
+    supplier?: any;
+    autoSetOff?: boolean;
+    invoices?: Array<{
+        invoiceId: any;
+        amountApplied: number;
+    }>;
+    bills?: Array<{
+        billId: any;
+        amountApplied: number;
+    }>;
+    setOffSummary?: {
+        totalSettled: number;
+        totalInvoicesAffected?: number;
+        totalBillsAffected?: number;
+        documents?: any[];
+    };
     createdBy: any;
     creatorRole: string;
     createdAt: string;
@@ -64,6 +82,10 @@ export interface CreateJournalPayload {
     date: string;
     branch: string;
     lines: JournalLine[];
+    contact?: string;
+    contactModel?: 'Customer' | 'Supplier';
+    supplier?: string;
+    autoSetOff?: boolean;
 }
 
 export interface LedgerEntriesResponse {
@@ -160,6 +182,11 @@ export const clearLedgerEntriesByCode = async (
 export const createManualJournal = async (payload: CreateJournalPayload): Promise<any> => {
     const response = await api.post('/api/ledger/journals', payload);
     return response.data.data;
+};
+
+export const bulkUploadManualJournals = async (payload: { journals?: any[]; rows?: any[] } | any[]): Promise<any> => {
+    const response = await api.post('/api/ledger/journals/bulk-upload', payload);
+    return response.data;
 };
 
 export interface ManualJournalsResponse {

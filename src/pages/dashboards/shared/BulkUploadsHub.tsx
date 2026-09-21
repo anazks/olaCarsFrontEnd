@@ -48,11 +48,13 @@ const BulkUploadsHub = () => {
             headers = ['fullName','email','phone','whatsappNumber','dateOfBirth','nationality','idType','idNumber','licenseNumber','licenseCountry','licenseExpiry','emergencyName','emergencyRelationship','emergencyPhone','vehicleNumber','vehicleMake','vehicleModel','vehicleYear','vehicleCategory','vehicleFuelType','vehicleColour','vehicleVin','activationDate','deactivationDate','weeklyRent','durationWeeks','remarks'];
             rows = [['John Smith', 'john@example.com', '+254700000001', '+254700000001', '1995-05-15', 'Kenyan', 'National ID', 'ID-12345', 'DL-123', 'Kenya', '2028-12-31', 'Jane Smith', 'Spouse', '+254700000002', 'KAA 123A', 'Toyota', 'Corolla', '2022', 'Sedan', 'GASOLINE', 'White', '', '15/01/24', '', '1500', '60', 'Migrated from old system']];
         } else if (type === 'journal') {
-            fileName = 'journal_entries_template.csv';
-            headers = ['Date', 'Reference', 'Branch', 'Account Code', 'Debit', 'Credit', 'Line Description', 'Tax Name'];
+            fileName = format === 'xlsx' ? 'manual_journal_bulk_template.xlsx' : 'manual_journal_bulk_template.csv';
+            headers = ['Reference', 'Date', 'Branch', 'Driver', 'Vendor', 'Account Name', 'Debit', 'Credit', 'Line Description', 'Tax Name'];
             rows = [
-                ['2026-05-20', 'INV-001', 'BR01', '1010', '200', '0', 'Rent payment received', ''],
-                ['2026-05-20', 'INV-001', 'BR01', '4010', '0', '200', 'Rent revenue earned', '']
+                ['MJ-DRV-001', '2026-06-15', 'Panama Branch', 'SAMUEL ALEJANDRO LLORENTE LEFRANC', '', 'Banco General CT 600', '285.71', '0.00', 'Driver invoice settlement', ''],
+                ['MJ-DRV-001', '2026-06-15', 'Panama Branch', 'SAMUEL ALEJANDRO LLORENTE LEFRANC', '', 'Accounts Receivable', '0.00', '285.71', 'Driver invoice settlement', ''],
+                ['MJ-VND-002', '2026-06-16', 'Panama Branch', '', 'Acme Fleet Supplies', 'Accounts Payable', '450.00', '0.00', 'Supplier bill payment set-off', ''],
+                ['MJ-VND-002', '2026-06-16', 'Panama Branch', '', 'Acme Fleet Supplies', 'Banco General CT 600', '0.00', '450.00', 'Supplier bill payment set-off', '']
             ];
         } else if (type === 'invoice') {
             fileName = 'invoice_bulk_template.csv';
