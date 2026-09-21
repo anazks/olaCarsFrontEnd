@@ -13,6 +13,8 @@ export interface InvoicePayment {
     paidAt: string;
     paymentMethod: string;
     transactionId?: string;
+    referenceNumber?: string;
+    paymentReceivedId?: string;
     note?: string;
 }
 

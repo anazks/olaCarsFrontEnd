@@ -43,7 +43,7 @@ export const EditInvoiceModal: React.FC<Props> = ({ isOpen, invoice, onClose, on
 
     const fetchTaxes = useCallback(async () => {
         try {
-            const taxRes = await getAllTaxes();
+            const taxRes: any = await getAllTaxes();
             const list = Array.isArray(taxRes) ? taxRes : (taxRes?.data || []);
             setTaxes(list);
         } catch (err) {

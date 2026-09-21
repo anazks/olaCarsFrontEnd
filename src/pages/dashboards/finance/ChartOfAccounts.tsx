@@ -218,7 +218,7 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
             if (activeAccountTypeFilter) {
                 params.accountType = activeAccountTypeFilter;
             }
-            const response = await getAllAccountingCodes(params);
+            const response: any = await getAllAccountingCodes(params);
             const dataList: AccountingCode[] = Array.isArray(response)
                 ? response
                 : (Array.isArray(response?.data) ? response.data : []);

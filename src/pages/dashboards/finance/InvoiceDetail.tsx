@@ -14,25 +14,19 @@ import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import EditInvoiceModal from './EditInvoiceModal';
 import DeleteInvoiceModal from './DeleteInvoiceModal';
-import { getUserRole } from '../../../utils/auth';
 
 const InvoiceDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const userRole = getUserRole();
-
+    
     const [invoice, setInvoice] = useState<Invoice | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
 
-    // Edit Modal State
+    // Edit & Delete Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [editBaseAmount, setEditBaseAmount] = useState<number>(0);
-    const [editDueDate, setEditDueDate] = useState<string>('');
-    const [editWeekLabel, setEditWeekLabel] = useState<string>('');
-    const [submittingEdit, setSubmittingEdit] = useState(false);
 
     // Record Payment Modal State
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -146,34 +140,6 @@ const InvoiceDetail = () => {
         fetchDriverPrepayment();
     }, [paymentModalOpen, invoice]);
 
-    const triggerEditModal = () => {
-        if (!invoice) return;
-        setEditBaseAmount(invoice.baseAmount || 0);
-        setEditDueDate(invoice.dueDate ? new Date(invoice.dueDate).toISOString().split('T')[0] : '');
-        setEditWeekLabel(invoice.weekLabel || '');
-        setIsEditModalOpen(true);
-    };
-
-    const handleEditInvoice = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!id || !invoice) return;
-        setSubmittingEdit(true);
-        try {
-            await updateInvoice(id, {
-                baseAmount: editBaseAmount,
-                dueDate: editDueDate,
-                weekLabel: editWeekLabel
-            });
-            toast.success("Invoice params adjusted!");
-            setIsEditModalOpen(false);
-            await fetchInvoice();
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || "Failed editing invoice.");
-        } finally {
-            setSubmittingEdit(false);
-        }
-    };
-
     const triggerPaymentModal = () => {
         if (!invoice) return;
         setPaymentAmount(invoice.balance);
@@ -270,17 +236,6 @@ const InvoiceDetail = () => {
             }
         } catch (err: any) {
             toast.error(err.response?.data?.message || "Failed posting application.");
-        }
-    };
-
-    const handleDeleteInvoice = async () => {
-        if (!window.confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) return;
-        try {
-            await deleteInvoice(id!);
-            toast.success('Invoice deleted successfully');
-            navigate('../invoices');
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || 'Failed to delete invoice');
         }
     };
 
@@ -685,7 +640,7 @@ const InvoiceDetail = () => {
                                     
                                     const prNumber = notePrMatch ||
                                         (pay.transactionId && !isMongoId(pay.transactionId) ? pay.transactionId : null) ||
-                                        (pay.referenceNumber && !isMongoId(pay.referenceNumber) ? pay.referenceNumber : null) ||
+                                        ((pay as any).referenceNumber && !isMongoId((pay as any).referenceNumber) ? (pay as any).referenceNumber : null) ||
                                         null;
 
                                     // Check if there is a separate bank transaction/upload reference
