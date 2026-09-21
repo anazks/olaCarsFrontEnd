@@ -15,8 +15,7 @@ import {
     Scale,
     Search,
     ChevronDown,
-    FileText,
-    Layers
+    FileText
 } from 'lucide-react';
 import { 
     getManualJournalById, 

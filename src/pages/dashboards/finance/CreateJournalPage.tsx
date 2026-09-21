@@ -605,7 +605,7 @@ const CreateJournalPage = () => {
     };
 
     // Form inputs
-    const [newBranch, setNewBranch] = useState({ name: '', code: '', address: '', city: '', state: '', phone: '', email: '', country: '', countryManager: '', status: 'ACTIVE' });
+    const [newBranch, setNewBranch] = useState({ name: '', code: '', address: '', city: '', state: '', phone: '', email: '', country: '', countryManager: '', status: 'ACTIVE' as 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE' });
     const [newCountryManager, setNewCountryManager] = useState({ fullName: '', email: '', password: '', phone: '', country: '' });
     const [newAccountingCode, setNewAccountingCode] = useState<{ code: string, name: string, category: any }>({ code: '', name: '', category: 'EXPENSE' });
     const [newTax, setNewTax] = useState({ name: '', rate: 0 });
@@ -777,9 +777,10 @@ const CreateJournalPage = () => {
             const res = await createBranch(newBranch);
             const branchList = await getAllBranches();
             setBranches(branchList.data || []);
-            setHeader(prev => ({ ...prev, branch: res.data._id }));
+            const createdBranchId = (res as any).data?._id || res._id;
+            setHeader(prev => ({ ...prev, branch: createdBranchId }));
             setShowBranchModal(false);
-            setNewBranch({ name: '', code: '', address: '', city: '', state: '', phone: '', email: '', country: '', countryManager: '', status: 'ACTIVE' });
+            setNewBranch({ name: '', code: '', address: '', city: '', state: '', phone: '', email: '', country: '', countryManager: '', status: 'ACTIVE' as const });
         } catch (err: any) {
             setQuickCreateError(err.response?.data?.message || err.message || 'Failed to create branch');
         } finally {
@@ -811,7 +812,7 @@ const CreateJournalPage = () => {
         try {
             const res = await createAccountingCode(newAccountingCode);
             const codesData = await getAllAccountingCodes({ limit: 1000 });
-            setAccountingCodes(Array.isArray(codesData) ? codesData : (codesData.data || []));
+            setAccountingCodes(Array.isArray(codesData) ? codesData : ((codesData as any)?.data || []));
 
             if (targetLineIndex !== null) {
                 updateLine(targetLineIndex, 'accountingCode', res._id);
@@ -1738,7 +1739,7 @@ const CreateJournalPage = () => {
                                     <select
                                         required
                                         value={newBranch.status}
-                                        onChange={e => setNewBranch({ ...newBranch, status: e.target.value })}
+                                        onChange={e => setNewBranch({ ...newBranch, status: e.target.value as 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE' })}
                                         className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-sm text-[var(--text-main)] outline-none focus:border-[#C8E600] appearance-none"
                                         style={{ colorScheme: 'dark' }}
                                     >

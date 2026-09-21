@@ -350,8 +350,8 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                     c.name?.toLowerCase() === searchD ||
                     c.name?.toLowerCase().includes(searchD) ||
                     (c.driver && (
-                        c.driver.name?.toLowerCase() === searchD ||
-                        c.driver.name?.toLowerCase().includes(searchD) ||
+                        (c.driver as any).name?.toLowerCase() === searchD ||
+                        (c.driver as any).name?.toLowerCase().includes(searchD) ||
                         c.driver.driverId?.toLowerCase() === searchD
                     )) ||
                     c.phone?.trim() === first.driver!.trim() ||
@@ -361,7 +361,7 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                 if (matchedCust) {
                     contactId = matchedCust._id;
                     contactModel = 'Customer';
-                    contactName = matchedCust.name || matchedCust.driver?.name || first.driver;
+                    contactName = matchedCust.name || (matchedCust.driver as any)?.name || first.driver;
                 } else {
                     errors.push(`Driver / Customer "${first.driver}" not found in system.`);
                 }
@@ -374,7 +374,7 @@ const BulkUploadJournal = ({ onClose, onSuccess }: { onClose: () => void; onSucc
                     s.companyName?.toLowerCase() === searchV ||
                     s.companyName?.toLowerCase().includes(searchV) ||
                     s.vendorNumber?.toLowerCase() === searchV ||
-                    s.supplierNumber?.toLowerCase() === searchV ||
+                    (s as any).supplierNumber?.toLowerCase() === searchV ||
                     s.phone?.trim() === first.vendor!.trim() ||
                     s.email?.toLowerCase() === searchV
                 );
