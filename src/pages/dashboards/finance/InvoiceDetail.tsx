@@ -5,7 +5,7 @@ import {
     Printer, ArrowLeft, Edit3, FileSpreadsheet, Trash2,
     User, Landmark, History, Package, Receipt, FileText, ExternalLink
 } from 'lucide-react';
-import { getInvoiceById, payInvoice, updateInvoice, deleteInvoice, getInvoicesByDriver } from '../../../services/invoiceService';
+import { getInvoiceById, payInvoice, getInvoicesByDriver } from '../../../services/invoiceService';
 import { createCreditNote, getAllCreditNotes, applyCreditNote } from '../../../services/creditNoteService';
 import { getLedgerEntries } from '../../../services/ledgerService';
 import type { Invoice } from '../../../services/invoiceService';
