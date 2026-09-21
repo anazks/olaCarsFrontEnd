@@ -158,8 +158,12 @@ export const getInvoiceById = async (invoiceId: string): Promise<Invoice> => {
     return response.data.data;
 };
 
-export const deleteInvoice = async (invoiceId: string): Promise<void> => {
-    await api.delete(`/api/invoices/${invoiceId}`);
+export const deleteInvoice = async (invoiceId: string, payload: { paymentAction?: string; targetInvoiceId?: string } = {}): Promise<any> => {
+    const response = await api.delete(`/api/invoices/${invoiceId}`, {
+        data: payload,
+        headers: { 'X-Skip-Toast': 'true' }
+    });
+    return response.data;
 };
 
 export const deleteAllInvoices = async (): Promise<void> => {

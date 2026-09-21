@@ -1,37 +1,37 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Trash2, AlertTriangle, ChevronDown, Check, FileText } from 'lucide-react';
-import * as billService from '../../../../services/billService';
+import * as invoiceService from '../../../services/invoiceService';
 import toast from 'react-hot-toast';
 
 interface Props {
     isOpen: boolean;
-    bill: any | null;
+    invoice: any | null;
     onClose: () => void;
     onSuccess: () => void;
 }
 
-export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => {
+export const DeleteInvoiceModal = ({ isOpen, invoice, onClose, onSuccess }: Props) => {
     const [submitting, setSubmitting] = useState(false);
     const [resolutionData, setResolutionData] = useState<{
         amountPaid: number;
-        hasOtherOpenBills: boolean;
-        otherOpenBills: Array<{ _id: string; billNumber: string; balanceDue: number; totalAmount?: number }>;
+        hasOtherOpenInvoices: boolean;
+        otherOpenInvoices: Array<{ _id: string; invoiceNumber: string; balance: number; totalAmountDue: number }>;
     } | null>(null);
 
-    const [paymentAction, setPaymentAction] = useState<'CONVERT_TO_ADVANCE' | 'REASSIGN_TO_BILL'>('CONVERT_TO_ADVANCE');
-    const [targetBillId, setTargetBillId] = useState<string>('');
+    const [paymentAction, setPaymentAction] = useState<'CONVERT_TO_CUSTOMER_ADVANCE' | 'REASSIGN_TO_INVOICE'>('CONVERT_TO_CUSTOMER_ADVANCE');
+    const [targetInvoiceId, setTargetInvoiceId] = useState<string>('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (isOpen) {
             setResolutionData(null);
-            setPaymentAction('CONVERT_TO_ADVANCE');
-            setTargetBillId('');
+            setPaymentAction('CONVERT_TO_CUSTOMER_ADVANCE');
+            setTargetInvoiceId('');
             setIsDropdownOpen(false);
             setSubmitting(false);
         }
-    }, [isOpen, bill]);
+    }, [isOpen, invoice]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -47,7 +47,7 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
         };
     }, [isDropdownOpen]);
 
-    if (!isOpen || !bill) return null;
+    if (!isOpen || !invoice) return null;
 
     const handleDelete = async (actionOverride?: string, targetIdOverride?: string) => {
         setSubmitting(true);
@@ -58,44 +58,44 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
             } else if (resolutionData && paymentAction) {
                 payload.paymentAction = paymentAction;
             }
-            if ((actionOverride === 'REASSIGN_TO_BILL' || (resolutionData && paymentAction === 'REASSIGN_TO_BILL')) && (targetIdOverride || targetBillId)) {
-                payload.targetBillId = targetIdOverride || targetBillId;
+            if ((actionOverride === 'REASSIGN_TO_INVOICE' || (resolutionData && paymentAction === 'REASSIGN_TO_INVOICE')) && (targetIdOverride || targetInvoiceId)) {
+                payload.targetInvoiceId = targetIdOverride || targetInvoiceId;
             }
 
-            const res = await billService.deleteBill(bill._id, payload);
-            toast.success(res?.message || `Bill ${bill.billNumber} deleted successfully`);
+            const res = await invoiceService.deleteInvoice(invoice._id, payload);
+            toast.success(res?.message || `Invoice ${invoice.invoiceNumber} deleted successfully`);
             onSuccess();
             onClose();
         } catch (err: any) {
             const errData = err.response?.data;
             if (errData?.requiresPaymentAction) {
-                const currentBillId = bill?._id?.toString();
-                const currentBillNum = bill?.billNumber;
-                const filteredBills = (errData.otherOpenBills || []).filter(
-                    (ob: any) => ob._id?.toString() !== currentBillId && ob.billNumber !== currentBillNum
+                const currentInvoiceId = invoice?._id?.toString();
+                const currentInvoiceNum = invoice?.invoiceNumber;
+                const filteredInvoices = (errData.otherOpenInvoices || []).filter(
+                    (oi: any) => oi._id?.toString() !== currentInvoiceId && oi.invoiceNumber !== currentInvoiceNum
                 );
 
                 setResolutionData({
                     amountPaid: errData.amountPaid,
-                    hasOtherOpenBills: filteredBills.length > 0,
-                    otherOpenBills: filteredBills
+                    hasOtherOpenInvoices: filteredInvoices.length > 0,
+                    otherOpenInvoices: filteredInvoices
                 });
-                if (filteredBills.length > 0) {
-                    setTargetBillId(filteredBills[0]._id);
+                if (filteredInvoices.length > 0) {
+                    setTargetInvoiceId(filteredInvoices[0]._id);
                 } else {
-                    setPaymentAction('CONVERT_TO_ADVANCE');
-                    setTargetBillId('');
+                    setPaymentAction('CONVERT_TO_CUSTOMER_ADVANCE');
+                    setTargetInvoiceId('');
                 }
             } else {
-                toast.error(errData?.message || err.message || 'Failed to delete bill');
+                toast.error(errData?.message || err.message || 'Failed to delete invoice');
             }
         } finally {
             setSubmitting(false);
         }
     };
 
-    const selectedTargetBill = resolutionData?.otherOpenBills.find(
-        (ob) => ob._id === targetBillId
+    const selectedTargetInvoice = resolutionData?.otherOpenInvoices.find(
+        (oi) => oi._id === targetInvoiceId
     );
 
     return (
@@ -111,10 +111,10 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
                         </div>
                         <div>
                             <h2 className="text-lg font-black" style={{ color: 'var(--text-main)' }}>
-                                Delete Bill
+                                Delete Invoice
                             </h2>
                             <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                                {bill.billNumber}
+                                {invoice.invoiceNumber}
                             </p>
                         </div>
                     </div>
@@ -126,10 +126,10 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
                 {!resolutionData ? (
                     <div className="space-y-4">
                         <p className="text-sm" style={{ color: 'var(--text-main)' }}>
-                            Are you sure you want to delete bill <span className="font-bold text-[#C8E600]">{bill.billNumber}</span>?
+                            Are you sure you want to delete invoice <span className="font-bold text-[#C8E600]">{invoice.invoiceNumber}</span>?
                         </p>
                         <p className="text-xs text-dim">
-                            This will reverse the bill's liability entries and update Chart of Accounts balances.
+                            This will reverse the invoice's accounts receivable and income ledger entries and sync Chart of Accounts balances.
                         </p>
 
                         <div className="flex justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
@@ -159,17 +159,17 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
                             <div className="text-xs space-y-1">
                                 <p className="font-bold">Payment Resolution Required</p>
                                 <p className="opacity-90">
-                                    This bill has payments totaling <span className="font-bold text-white">${resolutionData.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> applied to it. How would you like to handle these payments?
+                                    This invoice has recorded payments totaling <span className="font-bold text-white">${resolutionData.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span> applied to it. How would you like to handle these payments?
                                 </p>
                             </div>
                         </div>
 
                         <div className="space-y-3">
-                            {/* Option 1: Convert to Advance */}
+                            {/* Option 1: Convert to Customer Advance */}
                             <div
-                                onClick={() => setPaymentAction('CONVERT_TO_ADVANCE')}
+                                onClick={() => setPaymentAction('CONVERT_TO_CUSTOMER_ADVANCE')}
                                 className={`flex items-start gap-3.5 p-4 rounded-2xl border cursor-pointer transition-all ${
-                                    paymentAction === 'CONVERT_TO_ADVANCE'
+                                    paymentAction === 'CONVERT_TO_CUSTOMER_ADVANCE'
                                         ? 'border-[#C8E600] bg-[#C8E600]/5 shadow-sm'
                                         : 'border-white/10 hover:border-white/20 bg-white/[0.02]'
                                 }`}
@@ -177,25 +177,25 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
                                 <input
                                     type="radio"
                                     name="paymentAction"
-                                    value="CONVERT_TO_ADVANCE"
-                                    checked={paymentAction === 'CONVERT_TO_ADVANCE'}
-                                    onChange={() => setPaymentAction('CONVERT_TO_ADVANCE')}
+                                    value="CONVERT_TO_CUSTOMER_ADVANCE"
+                                    checked={paymentAction === 'CONVERT_TO_CUSTOMER_ADVANCE'}
+                                    onChange={() => setPaymentAction('CONVERT_TO_CUSTOMER_ADVANCE')}
                                     className="mt-1 accent-[#C8E600] cursor-pointer"
                                 />
                                 <div>
-                                    <span className="font-bold text-xs block text-white">Convert to Vendor Advance</span>
+                                    <span className="font-bold text-xs block text-white">Convert to Customer Advance</span>
                                     <span className="text-[11px] text-dim block mt-0.5 leading-relaxed">
-                                        Restores ${resolutionData.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })} as available advance credit on the supplier's account.
+                                        Reclassifies ${resolutionData.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })} as available customer advance liability (Account 2.1.02) for future invoices.
                                     </span>
                                 </div>
                             </div>
 
-                            {/* Option 2: Reassign to another open bill */}
-                            {resolutionData.hasOtherOpenBills ? (
+                            {/* Option 2: Reassign to another open invoice */}
+                            {resolutionData.hasOtherOpenInvoices ? (
                                 <div
-                                    onClick={() => setPaymentAction('REASSIGN_TO_BILL')}
+                                    onClick={() => setPaymentAction('REASSIGN_TO_INVOICE')}
                                     className={`p-4 rounded-2xl border transition-all cursor-pointer ${
-                                        paymentAction === 'REASSIGN_TO_BILL'
+                                        paymentAction === 'REASSIGN_TO_INVOICE'
                                             ? 'border-[#C8E600] bg-[#C8E600]/5 shadow-sm'
                                             : 'border-white/10 hover:border-white/20 bg-white/[0.02]'
                                     }`}
@@ -204,22 +204,22 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
                                         <input
                                             type="radio"
                                             name="paymentAction"
-                                            value="REASSIGN_TO_BILL"
-                                            checked={paymentAction === 'REASSIGN_TO_BILL'}
-                                            onChange={() => setPaymentAction('REASSIGN_TO_BILL')}
+                                            value="REASSIGN_TO_INVOICE"
+                                            checked={paymentAction === 'REASSIGN_TO_INVOICE'}
+                                            onChange={() => setPaymentAction('REASSIGN_TO_INVOICE')}
                                             className="mt-1 accent-[#C8E600] cursor-pointer"
                                         />
                                         <div className="w-full">
-                                            <span className="font-bold text-xs block text-white">Reassign to Another Open Bill</span>
+                                            <span className="font-bold text-xs block text-white">Reassign to Another Open Invoice</span>
                                             <span className="text-[11px] text-dim block mt-0.5 leading-relaxed">
-                                                Transfer payments directly to an outstanding bill for this supplier.
+                                                Transfer payments directly to an outstanding invoice for this customer.
                                             </span>
 
-                                            {/* Rich Ola UI Target Bill Picker */}
-                                            {paymentAction === 'REASSIGN_TO_BILL' && (
+                                            {/* Rich Ola UI Target Invoice Picker */}
+                                            {paymentAction === 'REASSIGN_TO_INVOICE' && (
                                                 <div className="mt-3.5 relative" ref={dropdownRef} onClick={(e) => e.stopPropagation()}>
                                                     <label className="text-[10px] font-black uppercase tracking-wider text-dim block mb-1.5">
-                                                        Select Destination Bill
+                                                        Select Destination Invoice
                                                     </label>
 
                                                     <button
@@ -228,22 +228,22 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
                                                         className="w-full p-3 rounded-2xl border bg-black/50 text-left flex items-center justify-between transition-all hover:border-[#C8E600]/60 focus:border-[#C8E600] cursor-pointer group"
                                                         style={{ borderColor: isDropdownOpen ? '#C8E600' : 'rgba(255,255,255,0.15)' }}
                                                     >
-                                                        {selectedTargetBill ? (
+                                                        {selectedTargetInvoice ? (
                                                             <div className="flex items-center gap-3">
                                                                 <div className="w-8 h-8 rounded-xl bg-[#C8E600]/10 flex items-center justify-center text-[#C8E600] flex-shrink-0">
                                                                     <FileText size={15} />
                                                                 </div>
                                                                 <div className="flex flex-col">
                                                                     <span className="text-xs font-black text-white group-hover:text-[#C8E600] transition-colors">
-                                                                        {selectedTargetBill.billNumber}
+                                                                        {selectedTargetInvoice.invoiceNumber}
                                                                     </span>
                                                                     <span className="text-[10px] text-dim">
-                                                                        Balance Due: <strong className="font-mono text-amber-400 font-bold">${selectedTargetBill.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                                                                        Balance Due: <strong className="font-mono text-amber-400 font-bold">${(selectedTargetInvoice.balance ?? selectedTargetInvoice.totalAmountDue)?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
                                                                     </span>
                                                                 </div>
                                                             </div>
                                                         ) : (
-                                                            <span className="text-xs text-dim">Select an outstanding bill...</span>
+                                                            <span className="text-xs text-dim">Select an outstanding invoice...</span>
                                                         )}
                                                         <ChevronDown size={16} className={`text-dim transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-[#C8E600]' : ''}`} />
                                                     </button>
@@ -254,13 +254,13 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
                                                             className="absolute z-50 left-0 right-0 mt-2 rounded-2xl border shadow-2xl p-2 max-h-56 overflow-y-auto space-y-1.5 backdrop-blur-2xl"
                                                             style={{ background: '#121212', borderColor: 'rgba(255,255,255,0.15)' }}
                                                         >
-                                                            {resolutionData.otherOpenBills.map((ob) => {
-                                                                const isSelected = ob._id === targetBillId;
+                                                            {resolutionData.otherOpenInvoices.map((oi) => {
+                                                                const isSelected = oi._id === targetInvoiceId;
                                                                 return (
                                                                     <div
-                                                                        key={ob._id}
+                                                                        key={oi._id}
                                                                         onClick={() => {
-                                                                            setTargetBillId(ob._id);
+                                                                            setTargetInvoiceId(oi._id);
                                                                             setIsDropdownOpen(false);
                                                                         }}
                                                                         className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
@@ -275,10 +275,10 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
                                                                             </div>
                                                                             <div>
                                                                                 <p className={`text-xs font-black ${isSelected ? 'text-[#C8E600]' : 'text-white'}`}>
-                                                                                    {ob.billNumber}
+                                                                                    {oi.invoiceNumber}
                                                                                 </p>
                                                                                 <p className="text-[10px] font-mono text-dim">
-                                                                                    Total: ${(ob.totalAmount ?? ob.balanceDue)?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                                                    Total: ${(oi.totalAmountDue)?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                                                 </p>
                                                                             </div>
                                                                         </div>
@@ -286,7 +286,7 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
                                                                             <div>
                                                                                 <span className="text-[9px] uppercase tracking-wider block font-bold text-dim">Balance Due</span>
                                                                                 <span className="text-xs font-mono font-black text-amber-400">
-                                                                                    ${ob.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                                                    ${(oi.balance ?? oi.totalAmountDue)?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                                                 </span>
                                                                             </div>
                                                                             {isSelected && (
@@ -307,7 +307,7 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
                                 </div>
                             ) : (
                                 <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-[11px] text-dim">
-                                    This vendor has no other open bills. <strong>Convert to Vendor Advance</strong> is the only available option.
+                                    This customer has no other open invoices. <strong>Convert to Customer Advance</strong> is the only available option.
                                 </div>
                             )}
                         </div>
@@ -324,7 +324,7 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
                             <button
                                 type="button"
                                 onClick={() => handleDelete()}
-                                disabled={submitting || (paymentAction === 'REASSIGN_TO_BILL' && !targetBillId)}
+                                disabled={submitting || (paymentAction === 'REASSIGN_TO_INVOICE' && !targetInvoiceId)}
                                 className="px-6 py-2.5 rounded-xl bg-red-500 text-white font-bold text-xs hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
                             >
                                 {submitting ? 'Processing...' : 'Confirm & Delete'}
@@ -337,4 +337,4 @@ export const DeleteBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => 
     );
 };
 
-export default DeleteBillModal;
+export default DeleteInvoiceModal;

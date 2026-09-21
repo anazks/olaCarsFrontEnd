@@ -12,6 +12,8 @@ import type { Invoice } from '../../../services/invoiceService';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+import EditInvoiceModal from './EditInvoiceModal';
+import DeleteInvoiceModal from './DeleteInvoiceModal';
 import { getUserRole } from '../../../utils/auth';
 
 const InvoiceDetail = () => {
@@ -26,6 +28,7 @@ const InvoiceDetail = () => {
 
     // Edit Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [editBaseAmount, setEditBaseAmount] = useState<number>(0);
     const [editDueDate, setEditDueDate] = useState<string>('');
     const [editWeekLabel, setEditWeekLabel] = useState<string>('');
@@ -371,15 +374,13 @@ const InvoiceDetail = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-2 w-full md:w-auto print:hidden">
-                    {invoice.status !== 'PAID' && userRole !== 'admin' && (
-                        <button 
-                            onClick={triggerEditModal}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 font-bold text-xs rounded-xl transition-all cursor-pointer"
-                            style={{ color: 'var(--text-main)' }}
-                        >
-                            <Edit3 size={14} /> Edit Invoice
-                        </button>
-                    )}
+                    <button 
+                        onClick={() => setIsEditModalOpen(true)}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                        style={{ color: 'var(--text-main)' }}
+                    >
+                        <Edit3 size={14} /> Edit Invoice
+                    </button>
 
                     {invoice.balance > 0 && (
                         <button
@@ -403,14 +404,12 @@ const InvoiceDetail = () => {
                         <Printer size={14}/> Print
                     </button>
 
-                    {userRole !== 'admin' && (
-                        <button 
-                            onClick={handleDeleteInvoice}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 font-bold text-xs rounded-xl hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
-                        >
-                            <Trash2 size={14}/> Delete
-                        </button>
-                    )}
+                    <button 
+                        onClick={() => setIsDeleteModalOpen(true)}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 font-bold text-xs rounded-xl hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                    >
+                        <Trash2 size={14}/> Delete
+                    </button>
                 </div>
             </div>
 
@@ -678,17 +677,19 @@ const InvoiceDetail = () => {
                         {invoice.payments && invoice.payments.length > 0 ? (
                             <div className="p-5 space-y-4">
                                 {invoice.payments.map((pay, i) => {
+                                    const isMongoId = (val?: string | null) => !!val && /^[0-9a-fA-F]{24}$/.test(String(val).trim());
+
                                     // Extract the actual Payment Received receipt number (e.g. PR-1788500868008)
                                     const notePrMatch = (pay.note?.match(/PR:\s*([A-Za-z0-9-_]+)/i)?.[1]) ||
                                         (pay.note?.match(/PR-[\w-]+/i)?.[0]);
                                     
                                     const prNumber = notePrMatch ||
-                                        (pay.transactionId?.startsWith('PR') ? pay.transactionId : null) ||
-                                        pay.transactionId ||
-                                        (pay as any)._id;
+                                        (pay.transactionId && !isMongoId(pay.transactionId) ? pay.transactionId : null) ||
+                                        (pay.referenceNumber && !isMongoId(pay.referenceNumber) ? pay.referenceNumber : null) ||
+                                        null;
 
                                     // Check if there is a separate bank transaction/upload reference
-                                    const bankRef = pay.transactionId && pay.transactionId !== prNumber ? pay.transactionId : null;
+                                    const bankRef = pay.transactionId && pay.transactionId !== prNumber && !isMongoId(pay.transactionId) ? pay.transactionId : null;
 
                                     const handleNavigateToPayment = (e: React.MouseEvent) => {
                                         e.stopPropagation();
@@ -814,34 +815,22 @@ const InvoiceDetail = () => {
                 </div>
             </div>
 
-            {/* ================= INVOICE EDIT MODAL ================= */}
-            {isEditModalOpen && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="w-full max-w-md border shadow-2xl overflow-hidden rounded-3xl" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="p-6 border-b bg-black/20 flex justify-between items-center" style={{ borderColor: 'var(--border-main)' }}>
-                            <div><h2 className="text-lg font-black flex items-center gap-2" style={{ color: 'var(--text-main)' }}><Edit3 size={18} className="text-brand-lime" /> Edit Parameters</h2><p className="text-xs text-dim">{invoice.invoiceNumber}</p></div>
-                            <button onClick={() => setIsEditModalOpen(false)} className="p-2 rounded-xl hover:bg-white/5 cursor-pointer" style={{ color: 'var(--text-dim)' }}><X size={16} /></button>
-                        </div>
-                        <form onSubmit={handleEditInvoice} className="p-6 space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Period Rent amount ($)</label>
-                                <div className="relative"><DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={15} /><input type="number" step="0.01" required value={editBaseAmount} onChange={e => setEditBaseAmount(Number(e.target.value))} className="w-full pl-10 pr-4 py-2.5 border rounded-xl font-black outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} /></div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Cycle Label</label>
-                                <input type="text" required value={editWeekLabel} onChange={e => setEditWeekLabel(e.target.value)} className="w-full px-4 py-2.5 border rounded-xl font-bold outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Lease Due Date</label>
-                                <div className="relative"><Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={15} /><input type="date" required value={editDueDate} onChange={e => setEditDueDate(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border rounded-xl font-bold outline-none focus:border-brand-lime" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }} /></div>
-                            </div>
-                            <button type="submit" disabled={submittingEdit} className="w-full py-3.5 bg-brand-lime text-black font-black uppercase tracking-widest rounded-2xl hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all cursor-pointer" style={{ background: '#C8E600' }}>
-                                {submittingEdit ? "Re-calculating..." : "Overwrite Record"}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
+            {/* ================= INVOICE EDIT & DELETE MODALS ================= */}
+            <EditInvoiceModal
+                isOpen={isEditModalOpen}
+                invoice={invoice}
+                onClose={() => setIsEditModalOpen(false)}
+                onSuccess={fetchInvoice}
+            />
+
+            <DeleteInvoiceModal
+                isOpen={isDeleteModalOpen}
+                invoice={invoice}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onSuccess={() => {
+                    navigate('../invoices');
+                }}
+            />
 
             {/* ================= CREATE CREDIT NOTE MODAL ================= */}
             {isCreditNoteModalOpen && (

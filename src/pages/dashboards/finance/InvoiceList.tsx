@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-    FileText, RefreshCw, Filter, Search, CheckCircle2,
+    FileText, Eye, Edit2, RefreshCw, Filter, Search, CheckCircle2,
     Clock, AlertCircle, ChevronLeft, ChevronRight, Calendar, Plus,
     ArrowUpDown, ArrowUp, ArrowDown, Trash2, Settings, FileSpreadsheet, Download
 } from 'lucide-react';
@@ -11,6 +11,8 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import InvoiceSettingsModal from './InvoiceSettingsModal';
+import EditInvoiceModal from './EditInvoiceModal';
+import DeleteInvoiceModal from './DeleteInvoiceModal';
 import { getUserRole } from '../../../utils/auth';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 
@@ -23,6 +25,8 @@ const InvoiceList = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [selectedInvoiceForEdit, setSelectedInvoiceForEdit] = useState<any | null>(null);
+    const [selectedInvoiceForDelete, setSelectedInvoiceForDelete] = useState<any | null>(null);
     const [downloadingPdf, setDownloadingPdf] = useState(false);
     const [downloadingExcel, setDownloadingExcel] = useState(false);
 
@@ -777,12 +781,17 @@ const InvoiceList = () => {
                                             <Calendar size={12} /> Due Date <SortIcon field="dueDate" />
                                         </div>
                                     </th>
+                                    <th className="py-4 px-6 text-center w-[12%]">
+                                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                            Actions
+                                        </div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5 font-medium" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={10} className="py-20 text-center">
+                                        <td colSpan={11} className="py-20 text-center">
                                             <div className="flex flex-col items-center justify-center gap-3">
                                                 <RefreshCw className="animate-spin text-brand-lime" size={28} />
                                                 <span className="text-xs font-black tracking-widest text-dim uppercase">Decrypting Ledger...</span>
@@ -791,7 +800,7 @@ const InvoiceList = () => {
                                     </tr>
                                 ) : error ? (
                                     <tr>
-                                        <td colSpan={10} className="py-20 text-center">
+                                        <td colSpan={11} className="py-20 text-center">
                                             <div className="bg-rose-500/5 border border-rose-500/10 rounded-2xl p-6 inline-block">
                                                 <AlertCircle className="text-rose-500 mx-auto mb-2" size={28} />
                                                 <p className="text-xs font-black uppercase" style={{ color: 'var(--text-main)' }}>{error}</p>
@@ -800,7 +809,7 @@ const InvoiceList = () => {
                                     </tr>
                                 ) : invoices.length === 0 ? (
                                     <tr>
-                                        <td colSpan={10} className="py-20 text-center">
+                                        <td colSpan={11} className="py-20 text-center">
                                             <div className="text-dim space-y-1 uppercase">
                                                 <FileText className="mx-auto opacity-20 mb-2" size={32} />
                                                 <p className="text-xs font-black tracking-widest">No statements recorded</p>
@@ -877,6 +886,31 @@ const InvoiceList = () => {
                                             <td className="py-4 px-6 font-bold text-dim">
                                                 {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
                                             </td>
+                                            <td className="py-4 px-6 text-center" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    <button
+                                                        onClick={() => handleRowClick(invoice._id)}
+                                                        className="p-2 bg-white/5 border border-white/10 text-dim hover:text-white hover:border-white/30 rounded-xl cursor-pointer hover:scale-[1.05] active:scale-95 transition-all flex items-center justify-center"
+                                                        title="View Details"
+                                                    >
+                                                        <Eye size={14} strokeWidth={2.5} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setSelectedInvoiceForEdit(invoice)}
+                                                        className="p-2 bg-white/5 border border-white/10 text-dim hover:text-blue-400 hover:border-blue-400/30 rounded-xl cursor-pointer hover:scale-[1.05] active:scale-95 transition-all flex items-center justify-center"
+                                                        title="Edit Invoice"
+                                                    >
+                                                        <Edit2 size={14} strokeWidth={2.5} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setSelectedInvoiceForDelete(invoice)}
+                                                        className="p-2 bg-white/5 border border-white/10 text-dim hover:text-rose-400 hover:border-rose-400/30 rounded-xl cursor-pointer hover:scale-[1.05] active:scale-95 transition-all flex items-center justify-center"
+                                                        title="Delete Invoice"
+                                                    >
+                                                        <Trash2 size={14} strokeWidth={2.5} />
+                                                    </button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))
                                 )}
@@ -952,6 +986,20 @@ const InvoiceList = () => {
                     onClose={() => setShowSettingsModal(false)}
                 />
             )}
+
+            <EditInvoiceModal
+                isOpen={!!selectedInvoiceForEdit}
+                invoice={selectedInvoiceForEdit}
+                onClose={() => setSelectedInvoiceForEdit(null)}
+                onSuccess={fetchData}
+            />
+
+            <DeleteInvoiceModal
+                isOpen={!!selectedInvoiceForDelete}
+                invoice={selectedInvoiceForDelete}
+                onClose={() => setSelectedInvoiceForDelete(null)}
+                onSuccess={fetchData}
+            />
 
 
         </div>
