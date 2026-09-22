@@ -244,9 +244,62 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
         }
     }, [isOpen]);
 
+    const matchNameFlexibly = (inputName: string, dbNames: Set<string>): boolean => {
+        const cleanInput = inputName.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, ' ');
+        if (!cleanInput) return false;
+        
+        if (dbNames.has(cleanInput)) return true;
+        
+        for (const dbName of dbNames) {
+            const cleanDb = dbName.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, ' ');
+            if (cleanDb === cleanInput || cleanDb.includes(cleanInput) || cleanInput.includes(cleanDb)) {
+                return true;
+            }
+            
+            const inputWords = cleanInput.split(/\s+/).filter(w => w.length > 1);
+            if (inputWords.length > 0) {
+                const dbWords = cleanDb.split(/\s+/);
+                const matchesAll = inputWords.every(word => dbWords.some(dbWord => dbWord.includes(word) || word.includes(dbWord)));
+                if (matchesAll) return true;
+            }
+        }
+        return false;
+    };
+
     const validateRow = useCallback((row: any): string[] => {
         const errors: string[] = [];
         
+        // Validate Vendor / Supplier
+        const vendorName = (getRowVal(row, ['Vendor Name', 'vendorName', 'supplierName', 'supplier', 'Vendor', 'vendor']) || '').toString().trim();
+        const vendorNumber = (getRowVal(row, ['Vendor Number', 'vendorNumber', 'supplierNumber', 'Supplier Number']) || '').toString().trim();
+
+        if (!vendorName && !vendorNumber) {
+            errors.push('Vendor is required (Vendor Name or Vendor Number missing)');
+        } else if (availableSupplierNames.size > 0 || availableSupplierNumbers.size > 0) {
+            let found = false;
+
+            if (vendorName) {
+                const cleanNameInput = vendorName.toLowerCase().replace(/\s+/g, ' ').trim();
+                if (
+                    availableSupplierNames.has(cleanNameInput) ||
+                    matchNameFlexibly(cleanNameInput, availableSupplierNames)
+                ) {
+                    found = true;
+                }
+            }
+
+            if (!found && vendorNumber) {
+                const cleanNum = vendorNumber.toLowerCase().trim();
+                if (availableSupplierNumbers.has(cleanNum)) {
+                    found = true;
+                }
+            }
+
+            if (!found) {
+                errors.push(`Vendor "${vendorName || vendorNumber}" not found in registered suppliers`);
+            }
+        }
+
         // Validate Quantity (supports comma-separated)
         const qty = getRowVal(row, ['Quantity', 'quantity']);
         if (qty !== undefined && qty !== null && qty !== '') {
@@ -371,7 +424,7 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
         }
 
         return errors;
-    }, [accountingCodes, availableTaxes]);
+    }, [availableSupplierNames, availableSupplierNumbers, accountingCodes, availableTaxes]);
 
     useEffect(() => {
         if (parsedRows.length > 0) {
@@ -478,77 +531,67 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
             return;
         }
 
-        const totalRowsCount = validRows.length;
+        // Count unique bills
+        const billKeys = new Set();
+        validRows.forEach(row => {
+            const billNum = getRowVal(row, ["Bill Number", "billNumber"]);
+            const key = (billNum || `TEMP-${Date.now()}-${Math.random()}`).toString().trim();
+            billKeys.add(key);
+        });
+        const totalUniqueBills = billKeys.size;
+
         setUploading(true);
         setUploadProgress(0);
-        setUploadStatusText(`Uploading bills (0 / ${totalRowsCount} items)...`);
+        setUploadStatusText(`Preparing to upload ${totalUniqueBills} bills (${validRows.length} items)...`);
 
-        const CHUNK_SIZE = 50;
-        const chunks: any[][] = [];
-        for (let i = 0; i < validRows.length; i += CHUNK_SIZE) {
-            const chunk = validRows.slice(i, i + CHUNK_SIZE).map(({ _rowErrors, ...rest }) => {
-                const clean: any = {};
-                for (const key in rest) {
-                    if (key.toLowerCase() !== 'error reason' && key.toLowerCase() !== 'error_reason') {
-                        clean[key] = rest[key];
-                    }
+        const cleanPayloadRows = validRows.map(({ _rowErrors, ...rest }) => {
+            const clean: any = {};
+            for (const key in rest) {
+                if (key.toLowerCase() !== 'error reason' && key.toLowerCase() !== 'error_reason') {
+                    clean[key] = (rest as any)[key];
                 }
-                return clean;
-            });
-            chunks.push(chunk);
-        }
-
-        const finalResult = {
-            successCount: 0,
-            updatedCount: 0,
-            errorCount: 0,
-            skippedCount: 0,
-            errors: [] as string[],
-            skipped: [] as string[],
-            createdBills: [] as string[]
-        };
+            }
+            return clean;
+        });
 
         try {
-            let processedRowsCount = 0;
-            for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
-                const chunk = chunks[chunkIdx];
-                const res = await bulkUploadBills({ rows: chunk });
-                const data = res.data || {};
-                
-                finalResult.successCount += data.successCount || 0;
-                finalResult.updatedCount += data.updatedCount || 0;
-                finalResult.errorCount += data.errorCount || 0;
-                finalResult.skippedCount += data.skippedCount || 0;
-                if (data.errors) finalResult.errors.push(...data.errors);
-                if (data.skipped) finalResult.skipped.push(...data.skipped);
-                if (data.createdBills) finalResult.createdBills.push(...data.createdBills);
+            const res = await bulkUploadBills(
+                { rows: cleanPayloadRows, stream: true },
+                (progress) => {
+                    setUploadProgress(progress.percentage);
+                    setUploadStatusText(progress.statusMessage);
+                    toast(progress.statusMessage, {
+                        id: 'bulk-bill-upload-toast',
+                        icon: '⚡',
+                        duration: 10000
+                    });
+                }
+            );
 
-                processedRowsCount += chunk.length;
-                setUploadProgress(Math.round((processedRowsCount / totalRowsCount) * 100));
-                setUploadStatusText(`Uploading bills (${processedRowsCount} / ${totalRowsCount})...`);
+            toast.dismiss('bulk-bill-upload-toast');
+            const data = res?.data || res || {};
+            setResult(data);
+
+            if (autoDownloadFailed && (data.errorCount > 0 || errorRowsCount > 0)) {
+                downloadFailedRowsExcel(data);
             }
 
-            setResult(finalResult);
-
-            if (autoDownloadFailed && (finalResult.errorCount > 0 || errorRowsCount > 0)) {
-                downloadFailedRowsExcel(finalResult);
-            }
-
-            if (finalResult.successCount > 0 || finalResult.updatedCount > 0) {
+            if (data.successCount > 0 || data.updatedCount > 0) {
                 const parts = [];
-                if (finalResult.successCount > 0) parts.push(`${finalResult.successCount} created`);
-                if (finalResult.updatedCount > 0) parts.push(`${finalResult.updatedCount} updated`);
+                if (data.successCount > 0) parts.push(`${data.successCount} created`);
+                if (data.updatedCount > 0) parts.push(`${data.updatedCount} updated`);
                 toast.success(`Bills: ${parts.join(', ')}.`);
-                if (finalResult.errorCount === 0) {
+                if (data.errorCount === 0) {
                     onSuccess();
                 }
-            } else if (finalResult.errorCount > 0) {
-                toast.error(`Completed with ${finalResult.errorCount} errors.`);
+            } else if (data.errorCount > 0) {
+                toast.error(`Completed with ${data.errorCount} errors.`);
             } else {
                 toast.success('Upload complete.');
                 onSuccess();
             }
         } catch (err: any) {
+            toast.dismiss('bulk-bill-upload-toast');
             toast.error(err?.response?.data?.message || err?.message || 'Bulk upload failed.');
         } finally {
             setUploading(false);
@@ -984,27 +1027,35 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                                             ) : (
                                                 filteredRows.map(({ row, originalIndex }) => {
                                                     const hasErrors = row._rowErrors && row._rowErrors.length > 0;
-                                                const billNumber = getRowVal(row, ['Bill Number', 'billNumber']);
-                                                const vName = getRowVal(row, ['Vendor Name', 'vendorName', 'supplier']);
-                                                const itemNameVal = getRowVal(row, ['Item Name', 'itemName', 'Item', 'item']);
-                                                const descVal = getRowVal(row, ['Description', 'description']);
-                                                const qtyVal = getRowVal(row, ['Quantity', 'quantity']);
-                                                const priceVal = getRowVal(row, ['Rate', 'rate', 'unitPrice']);
-                                                const debitAccCode = getRowVal(row, ['Debit Account', 'debitAccount', 'Debit Account Code', 'debitAccountCode', 'Account Code', 'accountCode', 'Account']);
-                                                const pType = (getRowVal(row, ['Purchase Type', 'purchaseType', 'Bill Type', 'billType']) || 'Credit').toString().trim();
-                                                const creditAccCode = getRowVal(row, ['Credit Account', 'creditAccount', 'Credit Account Code', 'creditAccountCode', 'Accounts Payable']);
-                                                const taxNameVal = getRowVal(row, ['Item Tax', 'itemTax', 'Tax Name', 'taxName', 'Tax Profile', 'taxProfile']);
-                                                const taxRateVal = getRowVal(row, ['Item Tax %', 'itemTaxPct', 'Tax Percentage', 'taxPercentage', 'taxRate']);
-                                                const rawTaxType = getRowVal(row, ['Item Tax Type', 'itemTaxType', 'item_tax_type', 'Is Inclusive Tax', 'isInclusiveTax']);
-                                                const isInc = (rawTaxType === true || rawTaxType === 1 || String(rawTaxType).toLowerCase() === 'true' || String(rawTaxType).toLowerCase() === 'yes' || String(rawTaxType).toLowerCase() === 'inclusive');
-                                                const pTypeNorm = pType.toUpperCase().includes('CASH') ? 'Cash' : pType.toUpperCase().includes('BANK') ? 'Bank' : 'Credit';
-                                                const pTypeBadgeStyle = pTypeNorm === 'Cash' ? { background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.3)' } : pTypeNorm === 'Bank' ? { background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)' } : { background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' };
+                                                    const billNumber = getRowVal(row, ['Bill Number', 'billNumber']);
+                                                    const vName = getRowVal(row, ['Vendor Name', 'vendorName', 'supplierName', 'supplier', 'Vendor', 'vendor']) || getRowVal(row, ['Vendor Number', 'vendorNumber', 'supplierNumber']);
+                                                    const itemNameVal = getRowVal(row, ['Item Name', 'itemName', 'Item', 'item']);
+                                                    const descVal = getRowVal(row, ['Description', 'description']);
+                                                    const qtyVal = getRowVal(row, ['Quantity', 'quantity']);
+                                                    const priceVal = getRowVal(row, ['Rate', 'rate', 'unitPrice']);
+                                                    const debitAccCode = getRowVal(row, ['Debit Account', 'debitAccount', 'Debit Account Code', 'debitAccountCode', 'Account Code', 'accountCode', 'Account']);
+                                                    const pType = (getRowVal(row, ['Purchase Type', 'purchaseType', 'Bill Type', 'billType']) || 'Credit').toString().trim();
+                                                    const creditAccCode = getRowVal(row, ['Credit Account', 'creditAccount', 'Credit Account Code', 'creditAccountCode', 'Accounts Payable']);
+                                                    const taxNameVal = getRowVal(row, ['Item Tax', 'itemTax', 'Tax Name', 'taxName', 'Tax Profile', 'taxProfile']);
+                                                    const taxRateVal = getRowVal(row, ['Item Tax %', 'itemTaxPct', 'Tax Percentage', 'taxPercentage', 'taxRate']);
+                                                    const rawTaxType = getRowVal(row, ['Item Tax Type', 'itemTaxType', 'item_tax_type', 'Is Inclusive Tax', 'isInclusiveTax']);
+                                                    const isInc = (rawTaxType === true || rawTaxType === 1 || String(rawTaxType).toLowerCase() === 'true' || String(rawTaxType).toLowerCase() === 'yes' || String(rawTaxType).toLowerCase() === 'inclusive');
+                                                    const pTypeNorm = pType.toUpperCase().includes('CASH') ? 'Cash' : pType.toUpperCase().includes('BANK') ? 'Bank' : 'Credit';
+                                                    const pTypeBadgeStyle = pTypeNorm === 'Cash' ? { background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.3)' } : pTypeNorm === 'Bank' ? { background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)' } : { background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' };
 
-                                                return (
-                                                    <tr key={originalIndex} className={`transition-colors hover:bg-input/20 ${hasErrors ? 'bg-red-500/5' : ''}`}>
-                                                        <td className="p-3 text-dim font-medium">{originalIndex + 1}</td>
-                                                        <td className="p-3 font-bold text-main">{billNumber || 'Auto-generated'}</td>
-                                                        <td className="p-3 text-main font-bold">{vName || <span className="text-dim/60 italic">Fallback (captured in notes)</span>}</td>
+                                                    return (
+                                                        <tr key={originalIndex} className={`transition-colors hover:bg-input/20 ${hasErrors ? 'bg-red-500/5' : ''}`}>
+                                                            <td className="p-3 text-dim font-medium">{originalIndex + 1}</td>
+                                                            <td className="p-3 font-bold text-main">{billNumber || 'Auto-generated'}</td>
+                                                            <td className="p-3 font-bold">
+                                                                {vName ? (
+                                                                    <span className="text-main">{vName}</span>
+                                                                ) : (
+                                                                    <span className="text-rose-500 italic flex items-center gap-1 font-semibold text-[10px]">
+                                                                        <AlertTriangle size={12} className="shrink-0" /> Missing Vendor
+                                                                    </span>
+                                                                )}
+                                                            </td>
                                                         <td className="p-3 text-main">
                                                             <div className="font-bold">{itemNameVal || descVal || 'No Item Details'}</div>
                                                             {descVal && itemNameVal && descVal !== itemNameVal && (

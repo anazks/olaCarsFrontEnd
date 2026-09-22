@@ -101,7 +101,98 @@ export const createBill = async (billData: any): Promise<{ success: boolean; dat
     return response.data;
 };
 
-export const bulkUploadBills = async (payload: { rows: any[] }): Promise<any> => {
+export interface BillBulkUploadProgress {
+    type: 'progress' | 'complete' | 'error';
+    processedCount: number;
+    totalCount: number;
+    percentage: number;
+    insertedCount: number;
+    updatedCount?: number;
+    skippedCount: number;
+    errorCount?: number;
+    estimatedSecondsRemaining?: number;
+    statusMessage: string;
+}
+
+export const bulkUploadBills = async (
+    payload: { rows: any[]; stream?: boolean },
+    onProgress?: (progress: BillBulkUploadProgress) => void
+): Promise<any> => {
+    if (payload.stream || onProgress) {
+        const baseURL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
+        const token = localStorage.getItem('token');
+
+        const response = await fetch(`${baseURL}/api/bills/bulk-upload`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/x-ndjson',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({ ...payload, stream: true })
+        });
+
+        if (!response.ok) {
+            let errMessage = 'Bulk upload failed';
+            try {
+                const errData = await response.json();
+                errMessage = errData.message || errMessage;
+            } catch (_) {}
+            throw new Error(errMessage);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+            const json = await response.json();
+            return json.data || json;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finalResult = null;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed) continue;
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (parsed.type === 'progress') {
+                        if (onProgress) onProgress(parsed);
+                    } else if (parsed.type === 'complete') {
+                        finalResult = parsed;
+                    } else if (parsed.type === 'error') {
+                        throw new Error(parsed.message || 'Upload failed');
+                    }
+                } catch (e: any) {
+                    if (e.message && e.message !== 'Upload failed' && !e.message.startsWith('Unexpected')) {
+                        throw e;
+                    }
+                }
+            }
+        }
+
+        if (buffer.trim()) {
+            try {
+                const parsed = JSON.parse(buffer.trim());
+                if (parsed.type === 'complete') {
+                    finalResult = parsed;
+                } else if (parsed.type === 'error') {
+                    throw new Error(parsed.message || 'Upload failed');
+                }
+            } catch (_) {}
+        }
+
+        return finalResult?.data || finalResult;
+    }
+
     const response = await api.post('/api/bills/bulk-upload', payload);
     return response.data;
 };
