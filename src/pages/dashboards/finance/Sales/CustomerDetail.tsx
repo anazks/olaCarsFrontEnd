@@ -99,6 +99,35 @@ const CustomerDetail = () => {
         fetchData();
     }, [fetchData]);
 
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editedName, setEditedName] = useState('');
+    const [isSavingName, setIsSavingName] = useState(false);
+
+    const handleSaveName = async () => {
+        if (!customer || !editedName.trim()) return;
+        if (editedName.trim() === customer.name) {
+            setIsEditingName(false);
+            return;
+        }
+        setIsSavingName(true);
+        const toastId = toast.loading('Updating name...');
+        try {
+            const res = await updateCustomer(customer._id, { name: editedName.trim() });
+            toast.success('Name updated successfully!', { id: toastId });
+            setIsEditingName(false);
+            if (res?.data) {
+                setCustomer(res.data);
+            } else {
+                await fetchData();
+            }
+        } catch (err: any) {
+            console.error('Failed to update customer name:', err);
+            toast.error(err.response?.data?.message || err.message || 'Failed to update name', { id: toastId });
+        } finally {
+            setIsSavingName(false);
+        }
+    };
+
     const handleToggleStatus = async () => {
         if (!customer) return;
         const newStatus = customer.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
@@ -406,9 +435,56 @@ const CustomerDetail = () => {
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>
-                            {customer.name}
-                        </h1>
+                        {isEditingName ? (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    value={editedName}
+                                    onChange={(e) => setEditedName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveName();
+                                        if (e.key === 'Escape') setIsEditingName(false);
+                                    }}
+                                    autoFocus
+                                    className="text-lg font-bold tracking-tight px-3 py-1 rounded-xl border outline-none focus:border-brand-lime"
+                                    style={{ background: 'var(--bg-input, rgba(255,255,255,0.05))', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                                <button
+                                    onClick={handleSaveName}
+                                    disabled={isSavingName}
+                                    className="p-1.5 rounded-lg bg-brand-lime text-black hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm disabled:opacity-50"
+                                    title="Save Name"
+                                >
+                                    <CheckCircle2 size={16} />
+                                </button>
+                                <button
+                                    onClick={() => setIsEditingName(false)}
+                                    disabled={isSavingName}
+                                    className="p-1.5 rounded-lg border hover:bg-white/5 transition-all cursor-pointer"
+                                    style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                                    title="Cancel"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--text-main)' }}>
+                                    {customer.name}
+                                </h1>
+                                <button 
+                                    onClick={() => {
+                                        setEditedName(customer.name);
+                                        setIsEditingName(true);
+                                    }}
+                                    title="Edit Customer Name"
+                                    className="p-1.5 rounded-lg border transition-all hover:bg-white/10 active:scale-95 cursor-pointer text-dim hover:text-white"
+                                    style={{ borderColor: 'var(--border-main)' }}
+                                >
+                                    <Pencil size={14} />
+                                </button>
+                            </div>
+                        )}
                         <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-xs font-mono font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{customer.customerId || 'TEMP-ID'}</span>
                             <span className="w-1 h-1 rounded-full bg-white/20" />

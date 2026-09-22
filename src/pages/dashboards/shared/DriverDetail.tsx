@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, AlertCircle, FileCheck, Car, Tag, Download, Printer, CreditCard, History, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, AlertCircle, FileCheck, Car, Tag, Download, Printer, CreditCard, History, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { getDriverById, progressDriver, uploadDriverDocument, updateDriver, cancelContract } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getVehicleById } from '../../../services/vehicleService';
@@ -25,6 +25,10 @@ const DriverDetail = () => {
     const [loadingVehicle, setLoadingVehicle] = useState(false);
     const [contractPreviewHTML, setContractPreviewHTML] = useState<string | null>(null);
     const [invoices, setInvoices] = useState<any[]>([]);
+
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editedName, setEditedName] = useState('');
+    const [isSavingName, setIsSavingName] = useState(false);
 
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [cancelNotes, setCancelNotes] = useState('');
@@ -300,6 +304,33 @@ const DriverDetail = () => {
             setActionError(error.response?.data?.message || 'Failed to update emergency contact');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSaveName = async () => {
+        if (!driver || !editedName.trim()) return;
+        const currentName = driver.personalInfo?.fullName || '';
+        if (editedName.trim() === currentName) {
+            setIsEditingName(false);
+            return;
+        }
+        setIsSavingName(true);
+        const toastId = toast.loading('Updating name...');
+        try {
+            await updateDriver(id!, {
+                personalInfo: {
+                    ...driver.personalInfo,
+                    fullName: editedName.trim()
+                }
+            });
+            toast.success('Name updated successfully!', { id: toastId });
+            setIsEditingName(false);
+            await fetchDriver();
+        } catch (err: any) {
+            console.error('Failed to update driver name:', err);
+            toast.error(err.response?.data?.message || err.message || 'Failed to update name', { id: toastId });
+        } finally {
+            setIsSavingName(false);
         }
     };
 
@@ -642,8 +673,57 @@ const DriverDetail = () => {
                         <ChevronLeft size={24} className="group-hover:scale-110 transition-transform" />
                     </button>
                     <div>
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-[22px] font-bold" style={{ color: 'var(--text-main)' }}>{driver.personalInfo?.fullName}</h1>
+                        <div className="flex flex-wrap items-center gap-3">
+                            {isEditingName ? (
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={editedName}
+                                        onChange={(e) => setEditedName(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleSaveName();
+                                            if (e.key === 'Escape') setIsEditingName(false);
+                                        }}
+                                        autoFocus
+                                        className="text-lg font-bold px-3 py-1 rounded-xl border outline-none focus:border-brand-lime"
+                                        style={{ background: 'var(--bg-input, rgba(255,255,255,0.05))', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                    <button
+                                        onClick={handleSaveName}
+                                        disabled={isSavingName}
+                                        className="p-1.5 rounded-lg bg-brand-lime text-black hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm disabled:opacity-50"
+                                        title="Save Name"
+                                    >
+                                        <CheckCircle2 size={16} />
+                                    </button>
+                                    <button
+                                        onClick={() => setIsEditingName(false)}
+                                        disabled={isSavingName}
+                                        className="p-1.5 rounded-lg border hover:bg-white/5 transition-all cursor-pointer"
+                                        style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                                        title="Cancel"
+                                    >
+                                        <XCircle size={16} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-[22px] font-bold" style={{ color: 'var(--text-main)' }}>{driver.personalInfo?.fullName}</h1>
+                                    <HasPermission permission="DRIVER_EDIT" mode="hide">
+                                        <button
+                                            onClick={() => {
+                                                setEditedName(driver.personalInfo?.fullName || '');
+                                                setIsEditingName(true);
+                                            }}
+                                            title="Edit Driver Name"
+                                            className="p-1.5 rounded-lg border transition-all hover:bg-white/10 active:scale-95 cursor-pointer text-dim hover:text-white"
+                                            style={{ borderColor: 'var(--border-main)' }}
+                                        >
+                                            <Pencil size={15} />
+                                        </button>
+                                    </HasPermission>
+                                </div>
+                            )}
                             <div className="flex flex-col">
                                 <span className="px-3 py-1 text-sm font-bold rounded-full border uppercase tracking-wider w-fit" style={{ backgroundColor: 'rgba(200,230,0,0.1)', color: 'var(--brand-lime)', borderColor: 'rgba(200,230,0,0.2)' }}>
                                     {driver.status.replace(/_/g, ' ')}
