@@ -27,6 +27,26 @@ const formatDate = (dateString?: string) => {
     return `${day}/${month}/${year}`;
 };
 
+const getAssignedVehiclePlate = (c: Customer): string => {
+    const rawPlate = 
+        c.driver?.currentVehicle?.legalDocs?.registrationNumber ||
+        c.driver?.currentVehicle?.plateNumber ||
+        c.driver?.currentVehicle?.basicDetails?.fleetNumber ||
+        c.cfVehicleNo;
+
+    if (!rawPlate) {
+        return 'Nill';
+    }
+
+    const trimmed = String(rawPlate).trim();
+    const lower = trimmed.toLowerCase();
+    if (!trimmed || lower === 'n/a' || lower === 'na' || lower === 'none' || lower === 'null' || lower === 'nil' || lower === 'nill' || trimmed === '-' || trimmed === '—') {
+        return 'Nill';
+    }
+
+    return trimmed;
+};
+
 /* ─────────────────────────────────────────────────────────────────────────────
    CREATE CUSTOMER MODAL
    ───────────────────────────────────────────────────────────────────────────── */
@@ -410,6 +430,7 @@ const Customers = () => {
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Customer ID": c.customerId || 'N/A',
                 "Customer Name": c.name,
+                "Assigned Vehicle Plate": getAssignedVehiclePlate(c),
                 "Email": c.email || 'N/A',
                 "Phone": c.phone || 'N/A',
                 "WhatsApp": c.whatsappNumber || 'N/A',
@@ -456,6 +477,7 @@ const Customers = () => {
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Customer ID": c.customerId || 'N/A',
                 "Customer Name": c.name,
+                "Assigned Vehicle Plate": getAssignedVehiclePlate(c),
                 "Email": c.email || 'N/A',
                 "Phone": c.phone || 'N/A',
                 "WhatsApp": c.whatsappNumber || 'N/A',
@@ -508,11 +530,12 @@ const Customers = () => {
                 doc.text(`Period: ${startDate || 'N/A'} to ${endDate || 'N/A'}`, 14, 35);
             }
 
-            const head = [["Sl No.", "Customer ID", "Customer Name", "Email", "Phone", "Branch", "Status", "Registered"]];
+            const head = [["Sl No.", "Customer ID", "Customer Name", "Plate No.", "Email", "Phone", "Branch", "Status", "Registered"]];
             const body = allCustomers.map((c, idx) => [
                 String(idx + 1).padStart(2, '0'),
                 c.customerId || 'N/A',
                 c.name || 'N/A',
+                getAssignedVehiclePlate(c),
                 c.email || 'N/A',
                 c.phone || 'N/A',
                 (c.branch as any)?.name || 'N/A',
@@ -836,6 +859,9 @@ const Customers = () => {
                                         </div>
                                     </th>
                                     <th className="py-4 px-6 text-left">
+                                        <div className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Assigned Vehicle Plate</div>
+                                    </th>
+                                    <th className="py-4 px-6 text-left">
                                         <div className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Contact Info</div>
                                     </th>
                                     <th className="py-4 px-6 text-left">
@@ -857,7 +883,7 @@ const Customers = () => {
                             <tbody className="divide-y divide-white/5 font-medium" style={{ color: 'var(--text-main)', borderColor: 'var(--border-main)' }}>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={8} className="py-20 text-center">
+                                        <td colSpan={9} className="py-20 text-center">
                                             <div className="flex flex-col items-center justify-center gap-3">
                                                 <RefreshCw className="animate-spin text-brand-lime" size={28} />
                                                 <span className="text-xs font-black tracking-widest text-dim uppercase">Fetching Customers...</span>
@@ -866,7 +892,7 @@ const Customers = () => {
                                     </tr>
                                 ) : error ? (
                                     <tr>
-                                        <td colSpan={8} className="py-20 text-center">
+                                        <td colSpan={9} className="py-20 text-center">
                                             <div className="bg-rose-500/5 border border-rose-500/10 rounded-2xl p-6 inline-block">
                                                 <p className="text-xs font-black uppercase text-rose-500">{error}</p>
                                             </div>
@@ -874,7 +900,7 @@ const Customers = () => {
                                     </tr>
                                 ) : customers.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} className="py-20 text-center">
+                                        <td colSpan={9} className="py-20 text-center">
                                             <div className="flex flex-col items-center gap-4">
                                                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(200,230,0,0.08)', border: '1px solid rgba(200,230,0,0.2)' }}>
                                                     <Users size={28} style={{ color: 'var(--brand-lime)' }} />
@@ -894,7 +920,9 @@ const Customers = () => {
                                         </td>
                                     </tr>
                                 ) : (
-                                    customers.map((customer, index) => (
+                                    customers.map((customer, index) => {
+                                        const plate = getAssignedVehiclePlate(customer);
+                                        return (
                                         <tr 
                                             key={customer._id} 
                                             onClick={() => navigate(customer._id)}
@@ -923,6 +951,18 @@ const Customers = () => {
                                             </td>
                                             <td className="py-5 px-6 font-black text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
                                                 {customer.customerId || 'TEMP-ID'}
+                                            </td>
+                                            <td className="py-5 px-6">
+                                                {plate !== 'Nill' ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold tracking-wider bg-white/5 text-white border border-white/15">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-brand-lime shadow-sm shadow-brand-lime"></span>
+                                                        {plate}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs font-semibold italic text-dim opacity-60">
+                                                        Nill
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="py-5 px-6">
                                                 <div className="flex flex-col">
@@ -954,7 +994,8 @@ const Customers = () => {
                                                 </button>
                                             </td>
                                         </tr>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </tbody>
                         </table>
