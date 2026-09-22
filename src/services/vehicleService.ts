@@ -384,6 +384,7 @@ export const assignVehicleToDriver = async (
         frequency?: 'MONTHLY' | 'WEEKLY';
         depositAmount?: number;
         notes?: string;
+        activationDate?: string;
     }
 ): Promise<any> => {
     const response = await api.post(`/api/vehicle/${vehicleId}/assign/${driverId}`, leaseDetails);

@@ -12,6 +12,11 @@ export interface Customer {
         activation?: {
             activatedDate?: string;
         };
+        personalInfo?: {
+            fullName?: string;
+            email?: string;
+            phone?: string;
+        };
         emergencyContact?: {
             name?: string;
             relationship?: string;

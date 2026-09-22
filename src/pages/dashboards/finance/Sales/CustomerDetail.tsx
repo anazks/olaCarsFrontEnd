@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { getCustomerById, updateCustomer, updateCustomerWeeklyRent, type Customer } from '../../../../services/customerService';
 import { driverService } from '../../../../services/driverService';
+import { getAvailableVehicles, assignVehicleToDriver, type Vehicle } from '../../../../services/vehicleService';
 import { getInvoicesByCustomer, type Invoice } from '../../../../services/invoiceService';
 import { getAllCreditNotes, type CreditNote } from '../../../../services/creditNoteService';
 import api from '../../../../services/api';
@@ -142,18 +143,159 @@ const CustomerDetail = () => {
         }
     };
 
-    const handleToggleDriverStatus = async () => {
-        if (!customer || !customer.driver) return;
-        const driverId = customer.driver._id;
-        const newStatus = customer.driver.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-        const toastId = toast.loading(`Updating driver status to ${newStatus}...`);
+    // ── Driver Contract Cancellation (Deactivation) State ──
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [cancelNotes, setCancelNotes] = useState('');
+    const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+
+    const handleConfirmCancelContract = async () => {
+        if (!customer?.driver?._id) return;
+        setIsSubmittingCancel(true);
+        const toastId = toast.loading('Cancelling contract & deactivating driver...');
         try {
-            await driverService.updateDriver(driverId, { status: newStatus });
-            toast.success(`Driver status updated to ${newStatus}`, { id: toastId });
-            fetchData();
+            await driverService.cancelContract(customer.driver._id, cancelNotes || 'Deactivated from customer profile');
+            toast.success('Driver deactivated and contract cancelled successfully', { id: toastId });
+            setIsCancelModalOpen(false);
+            setCancelNotes('');
+            await fetchData();
         } catch (err: any) {
-            console.error('Failed to update driver status:', err);
-            toast.error(err.message || 'Failed to update driver status', { id: toastId });
+            console.error('Failed to cancel driver contract:', err);
+            toast.error(err.response?.data?.message || err.message || 'Failed to cancel driver contract', { id: toastId });
+        } finally {
+            setIsSubmittingCancel(false);
+        }
+    };
+
+    // ── Driver Reactivation & Vehicle Assignment State ──
+    const [isActivateModalOpen, setIsActivateModalOpen] = useState(false);
+    const [availableVehicles, setAvailableVehicles] = useState<Vehicle[]>([]);
+    const [loadingVehicles, setLoadingVehicles] = useState(false);
+    const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+    const [activationDate, setActivationDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+    const [frequency, setFrequency] = useState<'MONTHLY' | 'WEEKLY'>('WEEKLY');
+    const [durationWeeks, setDurationWeeks] = useState<number>(24);
+    const [durationMonths, setDurationMonths] = useState<number>(6);
+    const [weeklyRent, setWeeklyRent] = useState<number>(0);
+    const [monthlyRent, setMonthlyRent] = useState<number>(0);
+    const [depositAmount, setDepositAmount] = useState<number>(0);
+    const [activationNotes, setActivationNotes] = useState<string>('');
+    const [isSubmittingActivation, setIsSubmittingActivation] = useState(false);
+    const [vehicleSearchQuery, setVehicleSearchQuery] = useState('');
+
+    const openActivateModal = async () => {
+        setIsActivateModalOpen(true);
+        setLoadingVehicles(true);
+        setSelectedVehicleId('');
+        setActivationDate(new Date().toISOString().split('T')[0]);
+        setDepositAmount(0);
+        setActivationNotes('');
+        setVehicleSearchQuery('');
+        try {
+            const res = await getAvailableVehicles({ limit: 100 });
+            setAvailableVehicles(res.data || []);
+        } catch (err: any) {
+            console.error('Failed to load available vehicles:', err);
+            toast.error('Failed to load available vehicles');
+        } finally {
+            setLoadingVehicles(false);
+        }
+    };
+
+    const handleSelectVehicle = (v: Vehicle) => {
+        setSelectedVehicleId(v._id);
+        const sellingValue = v.basicDetails?.sellingValue || 0;
+        const defaultWeekly = (v as any).basicDetails?.weeklyRent || (sellingValue > 0 && durationWeeks > 0 ? Math.ceil(sellingValue / durationWeeks) : 150);
+        const defaultMonthly = (v as any).basicDetails?.monthlyRent || (sellingValue > 0 && durationMonths > 0 ? Math.ceil(sellingValue / durationMonths) : defaultWeekly * 4);
+        setWeeklyRent(defaultWeekly);
+        setMonthlyRent(defaultMonthly);
+    };
+
+    const filteredAvailableVehicles = useMemo(() => {
+        if (!vehicleSearchQuery.trim()) return availableVehicles;
+        const q = vehicleSearchQuery.toLowerCase();
+        return availableVehicles.filter(v => 
+            (v.basicDetails?.make || '').toLowerCase().includes(q) ||
+            (v.basicDetails?.model || '').toLowerCase().includes(q) ||
+            (v.legalDocs?.registrationNumber || (v as any).plateNumber || '').toLowerCase().includes(q) ||
+            (v.basicDetails?.vin || '').toLowerCase().includes(q) ||
+            (v.basicDetails?.fleetNumber || '').toLowerCase().includes(q)
+        );
+    }, [availableVehicles, vehicleSearchQuery]);
+
+    // Calculate repayment preview dates based on activationDate and frequency
+    const repaymentPreview = useMemo(() => {
+        if (!activationDate) return [];
+        const baseDate = new Date(activationDate);
+        if (isNaN(baseDate.getTime())) return [];
+
+        const count = frequency === 'WEEKLY' ? Math.min(durationWeeks || 24, 6) : Math.min(durationMonths || 6, 6);
+        const amount = frequency === 'WEEKLY' ? weeklyRent : monthlyRent;
+        const items = [];
+
+        let nextDueDate = new Date(baseDate);
+        if (frequency === 'WEEKLY') {
+            const currentDay = nextDueDate.getDay();
+            const daysUntilTarget = (3 - currentDay + 7) % 7;
+            const offset = daysUntilTarget === 0 ? 7 : daysUntilTarget;
+            nextDueDate.setDate(nextDueDate.getDate() + offset);
+        } else {
+            nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+            nextDueDate.setDate(1);
+        }
+
+        for (let i = 0; i < count; i++) {
+            const dueDate = new Date(nextDueDate);
+            if (frequency === 'WEEKLY') {
+                dueDate.setDate(nextDueDate.getDate() + (i * 7));
+            } else {
+                dueDate.setMonth(nextDueDate.getMonth() + i);
+                dueDate.setDate(1);
+            }
+            items.push({
+                period: i + 1,
+                label: frequency === 'WEEKLY'
+                    ? `Week ${i + 1} (${dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`
+                    : `Month ${i + 1} (${dueDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })})`,
+                dueDate: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                amount
+            });
+        }
+        return items;
+    }, [activationDate, frequency, weeklyRent, monthlyRent, durationWeeks, durationMonths]);
+
+    const handleConfirmActivation = async () => {
+        if (!customer?.driver?._id) return;
+        if (!selectedVehicleId) {
+            toast.error('Please select an available vehicle.');
+            return;
+        }
+        const effRent = frequency === 'WEEKLY' ? weeklyRent : monthlyRent;
+        if (!effRent || effRent <= 0) {
+            toast.error('Please enter a valid rental amount.');
+            return;
+        }
+
+        setIsSubmittingActivation(true);
+        const toastId = toast.loading('Activating driver & assigning vehicle...');
+        try {
+            await assignVehicleToDriver(selectedVehicleId, customer.driver._id, {
+                durationMonths: frequency === 'MONTHLY' ? Number(durationMonths) : Math.ceil(Number(durationWeeks) / 4),
+                durationWeeks: frequency === 'WEEKLY' ? Number(durationWeeks) : Number(durationMonths) * 4,
+                monthlyRent: frequency === 'MONTHLY' ? Number(monthlyRent) : Number(weeklyRent) * 4,
+                weeklyRent: frequency === 'WEEKLY' ? Number(weeklyRent) : Math.ceil(Number(monthlyRent) / 4),
+                frequency,
+                depositAmount: Number(depositAmount) || 0,
+                notes: activationNotes || `Reactivated from customer profile on ${activationDate}`,
+                activationDate: activationDate
+            });
+            toast.success('Driver activated, vehicle assigned & repayment plan generated!', { id: toastId });
+            setIsActivateModalOpen(false);
+            await fetchData();
+        } catch (err: any) {
+            console.error('Failed to activate driver:', err);
+            toast.error(err.response?.data?.message || err.message || 'Failed to activate driver', { id: toastId });
+        } finally {
+            setIsSubmittingActivation(false);
         }
     };
 
@@ -517,7 +659,13 @@ const CustomerDetail = () => {
 
                     {customer.driver && (
                         <button 
-                            onClick={handleToggleDriverStatus}
+                            onClick={() => {
+                                if (customer.driver?.status === 'ACTIVE') {
+                                    setIsCancelModalOpen(true);
+                                } else {
+                                    openActivateModal();
+                                }
+                            }}
                             className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm active:scale-95 border cursor-pointer ${
                                 customer.driver.status === 'ACTIVE' 
                                     ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border-rose-500/20' 
@@ -704,6 +852,327 @@ const CustomerDetail = () => {
                                     style={{ background: 'var(--brand-lime)' }}
                                 >
                                     Export {exportFormat.toUpperCase()}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Cancel Contract & Deactivate Driver Modal */}
+            {isCancelModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 transition-all">
+                    <div className="w-full max-w-lg p-6 sm:p-8 rounded-[2rem] border shadow-2xl relative animate-in zoom-in-95 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between pb-4 mb-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                                    <AlertCircle size={22} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-white">Deactivate Driver & Cancel Contract</h3>
+                                    <p className="text-[11px] font-medium text-dim mt-0.5">{customer.driver?.personalInfo?.fullName || customer.name} ({customer.driver?.driverId || 'Driver'})</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setIsCancelModalOpen(false)} className="text-dim hover:text-white transition-all text-sm font-bold cursor-pointer">&times;</button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 space-y-2">
+                                <p className="text-[11px] font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                                    <AlertCircle size={14} /> Critical Contract Teardown Effects:
+                                </p>
+                                <ul className="text-xs space-y-1.5 text-dim list-disc list-inside">
+                                    {customer.driver?.currentVehicle ? (
+                                        <li>
+                                            Current vehicle <span className="font-bold text-white">({(customer.driver.currentVehicle as any).basicDetails?.make || ''} {(customer.driver.currentVehicle as any).basicDetails?.model || ''} - {(customer.driver.currentVehicle as any).plateNumber || (customer.driver.currentVehicle as any).legalDocs?.registrationNumber || 'Assigned'})</span> will be unassigned & returned to <span className="text-emerald-400 font-bold">AVAILABLE</span> pool.
+                                        </li>
+                                    ) : (
+                                        <li>Vehicle assignment will be cleared.</li>
+                                    )}
+                                    <li>All pending/draft weekly rental invoices due after today will be <span className="text-rose-400 font-bold">CANCELLED</span>.</li>
+                                    <li>Future unpaid rent installments on repayment schedule will be terminated (balance set to $0).</li>
+                                    <li>Driver status and linked Customer profile will both be set to <span className="text-rose-400 font-bold">INACTIVE</span>.</li>
+                                </ul>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-dim">Cancellation Notes / Reason</label>
+                                <textarea
+                                    rows={3}
+                                    value={cancelNotes}
+                                    onChange={(e) => setCancelNotes(e.target.value)}
+                                    placeholder="Enter reason for deactivation or contract termination notes..."
+                                    className="w-full px-4 py-2.5 rounded-xl text-xs font-medium outline-none border focus:border-rose-500 transition-all resize-none"
+                                    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCancelModalOpen(false)}
+                                    disabled={isSubmittingCancel}
+                                    className="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/5 transition-all border border-white/10 cursor-pointer"
+                                >
+                                    Keep Active
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleConfirmCancelContract}
+                                    disabled={isSubmittingCancel}
+                                    className="px-6 py-2.5 rounded-xl text-white font-black text-[10px] uppercase tracking-widest bg-rose-600 hover:bg-rose-700 active:scale-95 transition-all shadow-xl cursor-pointer disabled:opacity-50"
+                                >
+                                    {isSubmittingCancel ? 'Cancelling...' : 'Confirm Deactivation'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Activate Driver & Assign Vehicle Modal */}
+            {isActivateModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 transition-all overflow-y-auto">
+                    <div className="w-full max-w-2xl my-8 p-6 sm:p-8 rounded-[2rem] border shadow-2xl relative animate-in zoom-in-95 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between pb-4 mb-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    <Car size={22} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-white">Activate Driver & Assign Vehicle</h3>
+                                    <p className="text-[11px] font-medium text-dim mt-0.5">
+                                        Assign an available car & generate repayment schedule for <span className="text-white font-bold">{customer.driver?.personalInfo?.fullName || customer.name}</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={() => setIsActivateModalOpen(false)} className="text-dim hover:text-white transition-all text-sm font-bold cursor-pointer">&times;</button>
+                        </div>
+
+                        <div className="space-y-6">
+                            {/* 1. Activation Date & Vehicle Selection */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                        <Calendar size={12} /> Activation Date (Contract Start)
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={activationDate}
+                                        onChange={(e) => setActivationDate(e.target.value)}
+                                        className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                    <span className="text-[9px] text-dim block">Repayment installments will be calibrated from this date.</span>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                        <Search size={12} /> Filter Available Cars
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={vehicleSearchQuery}
+                                        onChange={(e) => setVehicleSearchQuery(e.target.value)}
+                                        placeholder="Search by make, model, plate..."
+                                        className="w-full px-4 py-2.5 rounded-xl text-xs font-medium outline-none border focus:border-brand-lime transition-all"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Vehicle List */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">
+                                        Select Vehicle ({filteredAvailableVehicles.length} available)
+                                    </label>
+                                    {selectedVehicleId && (
+                                        <span className="text-[10px] font-black text-brand-lime uppercase tracking-wider">Vehicle Selected</span>
+                                    )}
+                                </div>
+
+                                {loadingVehicles ? (
+                                    <div className="p-8 text-center text-xs text-dim animate-pulse">Loading available fleet...</div>
+                                ) : filteredAvailableVehicles.length === 0 ? (
+                                    <div className="p-6 rounded-xl border border-dashed text-center text-xs text-dim" style={{ borderColor: 'var(--border-main)' }}>
+                                        No available vehicles found matching your search.
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
+                                        {filteredAvailableVehicles.map(v => {
+                                            const isSelected = selectedVehicleId === v._id;
+                                            const plate = (v as any).plateNumber || v.legalDocs?.registrationNumber || 'No Plate';
+                                            const fleet = v.basicDetails?.fleetNumber ? `Fleet #${v.basicDetails.fleetNumber}` : '';
+                                            return (
+                                                <div
+                                                    key={v._id}
+                                                    onClick={() => handleSelectVehicle(v)}
+                                                    className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                                                        isSelected 
+                                                            ? 'border-brand-lime bg-brand-lime/10 shadow-md' 
+                                                            : 'hover:bg-white/5 border-transparent'
+                                                    }`}
+                                                    style={!isSelected ? { borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' } : {}}
+                                                >
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-xs font-bold truncate text-white">
+                                                            {v.basicDetails?.make} {v.basicDetails?.model} {v.basicDetails?.year ? `(${v.basicDetails.year})` : ''}
+                                                        </p>
+                                                        <p className="text-[10px] font-mono text-dim mt-0.5 flex items-center gap-1.5">
+                                                            <span className="font-bold text-brand-lime">{plate}</span>
+                                                            {fleet && <span>• {fleet}</span>}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-right ml-2">
+                                                        <span className="text-xs font-black text-white">
+                                                            ${(v.basicDetails?.sellingValue || 0).toLocaleString()}
+                                                        </span>
+                                                        <span className="text-[9px] block text-dim">Value</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 2. Rent Terms */}
+                            <div className="p-4 rounded-2xl border space-y-4" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-dim">Billing Frequency</label>
+                                        <div className="grid grid-cols-2 gap-1 p-1 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFrequency('WEEKLY')}
+                                                className={`py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                                    frequency === 'WEEKLY' ? 'bg-brand-lime text-black' : 'text-dim hover:text-white'
+                                                }`}
+                                            >
+                                                Weekly
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFrequency('MONTHLY')}
+                                                className={`py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                                    frequency === 'MONTHLY' ? 'bg-brand-lime text-black' : 'text-dim hover:text-white'
+                                                }`}
+                                            >
+                                                Monthly
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-dim">
+                                            {frequency === 'WEEKLY' ? 'Duration (Weeks)' : 'Duration (Months)'}
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            value={frequency === 'WEEKLY' ? durationWeeks : durationMonths}
+                                            onChange={(e) => {
+                                                const val = Math.max(1, Number(e.target.value));
+                                                if (frequency === 'WEEKLY') setDurationWeeks(val);
+                                                else setDurationMonths(val);
+                                            }}
+                                            className="w-full px-4 py-2 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-dim">
+                                            {frequency === 'WEEKLY' ? 'Weekly Rent ($)' : 'Monthly Rent ($)'}
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            value={frequency === 'WEEKLY' ? weeklyRent : monthlyRent}
+                                            onChange={(e) => {
+                                                const val = Math.max(0, Number(e.target.value));
+                                                if (frequency === 'WEEKLY') setWeeklyRent(val);
+                                                else setMonthlyRent(val);
+                                            }}
+                                            className="w-full px-4 py-2 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-dim">Security Deposit ($)</label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            value={depositAmount}
+                                            onChange={(e) => setDepositAmount(Math.max(0, Number(e.target.value)))}
+                                            placeholder="Optional down payment / deposit"
+                                            className="w-full px-4 py-2 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-dim">Agreement / Assignment Notes</label>
+                                        <input
+                                            type="text"
+                                            value={activationNotes}
+                                            onChange={(e) => setActivationNotes(e.target.value)}
+                                            placeholder="Optional notes or remarks"
+                                            className="w-full px-4 py-2 rounded-xl text-xs font-medium outline-none border focus:border-brand-lime"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 3. Live Repayment Plan Preview */}
+                            {repaymentPreview.length > 0 && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                            <History size={12} className="text-brand-lime" /> Repayment Plan Preview (From {new Date(activationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
+                                        </label>
+                                        <span className="text-[9px] font-mono text-dim">Next {repaymentPreview.length} Installments</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                        {repaymentPreview.map(item => (
+                                            <div
+                                                key={item.period}
+                                                className="p-2.5 rounded-xl border text-xs"
+                                                style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}
+                                            >
+                                                <span className="text-[9px] font-black uppercase text-dim block truncate">{item.label}</span>
+                                                <div className="flex items-center justify-between mt-1">
+                                                    <span className="font-bold text-white">${item.amount}</span>
+                                                    <span className="text-[9px] text-emerald-400 font-medium">{item.dueDate}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsActivateModalOpen(false)}
+                                    disabled={isSubmittingActivation}
+                                    className="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/5 transition-all border border-white/10 cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleConfirmActivation}
+                                    disabled={isSubmittingActivation || !selectedVehicleId}
+                                    className="px-6 py-2.5 rounded-xl text-black font-black text-[10px] uppercase tracking-widest bg-brand-lime hover:scale-105 active:scale-95 transition-all shadow-xl cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
+                                >
+                                    {isSubmittingActivation ? 'Activating & Assigning...' : 'Activate Driver & Confirm Assignment'}
                                 </button>
                             </div>
                         </div>
