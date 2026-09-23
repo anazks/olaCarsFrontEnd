@@ -49,6 +49,7 @@ export interface JournalLine {
 export interface ManualJournal {
     _id: string;
     journalNumber: string;
+    referenceNumber?: string;
     description: string;
     date: string;
     branch: string;
@@ -78,6 +79,7 @@ export interface ManualJournal {
 }
 
 export interface CreateJournalPayload {
+    referenceNumber?: string;
     description: string;
     date: string;
     branch: string;
@@ -184,7 +186,98 @@ export const createManualJournal = async (payload: CreateJournalPayload): Promis
     return response.data.data;
 };
 
-export const bulkUploadManualJournals = async (payload: { journals?: any[]; rows?: any[] } | any[]): Promise<any> => {
+export interface JournalBulkUploadProgress {
+    type: 'progress' | 'complete' | 'error';
+    current?: number;
+    total?: number;
+    percentage?: number;
+    reference?: string;
+    statusMessage?: string;
+    message?: string;
+    data?: any;
+}
+
+export const bulkUploadManualJournals = async (
+    payload: { journals?: any[]; rows?: any[]; stream?: boolean } | any[],
+    onProgress?: (progress: JournalBulkUploadProgress) => void
+): Promise<any> => {
+    if (onProgress) {
+        const baseURL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
+        const token = localStorage.getItem('token');
+
+        const bodyObj = Array.isArray(payload) ? { journals: payload, stream: true } : { ...payload, stream: true };
+
+        const response = await fetch(`${baseURL}/api/ledger/journals/bulk-upload`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/x-ndjson',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify(bodyObj)
+        });
+
+        if (!response.ok) {
+            let errMessage = 'Bulk upload failed';
+            try {
+                const errData = await response.json();
+                errMessage = errData.message || errMessage;
+            } catch (_) {}
+            throw new Error(errMessage);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+            const json = await response.json();
+            return json.data || json;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finalResult = null;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith(':')) continue;
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (parsed.type === 'progress') {
+                        onProgress(parsed);
+                    } else if (parsed.type === 'complete') {
+                        finalResult = parsed;
+                    } else if (parsed.type === 'error') {
+                        throw new Error(parsed.message || 'Upload failed');
+                    }
+                } catch (e: any) {
+                    if (e.message && e.message !== 'Upload failed' && !e.message.startsWith('Unexpected')) {
+                        throw e;
+                    }
+                }
+            }
+        }
+
+        if (buffer.trim() && !buffer.trim().startsWith(':')) {
+            try {
+                const parsed = JSON.parse(buffer.trim());
+                if (parsed.type === 'complete') {
+                    finalResult = parsed;
+                } else if (parsed.type === 'error') {
+                    throw new Error(parsed.message || 'Upload failed');
+                }
+            } catch (_) {}
+        }
+
+        return finalResult?.data || finalResult;
+    }
+
     const response = await api.post('/api/ledger/journals/bulk-upload', payload);
     return response.data;
 };

@@ -115,7 +115,7 @@ export interface BillBulkUploadProgress {
 }
 
 export const bulkUploadBills = async (
-    payload: { rows: any[]; stream?: boolean },
+    payload: { rows: any[]; stream?: boolean; skipDuplicates?: boolean },
     onProgress?: (progress: BillBulkUploadProgress) => void
 ): Promise<any> => {
     if (payload.stream || onProgress) {

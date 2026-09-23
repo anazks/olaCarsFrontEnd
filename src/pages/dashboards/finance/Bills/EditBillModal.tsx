@@ -296,7 +296,7 @@ export const EditBillModal = ({ isOpen, bill, onClose, onSuccess }: Props) => {
                                                     <input
                                                         type="number"
                                                         min="0"
-                                                        step="0.01"
+                                                        step="any"
                                                         value={item.unitPrice}
                                                         onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
                                                         placeholder="0.00"

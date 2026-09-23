@@ -205,6 +205,7 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
     const [rowFilter, setRowFilter] = useState<'all' | 'valid' | 'invalid'>('all');
     const [searchBillNo, setSearchBillNo] = useState('');
     const [autoDownloadFailed, setAutoDownloadFailed] = useState(true);
+    const [skipDuplicates, setSkipDuplicates] = useState(true);
 
     useEffect(() => {
         if (isOpen) {
@@ -556,7 +557,7 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
 
         try {
             const res = await bulkUploadBills(
-                { rows: cleanPayloadRows, stream: true },
+                { rows: cleanPayloadRows, stream: true, skipDuplicates },
                 (progress) => {
                     setUploadProgress(progress.percentage);
                     setUploadStatusText(progress.statusMessage);
@@ -1122,32 +1123,44 @@ const BulkBillUpload = ({ isOpen, onClose, onSuccess }: BulkBillUploadProps) => 
                             </div>
 
                             {/* Control Actions */}
-                            <div className="flex justify-end gap-3 pt-2">
-                                <button
-                                    onClick={result ? onClose : handleReset}
-                                    disabled={uploading}
-                                    className="px-4 py-2 rounded-lg text-xs font-bold border hover:bg-input cursor-pointer bg-transparent text-main"
-                                    style={{ borderColor: 'var(--border-main)' }}
-                                >
-                                    {result ? 'Close' : 'Cancel'}
-                                </button>
-                                {!result && (
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                                <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-main">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={skipDuplicates} 
+                                        onChange={(e) => setSkipDuplicates(e.target.checked)}
+                                        disabled={uploading}
+                                        className="w-4 h-4 rounded text-lime-500 accent-[#C8E600] cursor-pointer"
+                                    />
+                                    <span>Skip duplicate items <span className="text-[10px] text-dim font-normal">(Ignores duplicate line items on the same bill)</span></span>
+                                </label>
+                                <div className="flex items-center gap-3">
                                     <button
-                                        onClick={handleSubmit}
-                                        disabled={uploading || parsedRows.length === 0 || errorRowsCount > 0}
-                                        className="px-6 py-2 rounded-lg text-xs font-bold transition-all text-black hover:scale-[1.02] cursor-pointer disabled:opacity-50 disabled:scale-100"
-                                        style={{ background: 'var(--brand-lime)' }}
+                                        onClick={result ? onClose : handleReset}
+                                        disabled={uploading}
+                                        className="px-4 py-2 rounded-lg text-xs font-bold border hover:bg-input cursor-pointer bg-transparent text-main"
+                                        style={{ borderColor: 'var(--border-main)' }}
                                     >
-                                        {uploading ? (
-                                            <span className="flex items-center gap-1.5">
-                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                Importing...
-                                            </span>
-                                        ) : (
-                                            `Submit ${validRowsCount} Record(s)`
-                                        )}
+                                        {result ? 'Close' : 'Cancel'}
                                     </button>
-                                )}
+                                    {!result && (
+                                        <button
+                                            onClick={handleSubmit}
+                                            disabled={uploading || parsedRows.length === 0 || errorRowsCount > 0}
+                                            className="px-6 py-2 rounded-lg text-xs font-bold transition-all text-black hover:scale-[1.02] cursor-pointer disabled:opacity-50 disabled:scale-100"
+                                            style={{ background: 'var(--brand-lime)' }}
+                                        >
+                                            {uploading ? (
+                                                <span className="flex items-center gap-1.5">
+                                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                    Importing...
+                                                </span>
+                                            ) : (
+                                                `Submit ${validRowsCount} Record(s)`
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}

@@ -45,6 +45,24 @@ const ManualJournals = () => {
     const [limit] = useState(10);
     const [pagination, setPagination] = useState<{ total: number, page: number, limit: number, totalPages: number } | null>(null);
 
+    const formatJournalDisplayDate = (val: string | Date | undefined): string => {
+        if (!val) return '—';
+        if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+            const [y, m, d] = val.split('T')[0].split('-');
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const mIdx = parseInt(m, 10) - 1;
+            return `${parseInt(d, 10)} ${monthNames[mIdx] || m} ${y}`;
+        }
+        const dObj = new Date(val);
+        if (isNaN(dObj.getTime())) return '—';
+        return dObj.toLocaleDateString('en-GB', {
+            timeZone: 'UTC',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
+    };
+
     const handleExportExcel = () => {
         if (journals.length === 0) {
             toast.error("No journals available to export.");
@@ -56,7 +74,7 @@ const ManualJournals = () => {
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Journal Number": j.journalNumber || 'N/A',
                 "Reference Number": (j as any).referenceNumber || j.journalNumber || '—',
-                "Journal Date": (j as any).journalDate ? new Date((j as any).journalDate).toLocaleDateString() : (j.date ? new Date(j.date).toLocaleDateString() : 'N/A'),
+                "Journal Date": formatJournalDisplayDate((j as any).journalDate || j.date),
                 "Status": j.status || 'N/A',
                 "Amount ($)": j.totalAmount || (j as any).amount || 0,
                 "Notes": j.description || (j as any).notes || '—',
@@ -96,7 +114,7 @@ const ManualJournals = () => {
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Journal Number": j.journalNumber || 'N/A',
                 "Reference Number": (j as any).referenceNumber || j.journalNumber || '—',
-                "Journal Date": (j as any).journalDate ? new Date((j as any).journalDate).toLocaleDateString() : (j.date ? new Date(j.date).toLocaleDateString() : 'N/A'),
+                "Journal Date": formatJournalDisplayDate((j as any).journalDate || j.date),
                 "Status": j.status || 'N/A',
                 "Amount ($)": j.totalAmount || (j as any).amount || 0,
                 "Notes": j.description || (j as any).notes || '—',
@@ -144,7 +162,7 @@ const ManualJournals = () => {
                 String(idx + 1).padStart(2, '0'),
                 j.journalNumber || 'N/A',
                 (j as any).referenceNumber || j.journalNumber || '—',
-                (j as any).journalDate ? new Date((j as any).journalDate).toLocaleDateString() : (j.date ? new Date(j.date).toLocaleDateString() : 'N/A'),
+                formatJournalDisplayDate((j as any).journalDate || j.date),
                 j.status || 'N/A',
                 `$${(j.totalAmount || (j as any).amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                 j.createdBy?.name || 'N/A'
@@ -387,14 +405,15 @@ const ManualJournals = () => {
                                                     </button>
                                                 </td>
                                                 <td className="px-6 py-5 text-sm font-semibold text-[var(--text-main)]">
-                                                    {new Date(journal.date).toLocaleDateString(undefined, {
-                                                        year: 'numeric',
-                                                        month: 'short',
-                                                        day: 'numeric'
-                                                    })}
+                                                    {formatJournalDisplayDate(journal.date)}
                                                 </td>
                                                 <td className="px-6 py-5 text-sm font-mono font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
-                                                    {journal.journalNumber}
+                                                    <div>{journal.journalNumber}</div>
+                                                    {journal.referenceNumber && (
+                                                        <div className="text-[10px] font-mono text-dim font-normal">
+                                                            Ref: {journal.referenceNumber}
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-5 text-sm text-[var(--text-main)] max-w-md truncate">
                                                     {journal.description}

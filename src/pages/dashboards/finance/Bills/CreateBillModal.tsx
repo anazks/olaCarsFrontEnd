@@ -479,7 +479,7 @@ const CreateBillModal = ({ isOpen, onClose, onSuccess }: Props) => {
                                                         type="number"
                                                         required
                                                         min="0"
-                                                        step="0.01"
+                                                        step="any"
                                                         placeholder="0.00"
                                                         value={item.unitPrice}
                                                         onChange={e => updateItem(idx, 'unitPrice', e.target.value)}

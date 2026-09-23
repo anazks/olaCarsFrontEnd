@@ -43,6 +43,24 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
     'EXPENSE': { bg: 'rgba(239,68,68,0.15)', text: '#f87171', border: 'rgba(239,68,68,0.3)' },
 };
 
+const formatJournalDisplayDate = (val: string | Date | undefined): string => {
+    if (!val) return '—';
+    if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+        const [y, m, d] = val.split('T')[0].split('-');
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const mIdx = parseInt(m, 10) - 1;
+        return `${parseInt(d, 10)} ${monthNames[mIdx] || m} ${y}`;
+    }
+    const dObj = new Date(val);
+    if (isNaN(dObj.getTime())) return '—';
+    return dObj.toLocaleDateString('en-GB', {
+        timeZone: 'UTC',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+    });
+};
+
 /**
  * Custom Searchable Account Selector in Ola Dark Theme
  */
@@ -387,6 +405,11 @@ const ManualJournalDetailModal: React.FC<ManualJournalDetailModalProps> = ({
                                 <h3 className="text-base sm:text-lg font-bold font-mono tracking-tight text-[var(--text-main, #fff)]">
                                     {journal?.journalNumber || 'Manual Journal'}
                                 </h3>
+                                {journal?.referenceNumber && (
+                                    <span className="text-[11px] font-mono text-dim px-2 py-0.5 rounded bg-white/5 border border-white/10 font-bold">
+                                        Ref: {journal.referenceNumber}
+                                    </span>
+                                )}
                                 {journal?.status && (
                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                         <CheckCircle2 size={11} />
@@ -440,11 +463,7 @@ const ManualJournalDetailModal: React.FC<ManualJournalDetailModalProps> = ({
                                         <Calendar size={12} className="opacity-60" /> Journal Date
                                     </span>
                                     <p className="text-xs sm:text-sm font-semibold text-[var(--text-main, #fff)]">
-                                        {new Date(journal.date).toLocaleDateString(undefined, {
-                                            year: 'numeric',
-                                            month: 'short',
-                                            day: 'numeric'
-                                        })}
+                                        {formatJournalDisplayDate(journal.date)}
                                     </p>
                                 </div>
 

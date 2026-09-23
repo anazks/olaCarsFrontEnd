@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, Users, DatabaseZap, BookOpen, X, ShieldAlert, ArrowRight, Lock, FileText, UserCheck } from 'lucide-react';
+import { Upload, Users, DatabaseZap, BookOpen, ShieldAlert, ArrowRight, Lock, FileText, UserCheck } from 'lucide-react';
 import { getDecodedToken } from '../../../utils/auth';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import BulkDriverUpload from './BulkDriverUpload';
@@ -1199,25 +1199,11 @@ const BulkUploadsHub = () => {
             />
 
             {activeModal === 'journal' && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-                    <div className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden border shadow-2xl"
-                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
-                            <div className="flex items-center gap-3">
-                                <BookOpen size={20} style={{ color: 'var(--brand-lime)' }} />
-                                <h2 className="text-lg font-bold text-main">Journal Bulk Importer</h2>
-                            </div>
-                            <button onClick={() => setActiveModal(null)} className="p-2 rounded-lg transition-all hover:scale-110 text-dim">
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-4">
-                            <BulkUploadJournal 
-                                onClose={() => setActiveModal(null)} 
-                                onSuccess={() => { setActiveModal(null); toast.success('Journal entries uploaded successfully!'); }} 
-                            />
-                        </div>
-                    </div>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+                    <BulkUploadJournal 
+                        onClose={() => setActiveModal(null)} 
+                        onSuccess={() => { setActiveModal(null); toast.success('Journal entries uploaded successfully!'); }} 
+                    />
                 </div>
             )}
 
