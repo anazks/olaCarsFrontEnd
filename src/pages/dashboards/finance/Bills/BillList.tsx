@@ -4,6 +4,7 @@ import {
     Receipt,
     Edit2,
     Trash2,
+    X,
     Search,
     Filter,
     ChevronLeft,
@@ -23,6 +24,7 @@ import * as billService from '../../../../services/billService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import CreateBillModal from './CreateBillModal';
 import DeleteBillModal from './DeleteBillModal';
+import BulkDeleteBillsModal from './BulkDeleteBillsModal';
 import EditBillModal from './EditBillModal';
 import BulkBillUpload from '../../shared/BulkBillUpload';
 import DateRangeReportModal from '../../shared/DateRangeReportModal';
@@ -45,6 +47,24 @@ const BillList = () => {
     const [selectedBillForDelete, setSelectedBillForDelete] = useState<any | null>(null);
     const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+
+    const handleToggleSelectAll = () => {
+        const pageIds = paginatedBills.map(b => b._id);
+        const allSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id));
+        if (allSelected) {
+            setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+        } else {
+            setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])));
+        }
+    };
+
+    const handleToggleSelectOne = (id: string) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+    };
 
     const handleDownloadReport = async (start: string, end: string) => {
         await downloadExcelReport('purchase-bills', {
@@ -694,6 +714,22 @@ const BillList = () => {
                         <table className="w-full border-collapse text-left text-xs select-text">
                             <thead>
                                 <tr className="border-b" style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                    <th className="py-4 px-4 text-center w-10" onClick={(e) => e.stopPropagation()}>
+                                        <input
+                                            type="checkbox"
+                                            checked={paginatedBills.length > 0 && paginatedBills.every(b => selectedIds.includes(b._id))}
+                                            ref={(el) => {
+                                                if (el) {
+                                                    const someSelected = paginatedBills.some(b => selectedIds.includes(b._id));
+                                                    const allSelected = paginatedBills.length > 0 && paginatedBills.every(b => selectedIds.includes(b._id));
+                                                    el.indeterminate = someSelected && !allSelected;
+                                                }
+                                            }}
+                                            onChange={handleToggleSelectAll}
+                                            className="w-4 h-4 rounded accent-[#C8E600] cursor-pointer"
+                                            title="Select all on current page"
+                                        />
+                                    </th>
                                     <th className="py-4 px-4 font-bold text-center w-12">SL</th>
                                     <th className="py-4 px-5 font-bold uppercase tracking-wider">Bill Number</th>
                                     <th className="py-4 px-5 font-bold uppercase tracking-wider">Supplier</th>
@@ -719,6 +755,14 @@ const BillList = () => {
                                             className="transition-colors cursor-pointer hover:bg-white/[0.02]"
                                             style={{ borderBottom: '1px solid var(--border-main)' }}
                                         >
+                                            <td className="py-4 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(bill._id)}
+                                                    onChange={() => handleToggleSelectOne(bill._id)}
+                                                    className="w-4 h-4 rounded accent-[#C8E600] cursor-pointer"
+                                                />
+                                            </td>
                                             <td className="py-4 px-4 text-center text-gray-500 font-semibold">
                                                 {String(startIndex + index + 1).padStart(2, '0')}
                                             </td>
@@ -871,6 +915,53 @@ const BillList = () => {
                 onClose={() => setIsReportModalOpen(false)}
                 onDownload={handleDownloadReport}
                 title="Purchase Bills Report"
+            />
+
+            {/* Floating Bulk Action Bar */}
+            {selectedIds.length > 0 && (
+                <div
+                    className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-between gap-6 px-6 py-4 rounded-2xl border shadow-2xl animate-fade-in backdrop-blur-md"
+                    style={{
+                        background: 'rgba(20, 20, 20, 0.88)',
+                        borderColor: 'var(--border-main)',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+                    }}
+                >
+                    <div className="flex items-center gap-3">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#C8E600] animate-pulse" />
+                        <span className="text-xs font-bold text-white">
+                            {selectedIds.length} bill{selectedIds.length > 1 ? 's' : ''} selected
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setIsBulkDeleteModalOpen(true)}
+                            className="flex items-center gap-1.5 px-4 py-2 text-xs font-black uppercase tracking-wider rounded-xl bg-red-600 hover:bg-red-500 text-white transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        >
+                            <Trash2 size={14} /> Delete Selected
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedIds([])}
+                            className="p-2 text-xs font-bold rounded-xl text-dim hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                            title="Clear selection"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <BulkDeleteBillsModal
+                isOpen={isBulkDeleteModalOpen}
+                billIds={selectedIds}
+                onClose={() => setIsBulkDeleteModalOpen(false)}
+                onSuccess={() => {
+                    setSelectedIds([]);
+                    fetchBills();
+                }}
             />
         </div>
     );

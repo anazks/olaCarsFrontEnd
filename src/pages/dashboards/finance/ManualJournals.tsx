@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
-import { Plus, Search, Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, BookOpen, AlertCircle, CheckCircle2, RefreshCw, FileText, Eye, Upload } from 'lucide-react';
+import { Plus, Search, Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, BookOpen, AlertCircle, CheckCircle2, RefreshCw, FileText, Eye, Upload, Pencil } from 'lucide-react';
 import { getManualJournals, getLedgerEntries } from '../../../services/ledgerService';
 import type { ManualJournal, LedgerEntry } from '../../../services/ledgerService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
@@ -15,6 +15,7 @@ const ManualJournals = () => {
     const navigate = useNavigate();
     const [journals, setJournals] = useState<ManualJournal[]>([]);
     const [selectedJournalId, setSelectedJournalId] = useState<string | null>(null);
+    const [openEditHeaderOnLoad, setOpenEditHeaderOnLoad] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [expandedJournal, setExpandedJournal] = useState<string | null>(null);
@@ -428,13 +429,28 @@ const ManualJournals = () => {
                                                     ${Number(journal.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </td>
                                                 <td className="px-6 py-5 text-center">
-                                                    <button
-                                                        onClick={() => setSelectedJournalId(journal._id)}
-                                                        className="p-2 rounded-xl bg-white/5 border border-white/10 hover:border-brand-lime/50 hover:bg-brand-lime/10 text-dim hover:text-brand-lime transition-all cursor-pointer inline-flex items-center justify-center shadow-sm active:scale-90"
-                                                        title="View & Edit Journal Details"
-                                                    >
-                                                        <Eye size={15} />
-                                                    </button>
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedJournalId(journal._id);
+                                                                setOpenEditHeaderOnLoad(false);
+                                                            }}
+                                                            className="p-2 rounded-xl bg-white/5 border border-white/10 hover:border-brand-lime/50 hover:bg-brand-lime/10 text-dim hover:text-brand-lime transition-all cursor-pointer inline-flex items-center justify-center shadow-sm active:scale-90"
+                                                            title="View Journal Details"
+                                                        >
+                                                            <Eye size={15} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedJournalId(journal._id);
+                                                                setOpenEditHeaderOnLoad(true);
+                                                            }}
+                                                            className="p-2 rounded-xl bg-white/5 border border-white/10 hover:border-[#C8E600]/50 hover:bg-[#C8E600]/10 text-dim hover:text-[#C8E600] transition-all cursor-pointer inline-flex items-center justify-center shadow-sm active:scale-90"
+                                                            title="Edit Journal (Date, Branch, Ref #)"
+                                                        >
+                                                            <Pencil size={14} />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                             {isExpanded && (
@@ -552,12 +568,17 @@ const ManualJournals = () => {
             {selectedJournalId && (
                 <ManualJournalDetailModal
                     journalId={selectedJournalId}
-                    onClose={() => setSelectedJournalId(null)}
+                    initialEditHeader={openEditHeaderOnLoad}
+                    onClose={() => {
+                        setSelectedJournalId(null);
+                        setOpenEditHeaderOnLoad(false);
+                    }}
                     onJournalUpdated={() => {
                         fetchJournals();
                     }}
                     onJournalDeleted={() => {
                         setSelectedJournalId(null);
+                        setOpenEditHeaderOnLoad(false);
                         fetchJournals();
                     }}
                 />

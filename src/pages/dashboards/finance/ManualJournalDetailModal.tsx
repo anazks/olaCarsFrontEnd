@@ -21,8 +21,10 @@ import {
     getManualJournalById, 
     updateLedgerEntry, 
     deleteSingleLedgerEntry, 
-    deleteManualJournal 
+    deleteManualJournal,
+    updateManualJournal
 } from '../../../services/ledgerService';
+import { getAllBranches, type Branch } from '../../../services/branchService';
 import type { ManualJournal, LedgerEntry } from '../../../services/ledgerService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import type { AccountingCode } from '../../../services/accountingService';
@@ -30,6 +32,7 @@ import toast from 'react-hot-toast';
 
 interface ManualJournalDetailModalProps {
     journalId: string;
+    initialEditHeader?: boolean;
     onClose: () => void;
     onJournalUpdated?: () => void;
     onJournalDeleted?: () => void;
@@ -219,6 +222,7 @@ const SearchableAccountSelector = ({
 
 const ManualJournalDetailModal: React.FC<ManualJournalDetailModalProps> = ({
     journalId,
+    initialEditHeader = false,
     onClose,
     onJournalUpdated,
     onJournalDeleted
@@ -226,8 +230,24 @@ const ManualJournalDetailModal: React.FC<ManualJournalDetailModalProps> = ({
     const [journal, setJournal] = useState<ManualJournal | null>(null);
     const [lines, setLines] = useState<LedgerEntry[]>([]);
     const [accounts, setAccounts] = useState<AccountingCode[]>([]);
+    const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Edit Journal Header State
+    const [isEditingHeader, setIsEditingHeader] = useState(initialEditHeader);
+    const [headerForm, setHeaderForm] = useState<{
+        date: string;
+        branch: string;
+        referenceNumber: string;
+        description: string;
+    }>({
+        date: '',
+        branch: '',
+        referenceNumber: '',
+        description: ''
+    });
+    const [savingHeader, setSavingHeader] = useState(false);
 
     // Edit Line State
     const [editingLineId, setEditingLineId] = useState<string | null>(null);
@@ -261,6 +281,18 @@ const ManualJournalDetailModal: React.FC<ManualJournalDetailModalProps> = ({
             const data = await getManualJournalById(journalId);
             setJournal(data.journal);
             setLines(data.lines || []);
+
+            const rawDate = data.journal?.date ? new Date(data.journal.date).toISOString().slice(0, 10) : '';
+            const branchId = typeof data.journal?.branch === 'object' && data.journal?.branch !== null
+                ? (data.journal.branch as any)._id
+                : (data.journal?.branch || '');
+
+            setHeaderForm({
+                date: rawDate,
+                branch: branchId,
+                referenceNumber: data.journal?.referenceNumber || '',
+                description: data.journal?.description || ''
+            });
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Failed to load journal details');
         } finally {
@@ -278,7 +310,79 @@ const ManualJournalDetailModal: React.FC<ManualJournalDetailModalProps> = ({
                 setAccounts(list);
             })
             .catch(err => console.error("Failed to load accounting codes:", err));
+
+        // Fetch branches for edit dropdown
+        getAllBranches({ limit: 100 })
+            .then((res: any) => {
+                const list = Array.isArray(res) ? res : (res?.data || []);
+                setBranches(list);
+            })
+            .catch(err => console.error("Failed to load branches:", err));
     }, [journalId]);
+
+    const handleStartEditHeader = () => {
+        if (!journal) return;
+        const rawDate = journal.date ? new Date(journal.date).toISOString().slice(0, 10) : '';
+        const branchId = typeof journal.branch === 'object' && journal.branch !== null
+            ? (journal.branch as any)._id
+            : (journal.branch || '');
+
+        setHeaderForm({
+            date: rawDate,
+            branch: branchId,
+            referenceNumber: journal.referenceNumber || '',
+            description: journal.description || ''
+        });
+        setIsEditingHeader(true);
+    };
+
+    const handleCancelEditHeader = () => {
+        if (journal) {
+            const rawDate = journal.date ? new Date(journal.date).toISOString().slice(0, 10) : '';
+            const branchId = typeof journal.branch === 'object' && journal.branch !== null
+                ? (journal.branch as any)._id
+                : (journal.branch || '');
+
+            setHeaderForm({
+                date: rawDate,
+                branch: branchId,
+                referenceNumber: journal.referenceNumber || '',
+                description: journal.description || ''
+            });
+        }
+        setIsEditingHeader(false);
+    };
+
+    const handleSaveHeader = async () => {
+        if (!journal) return;
+        if (!headerForm.branch) {
+            toast.error("Please select a branch");
+            return;
+        }
+        if (!headerForm.date) {
+            toast.error("Please select a journal date");
+            return;
+        }
+
+        setSavingHeader(true);
+        const toastId = toast.loading("Updating journal header...");
+        try {
+            await updateManualJournal(journalId, {
+                date: headerForm.date,
+                branch: headerForm.branch,
+                referenceNumber: headerForm.referenceNumber,
+                description: headerForm.description
+            });
+            toast.success("Journal header updated successfully", { id: toastId });
+            setIsEditingHeader(false);
+            if (onJournalUpdated) onJournalUpdated();
+            await loadJournalDetails();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || err.message || "Failed to update journal", { id: toastId });
+        } finally {
+            setSavingHeader(false);
+        }
+    };
 
     // Calculate totals
     const totalDebit = lines
@@ -405,6 +509,20 @@ const ManualJournalDetailModal: React.FC<ManualJournalDetailModalProps> = ({
                                 <h3 className="text-base sm:text-lg font-bold font-mono tracking-tight text-[var(--text-main, #fff)]">
                                     {journal?.journalNumber || 'Manual Journal'}
                                 </h3>
+                                {!isEditingHeader ? (
+                                    <button
+                                        type="button"
+                                        onClick={handleStartEditHeader}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-[#C8E600]/10 hover:bg-[#C8E600]/20 text-[#C8E600] border border-[#C8E600]/30 transition-all cursor-pointer active:scale-95 ml-1"
+                                        title="Edit Journal Date, Branch & Reference Number"
+                                    >
+                                        <Pencil size={11} /> Edit Journal
+                                    </button>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20 ml-1">
+                                        Editing Header
+                                    </span>
+                                )}
                                 {journal?.referenceNumber && (
                                     <span className="text-[11px] font-mono text-dim px-2 py-0.5 rounded bg-white/5 border border-white/10 font-bold">
                                         Ref: {journal.referenceNumber}
@@ -455,6 +573,106 @@ const ManualJournalDetailModal: React.FC<ManualJournalDetailModalProps> = ({
                         </div>
                     ) : journal && (
                         <>
+                            {/* Header Edit Panel or Metadata Grid */}
+                            {isEditingHeader ? (
+                                <div className="p-5 rounded-2xl border border-[#C8E600]/30 bg-[#C8E600]/[0.03] space-y-4 animate-in fade-in duration-200">
+                                    <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                                        <div className="flex items-center gap-2">
+                                            <Pencil size={15} className="text-[#C8E600]" />
+                                            <span className="text-xs font-bold uppercase tracking-wider text-white">
+                                                Edit Journal Details (Date, Branch & Reference Number)
+                                            </span>
+                                        </div>
+                                        <span className="text-[11px] text-dim hidden sm:inline">
+                                            Date and branch changes cascade to all linked ledger entries
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        {/* Journal Date */}
+                                        <div>
+                                            <label className="text-[10px] font-black uppercase tracking-wider text-dim flex items-center gap-1.5 mb-1.5">
+                                                <Calendar size={12} className="text-[#C8E600]" /> Journal Date *
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={headerForm.date}
+                                                onChange={(e) => setHeaderForm(prev => ({ ...prev, date: e.target.value }))}
+                                                className="w-full px-3 py-2 rounded-xl text-xs font-medium border bg-[#141721] border-white/15 text-white outline-none focus:border-[#C8E600] transition-colors"
+                                                style={{ colorScheme: 'dark' }}
+                                            />
+                                        </div>
+
+                                        {/* Branch */}
+                                        <div>
+                                            <label className="text-[10px] font-black uppercase tracking-wider text-dim flex items-center gap-1.5 mb-1.5">
+                                                <Building2 size={12} className="text-[#C8E600]" /> Branch *
+                                            </label>
+                                            <select
+                                                value={headerForm.branch}
+                                                onChange={(e) => setHeaderForm(prev => ({ ...prev, branch: e.target.value }))}
+                                                className="w-full px-3 py-2 rounded-xl text-xs font-medium border bg-[#141721] border-white/15 text-white outline-none focus:border-[#C8E600] transition-colors"
+                                            >
+                                                <option value="">Select Branch...</option>
+                                                {branches.map(b => (
+                                                    <option key={b._id} value={b._id}>
+                                                        {b.name} {b.code ? `(${b.code})` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Reference Number */}
+                                        <div>
+                                            <label className="text-[10px] font-black uppercase tracking-wider text-dim flex items-center gap-1.5 mb-1.5">
+                                                <FileText size={12} className="text-[#C8E600]" /> Reference Number
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. REF-2026-001"
+                                                value={headerForm.referenceNumber}
+                                                onChange={(e) => setHeaderForm(prev => ({ ...prev, referenceNumber: e.target.value }))}
+                                                className="w-full px-3 py-2 rounded-xl text-xs font-mono font-medium border bg-[#141721] border-white/15 text-white placeholder:text-dim outline-none focus:border-[#C8E600] transition-colors"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Description / Narration */}
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-dim block mb-1.5">
+                                            Description / Narration
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Journal description or narration notes..."
+                                            value={headerForm.description}
+                                            onChange={(e) => setHeaderForm(prev => ({ ...prev, description: e.target.value }))}
+                                            className="w-full px-3 py-2 rounded-xl text-xs font-medium border bg-[#141721] border-white/15 text-white placeholder:text-dim outline-none focus:border-[#C8E600] transition-colors"
+                                        />
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                                        <button
+                                            type="button"
+                                            disabled={savingHeader}
+                                            onClick={handleCancelEditHeader}
+                                            className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-xs font-medium text-dim hover:text-white transition-colors cursor-pointer"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={savingHeader}
+                                            onClick={handleSaveHeader}
+                                            className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold bg-[#C8E600] hover:bg-[#b8d600] text-black shadow-lg shadow-[#C8E600]/20 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                                        >
+                                            <Check size={14} /> {savingHeader ? 'Saving...' : 'Save Journal Changes'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null}
+
                             {/* Metadata Grid */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                 {/* Date */}

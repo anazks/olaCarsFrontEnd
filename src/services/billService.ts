@@ -210,3 +210,53 @@ export const deleteBill = async (id: string, payload: { paymentAction?: string; 
     });
     return response.data;
 };
+
+export interface BulkDeleteResolution {
+    billId: string;
+    action: 'REASSIGN_TO_BILL' | 'CONVERT_TO_ADVANCE';
+    targetBillId?: string;
+}
+
+export interface BulkDeleteBillsPayload {
+    billIds: string[];
+    resolutions?: BulkDeleteResolution[];
+}
+
+export interface BulkDeleteCandidateBill {
+    _id: string;
+    billNumber: string;
+    balanceDue: number;
+    totalAmount: number;
+    billDate?: string;
+    dueDate?: string;
+}
+
+export interface BulkDeletePreviewBill {
+    _id: string;
+    billNumber: string;
+    supplier?: { _id: string; name: string; supplierCode?: string };
+    totalAmount: number;
+    amountPaid: number;
+    balanceDue: number;
+    billDate?: string;
+    dueDate?: string;
+    status: string;
+    hasOtherOpenBills?: boolean;
+    otherOpenBills?: BulkDeleteCandidateBill[];
+}
+
+export interface BulkDeletePreviewResponse {
+    totalSelected: number;
+    unpaidBills: BulkDeletePreviewBill[];
+    paidBills: BulkDeletePreviewBill[];
+}
+
+export const previewBulkDeleteBills = async (billIds: string[]): Promise<BulkDeletePreviewResponse> => {
+    const response = await api.post('/api/bills/bulk-delete/preview', { billIds });
+    return response.data?.data || response.data;
+};
+
+export const bulkDeleteBills = async (payload: BulkDeleteBillsPayload): Promise<any> => {
+    const response = await api.post('/api/bills/bulk-delete', payload);
+    return response.data;
+};

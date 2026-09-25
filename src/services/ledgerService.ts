@@ -312,6 +312,19 @@ export const deleteManualJournal = async (id: string): Promise<any> => {
     return response.data;
 };
 
+export interface UpdateManualJournalPayload {
+    date?: string;
+    branch?: string;
+    referenceNumber?: string;
+    description?: string;
+    lines?: any[];
+}
+
+export const updateManualJournal = async (id: string, payload: UpdateManualJournalPayload): Promise<any> => {
+    const response = await api.put(`/api/ledger/journals/${id}`, payload);
+    return response.data;
+};
+
 // --- Voucher System ---
 
 export type VoucherType = 'SALES' | 'PURCHASE' | 'RECEIPT' | 'PAYMENT' | 'JOURNAL' | 'CONTRA';
