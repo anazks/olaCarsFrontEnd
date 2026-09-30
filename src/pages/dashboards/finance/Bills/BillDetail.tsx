@@ -26,6 +26,20 @@ import EditBillModal from './EditBillModal';
 import type { RootState } from '../../../../store';
 import { setFinanceDashboardData } from '../../../../store/dashboardSlice';
 
+const formatDateDDMMYY = (dateStr?: string | Date | null): string => {
+    if (!dateStr) return 'Not Specified';
+    if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+        const [year, month, day] = dateStr.slice(0, 10).split('-');
+        return `${day}/${month}/${year.slice(-2)}`;
+    }
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
+};
+
 const BillDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -204,7 +218,7 @@ const BillDetail = () => {
                                 <div>
                                     <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Due Date</p>
                                     <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>
-                                        {bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'Not Specified'}
+                                        {formatDateDDMMYY(bill.dueDate)}
                                     </p>
                                 </div>
                             </div>

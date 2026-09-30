@@ -61,6 +61,7 @@ export interface BasicDetails {
     make: string;
     model: string;
     year: number;
+    plateNumber?: string;
     vin?: string;
     category: VehicleCategory;
     fuelType: FuelType;
@@ -208,8 +209,8 @@ export interface StatusHistoryEntry {
 
 // ── Main Vehicle Interface ────────────────────────────────────────────────────
 
-export interface Vehicle {
-    _id: string;
+
+    plateNumber?: string;
     purchaseDetails: PurchaseDetails;
     basicDetails: BasicDetails;
     legalDocs?: LegalDocs;

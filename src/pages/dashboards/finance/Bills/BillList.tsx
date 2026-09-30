@@ -74,14 +74,18 @@ const BillList = () => {
     };
 
     const fetchAllFilteredBills = async () => {
-        return await billService.getAllBills({
-            search: debouncedSearch,
+        const queryParams: any = {
+            search: debouncedSearch.trim() || undefined,
             status: filterStatus !== 'ALL' ? filterStatus : undefined,
-            month: filterMonth,
-            year: filterYear,
-            fromDate: filterFromDate,
-            toDate: filterToDate
-        });
+            month: filterMonth || undefined,
+            year: filterYear || undefined,
+        };
+        if (filterFromDate) queryParams.fromDate = filterFromDate;
+        if (filterToDate) queryParams.toDate = filterToDate;
+        if (!filterFromDate && !filterToDate && !filterMonth && !filterYear) {
+            queryParams.ignoreDefaultDates = true;
+        }
+        return await billService.getAllBills(queryParams);
     };
 
     const handleExportExcel = async () => {
@@ -291,26 +295,13 @@ const BillList = () => {
         }
     };
 
-    const getDefaultStartDate = () => {
-        const y = new Date().getFullYear();
-        return `${y}-01-01`;
-    };
-
-    const getDefaultEndDate = () => {
-        const now = new Date();
-        const y = now.getFullYear();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    };
-
     // Filters states
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
     const [filterStatus, setFilterStatus] = useState<string>('ALL');
     const [filterMonth, setFilterMonth] = useState<string>('');
     const [filterYear, setFilterYear] = useState<string>('');
-    const [filterFromDate, setFilterFromDate] = useState<string>(getDefaultStartDate());
-    const [filterToDate, setFilterToDate] = useState<string>(getDefaultEndDate());
+    const [filterFromDate, setFilterFromDate] = useState<string>('');
+    const [filterToDate, setFilterToDate] = useState<string>('');
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -351,16 +342,21 @@ const BillList = () => {
     const fetchBills = async () => {
         setRefreshing(true);
         try {
-            const res = await billService.getAllBills({
+            const queryParams: any = {
                 page: currentPage,
                 limit: pageSize,
-                search: debouncedSearch,
+                search: debouncedSearch.trim() || undefined,
                 status: filterStatus !== 'ALL' ? filterStatus : undefined,
-                month: filterMonth,
-                year: filterYear,
-                fromDate: filterFromDate,
-                toDate: filterToDate
-            });
+                month: filterMonth || undefined,
+                year: filterYear || undefined,
+            };
+            if (filterFromDate) queryParams.fromDate = filterFromDate;
+            if (filterToDate) queryParams.toDate = filterToDate;
+            if (!filterFromDate && !filterToDate && !filterMonth && !filterYear) {
+                queryParams.ignoreDefaultDates = true;
+            }
+
+            const res = await billService.getAllBills(queryParams);
             setBills(res.data || []);
             if (res.pagination) {
                 setTotalRecords(res.pagination.totalItems);
@@ -489,16 +485,83 @@ const BillList = () => {
             {/* Collapsible Filter Panel */}
             {isFilterPanelOpen && (
                 <div className="border rounded-[2rem] p-6 space-y-4 transition-all duration-300 animate-in fade-in slide-in-from-top-4 duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                        <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Filter Bills</h3>
+                    <div className="flex flex-wrap justify-between items-center gap-3 border-b border-white/5 pb-3">
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Filter Bills</h3>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFilterMonth('');
+                                    setFilterYear('');
+                                    setFilterFromDate('');
+                                    setFilterToDate('');
+                                }}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                                    !filterMonth && !filterYear && !filterFromDate && !filterToDate
+                                        ? 'bg-[#C8E600]/10 text-[#C8E600] border-[#C8E600]/30'
+                                        : 'border-white/10 text-dim hover:text-white'
+                                }`}
+                            >
+                                All Time
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFilterMonth('');
+                                    setFilterYear('2026');
+                                    setFilterFromDate('');
+                                    setFilterToDate('');
+                                }}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                                    filterYear === '2026'
+                                        ? 'bg-[#C8E600]/10 text-[#C8E600] border-[#C8E600]/30'
+                                        : 'border-white/10 text-dim hover:text-white'
+                                }`}
+                            >
+                                2026
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFilterMonth('');
+                                    setFilterYear('2025');
+                                    setFilterFromDate('');
+                                    setFilterToDate('');
+                                }}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                                    filterYear === '2025'
+                                        ? 'bg-[#C8E600]/10 text-[#C8E600] border-[#C8E600]/30'
+                                        : 'border-white/10 text-dim hover:text-white'
+                                }`}
+                            >
+                                2025
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFilterMonth('');
+                                    setFilterYear('2024');
+                                    setFilterFromDate('');
+                                    setFilterToDate('');
+                                }}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                                    filterYear === '2024'
+                                        ? 'bg-[#C8E600]/10 text-[#C8E600] border-[#C8E600]/30'
+                                        : 'border-white/10 text-dim hover:text-white'
+                                }`}
+                            >
+                                2024
+                            </button>
+                        </div>
                         <button
                             type="button"
                             onClick={() => {
                                 setFilterStatus('ALL');
                                 setFilterMonth('');
                                 setFilterYear('');
-                                setFilterFromDate(getDefaultStartDate());
-                                setFilterToDate(getDefaultEndDate());
+                                setFilterFromDate('');
+                                setFilterToDate('');
+                                setSearch('');
                             }}
                             className="text-[10px] font-black uppercase tracking-widest text-brand-lime hover:opacity-80 transition-all bg-transparent border-none cursor-pointer"
                             style={{ color: '#C8E600' }}
@@ -556,14 +619,23 @@ const BillList = () => {
                             <label className="text-[9px] font-black uppercase tracking-wider text-dim" style={{ color: 'var(--text-dim)' }}>Year</label>
                             <select
                                 value={filterYear}
-                                onChange={(e) => setFilterYear(e.target.value)}
+                                onChange={(e) => {
+                                    setFilterYear(e.target.value);
+                                    if (e.target.value) {
+                                        setFilterFromDate('');
+                                        setFilterToDate('');
+                                    }
+                                }}
                                 className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
                                 style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             >
                                 <option value="">All Years</option>
-                                <option value="2025">2025</option>
-                                <option value="2026">2026</option>
                                 <option value="2027">2027</option>
+                                <option value="2026">2026</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                                <option value="2022">2022</option>
                             </select>
                         </div>
 
@@ -573,7 +645,13 @@ const BillList = () => {
                             <input
                                 type="date"
                                 value={filterFromDate}
-                                onChange={(e) => setFilterFromDate(e.target.value)}
+                                onChange={(e) => {
+                                    setFilterFromDate(e.target.value);
+                                    if (e.target.value) {
+                                        setFilterYear('');
+                                        setFilterMonth('');
+                                    }
+                                }}
                                 className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
                                 style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             />
@@ -585,7 +663,13 @@ const BillList = () => {
                             <input
                                 type="date"
                                 value={filterToDate}
-                                onChange={(e) => setFilterToDate(e.target.value)}
+                                onChange={(e) => {
+                                    setFilterToDate(e.target.value);
+                                    if (e.target.value) {
+                                        setFilterYear('');
+                                        setFilterMonth('');
+                                    }
+                                }}
                                 className="w-full px-3 py-2.5 rounded-xl border outline-none text-xs"
                                 style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                             />

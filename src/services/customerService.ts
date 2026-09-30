@@ -23,6 +23,7 @@ export interface Customer {
             phone?: string;
         };
         weeklyRent?: number;
+    durationWeeks?: number;
         currentVehicle?: {
             _id?: string;
             basicDetails?: {
@@ -90,17 +91,8 @@ export interface Customer {
     createdAt: string;
 }
 
-export interface CreateCustomerPayload {
-    name: string;
-    email?: string;
-    phone?: string;
-    whatsappNumber?: string;
-    branch: string;
-    address?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    status?: 'ACTIVE' | 'INACTIVE';
+
+    durationWeeks?: number;
 }
 
 export const getAllCustomers = async (params: any = {}) => {
