@@ -48,7 +48,7 @@ const DriverVehicleAssignment = () => {
 
                 console.log('[DEBUG] DriverVehicleAssignment - Fetching vehicles...');
                 const response = await getAvailableVehicles({
-                    limit: 100
+                    limit: 1000
                 });
 
                 const vehiclesList = response.data || [];
@@ -322,7 +322,18 @@ const DriverVehicleAssignment = () => {
                                     </div>
                                     <div className="pt-3 mt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
                                         <div className="flex items-center justify-between">
-                                            <p className="text-[10px] uppercase font-bold tracking-wider truncate opacity-70">Plate No: {vehicle.basicDetails.vin || '—'}</p>
+                                            <div className="flex flex-col gap-1 min-w-0 flex-1">
+                                                <p className="text-[10px] uppercase font-bold tracking-wider truncate opacity-70">Plate: {vehicle.legalDocs?.registrationNumber || vehicle.plateNumber || '—'}</p>
+                                                {isAssigned ? (
+                                                    <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-rose-400 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded w-fit">
+                                                        Assigned: {driverName}
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded w-fit">
+                                                        Available
+                                                    </span>
+                                                )}
+                                            </div>
                                             {vehicle.basicDetails.weeklyRent ? (
                                                 <p className="text-xs font-black text-brand-lime">${vehicle.basicDetails.weeklyRent.toLocaleString()}/wk</p>
                                             ) : null}
