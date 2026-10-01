@@ -140,6 +140,7 @@ const VehicleDetail = () => {
     // Cancel Contract modal state for vehicle driver change
     const [isCancelContractModalOpen, setIsCancelContractModalOpen] = useState(false);
     const [cancelNotes, setCancelNotes] = useState('');
+    const [cancelEndDate, setCancelEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [pendingNewDriverId, setPendingNewDriverId] = useState<string | null>(null);
     const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
@@ -340,7 +341,7 @@ const VehicleDetail = () => {
         setLoadingUnassignedDrivers(true);
         try {
             const params: any = {
-                status: 'ACTIVE,APPROVED',
+                status: mode === 'TEMP' ? 'ACTIVE' : 'ACTIVE,APPROVED,INACTIVE',
                 search: searchQuery,
                 limit: 50
             };
@@ -388,7 +389,7 @@ const VehicleDetail = () => {
         try {
             const { updateDriver } = await import('../../../services/driverService');
             await editVehicle(id, { currentDriver: newDriverId } as any);
-            await updateDriver(newDriverId, { currentVehicle: id });
+            await updateDriver(newDriverId, { currentVehicle: id, status: 'ACTIVE' });
 
             toast.success('Driver assigned successfully');
             setIsChangeDriverModalOpen(false);
@@ -407,13 +408,13 @@ const VehicleDetail = () => {
         const toastId = toast.loading("Cancelling contract and updating vehicle...");
         try {
             // 1. Cancel contract for existing assigned driver
-            await cancelContract(assignedDriver._id, cancelNotes || undefined);
+            await cancelContract(assignedDriver._id, cancelNotes || undefined, cancelEndDate);
 
             // 2. If a new driver was selected to replace old driver, assign new driver
             if (pendingNewDriverId) {
                 const { updateDriver } = await import('../../../services/driverService');
                 await editVehicle(id, { currentDriver: pendingNewDriverId } as any);
-                await updateDriver(pendingNewDriverId, { currentVehicle: id });
+                await updateDriver(pendingNewDriverId, { currentVehicle: id, status: 'ACTIVE' });
                 toast.success("Contract cancelled and new driver assigned successfully!", { id: toastId });
             } else {
                 toast.success("Contract cancelled and driver unassigned successfully!", { id: toastId });
@@ -2318,7 +2319,7 @@ const VehicleDetail = () => {
                                     <p className="text-[10px] mt-1 max-w-xs" style={{ color: 'var(--text-dim)' }}>
                                         {driverModalMode === 'TEMP'
                                             ? 'No active drivers were found.'
-                                            : 'No active drivers without a currently assigned vehicle were found.'}
+                                            : 'No available drivers without an assigned vehicle were found.'}
                                     </p>
                                 </div>
                             ) : (
@@ -2433,7 +2434,25 @@ const VehicleDetail = () => {
                                 </ul>
                             </div>
 
-                            <div className="space-y-1.5">
+<div className="space-y-1.5">
+                                <label className="text-[11px] font-black uppercase tracking-wider text-dim block">
+                                    Contract End Date <span className="text-red-400">*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={cancelEndDate}
+                                    max={new Date().toISOString().split('T')[0]}
+                                    onChange={(e) => setCancelEndDate(e.target.value)}
+                                    disabled={isSubmittingCancel}
+                                    className="w-full p-3 rounded-xl bg-black/20 border text-xs font-medium text-white outline-none focus:border-red-500/50 transition-all cursor-pointer"
+                                    style={{ borderColor: 'var(--border-main)' }}
+                                />
+                                <p className="text-[10px] text-dim">
+                                    Select contract termination date (future dates are disabled). Repayment plan weeks after this date will be cancelled.
+                                </p>
+                            </div>
+
+                                                        <div className="space-y-1.5">
                                 <label className="text-[11px] font-black uppercase tracking-wider text-dim block">
                                     Reason / Notes for Cancellation <span className="text-dim opacity-50 font-normal">(Optional)</span>
                                 </label>

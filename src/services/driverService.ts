@@ -227,8 +227,8 @@ export const deleteDriver = async (id: string): Promise<void> => {
     await api.delete(`/api/driver/${id}`);
 };
 
-export const cancelContract = async (id: string, notes?: string): Promise<Driver> => {
-    const response = await api.put(`/api/driver/${id}/cancel-contract`, { notes });
+export const cancelContract = async (id: string, notes?: string, endDate?: string): Promise<Driver> => {
+    const response = await api.put(`/api/driver/${id}/cancel-contract`, { notes, endDate });
     return response.data.data;
 };
 

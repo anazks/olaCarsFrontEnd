@@ -32,6 +32,7 @@ const DriverDetail = () => {
 
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [cancelNotes, setCancelNotes] = useState('');
+    const [cancelEndDate, setCancelEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
     const [expandedPayments, setExpandedPayments] = useState<Record<string, boolean>>({});
@@ -166,7 +167,7 @@ const DriverDetail = () => {
         const toastId = toast.loading("Cancelling contract and releasing vehicle...");
         try {
             setIsSubmittingCancel(true);
-            await cancelContract(id, cancelNotes || undefined);
+            await cancelContract(id, cancelNotes || undefined, cancelEndDate);
             toast.success("Contract cancelled successfully!", { id: toastId });
             setIsCancelModalOpen(false);
             setCancelNotes('');
@@ -1860,7 +1861,25 @@ const DriverDetail = () => {
                                 </ul>
                             </div>
 
-                            <div className="space-y-1.5">
+<div className="space-y-1.5">
+                                <label className="text-[11px] font-black uppercase tracking-wider text-dim block">
+                                    Contract End Date <span className="text-red-400">*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={cancelEndDate}
+                                    max={new Date().toISOString().split('T')[0]}
+                                    onChange={(e) => setCancelEndDate(e.target.value)}
+                                    disabled={isSubmittingCancel}
+                                    className="w-full p-3 rounded-xl bg-black/20 border text-xs font-medium text-white outline-none focus:border-red-500/50 transition-all cursor-pointer"
+                                    style={{ borderColor: 'var(--border-main)' }}
+                                />
+                                <p className="text-[10px] text-dim">
+                                    Select contract termination date (future dates are disabled). Repayment plan weeks after this date will be cancelled.
+                                </p>
+                            </div>
+
+                                                        <div className="space-y-1.5">
                                 <label className="text-[11px] font-black uppercase tracking-wider text-dim block">
                                     Reason / Notes for Cancellation <span className="text-dim opacity-50 font-normal">(Optional)</span>
                                 </label>

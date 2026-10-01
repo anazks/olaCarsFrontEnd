@@ -209,7 +209,8 @@ export interface StatusHistoryEntry {
 
 // ── Main Vehicle Interface ────────────────────────────────────────────────────
 
-
+export interface Vehicle {
+    _id: string;
     plateNumber?: string;
     purchaseDetails: PurchaseDetails;
     basicDetails: BasicDetails;
