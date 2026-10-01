@@ -290,14 +290,28 @@ const DriverVehicleAssignment = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {filteredVehicles.map((vehicle) => {
                         const isSelected = selectedVehicleId === vehicle._id;
+                        const isAssigned = !!(vehicle.currentDriver || vehicle.status === 'ACTIVE — RENTED');
+                        const cd: any = vehicle.currentDriver;
+                        const driverName = (cd?.personalInfo?.fullName || cd?.name || cd?.fullName || (cd?.driverId ? `Driver ${cd.driverId}` : '') || '').trim() || 'another driver';
 
                         return (
                             <div
                                 key={vehicle._id}
-                                onClick={() => setSelectedVehicleId(vehicle._id)}
+                                onClick={() => {
+                                    if (isAssigned) {
+                                        toast.error(
+                                            `This vehicle is already assigned with the driver (${driverName}), please cancel it to assign it to a new driver.`,
+                                            { duration: 7000, icon: '⚠️' }
+                                        );
+                                        return;
+                                    }
+                                    setSelectedVehicleId(vehicle._id);
+                                }}
                                 className={`cursor-pointer rounded-2xl border p-5 transition-all relative overflow-hidden group ${isSelected
                                         ? 'border-brand-lime shadow-lg scale-[1.02] bg-brand-lime/5'
-                                        : 'hover:border-brand-lime hover:shadow-md'
+                                        : isAssigned
+                                            ? 'border-rose-500/30 bg-rose-500/[0.03] hover:border-rose-500/60'
+                                            : 'hover:border-brand-lime hover:shadow-md'
                                     }`}
                                 style={{ backgroundColor: isSelected ? '' : 'var(--bg-card)', borderColor: isSelected ? 'var(--brand-lime)' : 'var(--border-main)' }}
                             >
