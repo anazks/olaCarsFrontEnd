@@ -3,6 +3,7 @@ import api from './api';
 export interface Customer {
     _id: string;
     customerId: string;
+    isDriver?: boolean;
     driver?: {
         _id: string;
         driverId?: string;
@@ -46,6 +47,20 @@ export interface Customer {
             plateNumber?: string;
             status?: string;
         };
+        assignmentHistory?: Array<{
+            _id?: string;
+            vehicle?: any;
+            plateNumber?: string;
+            fleetNumber?: string;
+            vehicleModel?: string;
+            weeklyRent?: number;
+            startDate: string;
+            endDate?: string | null;
+            status: 'ACTIVE' | 'CANCELLED' | 'COMPLETED';
+            cancelledBy?: string;
+            cancelNotes?: string;
+            createdAt?: string;
+        }>;
         rentChangeHistory?: Array<{
             _id?: string;
             previousWeeklyRent?: number;
@@ -150,5 +165,18 @@ export const bulkCreateCustomers = async (customers: any[], branch?: string): Pr
 
 export const updateCustomerWeeklyRent = async (id: string, payload: { weeklyRent: number; remark: string; effectiveDate?: string }) => {
     const res = await api.put(`/api/customers/${id}/weekly-rent`, payload);
+    return res.data;
+};
+
+export const assignVehicleToCustomer = async (
+    id: string, 
+    payload: { 
+        vehicleId: string; 
+        startDate?: string; 
+        durationWeeks?: number; 
+        weeklyRent?: number;
+    }
+) => {
+    const res = await api.post(`/api/customers/${id}/assign-vehicle`, payload);
     return res.data;
 };

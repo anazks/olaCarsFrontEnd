@@ -36,13 +36,15 @@ const OlaVehicleSelect = ({ vehicles, selectedId, onSelect, selectedBranchId, lo
 
     const filteredVehicles = vehicles.filter(v => {
         if (!search.trim()) return true;
-        const term = search.toLowerCase();
-        const plate = (v.legalDocs?.registrationNumber || v.plateNumber || v.basicDetails?.plateNumber || '').toLowerCase();
+        const rawTerm = search.toLowerCase();
+        const cleanTerm = rawTerm.replace(/[\s-_]/g, '');
+        const rawPlate = (v.legalDocs?.registrationNumber || v.plateNumber || v.basicDetails?.plateNumber || '').toLowerCase();
+        const cleanPlate = rawPlate.replace(/[\s-_]/g, '');
         const make = (v.basicDetails?.make || '').toLowerCase();
         const model = (v.basicDetails?.model || '').toLowerCase();
         const fleetNo = (v.basicDetails?.fleetNumber || '').toLowerCase();
         const vin = (v.basicDetails?.vin || '').toLowerCase();
-        return plate.includes(term) || make.includes(term) || model.includes(term) || fleetNo.includes(term) || vin.includes(term);
+        return rawPlate.includes(rawTerm) || cleanPlate.includes(cleanTerm) || make.includes(rawTerm) || model.includes(rawTerm) || fleetNo.includes(rawTerm) || vin.includes(rawTerm);
     });
 
     const sortedVehicles = [...filteredVehicles].sort((a, b) => {
@@ -361,7 +363,7 @@ export const QuickAddCustomerModal = ({ isOpen, onClose, onSuccess, branches }: 
         if (!isOpen || !isDriver) return;
         let isMounted = true;
         setLoadingVehicles(true);
-        getAllVehicles({ limit: 1000 })
+        getAllVehicles({ limit: 2000 })
             .then(res => {
                 if (isMounted) {
                     const list = Array.isArray(res) 

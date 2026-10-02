@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { 
     User, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
@@ -6,16 +6,344 @@ import {
     Download, CheckCircle2, AlertCircle,
     ArrowLeft, Zap, Briefcase, Filter, X,
     ChevronLeft, ChevronRight, Search, Eye,
-    Car, Hash, Tag, Pencil, History
+    Car, Hash, Tag, Pencil, History, Clock, ChevronDown, Check, AlertTriangle
 } from 'lucide-react';
-import { getCustomerById, updateCustomer, updateCustomerWeeklyRent, type Customer } from '../../../../services/customerService';
+import { getCustomerById, updateCustomer, updateCustomerWeeklyRent, assignVehicleToCustomer, type Customer } from '../../../../services/customerService';
 import { driverService } from '../../../../services/driverService';
-import { getAvailableVehicles, assignVehicleToDriver, type Vehicle } from '../../../../services/vehicleService';
+import { getAllVehicles, assignVehicleToDriver, type Vehicle } from '../../../../services/vehicleService';
 import { getInvoicesByCustomer, type Invoice } from '../../../../services/invoiceService';
 import { getAllCreditNotes, type CreditNote } from '../../../../services/creditNoteService';
 import api from '../../../../services/api';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import toast from 'react-hot-toast';
+
+
+interface OlaVehicleSelectProps {
+    vehicles: Vehicle[];
+    selectedId: string;
+    onSelect: (id: string, vehicle?: Vehicle) => void;
+    selectedBranchId?: string;
+    loading?: boolean;
+}
+
+const OlaVehicleSelect = ({ vehicles, selectedId, onSelect, selectedBranchId, loading }: OlaVehicleSelectProps) => {
+    const [assignedAlert, setAssignedAlert] = useState<{ plate: string; driverName: string } | null>(null);
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedVehicle = vehicles.find(v => v._id === selectedId);
+
+    const getDriverName = (driver: any): string => {
+        if (!driver) return '';
+        if (typeof driver === 'string') return driver;
+        const pInfo = driver.personalInfo;
+        const name = pInfo?.fullName || driver.name || driver.fullName || '';
+        const code = driver.driverId ? ` (${driver.driverId})` : '';
+        return (name ? `${name}${code}` : (driver.driverId ? `Driver ${driver.driverId}` : '')).trim();
+    };
+
+    const filteredVehicles = vehicles.filter(v => {
+        if (!search.trim()) return true;
+        const rawTerm = search.toLowerCase();
+        const cleanTerm = rawTerm.replace(/[\s-_]/g, '');
+        const rawPlate = (v.legalDocs?.registrationNumber || (v as any).plateNumber || v.basicDetails?.plateNumber || '').toLowerCase();
+        const cleanPlate = rawPlate.replace(/[\s-_]/g, '');
+        const make = (v.basicDetails?.make || '').toLowerCase();
+        const model = (v.basicDetails?.model || '').toLowerCase();
+        const fleetNo = (v.basicDetails?.fleetNumber || '').toLowerCase();
+        const vin = (v.basicDetails?.vin || '').toLowerCase();
+        return rawPlate.includes(rawTerm) || cleanPlate.includes(cleanTerm) || make.includes(rawTerm) || model.includes(rawTerm) || fleetNo.includes(rawTerm) || vin.includes(rawTerm);
+    });
+
+    const sortedVehicles = [...filteredVehicles].sort((a, b) => {
+        if (!selectedBranchId) return 0;
+        const aBranch = (a.purchaseDetails?.branch as any)?._id || a.purchaseDetails?.branch;
+        const bBranch = (b.purchaseDetails?.branch as any)?._id || b.purchaseDetails?.branch;
+        const aMatch = String(aBranch) === String(selectedBranchId);
+        const bMatch = String(bBranch) === String(selectedBranchId);
+        if (aMatch && !bMatch) return -1;
+        if (!aMatch && bMatch) return 1;
+        return 0;
+    });
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-full px-4 py-3 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 ${
+                    isOpen 
+                        ? 'border-brand-lime ring-2 ring-brand-lime/20 bg-black/40' 
+                        : selectedVehicle 
+                            ? 'border-brand-lime/50 bg-brand-lime/[0.04] hover:border-brand-lime' 
+                            : 'hover:border-white/20 hover:bg-white/[0.02]'
+                }`}
+                style={{ 
+                    background: selectedVehicle ? undefined : 'var(--bg-input)', 
+                    borderColor: selectedVehicle && !isOpen ? 'rgba(200,230,0,0.45)' : undefined 
+                }}
+            >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div 
+                        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
+                        style={{ 
+                            background: selectedVehicle ? 'rgba(200,230,0,0.18)' : 'rgba(255,255,255,0.05)', 
+                            color: selectedVehicle ? 'var(--brand-lime)' : 'var(--text-dim)' 
+                        }}
+                    >
+                        <Car size={16} />
+                    </div>
+
+                    {selectedVehicle ? (
+                        <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-mono font-black tracking-wider bg-white/10 text-white border border-brand-lime/30 flex-shrink-0">
+                                <span className="w-1.5 h-1.5 rounded-full bg-brand-lime shadow-sm shadow-brand-lime"></span>
+                                {selectedVehicle.legalDocs?.registrationNumber || (selectedVehicle as any).plateNumber || selectedVehicle.basicDetails?.plateNumber || 'No Plate'}
+                            </span>
+                            <span className="font-bold text-xs truncate" style={{ color: 'var(--text-main)' }}>
+                                {selectedVehicle.basicDetails?.make} {selectedVehicle.basicDetails?.model} {selectedVehicle.basicDetails?.year ? `(${selectedVehicle.basicDetails.year})` : ''}
+                            </span>
+                            {selectedVehicle.basicDetails?.weeklyRent ? (
+                                <span className="text-[11px] font-black text-brand-lime sm:ml-auto flex-shrink-0">
+                                    ${selectedVehicle.basicDetails.weeklyRent}/wk
+                                </span>
+                            ) : null}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col">
+                            <span className="text-xs font-semibold" style={{ color: 'var(--text-dim)' }}>
+                                {loading ? 'Loading fleet vehicles...' : 'Select an available vehicle (Optional)...'}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {selectedVehicle && (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSelect('', undefined);
+                            }}
+                            className="p-1 rounded-lg hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
+                            title="Unassign vehicle"
+                        >
+                            <X size={14} />
+                        </button>
+                    )}
+                    <ChevronDown size={16} className={`text-dim transition-transform duration-200 ${isOpen ? 'rotate-180 text-brand-lime' : ''}`} />
+                </div>
+            </div>
+
+            {isOpen && (
+                <div 
+                    className="absolute left-0 right-0 top-full mt-2 z-50 rounded-2xl border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                    style={{ 
+                        background: 'var(--bg-card)', 
+                        borderColor: 'var(--border-main)',
+                        boxShadow: '0 20px 40px -15px rgba(0,0,0,0.5)'
+                    }}
+                >
+                    <div className="p-3 border-b border-white/10" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                        <div className="relative">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-brand-lime" />
+                            <input
+                                type="text"
+                                placeholder="Search plate, model, fleet #..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                onClick={e => e.stopPropagation()}
+                                autoFocus
+                                className="w-full pl-9 pr-7 py-2 rounded-xl text-xs font-semibold border outline-none focus:border-brand-lime transition-all" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            />
+                            {search && (
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); setSearch(''); }}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white"
+                                >
+                                    <X size={12} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="max-h-60 overflow-y-auto custom-scrollbar p-1.5 space-y-1">
+                        <div
+                            onClick={() => {
+                                onSelect('', undefined);
+                                setIsOpen(false);
+                            }}
+                            className={`px-3 py-2.5 rounded-xl cursor-pointer transition-all flex items-center justify-between text-xs font-bold ${
+                                !selectedId 
+                                    ? 'bg-brand-lime/10 text-brand-lime border border-brand-lime/30' 
+                                    : 'text-neutral-400 hover:bg-white/5 hover:text-white'
+                            }`}
+                        >
+                            <span className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-neutral-500"></span>
+                                No vehicle assigned (Assign later)
+                            </span>
+                            {!selectedId && <Check size={14} className="text-brand-lime" />}
+                        </div>
+
+                        {sortedVehicles.length > 0 ? (
+                            sortedVehicles.map(v => {
+                                const isSelected = v._id === selectedId;
+                                const plate = v.legalDocs?.registrationNumber || (v as any).plateNumber || v.basicDetails?.plateNumber || 'No Plate';
+                                const make = v.basicDetails?.make || '';
+                                const model = v.basicDetails?.model || '';
+                                const year = v.basicDetails?.year ? `(${v.basicDetails.year})` : '';
+                                const fleet = v.basicDetails?.fleetNumber ? `Fleet #${v.basicDetails.fleetNumber}` : '';
+                                const rent = v.basicDetails?.weeklyRent;
+                                const vBranchId = (v.purchaseDetails?.branch as any)?._id || v.purchaseDetails?.branch;
+                                const isBranchMatch = selectedBranchId && String(vBranchId) === String(selectedBranchId);
+
+                                const isAssigned = !!(v.currentDriver || v.status === 'ACTIVE — RENTED' || (v.status as string) === 'ACTIVE - RENTED');
+                                const assignedDriverName = getDriverName(v.currentDriver) || 'another driver';
+
+                                const handleItemClick = () => {
+                                    if (isAssigned) {
+                                        setAssignedAlert({ plate, driverName: assignedDriverName });
+                                        toast.error(
+                                            `This vehicle is already assigned with the driver (${assignedDriverName}), please cancel it to assign it to a new driver.`,
+                                            { duration: 7000, icon: '⚠️' }
+                                        );
+                                        return;
+                                    }
+                                    onSelect(v._id, v);
+                                    setIsOpen(false);
+                                };
+
+                                return (
+                                    <div
+                                        key={v._id}
+                                        onClick={handleItemClick}
+                                        className={`px-3 py-2.5 rounded-xl cursor-pointer transition-all flex items-center justify-between gap-3 text-xs ${
+                                            isSelected 
+                                                ? 'bg-brand-lime/15 text-white border border-brand-lime/40 shadow-sm' 
+                                                : isAssigned
+                                                    ? 'hover:bg-rose-500/[0.08] border border-rose-500/10 bg-rose-500/[0.03] opacity-80 hover:opacity-100'
+                                                    : 'hover:bg-white/5 border border-transparent'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                            <span className={`px-2 py-0.5 rounded font-mono font-black text-[11px] tracking-wider border flex-shrink-0 ${
+                                                isSelected 
+                                                    ? 'bg-brand-lime text-black border-brand-lime' 
+                                                    : isAssigned
+                                                        ? 'bg-rose-500/10 text-rose-300 border-rose-500/20'
+                                                        : 'bg-white/5 text-neutral-200 border-white/10'
+                                            }`}>
+                                                {plate}
+                                            </span>
+
+                                            <div className="min-w-0 flex-1 truncate">
+                                                <span className={`font-bold truncate ${isAssigned ? 'text-neutral-300' : 'text-white'}`}>
+                                                    {make} {model}
+                                                </span>
+                                                <span className="text-[10px] text-neutral-400 ml-1.5 truncate">
+                                                    {year} {fleet ? `• ${fleet}` : ''}
+                                                </span>
+                                            </div>
+
+                                            {isAssigned ? (
+                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30 flex-shrink-0 flex items-center gap-1" title={`Assigned to ${assignedDriverName}`}>
+                                                    <AlertTriangle size={10} />
+                                                    Assigned: {assignedDriverName}
+                                                </span>
+                                            ) : (
+                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex-shrink-0">
+                                                    Available
+                                                </span>
+                                            )}
+
+                                            {isBranchMatch && (
+                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex-shrink-0">
+                                                    This Branch
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            {rent ? (
+                                                <span className={`font-black text-xs ${isAssigned ? 'text-neutral-500 line-through' : 'text-brand-lime'}`}>
+                                                    ${rent}/wk
+                                                </span>
+                                            ) : null}
+                                            {isSelected && <CheckCircle2 size={14} className="text-brand-lime" />}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="p-4 text-center text-dim text-xs">
+                                {loading ? 'Loading vehicles...' : `No vehicles found matching "${search}"`}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-2.5 border-t border-white/10 flex items-center justify-between text-[10px] font-semibold text-neutral-400" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                        <span>{vehicles.length} fleet vehicles ({vehicles.filter(v => !v.currentDriver && v.status !== 'ACTIVE — RENTED' && (v.status as string) !== 'ACTIVE - RENTED').length} available)</span>
+                        <span className="text-brand-lime font-mono">Ola Fleet</span>
+                    </div>
+                </div>
+            )}
+
+            {assignedAlert && (
+                <div 
+                    className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-150"
+                    onClick={(e) => { e.stopPropagation(); setAssignedAlert(null); }}
+                >
+                    <div 
+                        className="w-full max-w-md rounded-3xl p-6 border shadow-2xl space-y-4 animate-in zoom-in-95 duration-150"
+                        style={{ 
+                            background: '#12161f', 
+                            borderColor: 'rgba(239, 68, 68, 0.4)',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 35px rgba(239, 68, 68, 0.2)' 
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                                <AlertTriangle size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-black text-white">Vehicle Already Assigned</h3>
+                                <p className="text-xs text-neutral-400 font-mono font-bold mt-0.5">{assignedAlert.plate}</p>
+                            </div>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs font-semibold leading-relaxed text-rose-200">
+                            This vehicle is already assigned with the driver <span className="font-black text-white underline underline-offset-2">({assignedAlert.driverName})</span>, please cancel it to assign it to a new driver.
+                        </div>
+
+                        <div className="flex justify-end pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setAssignedAlert(null)}
+                                className="px-5 py-2.5 rounded-xl font-bold text-xs bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 transition-all border border-rose-500/30"
+                            >
+                                Understood
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const CustomerDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -37,7 +365,7 @@ const CustomerDetail = () => {
     const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
     const [debitNotes, setDebitNotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'emi' | 'invoices' | 'payments' | 'credit_notes' | 'debit_notes' | 'statements'>(
+    const [activeTab, setActiveTab] = useState<'overview' | 'vehicle_history' | 'emi' | 'invoices' | 'payments' | 'credit_notes' | 'debit_notes' | 'statements'>(
         (tabParam as any) || 'overview'
     );
 
@@ -129,38 +457,169 @@ const CustomerDetail = () => {
         }
     };
 
-    const handleToggleStatus = async () => {
-        if (!customer) return;
-        const newStatus = customer.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-        const toastId = toast.loading(`Updating status to ${newStatus}...`);
+    // ── Customer & Driver Status / Contract Management ──
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [cancelNotes, setCancelNotes] = useState('');
+    const [cancelEndDate, setCancelEndDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+    const [cancelTarget, setCancelTarget] = useState<'CUSTOMER' | 'DRIVER'>('CUSTOMER');
+    const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+
+    // ── Assign Vehicle State (Modal matching Customer Creation flow) ──
+    const [isAssignVehicleModalOpen, setIsAssignVehicleModalOpen] = useState(false);
+    const [assignVehicleId, setAssignVehicleId] = useState('');
+    const [assignStartDate, setAssignStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [assignDurationWeeks, setAssignDurationWeeks] = useState<number>(60);
+    const [assignWeeklyRent, setAssignWeeklyRent] = useState<string | number>('');
+    const [isSubmittingAssign, setIsSubmittingAssign] = useState(false);
+
+    const openAssignVehicleModal = async () => {
+        setAssignVehicleId('');
+        setAssignStartDate(new Date().toISOString().split('T')[0]);
+        setAssignDurationWeeks(60);
+        setAssignWeeklyRent('');
+        setIsAssignVehicleModalOpen(true);
+        setLoadingVehicles(true);
         try {
-            await updateCustomer(customer._id, { status: newStatus });
-            toast.success(`Customer status updated to ${newStatus}`, { id: toastId });
-            fetchData();
+            const res = await getAllVehicles({ limit: 2000 });
+            const list = Array.isArray(res) ? res : ((res as any)?.data || []);
+            setAvailableVehicles(list);
         } catch (err: any) {
-            console.error('Failed to update customer status:', err);
-            toast.error(err.message || 'Failed to update status', { id: toastId });
+            console.error('Failed to load fleet vehicles:', err);
+            toast.error('Failed to load fleet vehicles');
+        } finally {
+            setLoadingVehicles(false);
         }
     };
 
-    // ── Driver Contract Cancellation (Deactivation) State ──
-    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-    const [cancelNotes, setCancelNotes] = useState('');
-    const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
+    const handleAssignVehicleSelect = (vId: string, vehicle?: Vehicle) => {
+        setAssignVehicleId(vId);
+        if (!vId) {
+            setAssignWeeklyRent('');
+            return;
+        }
+        const selected = vehicle || availableVehicles.find(v => v._id === vId);
+        if (selected?.basicDetails?.weeklyRent) {
+            setAssignWeeklyRent(selected.basicDetails.weeklyRent);
+        }
+        if (!assignStartDate) {
+            setAssignStartDate(new Date().toISOString().split('T')[0]);
+        }
+    };
+
+    const handleConfirmAssignVehicle = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!customer) return;
+        if (!assignVehicleId) {
+            toast.error('Please select an available vehicle.');
+            return;
+        }
+        if (!assignStartDate) {
+            toast.error('Start date is required.');
+            return;
+        }
+        if (assignWeeklyRent === '' || isNaN(Number(assignWeeklyRent)) || Number(assignWeeklyRent) <= 0) {
+            toast.error('Please enter a valid weekly rent.');
+            return;
+        }
+
+        setIsSubmittingAssign(true);
+        const toastId = toast.loading('Assigning vehicle to customer...');
+        try {
+            await assignVehicleToCustomer(customer._id, {
+                vehicleId: assignVehicleId,
+                startDate: assignStartDate,
+                durationWeeks: Number(assignDurationWeeks),
+                weeklyRent: Number(assignWeeklyRent)
+            });
+            toast.success('Vehicle assigned & contract created successfully!', { id: toastId });
+            setIsAssignVehicleModalOpen(false);
+            await fetchData();
+        } catch (err: any) {
+            console.error('Failed to assign vehicle:', err);
+            toast.error(err.response?.data?.message || err.message || 'Failed to assign vehicle', { id: toastId });
+        } finally {
+            setIsSubmittingAssign(false);
+        }
+    };
+
+    const handleToggleStatus = async () => {
+        if (!customer) return;
+        if (customer.status === 'INACTIVE') {
+            const toastId = toast.loading('Activating customer...');
+            try {
+                await updateCustomer(customer._id, { status: 'ACTIVE' });
+                toast.success('Customer status updated to ACTIVE', { id: toastId });
+                fetchData();
+            } catch (err: any) {
+                console.error('Failed to update customer status:', err);
+                toast.error(err.message || 'Failed to update status', { id: toastId });
+            }
+            return;
+        }
+
+        // Deactivating Customer:
+        // Check if customer is assigned with any vehicle or linked driver
+        const isAssignedVehicle = Boolean(
+            customer.driver?.currentVehicle || 
+            (customer.driver as any)?.assignedVehicle ||
+            (customer.cfVehicleNo && !['nill', 'nil', 'na', 'n/a', 'none', '-', '—', ''].includes(String(customer.cfVehicleNo).trim().toLowerCase()))
+        );
+
+        if (customer.driver || isAssignedVehicle) {
+            setCancelTarget('CUSTOMER');
+            setCancelEndDate(new Date().toISOString().split('T')[0]);
+            setCancelNotes('');
+            setIsCancelModalOpen(true);
+        } else {
+            const toastId = toast.loading('Deactivating customer...');
+            try {
+                await updateCustomer(customer._id, { status: 'INACTIVE' });
+                toast.success('Customer status updated to INACTIVE', { id: toastId });
+                fetchData();
+            } catch (err: any) {
+                console.error('Failed to update customer status:', err);
+                toast.error(err.message || 'Failed to update status', { id: toastId });
+            }
+        }
+    };
 
     const handleConfirmCancelContract = async () => {
-        if (!customer?.driver?._id) return;
+        if (!cancelEndDate) {
+            toast.error('Please select a contract end date');
+            return;
+        }
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (cancelEndDate > todayStr) {
+            toast.error('Contract end date cannot be in the future. Please select today or a past date.');
+            return;
+        }
+
         setIsSubmittingCancel(true);
-        const toastId = toast.loading('Cancelling contract & deactivating driver...');
+        const actionLabel = cancelTarget === 'CUSTOMER' ? 'customer & cancelling contract' : 'driver contract';
+        const toastId = toast.loading(`Deactivating ${actionLabel}...`);
         try {
-            await driverService.cancelContract(customer.driver._id, cancelNotes || 'Deactivated from customer profile');
-            toast.success('Driver deactivated and contract cancelled successfully', { id: toastId });
+            if (customer?.driver?._id) {
+                await driverService.cancelContract(
+                    customer.driver._id, 
+                    cancelNotes || (cancelTarget === 'CUSTOMER' ? 'Deactivated from customer profile' : 'Driver contract cancelled'),
+                    cancelEndDate
+                );
+            }
+            if (customer?._id) {
+                await updateCustomer(customer._id, { status: 'INACTIVE' });
+            }
+            toast.success(
+                cancelTarget === 'CUSTOMER'
+                    ? 'Customer deactivated and contract cancelled successfully'
+                    : 'Driver deactivated and contract cancelled successfully',
+                { id: toastId }
+            );
             setIsCancelModalOpen(false);
             setCancelNotes('');
             await fetchData();
         } catch (err: any) {
-            console.error('Failed to cancel driver contract:', err);
-            toast.error(err.response?.data?.message || err.message || 'Failed to cancel driver contract', { id: toastId });
+            console.error('Failed to cancel contract:', err);
+            toast.error(err.response?.data?.message || err.message || 'Failed to cancel contract', { id: toastId });
         } finally {
             setIsSubmittingCancel(false);
         }
@@ -191,8 +650,9 @@ const CustomerDetail = () => {
         setActivationNotes('');
         setVehicleSearchQuery('');
         try {
-            const res = await getAvailableVehicles({ limit: 100 });
-            setAvailableVehicles(res.data || []);
+            const res = await getAllVehicles({ limit: 2000 });
+            const list = Array.isArray(res) ? res : ((res as any)?.data || []);
+            setAvailableVehicles(list);
         } catch (err: any) {
             console.error('Failed to load available vehicles:', err);
             toast.error('Failed to load available vehicles');
@@ -556,6 +1016,16 @@ const CustomerDetail = () => {
         }
     };
 
+    const customerDriver = customer?.driver as any;
+    const isCustomerDriver = Boolean(customer?.isDriver || customerDriver);
+    const customerVehicle = customerDriver?.currentVehicle;
+    const activeAssignment = customerDriver?.assignmentHistory?.find((a: any) => a.status === 'ACTIVE');
+    const hasAssignedVehicle = isCustomerDriver && Boolean(
+        (customerVehicle && (customerVehicle.legalDocs?.registrationNumber || customerVehicle.plateNumber || customerVehicle.basicDetails?.plateNumber) && customerVehicle.status !== 'INACTIVE') ||
+        (activeAssignment && activeAssignment.status === 'ACTIVE') ||
+        (customer?.cfVehicleNo && !['nill', 'nil', 'na', 'n/a', 'none', '-', '—', ''].includes(String(customer.cfVehicleNo).trim().toLowerCase()) && customerDriver?.status === 'ACTIVE')
+    );
+
     return (
         <div className="container-responsive space-y-6 pb-20 animate-in fade-in duration-500">
             <Breadcrumbs 
@@ -646,6 +1116,16 @@ const CustomerDetail = () => {
                         <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
                     </button>
 
+                    {isCustomerDriver && !hasAssignedVehicle && (
+                        <button 
+                            type="button"
+                            onClick={openAssignVehicleModal}
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm active:scale-95 border cursor-pointer bg-lime-500/15 hover:bg-lime-500/25 text-lime-800 border-lime-500/30 dark:bg-brand-lime/10 dark:hover:bg-brand-lime/20 dark:text-brand-lime dark:border-brand-lime/30"
+                        >
+                            <Car size={14} className="text-lime-700 dark:text-brand-lime" /> Assign Vehicle
+                        </button>
+                    )}
+
                     <button 
                         onClick={handleToggleStatus}
                         className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm active:scale-95 border cursor-pointer ${
@@ -713,6 +1193,12 @@ const CustomerDetail = () => {
             <div className="flex items-center gap-1 p-1.5 rounded-2xl border bg-black/20 overflow-x-auto no-scrollbar" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
                 {[
                     { id: 'overview', label: 'Overview', icon: <User size={14} /> },
+                    ...(isCustomerDriver ? [{ 
+                        id: 'vehicle_history', 
+                        label: 'Vehicle History', 
+                        icon: <Car size={14} />,
+                        badge: (customerDriver?.assignmentHistory?.length || (hasAssignedVehicle ? 1 : 0)) ? `${customerDriver?.assignmentHistory?.length || 1}` : undefined
+                    }] : []),
                     { id: 'emi', label: 'EMI / Rent Plan', icon: <Calendar size={14} /> },
                     { id: 'invoices', label: 'Payables (Invoices)', icon: <FileText size={14} /> },
                     { id: 'payments', label: 'Payments Received', icon: <DollarSign size={14} /> },
@@ -732,6 +1218,13 @@ const CustomerDetail = () => {
                     >
                         {tab.icon}
                         {tab.label}
+                        {(tab as any).badge !== undefined && (
+                            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
+                                activeTab === tab.id ? 'bg-black/20 text-black' : 'bg-brand-lime/10 text-brand-lime border border-brand-lime/20'
+                            }`}>
+                                {(tab as any).badge}
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
@@ -747,6 +1240,9 @@ const CustomerDetail = () => {
                         totalInvoiced={totalInvoiced}
                         onRefresh={fetchData}
                     />
+                )}
+                {activeTab === 'vehicle_history' && isCustomerDriver && (
+                    <VehicleHistoryTab customer={customer} />
                 )}
                 {activeTab === 'emi' && <EMITab customer={customer} invoices={invoices} />}
                 {activeTab === 'invoices' && <InvoicesTab invoices={invoices} navigate={navigate} basePath={basePath} />}
@@ -861,7 +1357,7 @@ const CustomerDetail = () => {
 
             {/* Cancel Contract & Deactivate Driver Modal */}
             {isCancelModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 transition-all">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 transition-all">
                     <div className="w-full max-w-lg p-6 sm:p-8 rounded-[2rem] border shadow-2xl relative animate-in zoom-in-95 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="flex items-center justify-between pb-4 mb-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
                             <div className="flex items-center gap-3">
@@ -869,8 +1365,12 @@ const CustomerDetail = () => {
                                     <AlertCircle size={22} />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black uppercase tracking-widest text-white">Deactivate Driver & Cancel Contract</h3>
-                                    <p className="text-[11px] font-medium text-dim mt-0.5">{customer.driver?.personalInfo?.fullName || customer.name} ({customer.driver?.driverId || 'Driver'})</p>
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-white">
+                                        {cancelTarget === 'CUSTOMER' ? 'Deactivate Customer & Cancel Contract' : 'Deactivate Driver & Cancel Contract'}
+                                    </h3>
+                                    <p className="text-[11px] font-medium text-dim mt-0.5">
+                                        {customer.name} {customer.driver?.driverId ? `(${customer.driver.driverId})` : ''}
+                                    </p>
                                 </div>
                             </div>
                             <button onClick={() => setIsCancelModalOpen(false)} className="text-dim hover:text-white transition-all text-sm font-bold cursor-pointer">&times;</button>
@@ -879,23 +1379,53 @@ const CustomerDetail = () => {
                         <div className="space-y-4">
                             <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 space-y-2">
                                 <p className="text-[11px] font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
-                                    <AlertCircle size={14} /> Critical Contract Teardown Effects:
+                                    <AlertCircle size={14} /> Contract Termination Effects:
                                 </p>
                                 <ul className="text-xs space-y-1.5 text-dim list-disc list-inside">
-                                    {customer.driver?.currentVehicle ? (
+                                    {customer.driver?.currentVehicle || customer.cfVehicleNo ? (
                                         <li>
-                                            Current vehicle <span className="font-bold text-white">({(customer.driver.currentVehicle as any).basicDetails?.make || ''} {(customer.driver.currentVehicle as any).basicDetails?.model || ''} - {(customer.driver.currentVehicle as any).plateNumber || (customer.driver.currentVehicle as any).legalDocs?.registrationNumber || 'Assigned'})</span> will be unassigned & returned to <span className="text-emerald-400 font-bold">AVAILABLE</span> pool.
+                                            Current vehicle <span className="font-bold text-white font-mono">({(customer.driver?.currentVehicle as any)?.legalDocs?.registrationNumber || (customer.driver?.currentVehicle as any)?.plateNumber || customer.cfVehicleNo || 'Assigned'})</span> will be unassigned & returned to <span className="text-emerald-400 font-bold">ACTIVE — AVAILABLE</span> status.
                                         </li>
                                     ) : (
                                         <li>Vehicle assignment will be cleared.</li>
                                     )}
-                                    <li>All pending/draft weekly rental invoices due after today will be <span className="text-rose-400 font-bold">CANCELLED</span>.</li>
-                                    <li>Future unpaid rent installments on repayment schedule will be terminated (balance set to $0).</li>
-                                    <li>Driver status and linked Customer profile will both be set to <span className="text-rose-400 font-bold">INACTIVE</span>.</li>
+                                    <li>
+                                        Pending weekly rental invoices due after <span className="font-bold text-rose-300 font-mono">{cancelEndDate || 'selected end date'}</span> will be <span className="text-rose-400 font-bold">CANCELLED</span>.
+                                    </li>
+                                    <li>
+                                        Future unpaid rent installments on repayment schedule will be terminated (balance set to $0).
+                                    </li>
+                                    <li>
+                                        Status will be set to <span className="text-rose-400 font-bold">INACTIVE</span>.
+                                    </li>
                                 </ul>
                             </div>
 
-                            <div className="space-y-2">
+                            {/* Contract End Date Field */}
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center justify-between">
+                                    <span className="flex items-center gap-1.5">
+                                        <Calendar size={12} className="text-brand-lime" />
+                                        Contract End Date <span className="text-rose-500">*</span>
+                                    </span>
+                                    <span className="text-[9px] text-amber-400 font-medium">Future dates disabled</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={cancelEndDate}
+                                    max={new Date().toISOString().split('T')[0]}
+                                    onChange={(e) => setCancelEndDate(e.target.value)}
+                                    required
+                                    className="w-full px-4 py-2.5 rounded-xl text-xs font-semibold outline-none border focus:border-rose-500 transition-all cursor-pointer"
+                                    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                                <p className="text-[10px] text-neutral-400">
+                                    Select the effective contract cancellation date (today or in the past). Repayments past this date will be cleared.
+                                </p>
+                            </div>
+
+                            {/* Cancellation Notes / Reason */}
+                            <div className="space-y-1.5">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-dim">Cancellation Notes / Reason</label>
                                 <textarea
                                     rows={3}
@@ -912,19 +1442,194 @@ const CustomerDetail = () => {
                                     type="button"
                                     onClick={() => setIsCancelModalOpen(false)}
                                     disabled={isSubmittingCancel}
-                                    className="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/5 transition-all border border-white/10 cursor-pointer"
+                                    className="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border cursor-pointer hover:opacity-80" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)', background: 'var(--bg-input)' }}
                                 >
                                     Keep Active
                                 </button>
                                 <button
                                     type="button"
                                     onClick={handleConfirmCancelContract}
-                                    disabled={isSubmittingCancel}
+                                    disabled={isSubmittingCancel || !cancelEndDate}
                                     className="px-6 py-2.5 rounded-xl text-white font-black text-[10px] uppercase tracking-widest bg-rose-600 hover:bg-rose-700 active:scale-95 transition-all shadow-xl cursor-pointer disabled:opacity-50"
                                 >
-                                    {isSubmittingCancel ? 'Cancelling...' : 'Confirm Deactivation'}
+                                    {isSubmittingCancel ? 'Processing...' : 'Confirm Deactivation & Cancel Contract'}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+{/* Assign Vehicle Modal (Ola Theme matching Customer Creation) */}
+            {isAssignVehicleModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all overflow-y-auto">
+                    <div 
+                        className="w-full max-w-xl p-6 sm:p-8 rounded-[2rem] border shadow-2xl relative animate-in zoom-in-95 duration-200 space-y-6"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', boxShadow: '0 25px 60px -15px rgba(0,0,0,0.5)' }}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-brand-lime/10 text-brand-lime border border-brand-lime/20 flex-shrink-0">
+                                    <Car size={20} />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-sm font-black uppercase tracking-wider font-mono" style={{ color: 'var(--text-main)' }}>
+                                            VEHICLE ASSIGNMENT
+                                        </h3>
+                                        <span className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-white/5 text-dim border border-white/10">
+                                            DIRECT ASSIGN
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-neutral-400 mt-0.5">
+                                        Assign fleet car to <span className="font-bold" style={{ color: 'var(--text-main)' }}>{customer.name}</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-semibold text-brand-lime hidden sm:inline-block">
+                                    {loadingVehicles ? 'Loading fleet...' : `${availableVehicles.length} available vehicles in fleet`}
+                                </span>
+                                <button 
+                                    type="button"
+                                    onClick={() => setIsAssignVehicleModalOpen(false)} 
+                                    className="transition-all text-xl font-bold cursor-pointer hover:opacity-80" style={{ color: 'var(--text-dim)' }}
+                                >
+                                    &times;
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Select Vehicle Dropdown */}
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>
+                                    Select Vehicle (Ola Theme Dropdown)
+                                </label>
+                                <OlaVehicleSelect
+                                    vehicles={availableVehicles}
+                                    selectedId={assignVehicleId}
+                                    onSelect={handleAssignVehicleSelect}
+                                    selectedBranchId={(customer.branch as any)?._id || customer.branch}
+                                    loading={loadingVehicles}
+                                />
+                            </div>
+
+                            {/* 3-Column details row when vehicle picked */}
+                            {assignVehicleId && (
+                                <div className="space-y-4 animate-in fade-in duration-200">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                                        {/* Start Date */}
+                                        <div>
+                                            <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>
+                                                Start Date <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={assignStartDate}
+                                                onChange={e => setAssignStartDate(e.target.value)}
+                                                required
+                                                className="w-full px-4 py-3 rounded-xl text-xs font-semibold border outline-none transition-all cursor-pointer focus:ring-2 focus:ring-brand-lime/20"
+                                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                            />
+                                        </div>
+
+                                        {/* Duration Weeks */}
+                                        <div>
+                                            <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>
+                                                Duration (Weeks) <span className="text-rose-500">*</span>
+                                            </label>
+                                            <div className="relative">
+                                                <Clock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-brand-lime" />
+                                                <select
+                                                    value={assignDurationWeeks}
+                                                    onChange={e => setAssignDurationWeeks(Number(e.target.value))}
+                                                    className="w-full pl-10 pr-8 py-3 rounded-xl text-xs font-semibold border outline-none appearance-none cursor-pointer transition-all focus:ring-2 focus:ring-brand-lime/20"
+                                                    style={{ 
+                                                        background: 'var(--bg-input)', 
+                                                        borderColor: 'var(--border-main)', 
+                                                        color: 'var(--text-main)' 
+                                                    }}
+                                                >
+                                                    <option value={4}>4 Weeks (~1 Month)</option>
+                                                    <option value={8}>8 Weeks (~2 Months)</option>
+                                                    <option value={12}>12 Weeks (~3 Months)</option>
+                                                    <option value={16}>16 Weeks (~4 Months)</option>
+                                                    <option value={20}>20 Weeks (~5 Months)</option>
+                                                    <option value={24}>24 Weeks (~6 Months)</option>
+                                                    <option value={36}>36 Weeks (~9 Months)</option>
+                                                    <option value={48}>48 Weeks (~11 Months)</option>
+                                                    <option value={52}>52 Weeks (1 Year)</option>
+                                                    <option value={60}>60 Weeks (~14 Months)</option>
+                                                    <option value={104}>104 Weeks (2 Years)</option>
+                                                    <option value={156}>156 Weeks (3 Years)</option>
+                                                    <option value={208}>208 Weeks (4 Years)</option>
+                                                    <option value={260}>260 Weeks (5 Years)</option>
+                                                </select>
+                                                <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400" />
+                                            </div>
+                                        </div>
+
+                                        {/* Weekly Rent */}
+                                        <div>
+                                            <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>
+                                                Weekly Rent ($) <span className="text-rose-500">*</span>
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-lime font-bold text-xs">$</span>
+                                                <input
+                                                    type="number"
+                                                    value={assignWeeklyRent}
+                                                    onChange={e => setAssignWeeklyRent(e.target.value)}
+                                                    placeholder="0.00"
+                                                    min="0"
+                                                    step="0.01"
+                                                    required
+                                                    className="w-full pl-8 pr-4 py-3 rounded-xl text-xs font-semibold border outline-none transition-all focus:ring-2 focus:ring-brand-lime/20"
+                                                    style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Schedule & Total summary card matching user screenshot */}
+                                    {assignWeeklyRent !== '' && Number(assignWeeklyRent) > 0 && (
+                                        <div className="p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2" style={{ background: 'var(--bg-input)', borderColor: 'rgba(200,230,0,0.3)' }}>
+                                            <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                                Schedule: <span className="font-mono text-lime-700 dark:text-brand-lime font-bold">{assignDurationWeeks} weekly installments</span>
+                                            </span>
+                                            <span className="text-xs font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>
+                                                ESTIMATED TOTAL: <span className="font-mono text-sm text-lime-700 dark:text-brand-lime font-black">${((Number(assignWeeklyRent) || 0) * assignDurationWeeks).toLocaleString()}</span>
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <p className="text-[11px] text-neutral-400">
+                                        A connected driver profile will be created and assigned this vehicle for {assignDurationWeeks} weeks starting {assignStartDate}.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Actions */}
+                        <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                            <button
+                                type="button"
+                                onClick={() => setIsAssignVehicleModalOpen(false)}
+                                disabled={isSubmittingAssign}
+                                className="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border cursor-pointer hover:opacity-80" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)', background: 'var(--bg-input)' }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmAssignVehicle}
+                                disabled={isSubmittingAssign || !assignVehicleId}
+                                className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-xl cursor-pointer disabled:opacity-50 hover:opacity-90" style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
+                            >
+                                {isSubmittingAssign ? 'Assigning Vehicle...' : 'Confirm Vehicle Assignment'}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1205,33 +1910,54 @@ const OverviewTab = ({
     const isDriver = !!customer.driver;
     const driver = customer.driver as any;
     const vehicle = driver?.currentVehicle;
+    const activeAssignment = driver?.assignmentHistory?.find((a: any) => a.status === 'ACTIVE')
+        || (driver?.assignmentHistory && driver.assignmentHistory.length > 0
+            ? driver.assignmentHistory[driver.assignmentHistory.length - 1]
+            : null);
+
+    const hasAssignedVehicle = Boolean(
+        (vehicle && (vehicle.legalDocs?.registrationNumber || vehicle.plateNumber || vehicle.basicDetails?.plateNumber) && vehicle.status !== 'INACTIVE') ||
+        (activeAssignment && activeAssignment.status === 'ACTIVE') ||
+        (customer.cfVehicleNo && !['nill', 'nil', 'na', 'n/a', 'none', '-', '—', ''].includes(String(customer.cfVehicleNo).trim().toLowerCase()) && driver?.status === 'ACTIVE')
+    );
 
     // 1. Vehicle Plate Number
-    const plateNumber = vehicle?.legalDocs?.registrationNumber || vehicle?.plateNumber || customer.cfVehicleNo || '—';
+    const plateNumber = hasAssignedVehicle 
+        ? (vehicle?.legalDocs?.registrationNumber || vehicle?.plateNumber || activeAssignment?.plateNumber || customer.cfVehicleNo || '—') 
+        : '—';
 
     // 2. Vehicle Model
     const make = vehicle?.basicDetails?.make || '';
     const model = vehicle?.basicDetails?.model || '';
     const year = vehicle?.basicDetails?.year ? `(${vehicle.basicDetails.year})` : '';
-    const vehicleModel = [make, model, year].filter(Boolean).join(' ').trim() || (vehicle ? 'Model Unspecified' : 'No Vehicle Assigned');
+    const vehicleModel = [make, model, year].filter(Boolean).join(' ').trim() 
+        || activeAssignment?.vehicleModel 
+        || (vehicle ? 'Model Unspecified' : 'No Vehicle Assigned');
 
     // 3. VIN Number
     const vinNumber = vehicle?.basicDetails?.vin || vehicle?.vin || '—';
 
     // 4. Active Date
-    const rawActiveDate = driver?.activationDate || driver?.activation?.activatedDate || customer.cfActiveDate;
+    const rawActiveDate = (hasAssignedVehicle && activeAssignment?.status === 'ACTIVE' ? activeAssignment.startDate : null)
+        || driver?.activationDate 
+        || driver?.activation?.activatedDate 
+        || customer.cfActiveDate;
     const activeDateFormatted = rawActiveDate 
         ? new Date(rawActiveDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) 
         : '—';
 
     // 5. End Date
-    const rawEndDate = driver?.deactivationDate || customer.cfEndDate;
+    const isCurrentlyActive = (driver?.status === 'ACTIVE' || customer.status === 'ACTIVE') && hasAssignedVehicle;
+    const rawEndDate = isCurrentlyActive
+        ? (activeAssignment?.endDate && new Date(activeAssignment.endDate) > new Date() ? activeAssignment.endDate : null)
+        : (activeAssignment?.endDate || driver?.deactivationDate || customer.cfEndDate);
+
     const endDateFormatted = rawEndDate 
         ? new Date(rawEndDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) 
-        : (rawActiveDate ? 'Ongoing / Active' : '—');
+        : (isCurrentlyActive ? 'Ongoing / Active' : (rawActiveDate ? 'Ongoing / Active' : '—'));
 
     // 6. Fleet Number (if assigned)
-    const fleetNo = vehicle?.basicDetails?.fleetNumber || vehicle?.fleet?.fleetNumber || (vehicle as any)?.fleetNumber || customer.cfFleetNo;
+    const fleetNo = vehicle?.basicDetails?.fleetNumber || vehicle?.fleet?.fleetNumber || (vehicle as any)?.fleetNumber || activeAssignment?.fleetNumber || customer.cfFleetNo;
 
     // 7. Weekly Rent
     const activeTrackingRent = driver?.rentTracking?.find((t: any) => t.amount && Number(t.amount) > 0)?.amount;
@@ -1337,8 +2063,8 @@ const OverviewTab = ({
                                 </div>
                                 <div className="space-y-1 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
                                     <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Assigned Vehicle</p>
-                                    <p className="text-xs font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
-                                        {vehicleModel}
+                                    <p className={`text-xs font-bold ${hasAssignedVehicle ? 'text-brand-lime' : 'text-neutral-400'}`}>
+                                        {hasAssignedVehicle ? vehicleModel : 'No Vehicle Assigned'}
                                     </p>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
@@ -1361,8 +2087,8 @@ const OverviewTab = ({
                 </SectionCard>
             </div>
 
-            {/* Vehicle & Assignment Details Overview (Shown if Customer is a Driver) */}
-            {isDriver && (
+            {/* Vehicle & Assignment Details Overview (Only Shown if Customer is a Driver AND Vehicle is Assigned) */}
+            {isDriver && hasAssignedVehicle && (
                 <div className="p-6 rounded-[2rem] border shadow-xl animate-in slide-in-from-bottom-2 duration-300 space-y-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b gap-3" style={{ borderColor: 'var(--border-main)' }}>
                         <div className="flex items-center gap-3">
@@ -1480,6 +2206,148 @@ const OverviewTab = ({
                     </div>
                 </div>
             )}
+
+            {/* Vehicle Assignment & Contract Lifecycle History Section */}
+            {(() => {
+                if (!isDriver) return null;
+                const rawHistory: any[] = Array.isArray(driver?.assignmentHistory) ? [...driver.assignmentHistory] : [];
+                const hasActiveInHistory = rawHistory.some((h: any) => h.status === 'ACTIVE' && (!h.endDate || new Date(h.endDate) > new Date()));
+
+                if (!hasActiveInHistory && hasAssignedVehicle) {
+                    rawHistory.unshift({
+                        _id: 'current-active-assignment',
+                        vehicle: vehicle,
+                        plateNumber: plateNumber !== '—' ? plateNumber : (vehicle?.legalDocs?.registrationNumber || vehicle?.basicDetails?.plateNumber || customer.cfVehicleNo || 'Active Vehicle'),
+                        fleetNumber: fleetNo || vehicle?.basicDetails?.fleetNumber || customer.cfFleetNo || '',
+                        vehicleModel: vehicleModel !== 'No Vehicle Assigned' ? vehicleModel : (vehicle?.basicDetails ? `${vehicle.basicDetails.make || ''} ${vehicle.basicDetails.model || ''}`.trim() : (customer.cfVehicleModel || 'Active Vehicle')),
+                        weeklyRent: rawWeeklyRent ? Number(rawWeeklyRent) : (driver?.weeklyRent || vehicle?.basicDetails?.weeklyRent),
+                        startDate: rawActiveDate ? new Date(rawActiveDate) : (driver?.activationDate || driver?.createdAt || customer.createdAt || new Date()),
+                        endDate: null,
+                        status: 'ACTIVE',
+                        cancelNotes: 'Current Active Assignment'
+                    });
+                }
+                const displayedHistory = rawHistory;
+
+                if (displayedHistory.length === 0) return null;
+
+                return (
+                    <div className="p-6 rounded-[2rem] border shadow-xl animate-in slide-in-from-bottom-2 duration-300 space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-lime-500/10 text-lime-400">
+                                    <Car size={18} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xs font-black uppercase tracking-widest text-white">
+                                        Vehicle Assignment & Contract Lifecycle History
+                                    </h3>
+                                    <p className="text-[10px] font-medium text-dim mt-0.5">
+                                        Historical records of all vehicle assignments, activation periods, deactivations, and contract status
+                                    </p>
+                                </div>
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-dim px-2.5 py-1 rounded-lg bg-white/5 border border-white/10">
+                                {displayedHistory.length} {displayedHistory.length === 1 ? 'Period' : 'Periods'}
+                            </span>
+                        </div>
+
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-left border-collapse whitespace-nowrap">
+                                <thead>
+                                    <tr className="border-b text-[9px] font-black uppercase tracking-widest" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                        <th className="pb-3 px-3">Status</th>
+                                        <th className="pb-3 px-3">Vehicle Model</th>
+                                        <th className="pb-3 px-3">Plate & Fleet</th>
+                                        <th className="pb-3 px-3">Weekly Rent</th>
+                                        <th className="pb-3 px-3">Start Date</th>
+                                        <th className="pb-3 px-3">End Date</th>
+                                        <th className="pb-3 px-3">Duration</th>
+                                        <th className="pb-3 px-3">Deactivation Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y text-xs font-medium" style={{ borderColor: 'var(--border-main)' }}>
+                                    {displayedHistory.map((item: any, index: number) => {
+                                    const isCurrent = item.status === 'ACTIVE' && (!item.endDate || new Date(item.endDate) > new Date());
+                                    const start = item.startDate ? new Date(item.startDate) : null;
+                                    const end = item.endDate ? new Date(item.endDate) : null;
+                                    
+                                    let durationLabel = 'Ongoing';
+                                    if (start) {
+                                        const endDateCalc = end || new Date();
+                                        const diffMs = endDateCalc.getTime() - start.getTime();
+                                        const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+                                        const weeks = Math.floor(diffDays / 7);
+                                        const remDays = diffDays % 7;
+                                        durationLabel = weeks > 0 ? `${weeks}w ${remDays}d` : `${diffDays}d`;
+                                    }
+
+                                    const vObj = typeof item.vehicle === 'object' && item.vehicle ? item.vehicle : null;
+                                    const plate = item.plateNumber || vObj?.legalDocs?.registrationNumber || vObj?.basicDetails?.plateNumber || '—';
+                                    const fleet = item.fleetNumber || vObj?.basicDetails?.fleetNumber || vObj?.fleet?.fleetNumber;
+                                    const model = item.vehicleModel || (vObj?.basicDetails ? `${vObj.basicDetails.make || ''} ${vObj.basicDetails.model || ''}`.trim() : '') || '—';
+
+                                    return (
+                                        <tr key={item._id || index} className="hover:bg-white/[0.02] transition-all">
+                                            <td className="py-3 px-3">
+                                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                                    isCurrent 
+                                                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                                                        : item.status === 'CANCELLED' 
+                                                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
+                                                            : 'bg-white/5 text-gray-400 border-white/10'
+                                                }`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${isCurrent ? 'bg-emerald-400 animate-pulse' : item.status === 'CANCELLED' ? 'bg-rose-400' : 'bg-gray-400'}`} />
+                                                    {isCurrent ? 'ACTIVE' : item.status || 'COMPLETED'}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-3">
+                                                <span className="text-white font-bold text-[11px] truncate max-w-[200px] inline-block" title={model}>
+                                                    {model}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-3">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="font-mono font-bold text-white text-[11px] bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/10">
+                                                        {plate}
+                                                    </span>
+                                                    {fleet && (
+                                                        <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                            #{fleet}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-3">
+                                                <span className="font-bold text-emerald-400 font-mono text-[11px]">
+                                                    {item.weeklyRent ? `${Number(item.weeklyRent).toFixed(2)}` : '—'}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-3 text-dim font-mono text-[11px]">
+                                                {start ? start.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
+                                            </td>
+                                            <td className="py-3 px-3 font-mono text-[11px]">
+                                                {end ? (
+                                                    <span className="text-amber-400">{end.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                                ) : (
+                                                    <span className="text-emerald-400 font-bold">Ongoing / Active</span>
+                                                )}
+                                            </td>
+                                            <td className="py-3 px-3 text-dim font-mono text-[11px]">
+                                                {durationLabel}
+                                            </td>
+                                            <td className="py-3 px-3 text-dim text-[11px] max-w-[220px] truncate" title={item.cancelNotes || ''}>
+                                                {item.cancelNotes || '—'}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                );
+            })()}
 
             {/* Weekly Rent Adjustment History Section (Only shown when records exist) */}
             {isDriver && driver.rentChangeHistory && driver.rentChangeHistory.length > 0 && (
@@ -1741,6 +2609,201 @@ const OverviewTab = ({
         </div>
     );
 };
+
+function VehicleHistoryTab({ customer }: { customer: Customer }) {
+    const driver = customer.driver as any;
+    const vehicle = driver?.currentVehicle as any;
+
+    const hasAssignedVehicle = Boolean(
+        (vehicle && (vehicle.legalDocs?.registrationNumber || vehicle.plateNumber || vehicle.basicDetails?.plateNumber) && vehicle.status !== 'INACTIVE') ||
+        (customer.cfVehicleNo && !['nill', 'nil', 'na', 'n/a', 'none', '-', '—', ''].includes(String(customer.cfVehicleNo).trim().toLowerCase()) && driver?.status === 'ACTIVE')
+    );
+
+    const rawHistory: any[] = Array.isArray(driver?.assignmentHistory) ? [...driver.assignmentHistory] : [];
+    const hasActiveInHistory = rawHistory.some((h: any) => h.status === 'ACTIVE' && (!h.endDate || new Date(h.endDate) > new Date()));
+
+    if (!hasActiveInHistory && hasAssignedVehicle) {
+        const plateNumber = vehicle?.legalDocs?.registrationNumber || vehicle?.plateNumber || vehicle?.basicDetails?.plateNumber || customer.cfVehicleNo || 'Assigned';
+        const fleetNo = vehicle?.basicDetails?.fleetNumber || customer.cfFleetNo || '';
+        const vehicleModel = vehicle?.basicDetails
+            ? `${vehicle.basicDetails.make || ''} ${vehicle.basicDetails.model || ''}`.trim()
+            : (customer.cfVehicleModel || 'Active Vehicle');
+        const weeklyRent = customer.cfWeeklyRent !== undefined && customer.cfWeeklyRent !== null && customer.cfWeeklyRent !== ''
+            ? Number(customer.cfWeeklyRent)
+            : (driver?.weeklyRent || vehicle?.basicDetails?.weeklyRent);
+        const startDate = customer.cfActiveDate || driver?.activationDate || driver?.createdAt || customer.createdAt || new Date();
+
+        rawHistory.unshift({
+            _id: 'current-active-assignment',
+            vehicle: vehicle,
+            plateNumber,
+            fleetNumber: fleetNo,
+            vehicleModel,
+            weeklyRent,
+            startDate,
+            endDate: null,
+            status: 'ACTIVE',
+            cancelNotes: 'Current Active Assignment'
+        });
+    }
+
+    const history = rawHistory;
+    const activeEntry = history.find((h: any) => h.status === 'ACTIVE' && (!h.endDate || new Date(h.endDate) > new Date()));
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Quick Stats Banner */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-5 rounded-2xl border shadow-lg space-y-1" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-dim">Current Vehicle</p>
+                    <p className="text-sm font-bold text-white flex items-center gap-2">
+                        {activeEntry ? (
+                            <>
+                                <span className="text-brand-lime">{activeEntry.vehicleModel || 'Assigned'}</span>
+                                <span className="font-mono text-xs text-dim">({activeEntry.plateNumber})</span>
+                            </>
+                        ) : (
+                            <span className="text-neutral-400">None Active</span>
+                        )}
+                    </p>
+                </div>
+                <div className="p-5 rounded-2xl border shadow-lg space-y-1" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-dim">Total Assignments</p>
+                    <p className="text-sm font-black text-white">{history.length} {history.length === 1 ? 'Period' : 'Periods'}</p>
+                </div>
+                <div className="p-5 rounded-2xl border shadow-lg space-y-1" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-dim">Driver Profile</p>
+                    <p className="text-sm font-mono font-bold text-brand-lime">{driver?.driverId || 'LINKED'}</p>
+                </div>
+            </div>
+
+            {/* Complete Assignment Table */}
+            <div className="p-6 rounded-[2rem] border shadow-xl space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-lime-500/10 text-lime-400">
+                            <Car size={18} />
+                        </div>
+                        <div>
+                            <h3 className="text-xs font-black uppercase tracking-widest text-white">
+                                Complete Vehicle Assignment & Lifecycle Audit Trail
+                            </h3>
+                            <p className="text-[10px] font-medium text-dim mt-0.5">
+                                Chronological log of all assigned vehicles, registration plates, active terms, and deactivation details
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {history.length > 0 ? (
+                    <div className="overflow-x-auto custom-scrollbar">
+                        <table className="w-full text-left border-collapse whitespace-nowrap">
+                            <thead>
+                                <tr className="border-b text-[9px] font-black uppercase tracking-widest" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                    <th className="pb-3 px-3">Status</th>
+                                    <th className="pb-3 px-3">Vehicle Model</th>
+                                    <th className="pb-3 px-3">Plate & Fleet</th>
+                                    <th className="pb-3 px-3">Weekly Rent</th>
+                                    <th className="pb-3 px-3">Start Date</th>
+                                    <th className="pb-3 px-3">End Date</th>
+                                    <th className="pb-3 px-3">Duration</th>
+                                    <th className="pb-3 px-3">Deactivation Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y text-xs font-medium" style={{ borderColor: 'var(--border-main)' }}>
+                                {history.map((item: any, index: number) => {
+                                    const isCurrent = item.status === 'ACTIVE' && (!item.endDate || new Date(item.endDate) > new Date());
+                                    const start = item.startDate ? new Date(item.startDate) : null;
+                                    const end = item.endDate ? new Date(item.endDate) : null;
+                                    
+                                    let durationLabel = 'Ongoing';
+                                    if (start) {
+                                        const endDateCalc = end || new Date();
+                                        const diffMs = endDateCalc.getTime() - start.getTime();
+                                        const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+                                        const weeks = Math.floor(diffDays / 7);
+                                        const remDays = diffDays % 7;
+                                        durationLabel = weeks > 0 ? `${weeks}w ${remDays}d` : `${diffDays}d`;
+                                    }
+
+                                    const vObj = typeof item.vehicle === 'object' && item.vehicle ? item.vehicle : null;
+                                    const plate = item.plateNumber || vObj?.legalDocs?.registrationNumber || vObj?.basicDetails?.plateNumber || '—';
+                                    const fleet = item.fleetNumber || vObj?.basicDetails?.fleetNumber || vObj?.fleet?.fleetNumber;
+                                    const model = item.vehicleModel || (vObj?.basicDetails ? `${vObj.basicDetails.make || ''} ${vObj.basicDetails.model || ''}`.trim() : '') || '—';
+
+                                    return (
+                                        <tr key={item._id || index} className="hover:bg-white/[0.02] transition-all">
+                                            <td className="py-3 px-3">
+                                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                                    isCurrent 
+                                                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                                                        : item.status === 'CANCELLED' 
+                                                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
+                                                            : 'bg-white/5 text-gray-400 border-white/10'
+                                                }`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${isCurrent ? 'bg-emerald-400 animate-pulse' : item.status === 'CANCELLED' ? 'bg-rose-400' : 'bg-gray-400'}`} />
+                                                    {isCurrent ? 'ACTIVE' : item.status || 'COMPLETED'}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-3">
+                                                <span className="text-white font-bold text-[11px] truncate max-w-[220px] inline-block" title={model}>
+                                                    {model}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-3">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="font-mono font-bold text-white text-[11px] bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/10">
+                                                        {plate}
+                                                    </span>
+                                                    {fleet && (
+                                                        <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                            #{fleet}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-3">
+                                                <span className="font-bold text-emerald-400 font-mono text-[11px]">
+                                                    {item.weeklyRent ? `${Number(item.weeklyRent).toFixed(2)}` : '—'}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-3 text-dim font-mono text-[11px]">
+                                                {start ? start.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
+                                            </td>
+                                            <td className="py-3 px-3 font-mono text-[11px]">
+                                                {end ? (
+                                                    <span className="text-amber-400">{end.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                                ) : (
+                                                    <span className="text-emerald-400 font-bold">Ongoing / Active</span>
+                                                )}
+                                            </td>
+                                            <td className="py-3 px-3 text-dim font-mono text-[11px]">
+                                                {durationLabel}
+                                            </td>
+                                            <td className="py-3 px-3 text-dim text-[11px] max-w-[220px] truncate" title={item.cancelNotes || ''}>
+                                                {item.cancelNotes || '—'}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="py-12 text-center space-y-2">
+                        <div className="w-12 h-12 mx-auto rounded-full bg-white/5 flex items-center justify-center text-dim">
+                            <Car size={24} />
+                        </div>
+                        <h4 className="text-xs font-black uppercase tracking-widest text-white">No Vehicle Assignment History</h4>
+                        <p className="text-[11px] font-medium text-dim max-w-sm mx-auto">
+                            There are no past or present vehicle assignments logged for this driver profile.
+                        </p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 const EMITab = ({ customer, invoices }: { customer: Customer, invoices: Invoice[] }) => {
     const rentTracking = customer.driver?.rentTracking || [];

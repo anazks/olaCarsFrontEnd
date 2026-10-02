@@ -6,12 +6,12 @@ import { setCustomersData } from '../../../../store/dashboardSlice';
 import { 
     Users, Search, Filter, ChevronRight, ChevronLeft, RefreshCw, 
     ArrowUpDown, ArrowUp, ArrowDown, DollarSign, FileText, UserPlus,
-    X, User, Mail, Phone, MapPin, Building2, Globe, Check, Car, Clock, CheckCircle2, ChevronDown
+    X, User, Mail, Phone, MapPin, Building2, Globe, Check, Car, Clock, CheckCircle2, ChevronDown, AlertTriangle
 } from 'lucide-react';
 import { getAllCustomers, createCustomer, type Customer, type CreateCustomerPayload } from '../../../../services/customerService';
 import type { PaginationMetadata } from '../../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
-import { getAvailableVehicles, type Vehicle } from '../../../../services/vehicleService';
+import { getAllVehicles, type Vehicle } from '../../../../services/vehicleService';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
@@ -62,6 +62,7 @@ interface OlaVehicleSelectProps {
 }
 
 const OlaVehicleSelect = ({ vehicles, selectedId, onSelect, selectedBranchId, loading }: OlaVehicleSelectProps) => {
+    const [assignedAlert, setAssignedAlert] = useState<{ plate: string; driverName: string } | null>(null);
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -78,15 +79,26 @@ const OlaVehicleSelect = ({ vehicles, selectedId, onSelect, selectedBranchId, lo
 
     const selectedVehicle = vehicles.find(v => v._id === selectedId);
 
+    const getDriverName = (driver: any): string => {
+        if (!driver) return '';
+        if (typeof driver === 'string') return driver;
+        const pInfo = driver.personalInfo;
+        const name = pInfo?.fullName || driver.name || driver.fullName || '';
+        const code = driver.driverId ? ` (${driver.driverId})` : '';
+        return (name ? `${name}${code}` : (driver.driverId ? `Driver ${driver.driverId}` : '')).trim();
+    };
+
     const filteredVehicles = vehicles.filter(v => {
         if (!search.trim()) return true;
-        const term = search.toLowerCase();
-        const plate = (v.legalDocs?.registrationNumber || v.plateNumber || v.basicDetails?.plateNumber || '').toLowerCase();
+        const rawTerm = search.toLowerCase();
+        const cleanTerm = rawTerm.replace(/[\s-_]/g, '');
+        const rawPlate = (v.legalDocs?.registrationNumber || (v as any).plateNumber || v.basicDetails?.plateNumber || '').toLowerCase();
+        const cleanPlate = rawPlate.replace(/[\s-_]/g, '');
         const make = (v.basicDetails?.make || '').toLowerCase();
         const model = (v.basicDetails?.model || '').toLowerCase();
         const fleetNo = (v.basicDetails?.fleetNumber || '').toLowerCase();
         const vin = (v.basicDetails?.vin || '').toLowerCase();
-        return plate.includes(term) || make.includes(term) || model.includes(term) || fleetNo.includes(term) || vin.includes(term);
+        return rawPlate.includes(rawTerm) || cleanPlate.includes(cleanTerm) || make.includes(rawTerm) || model.includes(rawTerm) || fleetNo.includes(rawTerm) || vin.includes(rawTerm);
     });
 
     const sortedVehicles = [...filteredVehicles].sort((a, b) => {
@@ -131,21 +143,21 @@ const OlaVehicleSelect = ({ vehicles, selectedId, onSelect, selectedBranchId, lo
                         <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-mono font-black tracking-wider bg-white/10 text-white border border-brand-lime/30 flex-shrink-0">
                                 <span className="w-1.5 h-1.5 rounded-full bg-brand-lime shadow-sm shadow-brand-lime"></span>
-                                {selectedVehicle.legalDocs?.registrationNumber || selectedVehicle.plateNumber || selectedVehicle.basicDetails?.plateNumber || 'No Plate'}
+                                {selectedVehicle.legalDocs?.registrationNumber || (selectedVehicle as any).plateNumber || selectedVehicle.basicDetails?.plateNumber || 'No Plate'}
                             </span>
                             <span className="font-bold text-xs truncate" style={{ color: 'var(--text-main)' }}>
                                 {selectedVehicle.basicDetails?.make} {selectedVehicle.basicDetails?.model} {selectedVehicle.basicDetails?.year ? `(${selectedVehicle.basicDetails.year})` : ''}
                             </span>
                             {selectedVehicle.basicDetails?.weeklyRent ? (
                                 <span className="text-[11px] font-black text-brand-lime sm:ml-auto flex-shrink-0">
-                                    ${selectedVehicle.basicDetails.weeklyRent}/wk
+                                    $${selectedVehicle.basicDetails.weeklyRent}/wk
                                 </span>
                             ) : null}
                         </div>
                     ) : (
                         <div className="flex flex-col">
                             <span className="text-xs font-semibold" style={{ color: 'var(--text-dim)' }}>
-                                {loading ? 'Loading available vehicles...' : 'Select an available vehicle (Optional)...'}
+                                {loading ? 'Loading fleet vehicles...' : 'Select an available vehicle (Optional)...'}
                             </span>
                         </div>
                     )}
@@ -224,7 +236,7 @@ const OlaVehicleSelect = ({ vehicles, selectedId, onSelect, selectedBranchId, lo
                         {sortedVehicles.length > 0 ? (
                             sortedVehicles.map(v => {
                                 const isSelected = v._id === selectedId;
-                                const plate = v.legalDocs?.registrationNumber || v.plateNumber || v.basicDetails?.plateNumber || 'No Plate';
+                                const plate = v.legalDocs?.registrationNumber || (v as any).plateNumber || v.basicDetails?.plateNumber || 'No Plate';
                                 const make = v.basicDetails?.make || '';
                                 const model = v.basicDetails?.model || '';
                                 const year = v.basicDetails?.year ? `(${v.basicDetails.year})` : '';
@@ -233,30 +245,47 @@ const OlaVehicleSelect = ({ vehicles, selectedId, onSelect, selectedBranchId, lo
                                 const vBranchId = (v.purchaseDetails?.branch as any)?._id || v.purchaseDetails?.branch;
                                 const isBranchMatch = selectedBranchId && String(vBranchId) === String(selectedBranchId);
 
+                                const isAssigned = !!(v.currentDriver || v.status === 'ACTIVE — RENTED' || (v.status as string) === 'ACTIVE - RENTED');
+                                const assignedDriverName = getDriverName(v.currentDriver) || 'another driver';
+
+                                const handleItemClick = () => {
+                                    if (isAssigned) {
+                                        setAssignedAlert({ plate, driverName: assignedDriverName });
+                                        toast.error(
+                                            `This vehicle is already assigned with the driver (${assignedDriverName}), please cancel it to assign it to a new driver.`,
+                                            { duration: 7000, icon: '⚠️' }
+                                        );
+                                        return;
+                                    }
+                                    onSelect(v._id, v);
+                                    setIsOpen(false);
+                                };
+
                                 return (
                                     <div
                                         key={v._id}
-                                        onClick={() => {
-                                            onSelect(v._id, v);
-                                            setIsOpen(false);
-                                        }}
+                                        onClick={handleItemClick}
                                         className={`px-3 py-2.5 rounded-xl cursor-pointer transition-all flex items-center justify-between gap-3 text-xs ${
                                             isSelected 
                                                 ? 'bg-brand-lime/15 text-white border border-brand-lime/40 shadow-sm' 
-                                                : 'hover:bg-white/5 border border-transparent'
+                                                : isAssigned
+                                                    ? 'hover:bg-rose-500/[0.08] border border-rose-500/10 bg-rose-500/[0.03] opacity-80 hover:opacity-100'
+                                                    : 'hover:bg-white/5 border border-transparent'
                                         }`}
                                     >
                                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                             <span className={`px-2 py-0.5 rounded font-mono font-black text-[11px] tracking-wider border flex-shrink-0 ${
                                                 isSelected 
                                                     ? 'bg-brand-lime text-black border-brand-lime' 
-                                                    : 'bg-white/5 text-neutral-200 border-white/10'
+                                                    : isAssigned
+                                                        ? 'bg-rose-500/10 text-rose-300 border-rose-500/20'
+                                                        : 'bg-white/5 text-neutral-200 border-white/10'
                                             }`}>
                                                 {plate}
                                             </span>
 
                                             <div className="min-w-0 flex-1 truncate">
-                                                <span className="font-bold text-white truncate">
+                                                <span className={`font-bold truncate ${isAssigned ? 'text-neutral-300' : 'text-white'}`}>
                                                     {make} {model}
                                                 </span>
                                                 <span className="text-[10px] text-neutral-400 ml-1.5 truncate">
@@ -264,8 +293,19 @@ const OlaVehicleSelect = ({ vehicles, selectedId, onSelect, selectedBranchId, lo
                                                 </span>
                                             </div>
 
-                                            {isBranchMatch && (
+                                            {isAssigned ? (
+                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30 flex-shrink-0 flex items-center gap-1" title={`Assigned to ${assignedDriverName}`}>
+                                                    <AlertTriangle size={10} />
+                                                    Assigned: {assignedDriverName}
+                                                </span>
+                                            ) : (
                                                 <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex-shrink-0">
+                                                    Available
+                                                </span>
+                                            )}
+
+                                            {isBranchMatch && (
+                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex-shrink-0">
                                                     This Branch
                                                 </span>
                                             )}
@@ -273,8 +313,8 @@ const OlaVehicleSelect = ({ vehicles, selectedId, onSelect, selectedBranchId, lo
 
                                         <div className="flex items-center gap-2 flex-shrink-0">
                                             {rent ? (
-                                                <span className="font-black text-brand-lime text-xs">
-                                                    ${rent}/wk
+                                                <span className={`font-black text-xs ${isAssigned ? 'text-neutral-500 line-through' : 'text-brand-lime'}`}>
+                                                    $${rent}/wk
                                                 </span>
                                             ) : null}
                                             {isSelected && <CheckCircle2 size={14} className="text-brand-lime" />}
@@ -284,14 +324,55 @@ const OlaVehicleSelect = ({ vehicles, selectedId, onSelect, selectedBranchId, lo
                             })
                         ) : (
                             <div className="p-4 text-center text-dim text-xs">
-                                {loading ? 'Loading vehicles...' : `No available vehicles found matching "${search}"`}
+                                {loading ? 'Loading vehicles...' : `No vehicles found matching "${search}"`}
                             </div>
                         )}
                     </div>
 
                     <div className="p-2.5 border-t border-white/10 flex items-center justify-between text-[10px] font-semibold text-neutral-400" style={{ background: 'rgba(255,255,255,0.01)' }}>
-                        <span>{vehicles.length} available in fleet</span>
+                        <span>{vehicles.length} fleet vehicles ({vehicles.filter(v => !v.currentDriver && v.status !== 'ACTIVE — RENTED' && (v.status as string) !== 'ACTIVE - RENTED').length} available)</span>
                         <span className="text-brand-lime font-mono">Ola Fleet</span>
+                    </div>
+                </div>
+            )}
+
+            {assignedAlert && (
+                <div 
+                    className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-150"
+                    onClick={(e) => { e.stopPropagation(); setAssignedAlert(null); }}
+                >
+                    <div 
+                        className="w-full max-w-md rounded-3xl p-6 border shadow-2xl space-y-4 animate-in zoom-in-95 duration-150"
+                        style={{ 
+                            background: '#12161f', 
+                            borderColor: 'rgba(239, 68, 68, 0.4)',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 35px rgba(239, 68, 68, 0.2)' 
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                                <AlertTriangle size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-black text-white">Vehicle Already Assigned</h3>
+                                <p className="text-xs text-neutral-400 font-mono font-bold mt-0.5">{assignedAlert.plate}</p>
+                            </div>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs font-semibold leading-relaxed text-rose-200">
+                            This vehicle is already assigned with the driver <span className="font-black text-white underline underline-offset-2">({assignedAlert.driverName})</span>, please cancel it to assign it to a new driver.
+                        </div>
+
+                        <div className="flex justify-end pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setAssignedAlert(null)}
+                                className="px-5 py-2.5 rounded-xl font-bold text-xs bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 transition-all border border-rose-500/30"
+                            >
+                                Understood
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -335,7 +416,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onSuccess, branches }: CreateCus
         if (!isOpen || !isDriver) return;
         let isMounted = true;
         setLoadingVehicles(true);
-        getAvailableVehicles({ limit: 200 })
+        getAllVehicles({ limit: 2000 })
             .then(res => {
                 if (isMounted) {
                     const list = Array.isArray(res) 
