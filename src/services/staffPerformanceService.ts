@@ -139,14 +139,77 @@ export interface PerformanceFilters {
     endDate?: string;
 }
 
-export const getStaffPerformance = async (filters: PerformanceFilters = {}): Promise<StaffPerformanceResponse> => {
-    const response = await api.get('/api/staff-performance', { params: filters });
-    return response.data;
+// Client-side In-Memory Cache (TTL: 90 seconds)
+const clientPerfCache = new Map<string, { data: StaffPerformanceResponse; timestamp: number }>();
+const clientIndividualPerfCache = new Map<string, { data: any; timestamp: number }>();
+const CLIENT_CACHE_TTL = 90 * 1000;
+
+export const clearClientStaffPerformanceCache = () => {
+    clientPerfCache.clear();
+    clientIndividualPerfCache.clear();
 };
 
-export const getIndividualStaffPerformance = async (id: string, startDate?: string, endDate?: string) => {
+export const getStaffPerformance = async (
+    filters: PerformanceFilters = {},
+    bypassCache = false
+): Promise<StaffPerformanceResponse> => {
+    const isBypass = bypassCache || (filters as any).refresh === 'true' || (filters as any).bypassCache === 'true';
+    const cacheKey = JSON.stringify(filters);
+
+    if (!isBypass) {
+        const cached = clientPerfCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp < CLIENT_CACHE_TTL)) {
+            return cached.data;
+        }
+    }
+
+    const headers: Record<string, string> = {};
+    if (isBypass) {
+        headers['x-bypass-cache'] = 'true';
+    }
+
+    const response = await api.get('/api/staff-performance', { params: filters, headers });
+    const data = response.data;
+
+    if (clientPerfCache.size >= 50) {
+        const first = clientPerfCache.keys().next().value;
+        if (first) clientPerfCache.delete(first);
+    }
+    clientPerfCache.set(cacheKey, { data, timestamp: Date.now() });
+
+    return data;
+};
+
+export const getIndividualStaffPerformance = async (
+    id: string,
+    startDate?: string,
+    endDate?: string,
+    bypassCache = false
+) => {
+    const cacheKey = `${id}:${startDate || ''}:${endDate || ''}`;
+    if (!bypassCache) {
+        const cached = clientIndividualPerfCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp < CLIENT_CACHE_TTL)) {
+            return cached.data;
+        }
+    }
+
+    const headers: Record<string, string> = {};
+    if (bypassCache) {
+        headers['x-bypass-cache'] = 'true';
+    }
+
     const response = await api.get(`/api/staff-performance/${id}/details`, {
-        params: { startDate, endDate }
+        params: { startDate, endDate },
+        headers
     });
-    return response.data;
+    const data = response.data;
+
+    if (clientIndividualPerfCache.size >= 50) {
+        const first = clientIndividualPerfCache.keys().next().value;
+        if (first) clientIndividualPerfCache.delete(first);
+    }
+    clientIndividualPerfCache.set(cacheKey, { data, timestamp: Date.now() });
+
+    return data;
 };

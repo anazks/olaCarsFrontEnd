@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { 
      Calendar, MapPin, Building, 
     Search, Filter, FilterX, Clock, ShieldAlert, FileSpreadsheet,
-    Loader2, FileText
+    Loader2, FileText, RefreshCw
 } from 'lucide-react';
 import { format, startOfMonth } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -141,7 +141,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
     }, [searchQuery]);
 
     // 2. Paginated Data Fetch
-    const fetchPage = async (pageNumber = 1) => {
+    const fetchPage = async (pageNumber = 1, forceRefresh = false) => {
         setLoading(true);
         try {
             const query = {
@@ -150,9 +150,10 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                 status: statusFilter,
                 page: pageNumber,
                 limit: 15,
-                listType: meta.listType
+                listType: meta.listType,
+                ...(forceRefresh ? { refresh: 'true' } : {})
             };
-            const data = await getCollectionsList(query);
+            const data = await getCollectionsList(query, forceRefresh);
             setListItems(data.items || []);
             setPagination({
                 page: data.pagination.page,
@@ -561,6 +562,16 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     >
                         <FileSpreadsheet size={14} className="text-blue-400" /> Export CSV
+                    </button>
+
+                    <button 
+                        disabled={loading}
+                        onClick={() => fetchPage(pagination.page, true)}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm hover:scale-105 active:scale-95 border"
+                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        title="Force refresh data"
+                    >
+                        <RefreshCw size={13} className={loading ? "animate-spin text-brand-lime" : ""} /> Refresh
                     </button>
                 </div>
             </div>

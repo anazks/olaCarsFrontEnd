@@ -214,10 +214,10 @@ const ExecutiveSidebar = ({
           label: t("sidebar.items.upcomingPayments"),
           path: "/admin/admin/collections/upcoming",
         },
-        {
-          label: t("sidebar.items.invoicesLedger"),
-          path: "/admin/admin/collections/invoices",
-        },
+        // {
+        //   label: t("sidebar.items.invoicesLedger"),
+        //   path: "/admin/admin/collections/invoices",
+        // },
       ],
     },
     {

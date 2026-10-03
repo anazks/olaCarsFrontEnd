@@ -95,18 +95,18 @@ const FinancialAdminDashboard = () => {
     }, [filters.country, filteredBranches]);
 
     // 3. Primary Data Fetch
-    const fetchData = async () => {
+    const fetchData = async (forceRefresh = false) => {
         setKpiLoading(true);
         setRestLoading(true);
         try {
-            // 1. Fetch only KPIs first (extremely fast)
-            const kpiRes = await getFinancialDashboardSummary({ ...filters, onlyKpi: true });
+            // 1. Fetch only KPIs first (cached/instant)
+            const kpiRes = await getFinancialDashboardSummary({ ...filters, onlyKpi: true, refresh: forceRefresh });
             setKpiData(kpiRes);
             setKpiLoading(false);
 
             // 2. Fetch the rest of the dashboard data in the background
             Promise.all([
-                getFinancialDashboardSummary(filters),
+                getFinancialDashboardSummary({ ...filters, refresh: forceRefresh }),
                 getAllPurchaseOrders({ status: 'PENDING_FINANCE_APPROVAL', limit: 1000 }).catch((err) => {
                     console.error("FinancialAdminDashboard: Fetch POs failed:", err);
                     return { data: [] };
@@ -182,7 +182,14 @@ const FinancialAdminDashboard = () => {
                 <div>
                     <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
                         <Briefcase className="text-[#C8E600]" /> Financial Dashboard
-                        {loading && <RefreshCw className="animate-spin text-[#C8E600] ml-2" size={20} />}
+                        <button
+                            onClick={() => fetchData(true)}
+                            title="Force Refresh Live Data"
+                            disabled={loading || restLoading}
+                            className="p-1 rounded-lg hover:bg-white/10 active:scale-95 transition-all ml-1 cursor-pointer"
+                        >
+                            <RefreshCw className={`${loading || restLoading ? 'animate-spin' : ''} text-[#C8E600]`} size={20} />
+                        </button>
                     </h1>
                     <p className="font-medium" style={{ color: 'var(--text-dim)' }}>Ecosystem Telemetry</p>
                 </div>

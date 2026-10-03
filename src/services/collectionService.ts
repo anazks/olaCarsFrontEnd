@@ -93,12 +93,74 @@ export interface CollectionsQueryParams {
     listType?: 'OVERDUE' | 'UPCOMING' | 'GENERAL' | string;
 }
 
-export const getCollectionsOverview = async (params: CollectionsQueryParams = {}): Promise<CollectionsOverviewResponse> => {
-    const response = await api.get('/api/collections/overview', { params, headers: { 'X-Skip-Toast': 'true' } });
-    return response.data.data;
+// Client-side In-Memory Cache (TTL: 90 seconds)
+const clientListCache = new Map<string, { data: CollectionsListResponse; timestamp: number }>();
+const clientOverviewCache = new Map<string, { data: CollectionsOverviewResponse; timestamp: number }>();
+const CLIENT_CACHE_TTL = 90 * 1000;
+
+export const clearClientCollectionsCache = () => {
+    clientListCache.clear();
+    clientOverviewCache.clear();
 };
 
-export const getCollectionsList = async (params: CollectionsQueryParams = {}): Promise<CollectionsListResponse> => {
-    const response = await api.get('/api/collections/list', { params, headers: { 'X-Skip-Toast': 'true' } });
-    return response.data.data;
+export const getCollectionsOverview = async (
+    params: CollectionsQueryParams = {},
+    bypassCache = false
+): Promise<CollectionsOverviewResponse> => {
+    const isBypass = bypassCache || (params as any).refresh === 'true' || (params as any).bypassCache === 'true';
+    const cacheKey = JSON.stringify(params);
+
+    if (!isBypass) {
+        const cached = clientOverviewCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp < CLIENT_CACHE_TTL)) {
+            return cached.data;
+        }
+    }
+
+    const headers: Record<string, string> = { 'X-Skip-Toast': 'true' };
+    if (isBypass) {
+        headers['x-bypass-cache'] = 'true';
+    }
+
+    const response = await api.get('/api/collections/overview', { params, headers });
+    const data = response.data.data;
+
+    if (clientOverviewCache.size >= 50) {
+        const first = clientOverviewCache.keys().next().value;
+        if (first) clientOverviewCache.delete(first);
+    }
+    clientOverviewCache.set(cacheKey, { data, timestamp: Date.now() });
+
+    return data;
+};
+
+export const getCollectionsList = async (
+    params: CollectionsQueryParams = {},
+    bypassCache = false
+): Promise<CollectionsListResponse> => {
+    const isBypass = bypassCache || (params as any).refresh === 'true' || (params as any).bypassCache === 'true';
+    const cacheKey = JSON.stringify(params);
+
+    if (!isBypass) {
+        const cached = clientListCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp < CLIENT_CACHE_TTL)) {
+            return cached.data;
+        }
+    }
+
+    const headers: Record<string, string> = { 'X-Skip-Toast': 'true' };
+    if (isBypass) {
+        headers['x-bypass-cache'] = 'true';
+    }
+
+    const response = await api.get('/api/collections/list', { params, headers });
+    const data = response.data.data;
+
+    if (clientListCache.size >= 50) {
+        const first = clientListCache.keys().next().value;
+        if (first) clientListCache.delete(first);
+    }
+    clientListCache.set(cacheKey, { data, timestamp: Date.now() });
+
+    return data;
 };

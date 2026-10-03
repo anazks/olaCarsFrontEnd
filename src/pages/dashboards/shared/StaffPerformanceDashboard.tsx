@@ -56,15 +56,16 @@ const StaffPerformanceDashboard = () => {
         }
     };
 
-    const fetchData = async () => {
+    const fetchData = async (forceRefresh = false) => {
         setLoading(true);
         try {
             const data = await getStaffPerformance({
                 branch: isBranchScoped ? undefined : selectedBranch || undefined,
                 type: staffType,
                 startDate: dateRange.startDate,
-                endDate: dateRange.endDate
-            });
+                endDate: dateRange.endDate,
+                ...(forceRefresh ? { refresh: 'true' } as any : {})
+            }, forceRefresh);
             setFinStaff(data.data.financeStaff || []);
             setOpStaff(data.data.operationStaff || []);
             setBranchManagers(data.data.branchManagers || []);
@@ -195,7 +196,14 @@ const StaffPerformanceDashboard = () => {
                         <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                             <Activity size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
                             Resource Intelligence
-                            {loading && <RefreshCw className="animate-spin text-brand-lime ml-2 flex-shrink-0" size={18} />}
+                            <button
+                                onClick={() => fetchData(true)}
+                                disabled={loading}
+                                className="p-1 rounded-lg hover:bg-white/10 transition-colors ml-1 cursor-pointer disabled:opacity-50"
+                                title="Force refresh data"
+                            >
+                                <RefreshCw className={`${loading ? 'animate-spin' : ''} text-brand-lime`} size={16} />
+                            </button>
                         </h1>
                         <p className="text-xs font-medium text-dim mt-0.5">Telemetry analytics and workforce performance.</p>
                     </div>

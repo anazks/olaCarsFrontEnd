@@ -73,13 +73,27 @@ export interface BranchFilters {
   sortOrder?: "asc" | "desc";
 }
 
+// In-memory cache for branch lookups (5 min TTL)
+let branchesCache: { data: PaginatedResponse<Branch>; timestamp: number } | null = null;
+const BRANCH_CACHE_TTL = 5 * 60 * 1000;
+
 // GET all branches
 export const getAllBranches = async (
   filters: BranchFilters = {},
 ): Promise<PaginatedResponse<Branch>> => {
+  const isDefaultLookup = (!filters.search && !filters.country && !filters.status && (!filters.page || filters.page === 1) && (!filters.limit || filters.limit >= 100));
+  if (isDefaultLookup && branchesCache && (Date.now() - branchesCache.timestamp < BRANCH_CACHE_TTL)) {
+    return branchesCache.data;
+  }
+
   const response = await api.get("/api/branch", {
     params: filters,
   });
+
+  if (isDefaultLookup && response.data) {
+    branchesCache = { data: response.data, timestamp: Date.now() };
+  }
+
   return response.data;
 };
 

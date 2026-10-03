@@ -558,10 +558,10 @@ function App() {
                 path="collections/upcoming"
                 element={<CollectionsLedgerView type="UPCOMING" />}
               />
-              <Route
+              {/* <Route
                 path="collections/invoices"
                 element={<CollectionsLedgerView type="GENERAL" />}
-              />
+              /> */}
             </Route>
           </Route>
 

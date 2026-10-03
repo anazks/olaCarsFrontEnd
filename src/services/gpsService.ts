@@ -38,9 +38,59 @@ export interface GpsLocation {
     locDesc?: string;
 }
 
-export const getGpsVehiclesList = async (): Promise<GpsVehicle[]> => {
-    const response = await api.get('/api/gps/vehicles');
-    return response.data.data;
+export interface GpsFleetSummary {
+    total: number;
+    online: number;
+    offline: number;
+    disabled: number;
+    expired: number;
+    plateAssigned: number;
+    platePending: number;
+}
+
+export interface GpsVehiclesPaginatedResponse {
+    vehicles: GpsVehicle[];
+    pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    };
+    summary: GpsFleetSummary;
+}
+
+export const getGpsVehiclesPaginated = async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    plateStatus?: string;
+}): Promise<GpsVehiclesPaginatedResponse> => {
+    const response = await api.get('/api/gps/vehicles', { params });
+    const res = response.data;
+    return {
+        vehicles: Array.isArray(res.data) ? res.data : [],
+        pagination: res.pagination || {
+            total: Array.isArray(res.data) ? res.data.length : 0,
+            page: params.page || 1,
+            limit: params.limit || 25,
+            totalPages: 1
+        },
+        summary: res.summary || {
+            total: 0,
+            online: 0,
+            offline: 0,
+            disabled: 0,
+            expired: 0,
+            plateAssigned: 0,
+            platePending: 0
+        }
+    };
+};
+
+export const getGpsVehiclesList = async (params?: { all?: boolean }): Promise<GpsVehicle[]> => {
+    const response = await api.get('/api/gps/vehicles', { params: { all: true, ...params } });
+    return response.data.data || [];
 };
 
 export const getGpsLocationsList = async (imeis?: string): Promise<GpsLocation[]> => {

@@ -8,12 +8,13 @@ import {
     Calendar, Shield, Activity, Info, RefreshCw, SlidersHorizontal,
     Copy, Check, FileSpreadsheet, FileText, User, Phone, MapPin, Gauge,
     Battery, Zap, Navigation, Link, ExternalLink, Satellite,
-    Map, Eye, Columns, ArrowLeft, X, Printer, Clock
+    Map, Eye, Columns, ArrowLeft, X, Printer, Clock,
+    ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react';
 import {
-    getGpsVehiclesList, getGpsLocationsList, getDeviceLiveStreamingUrl, getDeviceMediaEventUrl,
+    getGpsVehiclesList, getGpsVehiclesPaginated, getGpsLocationsList, getDeviceLiveStreamingUrl, getDeviceMediaEventUrl,
     getGpsTripsReport, getGpsMileageList, getGpsNotificationsList, getGpsObdData,
-    type GpsVehicle, type GpsLocation, type GpsMileage, type GpsNotification, type GpsObdData
+    type GpsVehicle, type GpsLocation, type GpsMileage, type GpsNotification, type GpsObdData, type GpsFleetSummary
 } from '../../../services/gpsService';
 import FleetSummaryReportModal from '../../../components/gps/FleetSummaryReportModal';
 import { getAllVehicles } from '../../../services/vehicleService';
@@ -48,6 +49,31 @@ const GpsVehicles = () => {
     const [copiedImei, setCopiedImei] = useState<string | null>(null);
     const [liveStreamLoading, setLiveStreamLoading] = useState(false);
     const [mediaEventLoading, setMediaEventLoading] = useState(false);
+
+    // Server Pagination & Fleet Summary State
+    const [page, setPage] = useState<number>(1);
+    const [limit, setLimit] = useState<number>(25);
+    const [totalItems, setTotalItems] = useState<number>(0);
+    const [totalPages, setTotalPages] = useState<number>(1);
+    const [fleetSummary, setFleetSummary] = useState<GpsFleetSummary>({
+        total: 0,
+        online: 0,
+        offline: 0,
+        disabled: 0,
+        expired: 0,
+        plateAssigned: 0,
+        platePending: 0
+    });
+    const [debouncedSearch, setDebouncedSearch] = useState<string>('');
+    const [exportingCsv, setExportingCsv] = useState<boolean>(false);
+
+    // Debounce search query input (350ms)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 350);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     // Mileage & Webhooks state
     const [mileages, setMileages] = useState<Record<string, GpsMileage>>({});
@@ -126,39 +152,66 @@ const GpsVehicles = () => {
         }
     }, [trackMapMode]);
 
-    // Fetch GPS telemetry (devices + locations) + fleet vehicle/driver linkage + mileage
-    const loadGpsData = async (isSilent = false) => {
+    // Fetch GPS telemetry (paginated devices + locations) + fleet vehicle/driver linkage + mileage
+    const loadGpsData = async (
+        isSilent = false,
+        targetPage = page,
+        targetLimit = limit,
+        targetSearch = debouncedSearch,
+        targetStatus = selectedStatus,
+        targetPlate = plateStatusFilter
+    ) => {
         if (!isSilent) setLoading(true);
         else setRefreshing(true);
         setError(null);
         try {
-            const [vehiclesData, locationsData, fleetRes, driversRes] = await Promise.all([
-                getGpsVehiclesList(),
-                getGpsLocationsList(),
-                getAllVehicles({ limit: 500 }).catch(() => ({ data: [] })),
-                getAllDrivers({ limit: 1000 }).catch(() => ({ data: [] }))
+            const [paginatedRes, fleetRes, driversRes] = await Promise.all([
+                getGpsVehiclesPaginated({
+                    page: targetPage,
+                    limit: targetLimit,
+                    search: targetSearch,
+                    status: targetStatus,
+                    plateStatus: targetPlate
+                }),
+                fleetVehicles.length === 0 ? getAllVehicles({ limit: 500 }).catch(() => ({ data: [] })) : Promise.resolve({ data: fleetVehicles }),
+                fleetDrivers.length === 0 ? getAllDrivers({ limit: 1000 }).catch(() => ({ data: [] })) : Promise.resolve({ data: fleetDrivers })
             ]);
-            const vList = Array.isArray(vehiclesData) ? vehiclesData : [];
-            setVehicles(vList);
-            setLocations(Array.isArray(locationsData) ? locationsData : []);
-            setFleetVehicles((fleetRes as any).data || []);
-            setFleetDrivers((driversRes as any).data || []);
 
-            // Now fetch mileage for these devices
+            const vList = Array.isArray(paginatedRes.vehicles) ? paginatedRes.vehicles : [];
+            setVehicles(vList);
+            setTotalItems(paginatedRes.pagination.total);
+            setTotalPages(paginatedRes.pagination.totalPages);
+            setPage(paginatedRes.pagination.page);
+            setFleetSummary(paginatedRes.summary);
+
+            if (fleetVehicles.length === 0) setFleetVehicles((fleetRes as any).data || []);
+            if (fleetDrivers.length === 0) setFleetDrivers((driversRes as any).data || []);
+
+            // Now fetch mileage and live positions ONLY for this page's devices
             if (vList.length > 0) {
-                try {
-                    const imeisString = vList.map(v => v.imei).join(',');
-                    const mileageList = await getGpsMileageList(imeisString);
-                    const mileageMap: Record<string, GpsMileage> = {};
-                    if (Array.isArray(mileageList)) {
-                        mileageList.forEach(m => {
-                            mileageMap[m.imei] = m;
-                        });
+                const imeisString = vList.map(v => v.imei).filter(Boolean).join(',');
+                if (imeisString) {
+                    try {
+                        const [locationsData, mileageList] = await Promise.all([
+                            getGpsLocationsList(imeisString),
+                            getGpsMileageList(imeisString).catch(() => [])
+                        ]);
+                        if (Array.isArray(locationsData)) {
+                            setLocations(locationsData);
+                        }
+                        const mileageMap: Record<string, GpsMileage> = {};
+                        if (Array.isArray(mileageList)) {
+                            mileageList.forEach(m => {
+                                mileageMap[m.imei] = m;
+                            });
+                        }
+                        setMileages(mileageMap);
+                    } catch (mErr) {
+                        console.error("Failed to load page telemetry data:", mErr);
                     }
-                    setMileages(mileageMap);
-                } catch (mErr) {
-                    console.error("Failed to load mileage data:", mErr);
                 }
+            } else {
+                setLocations([]);
             }
         } catch (err: any) {
             console.error("Failed to load GPS devices", err);
@@ -184,9 +237,13 @@ const GpsVehicles = () => {
     };
 
     useEffect(() => {
-        loadGpsData();
         loadNotifications();
     }, []);
+
+    // Main data loading effect triggered on mount and whenever pagination/filter params change
+    useEffect(() => {
+        loadGpsData(false, page, limit, debouncedSearch, selectedStatus, plateStatusFilter);
+    }, [page, limit, debouncedSearch, selectedStatus, plateStatusFilter]);
 
     // Polling effect for the single tracked vehicle
     useEffect(() => {
@@ -256,9 +313,27 @@ const GpsVehicles = () => {
         }
     }, [activeView, selectedTrackVehicle]);
 
-    // Polling effect for the entire fleet locations (list or map view)
+    // Polling effect for the active view locations
     useEffect(() => {
-        if (activeView === 'list' || activeView === 'map') {
+        if (activeView === 'list') {
+            if (vehicles.length === 0) return;
+            const pageImeis = vehicles.map(v => v.imei).filter(Boolean).join(',');
+            if (!pageImeis) return;
+
+            const fetchPageLocations = async () => {
+                try {
+                    const locationsData = await getGpsLocationsList(pageImeis);
+                    if (Array.isArray(locationsData)) {
+                        setLocations(locationsData);
+                    }
+                } catch (err) {
+                    console.error("Failed to poll GPS locations for current page", err);
+                }
+            };
+
+            const interval = setInterval(fetchPageLocations, 10000);
+            return () => clearInterval(interval);
+        } else if (activeView === 'map') {
             const fetchFleetLocations = async () => {
                 try {
                     const locationsData = await getGpsLocationsList();
@@ -266,15 +341,15 @@ const GpsVehicles = () => {
                         setLocations(locationsData);
                     }
                 } catch (err) {
-                    console.error("Failed to poll GPS locations", err);
+                    console.error("Failed to poll GPS locations for map", err);
                 }
             };
 
-            // Set up 10-second polling interval
-            const interval = setInterval(fetchFleetLocations, 10000);
+            fetchFleetLocations();
+            const interval = setInterval(fetchFleetLocations, 15000);
             return () => clearInterval(interval);
         }
-    }, [activeView]);
+    }, [activeView, vehicles]);
 
     // Initialize/cleanup Fleet map container
     useEffect(() => {
@@ -479,28 +554,8 @@ const GpsVehicles = () => {
         };
     }, [activeView, selectedTrackVehicle, locations, theme]);
 
-    // Filtered data memo
-    const filteredVehicles = useMemo(() => {
-        return vehicles.filter(v => {
-            const matchesSearch =
-                (v.deviceName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (v.imei || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (v.sim || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (v.vehicleNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (v.carFrame || '').toLowerCase().includes(searchQuery.toLowerCase());
-
-            const matchesStatus = selectedStatus === 'ALL' || v.status === selectedStatus;
-
-            let matchesPlateStatus = true;
-            if (plateStatusFilter === 'WITH DATA') {
-                matchesPlateStatus = !!v.vehicleNumber && v.vehicleNumber.trim() !== '' && v.vehicleNumber !== 'Pending';
-            } else if (plateStatusFilter === 'PENDING') {
-                matchesPlateStatus = !v.vehicleNumber || v.vehicleNumber.trim() === '' || v.vehicleNumber === 'Pending';
-            }
-
-            return matchesSearch && matchesStatus && matchesPlateStatus;
-        });
-    }, [vehicles, searchQuery, selectedStatus, plateStatusFilter]);
+    // Telemetry items for current page are filtered and paginated on server
+    const filteredVehicles = vehicles;
 
     // Build a linked data map: GPS IMEI -> { fleetVehicle, driver }
     const linkedDataMap = useMemo(() => {
@@ -548,19 +603,10 @@ const GpsVehicles = () => {
         return `${Math.abs(lat).toFixed(5)}° ${latDirection}, ${Math.abs(lng).toFixed(5)}° ${lngDirection}`;
     };
 
-    // Statistics calculations
+    // Overall Fleet Statistics (accurate total metrics computed server-side across all devices)
     const stats = useMemo(() => {
-        const total = vehicles.length;
-        const online = vehicles.filter(v => v.status === 'NORMAL').length;
-        const offline = vehicles.filter(v => v.status === 'OFFLINE').length;
-        const disabled = vehicles.filter(v => v.enabledFlag === 0).length;
-        const expired = vehicles.filter(v => v.status === 'EXPIRED').length;
-
-        const plateAssigned = vehicles.filter(v => !!v.vehicleNumber && v.vehicleNumber.trim() !== '' && v.vehicleNumber !== 'Pending').length;
-        const platePending = vehicles.filter(v => !v.vehicleNumber || v.vehicleNumber.trim() === '' || v.vehicleNumber === 'Pending').length;
-
-        return { total, online, offline, disabled, expired, plateAssigned, platePending };
-    }, [vehicles]);
+        return fleetSummary;
+    }, [fleetSummary]);
 
     const handleCopy = (text: string) => {
         navigator.clipboard.writeText(text);
@@ -620,31 +666,60 @@ const GpsVehicles = () => {
         }
     };
 
-    const handleExportCSV = () => {
-        const headers = ["IMEI", "Device Name", "SIM Card", "Activation Time", "Expiration", "Vehicle Number", "VIN/Frame", "Status", "Driver", "Driver Phone"];
-        const rows = filteredVehicles.map(v => [
-            v.imei,
-            v.deviceName,
-            v.sim,
-            v.activationTime,
-            v.expiration,
-            v.vehicleNumber || 'N/A',
-            v.carFrame || 'N/A',
-            v.status,
-            v.driverName || 'Unassigned',
-            v.driverPhone || 'N/A'
-        ]);
+    const handleExportCSV = async () => {
+        setExportingCsv(true);
+        try {
+            const allVehicles = await getGpsVehiclesList();
+            const q = debouncedSearch.toLowerCase().trim();
+            const exportList = allVehicles.filter(v => {
+                const matchesSearch = !q ||
+                    (v.deviceName || '').toLowerCase().includes(q) ||
+                    (v.imei || '').toLowerCase().includes(q) ||
+                    (v.sim || '').toLowerCase().includes(q) ||
+                    (v.vehicleNumber || '').toLowerCase().includes(q) ||
+                    (v.carFrame || '').toLowerCase().includes(q);
 
-        const csvContent = "data:text/csv;charset=utf-8,"
-            + [headers.join(","), ...rows.map(e => e.map(val => `"${val}"`).join(","))].join("\n");
+                const matchesStatus = selectedStatus === 'ALL' || v.status === selectedStatus;
 
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `GPS_Vehicles_Report_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+                let matchesPlateStatus = true;
+                if (plateStatusFilter === 'WITH DATA') {
+                    matchesPlateStatus = !!v.vehicleNumber && v.vehicleNumber.trim() !== '' && v.vehicleNumber !== 'Pending';
+                } else if (plateStatusFilter === 'PENDING') {
+                    matchesPlateStatus = !v.vehicleNumber || v.vehicleNumber.trim() === '' || v.vehicleNumber === 'Pending';
+                }
+
+                return matchesSearch && matchesStatus && matchesPlateStatus;
+            });
+
+            const headers = ["IMEI", "Device Name", "SIM Card", "Activation Time", "Expiration", "Vehicle Number", "VIN/Frame", "Status", "Driver", "Driver Phone"];
+            const rows = exportList.map(v => [
+                v.imei,
+                v.deviceName,
+                v.sim,
+                v.activationTime,
+                v.expiration,
+                v.vehicleNumber || 'N/A',
+                v.carFrame || 'N/A',
+                v.status,
+                v.driverName || 'Unassigned',
+                v.driverPhone || 'N/A'
+            ]);
+
+            const csvContent = "data:text/csv;charset=utf-8,"
+                + [headers.join(","), ...rows.map(e => e.map(val => `"${val}"`).join(","))].join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `GPS_Vehicles_Report_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (csvErr) {
+            console.error("Failed to export GPS vehicles CSV:", csvErr);
+        } finally {
+            setExportingCsv(false);
+        }
     };
 
     const formatDuration = (seconds?: number) => {
@@ -1123,7 +1198,10 @@ const GpsVehicles = () => {
                                     type="text"
                                     placeholder="Search Name, IMEI, Plate, SIM..."
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        setPage(1);
+                                    }}
                                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border-main)] bg-[var(--bg-input)] text-xs font-semibold outline-none focus:border-[#C8E600] transition-all"
                                 />
                                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-dim)]" />
@@ -1146,6 +1224,7 @@ const GpsVehicles = () => {
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setPlateStatusFilter(status.label as any);
+                                                    setPage(1);
                                                 }}
                                                 className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer flex-1 md:flex-initial flex items-center justify-center gap-1.5 ${plateStatusFilter === status.label ? 'bg-[var(--brand-dynamic)] text-[var(--bg-main)] shadow-sm' : 'text-[var(--text-dim)] hover:text-[var(--text-main)]'}`}
                                             >
@@ -1172,6 +1251,7 @@ const GpsVehicles = () => {
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setSelectedStatus(status.label);
+                                                    setPage(1);
                                                 }}
                                                 className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer flex-1 md:flex-initial flex items-center justify-center gap-1.5 ${selectedStatus === status.label ? 'bg-[var(--brand-dynamic)] text-[var(--bg-main)] shadow-sm' : 'text-[var(--text-dim)] hover:text-[var(--text-main)]'}`}
                                             >
@@ -1353,6 +1433,129 @@ const GpsVehicles = () => {
                                         )}
                                     </tbody>
                                 </table>
+                            </div>
+
+                            {/* Server-Side Pagination Bar */}
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-[var(--border-main)] bg-[var(--bg-card)]">
+                                {/* Left: Items Count & Summary */}
+                                <div className="text-xs font-semibold text-[var(--text-dim)] flex flex-wrap items-center gap-1.5">
+                                    Showing{' '}
+                                    <span className="font-extrabold text-[var(--text-main)]">
+                                        {totalItems === 0 ? 0 : (page - 1) * limit + 1}
+                                    </span>{' '}
+                                    to{' '}
+                                    <span className="font-extrabold text-[var(--text-main)]">
+                                        {Math.min(page * limit, totalItems)}
+                                    </span>{' '}
+                                    of{' '}
+                                    <span className="font-extrabold text-[var(--text-main)]">
+                                        {totalItems.toLocaleString()}
+                                    </span>{' '}
+                                    vehicles
+                                    {totalItems !== stats.total && stats.total > 0 && (
+                                        <span className="text-[10px] text-[var(--text-dim)] font-medium ml-1">
+                                            (filtered from {stats.total.toLocaleString()} total fleet units)
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Center: Rows per page selector */}
+                                <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-dim)]">
+                                    <span>Rows per page:</span>
+                                    <select
+                                        value={limit}
+                                        onChange={(e) => {
+                                            setLimit(Number(e.target.value));
+                                            setPage(1);
+                                        }}
+                                        className="px-2.5 py-1.5 rounded-lg border border-[var(--border-main)] bg-[var(--bg-input)] text-xs font-bold text-[var(--text-main)] outline-none focus:border-[var(--brand-dynamic)] transition-all cursor-pointer"
+                                    >
+                                        <option value={10}>10</option>
+                                        <option value={25}>25</option>
+                                        <option value={50}>50</option>
+                                        <option value={100}>100</option>
+                                    </select>
+                                </div>
+
+                                {/* Right: Page Navigation Controls */}
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={() => setPage(1)}
+                                        disabled={page <= 1 || loading}
+                                        className="p-2 rounded-lg border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-[var(--text-main)] disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                        title="First Page"
+                                    >
+                                        <ChevronsLeft size={16} />
+                                    </button>
+                                    <button
+                                        onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                                        disabled={page <= 1 || loading}
+                                        className="p-2 rounded-lg border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-[var(--text-main)] disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                        title="Previous Page"
+                                    >
+                                        <ChevronLeft size={16} />
+                                    </button>
+
+                                    {/* Numeric page pills with smart ellipsis */}
+                                    <div className="flex items-center gap-1 px-1">
+                                        {(() => {
+                                            const pages: (number | string)[] = [];
+                                            if (totalPages <= 7) {
+                                                for (let i = 1; i <= totalPages; i++) pages.push(i);
+                                            } else {
+                                                if (page <= 4) {
+                                                    pages.push(1, 2, 3, 4, 5, '...', totalPages);
+                                                } else if (page >= totalPages - 3) {
+                                                    pages.push(1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+                                                } else {
+                                                    pages.push(1, '...', page - 1, page, page + 1, '...', totalPages);
+                                                }
+                                            }
+
+                                            return pages.map((p, idx) => {
+                                                if (p === '...') {
+                                                    return (
+                                                        <span key={`dots-${idx}`} className="px-2 py-1 text-xs text-[var(--text-dim)] font-bold">
+                                                            …
+                                                        </span>
+                                                    );
+                                                }
+                                                const isCurrent = p === page;
+                                                return (
+                                                    <button
+                                                        key={p}
+                                                        onClick={() => setPage(Number(p))}
+                                                        disabled={loading}
+                                                        className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
+                                                            isCurrent
+                                                                ? 'bg-[var(--brand-dynamic)] text-[var(--bg-main)] shadow-sm'
+                                                                : 'border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-[var(--text-main)]'
+                                                        }`}
+                                                    >
+                                                        {p}
+                                                    </button>
+                                                );
+                                            });
+                                        })()}
+                                    </div>
+
+                                    <button
+                                        onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                                        disabled={page >= totalPages || loading}
+                                        className="p-2 rounded-lg border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-[var(--text-main)] disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                        title="Next Page"
+                                    >
+                                        <ChevronRight size={16} />
+                                    </button>
+                                    <button
+                                        onClick={() => setPage(totalPages)}
+                                        disabled={page >= totalPages || loading}
+                                        className="p-2 rounded-lg border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-[var(--text-main)] disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                        title="Last Page"
+                                    >
+                                        <ChevronsRight size={16} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </>
