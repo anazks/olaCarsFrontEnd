@@ -18,15 +18,7 @@ import Modal from '../../../components/Modal';
 import QuickAddAccountModal from '../../../components/common/QuickAddAccountModal';
 import { SearchableSelect } from '../../../components/common/SearchableSelect';
 
-const formatDateUTC = (dateInput: string | Date | undefined) => {
-    if (!dateInput) return '—';
-    const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return '—';
-    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(d.getUTCDate()).padStart(2, '0');
-    const year = d.getUTCFullYear();
-    return `${month}/${day}/${year}`;
-};
+import { formatDateUTC } from '../../../utils/dateUtils';
 
 const CreateFixedAsset = () => {
     const { id } = useParams<{ id: string }>();

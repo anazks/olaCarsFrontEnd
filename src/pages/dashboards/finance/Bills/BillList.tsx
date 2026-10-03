@@ -33,6 +33,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import toast from 'react-hot-toast';
+import { formatDate, formatDateTime } from '../../../../utils/dateUtils';
 
 const BillList = () => {
     const navigate = useNavigate();
@@ -116,8 +117,8 @@ const BillList = () => {
                 "Bill Number": bill.billNumber || 'N/A',
                 "Status": String(bill.status || 'N/A'),
                 "Vendor": getSupplierName(bill.supplier),
-                "Bill Date": bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
-                "Due Date": bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
+                "Bill Date": formatDate(bill.billDate, 'N/A'),
+                "Due Date": formatDate(bill.dueDate, 'N/A'),
                 "Total Amount ($)": Number(bill.totalAmount) || 0,
                 "Amount Paid ($)": Number(bill.amountPaid) || 0,
                 "Balance Due ($)": Number(bill.balanceDue) || 0
@@ -267,10 +268,10 @@ const BillList = () => {
             doc.setFont("helvetica", "normal");
             doc.setTextColor(100, 116, 139);
             const periodText = (filterFromDate || filterToDate) 
-                ? `Filter Period: ${filterFromDate || 'Start'} to ${filterToDate || 'Current'}`
+                ? `Filter Period: ${formatDate(filterFromDate) || 'Start'} to ${formatDate(filterToDate) || 'Current'}`
                 : 'Filter Period: All Time';
             const statusText = filterStatus !== 'ALL' ? `  |  Status: ${filterStatus}` : '';
-            doc.text(`${periodText}${statusText}  |  Generated on: ${new Date().toLocaleString()}  |  Total Bills: ${allBills.length}`, 14, 23);
+            doc.text(`${periodText}${statusText}  |  Generated on: ${formatDateTime(new Date())}  |  Total Bills: ${allBills.length}`, 14, 23);
 
             // KPI Summary Table
             autoTable(doc, {
@@ -315,8 +316,8 @@ const BillList = () => {
                 bill.billNumber || 'N/A',
                 bill.status || 'N/A',
                 (typeof bill.supplier === 'object' && bill.supplier ? bill.supplier.name : bill.supplier) || 'N/A',
-                bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
-                bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
+                formatDate(bill.billDate, 'N/A'),
+                formatDate(bill.dueDate, 'N/A'),
                 `$${(bill.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                 `$${(bill.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                 `$${(bill.balanceDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -919,13 +920,13 @@ const BillList = () => {
                                             <td className="py-4 px-5">
                                                 <div className="flex items-center gap-1.5">
                                                     <Calendar size={12} className="opacity-40" />
-                                                    {bill.billDate ? new Date(bill.billDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                                                    {formatDate(bill.billDate, 'N/A')}
                                                 </div>
                                             </td>
                                             <td className="py-4 px-5">
                                                 <div className="flex items-center gap-1.5">
                                                     <Calendar size={12} className="opacity-40" />
-                                                    {bill.dueDate ? new Date(bill.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                                                    {formatDate(bill.dueDate, 'N/A')}
                                                 </div>
                                             </td>
                                             <td className="py-4 px-5 text-right font-black text-sm">

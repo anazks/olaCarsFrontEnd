@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -222,7 +223,7 @@ const ManageBranches = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             const head = [["Sl No.", "Code", "Name", "Type", "Country", "Status", "Manager"]];
             const body = branches.map((b, idx) => [

@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -197,7 +198,7 @@ const LedgerEntryDetailPage = () => {
     const entryDateStr = entry.entryDate || entry.date;
     const dateObj = new Date(entryDateStr);
     const formattedDate = !isNaN(dateObj.getTime())
-        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        ? formatDateTime(dateObj)
         : entryDateStr;
 
     const style = CATEGORY_STYLES[entry.accountingCode?.category] || { bg: 'transparent', text: 'var(--text-main)', border: 'transparent' };

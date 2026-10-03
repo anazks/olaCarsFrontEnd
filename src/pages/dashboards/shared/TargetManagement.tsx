@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo } from 'react';
 import {
     MapPin, Users,
@@ -549,7 +550,7 @@ const TargetManagement = () => {
                                                     </td>
                                                     <td className="p-4">
                                                         <div className={`flex flex-col ${new Date(t.endDate) < new Date() && t.status !== 'COMPLETED' ? 'text-rose-500' : 'text-dim'}`}>
-                                                            <span className="text-[11px] font-semibold">{new Date(t.endDate).toLocaleDateString()}</span>
+                                                            <span className="text-[11px] font-semibold">{formatDate(t.endDate)}</span>
                                                             <span className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
                                                                 {new Date(t.endDate) < new Date() && t.status !== 'COMPLETED' ? <AlertCircle size={10} /> : <Clock size={10} />}
                                                                 {new Date(t.endDate) < new Date() && t.status !== 'COMPLETED' ? 'Overdue' : 'Remaining'}

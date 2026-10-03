@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -80,13 +81,11 @@ const LedgerEntryDetailModal = ({
     if (!isOpen || !entry) return null;
 
     const entryDate = new Date(entry.entryDate || entry.createdAt);
-    const formattedEntryDate = !isNaN(entryDate.getTime())
-        ? `${entryDate.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })} ${entryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-        : 'N/A';
+    const formattedEntryDate = formatDateTime(entryDate, 'N/A');
 
     const createdAt = entry.createdAt ? new Date(entry.createdAt) : null;
     const updatedAt = entry.updatedAt ? new Date(entry.updatedAt) : null;
-    const fmtTs = (d: Date | null) => d && !isNaN(d.getTime()) ? `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '—';
+    const fmtTs = (d: Date | null) => formatDateTime(d);
 
     const isDebit = entry.type === 'DEBIT';
 
@@ -372,7 +371,7 @@ const LedgerEntryDetailModal = ({
                                         </span>
                                         {att.uploadedAt && (
                                             <span className="text-[10px] opacity-50 ml-3 shrink-0">
-                                                {new Date(att.uploadedAt).toLocaleDateString()}
+                                                {formatDate(att.uploadedAt)}
                                             </span>
                                         )}
                                     </a>
@@ -776,7 +775,7 @@ const BankTransactionDetailPage = () => {
     
     const dateObj = new Date(transaction.entryDate || transaction.createdAt);
     const formattedDate = !isNaN(dateObj.getTime()) 
-        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` 
+        ? formatDateTime(dateObj) 
         : transaction.entryDate;
 
     const handleOpenEdit = (mode: EditMode) => {

@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import {
     AlertTriangle, AlertCircle, Clock, Search, Filter, CheckCircle,
@@ -486,9 +487,7 @@ const AlertsManagement = () => {
                                     {/* Right side: date + resolve */}
                                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
                                         <span className="text-[11px] font-medium" style={{ color: 'var(--text-dim)' }}>
-                                            {new Date(alert.createdAt).toLocaleDateString('en-US', {
-                                                month: 'short', day: 'numeric', year: 'numeric'
-                                            })}
+                                            {formatDate(alert.createdAt)}
                                         </span>
                                         {alert.status === 'ACTIVE' && (
                                             <button

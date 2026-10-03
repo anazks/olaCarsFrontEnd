@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, RefreshCw, Search, FileText, AlertTriangle, Eye, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, Filter, ChevronDown, Trash2 } from 'lucide-react';
@@ -121,7 +122,7 @@ const PurchaseOrderList = () => {
                 "Status": po.status || 'N/A',
                 "Vendor": typeof po.supplier === 'object' ? po.supplier.name : (po.supplierDetails?.name || 'N/A'),
                 "Branch": typeof po.branch === 'object' ? po.branch.name : 'N/A',
-                "Date": po.createdAt ? new Date(po.createdAt).toLocaleDateString() : 'N/A',
+                "Date": po.createdAt ? formatDate(po.createdAt) : 'N/A',
                 "Total Amount ($)": po.totalAmount || 0,
                 "Is Billed": po.isBilled ? 'Yes' : 'No'
             }));
@@ -162,7 +163,7 @@ const PurchaseOrderList = () => {
                 "Status": po.status || 'N/A',
                 "Vendor": typeof po.supplier === 'object' ? po.supplier.name : (po.supplierDetails?.name || 'N/A'),
                 "Branch": typeof po.branch === 'object' ? po.branch.name : 'N/A',
-                "Date": po.createdAt ? new Date(po.createdAt).toLocaleDateString() : 'N/A',
+                "Date": po.createdAt ? formatDate(po.createdAt) : 'N/A',
                 "Total Amount ($)": po.totalAmount || 0,
                 "Is Billed": po.isBilled ? 'Yes' : 'No'
             }));
@@ -201,7 +202,7 @@ const PurchaseOrderList = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             const head = [["Sl No.", "PO Number", "Purpose", "Status", "Vendor", "Branch", "Total Amount"]];
             const body = pos.map((po, idx) => [
@@ -710,7 +711,7 @@ const PurchaseOrderList = () => {
                                         <td className="py-4 px-6">
                                             <div className="flex flex-col">
                                                 <div className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                                                    {new Date(po.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    {formatDate(po.createdAt)}
                                                 </div>
                                                 <div className="text-[10px] opacity-30 mt-0.5">
                                                     {new Date(po.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}

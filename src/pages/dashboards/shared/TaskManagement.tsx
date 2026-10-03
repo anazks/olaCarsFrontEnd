@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo } from 'react';
 import {
     MapPin, Users,
@@ -559,7 +560,7 @@ const TaskManagement = () => {
                                                     </td>
                                                     <td className="p-4">
                                                         <div className={`flex flex-col ${new Date(t.dueDate) < new Date() && t.status !== 'COMPLETED' ? 'text-rose-500' : 'text-dim'}`}>
-                                                            <span className="text-[11px] font-semibold">{new Date(t.dueDate).toLocaleDateString()}</span>
+                                                            <span className="text-[11px] font-semibold">{formatDate(t.dueDate)}</span>
                                                             <span className="text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 mt-0.5">
                                                                 {new Date(t.dueDate) < new Date() && t.status !== 'COMPLETED' ? <AlertCircle size={10} /> : <Clock size={10} />}
                                                                 {new Date(t.dueDate) < new Date() && t.status !== 'COMPLETED' ? 'Overdue' : 'Remaining'}
@@ -664,7 +665,7 @@ const TaskManagement = () => {
                                                         </div>
                                                     </td>
                                                     <td className="p-4 text-right">
-                                                        <span className="text-xs font-semibold text-dim">{new Date(t.dueDate).toLocaleDateString()}</span>
+                                                        <span className="text-xs font-semibold text-dim">{formatDate(t.dueDate)}</span>
                                                     </td>
                                                     <td className="p-4 text-center pr-8">
                                                         <div className="w-full bg-[var(--bg-input)] h-1 rounded-full overflow-hidden">

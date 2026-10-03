@@ -18,15 +18,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const formatDate = (dateString?: string) => {
-    if (!dateString) return '—';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '—';
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-};
+import { formatDate } from '../../../../utils/dateUtils';
 
 const getAssignedVehiclePlate = (c: Customer): string => {
     const rawPlate = 
@@ -1018,7 +1010,7 @@ const Customers = () => {
                 "City": c.city || 'N/A',
                 "Country": c.country || 'N/A',
                 "Status": c.status || 'ACTIVE',
-                "Registered Date": c.createdAt ? new Date(c.createdAt).toLocaleDateString() : 'N/A'
+                "Registered Date": c.createdAt ? formatDate(c.createdAt) : 'N/A'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -1065,7 +1057,7 @@ const Customers = () => {
                 "City": c.city || 'N/A',
                 "Country": c.country || 'N/A',
                 "Status": c.status || 'ACTIVE',
-                "Registered Date": c.createdAt ? new Date(c.createdAt).toLocaleDateString() : 'N/A'
+                "Registered Date": c.createdAt ? formatDate(c.createdAt) : 'N/A'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -1104,7 +1096,7 @@ const Customers = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
             if (startDate || endDate) {
                 doc.text(`Period: ${startDate || 'N/A'} to ${endDate || 'N/A'}`, 14, 35);
             }
@@ -1119,7 +1111,7 @@ const Customers = () => {
                 c.phone || 'N/A',
                 (c.branch as any)?.name || 'N/A',
                 c.status || 'ACTIVE',
-                c.createdAt ? new Date(c.createdAt).toLocaleDateString() : 'N/A'
+                c.createdAt ? formatDate(c.createdAt) : 'N/A'
             ]);
 
             autoTable(doc, {

@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FileText, RefreshCw, AlertTriangle, Calendar, Filter, PlusCircle, User, Receipt, Calculator, BookMarked, Eye } from 'lucide-react';
@@ -208,7 +209,7 @@ const GeneralLedger = () => {
                 const entryDateStr = entry.entryDate || entry.date;
                 const dateObj = new Date(entryDateStr);
                 const formattedDate = !isNaN(dateObj.getTime())
-                    ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    ? formatDateTime(dateObj)
                     : entryDateStr;
 
                 const debitVal = entry.amount !== undefined
@@ -270,7 +271,7 @@ const GeneralLedger = () => {
                 const entryDateStr = entry.entryDate || entry.date;
                 const dateObj = new Date(entryDateStr);
                 const formattedDate = !isNaN(dateObj.getTime())
-                    ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    ? formatDateTime(dateObj)
                     : entryDateStr;
 
                 const debitVal = entry.amount !== undefined
@@ -333,7 +334,7 @@ const GeneralLedger = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             let filterText = `Period: ${startDate || 'All'} to ${endDate || 'All'}`;
             if (selectedCode !== 'ALL') {
@@ -349,7 +350,7 @@ const GeneralLedger = () => {
                 const entryDateStr = entry.entryDate || entry.date;
                 const dateObj = new Date(entryDateStr);
                 const formattedDate = !isNaN(dateObj.getTime())
-                    ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                    ? formatDateTime(dateObj)
                     : entryDateStr;
 
                 const debitVal = entry.amount !== undefined
@@ -595,7 +596,7 @@ const GeneralLedger = () => {
                         <span>Immutable audit trail of all financial transactions</span>
                         {startDate && endDate && (
                             <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[var(--brand-lime)] font-mono text-[10px]">
-                                {new Date(startDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })} – {new Date(endDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                {formatDate(startDate)} – {formatDate(endDate)}
                             </span>
                         )}
                     </p>
@@ -835,7 +836,7 @@ const GeneralLedger = () => {
                                     const entryDateStr = entry.entryDate || entry.date;
                                     const dateObj = new Date(entryDateStr);
                                     const formattedDate = !isNaN(dateObj.getTime())
-                                        ? `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                                        ? formatDateTime(dateObj)
                                         : entryDateStr;
 
                                     const style = CATEGORY_STYLES[entry.accountingCode?.category] || { bg: 'transparent', text: 'var(--text-main)', border: 'transparent' };

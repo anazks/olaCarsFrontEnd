@@ -1,3 +1,4 @@
+import { formatDate, formatSpan } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
     ResponsiveContainer, AreaChart, Area, 
@@ -284,7 +285,7 @@ const CollectionsDashboard = () => {
                 "Fleet Number": item.fleetNumber || 'N/A',
                 "Branch": item.branch || 'N/A',
                 "Country": item.country || 'N/A',
-                "Due Date": item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : 'N/A',
+                "Due Date": item.dueDate ? formatDate(item.dueDate) : 'N/A',
                 "Days Overdue": item.daysOverdue || 0,
                 "Gross Billed ($)": item.totalAmountDue || 0,
                 "Net Settled ($)": item.amountPaid || 0,
@@ -425,7 +426,7 @@ const CollectionsDashboard = () => {
                         <span>Aggregate recovery analysis and forecasts</span>
                         <span className="text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
                             ({filters.startDate || filters.endDate 
-                                ? `Span: ${filters.startDate ? format(new Date(filters.startDate), 'MMM d') : 'Start'} - ${filters.endDate ? format(new Date(filters.endDate), 'MMM d') : 'Now'}`
+                                ? formatSpan(filters.startDate, filters.endDate)
                                 : 'All-Time Dataset'})
                         </span>
                     </p>
@@ -730,7 +731,7 @@ const CollectionsDashboard = () => {
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="py-4 px-3 font-semibold" style={{ color: 'var(--text-muted)' }}>{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
+                                        <td className="py-4 px-3 font-semibold" style={{ color: 'var(--text-muted)' }}>{formatDate(entry.dueDate)}</td>
                                         <td className="py-4 px-3 text-right"><span className="bg-red-500/10 text-red-500 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">{entry.daysOverdue} Days</span></td>
                                         <td className="py-4 pr-4 pl-3 text-right font-black text-red-500">${entry.balance.toLocaleString()}</td>
                                     </tr>
@@ -802,7 +803,7 @@ const CollectionsDashboard = () => {
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="py-4 px-3 font-semibold" style={{ color: 'var(--text-muted)' }}>{format(new Date(entry.dueDate), 'MMM dd, yyyy')}</td>
+                                        <td className="py-4 px-3 font-semibold" style={{ color: 'var(--text-muted)' }}>{formatDate(entry.dueDate)}</td>
                                         <td className="py-4 px-3 text-right font-bold" style={{ color: 'var(--text-muted)' }}>${entry.totalDue.toLocaleString()}</td>
                                         <td className="py-4 pr-4 pl-3 text-right font-black" style={{ color: 'var(--text-main)' }}>${entry.balance.toLocaleString()}</td>
                                     </tr>
@@ -926,7 +927,7 @@ const CollectionsDashboard = () => {
                                          <div className="font-medium" style={{ color: 'var(--text-main)' }}>{item.branch}</div>
                                          <div className="text-[10px] uppercase font-black tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.country}</div>
                                      </td>
-                                     <td className="py-4 px-3 font-bold" style={{ color: 'var(--text-muted)' }}>{format(new Date(item.dueDate), 'MM/dd/yyyy')}</td>
+                                     <td className="py-4 px-3 font-bold" style={{ color: 'var(--text-muted)' }}>{formatDate(item.dueDate)}</td>
                                      <td className="py-4 px-3 text-right font-semibold" style={{ color: 'var(--text-muted)' }}>${item.totalAmountDue.toLocaleString()}</td>
                                      <td className="py-4 px-3 text-right font-bold text-green-500">${item.amountPaid.toLocaleString()}</td>
                                      <td className="py-4 px-3 text-right font-black" style={{ color: 'var(--text-main)' }}>${item.balance.toLocaleString()}</td>

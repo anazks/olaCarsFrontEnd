@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileText, Calendar, Building2, User, CheckCircle2, XCircle, Phone, Clock, Upload, ShieldCheck, PlayCircle, Ban, AlertCircle, FileCheck, Car, Tag, Download, Printer, CreditCard, History, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
@@ -886,14 +887,14 @@ const DriverDetail = () => {
                                     <CompactInfo label="Email Address" value={driver.personalInfo?.email} />
                                     <CompactInfo label="Phone Number" value={driver.personalInfo?.phone} />
                                     <CompactInfo label="WhatsApp" value={driver.personalInfo?.whatsappNumber || 'N/A'} />
-                                    <CompactInfo label="Birth Date" value={driver.personalInfo?.dateOfBirth ? new Date(driver.personalInfo.dateOfBirth).toLocaleDateString() : 'N/A'} />
+                                    <CompactInfo label="Birth Date" value={driver.personalInfo?.dateOfBirth ? formatDate(driver.personalInfo.dateOfBirth) : 'N/A'} />
                                 </div>
 
                                 {/* Column 2: Application & ID */}
                                 <div className="space-y-3 pr-0 md:pr-4 border-r-0 md:border-r border-white/5">
                                     <div className="text-[11px] font-black uppercase tracking-widest text-brand-lime mb-1">Application & ID</div>
                                     <CompactInfo label="Branch" value={typeof driver.branch === 'object' ? driver.branch.name : driver.branch} icon={<Building2 size={10} />} />
-                                    <CompactInfo label="Applied Date" value={new Date(driver.createdAt || driver.appliedAt).toLocaleDateString()} icon={<Calendar size={10} />} />
+                                    <CompactInfo label="Applied Date" value={formatDate(driver.createdAt || driver.appliedAt)} icon={<Calendar size={10} />} />
                                     <CompactInfo label="Nationality" value={driver.personalInfo?.nationality || 'N/A'} />
                                     <div className="flex flex-col gap-0.5">
                                         <span className="text-[10px] font-black uppercase tracking-wider opacity-40">Identity Documentation</span>
@@ -974,7 +975,7 @@ const DriverDetail = () => {
                                 <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
                                     <CompactInfo 
                                         label="Last Checked Date" 
-                                        value={driver.backgroundCheck?.performedAt ? new Date(driver.backgroundCheck.performedAt).toLocaleDateString() : 'N/A'} 
+                                        value={driver.backgroundCheck?.performedAt ? formatDate(driver.backgroundCheck.performedAt) : 'N/A'} 
                                         icon={<Calendar size={10} />}
                                     />
                                     <CompactInfo 
@@ -1057,7 +1058,7 @@ const DriverDetail = () => {
                                             <div className="flex-1">
                                                 <p className="font-bold text-base">{driver.backgroundCheck?.status || 'PENDING'}</p>
                                                 <p className="text-[12px] opacity-60 font-medium italic">
-                                                    {driver.backgroundCheck?.issuedDate ? `Issued: ${new Date(driver.backgroundCheck.issuedDate).toLocaleDateString()}` : 'Date Not Recorded'}
+                                                    {driver.backgroundCheck?.issuedDate ? `Issued: ${formatDate(driver.backgroundCheck.issuedDate)}` : 'Date Not Recorded'}
                                                 </p>
                                             </div>
 
@@ -1553,7 +1554,7 @@ const DriverDetail = () => {
                                                     )}
                                                 </div>
                                                 <h3 className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>{payment.label}</h3>
-                                                <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Due: {new Date(payment.dueDate).toLocaleDateString()}</p>
+                                                <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Due: {formatDate(payment.dueDate)}</p>
                                             </div>
                                         </div>
 
@@ -1598,7 +1599,7 @@ const DriverDetail = () => {
                                                     )}
                                                     {paidAt && (
                                                         <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
-                                                            <span className="font-semibold text-dim">Last Payment Date:</span> {new Date(paidAt).toLocaleDateString()}
+                                                            <span className="font-semibold text-dim">Last Payment Date:</span> {formatDate(paidAt)}
                                                         </p>
                                                     )}
                                                     <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>

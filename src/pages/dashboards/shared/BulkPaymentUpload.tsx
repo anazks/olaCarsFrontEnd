@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ArrowLeft } from 'lucide-react';
 import Papa from 'papaparse';
@@ -111,16 +112,7 @@ const parseFlexibleDate = (dateStr: any): Date | null => {
     return null;
 };
 
-const formatDateForDisplay = (dateVal: any): string => {
-    if (!dateVal) return '';
-    const parsed = parseFlexibleDate(dateVal);
-    if (!parsed) return String(dateVal);
-    
-    const yyyy = parsed.getFullYear();
-    const mm = String(parsed.getMonth() + 1).padStart(2, '0');
-    const dd = String(parsed.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-};
+const formatDateForDisplay = (dateVal: any): string => formatDate(dateVal);
 
 const cleanString = (str: string): string => {
     return str.toLowerCase().replace(/[^a-z0-9]/g, '').trim();

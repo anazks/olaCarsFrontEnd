@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -172,7 +173,7 @@ const ManageBankAccounts = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             const head = [["Sl No.", "Bank Name", "Account Holder", "Account Number", "Currency", "Current Balance", "Status"]];
             const body = accounts.map((a, idx) => [

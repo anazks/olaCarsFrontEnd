@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -78,15 +79,7 @@ const InfoRow = ({ label, value }: { label: string; value?: string | number | nu
     </div>
 );
 
-const formatDateToDMY = (dateInput?: string | Date) => {
-    if (!dateInput) return undefined;
-    const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return undefined;
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
-};
+const formatDateToDMY = (dateInput?: string | Date) => formatDate(dateInput);
 
 // ── Main Component ────────────────────────────────────────────────────────────
 const VehicleDetail = () => {
@@ -1200,8 +1193,8 @@ const VehicleDetail = () => {
                                             label={t('management.vehicles.vehicleDetail.labels.coverage', 'Coverage Type')}
                                             value={vehiclePolicies[0].insurance.coverageType || '—'}
                                         />
-                                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.validFrom')} value={vehiclePolicies[0].startDate ? new Date(vehiclePolicies[0].startDate).toLocaleDateString() : '—'} />
-                                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.validTo')} value={vehiclePolicies[0].expiryDate ? new Date(vehiclePolicies[0].expiryDate).toLocaleDateString() : '—'} />
+                                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.validFrom')} value={vehiclePolicies[0].startDate ? formatDate(vehiclePolicies[0].startDate) : '—'} />
+                                        <InfoRow label={t('management.vehicles.vehicleDetail.labels.validTo')} value={vehiclePolicies[0].expiryDate ? formatDate(vehiclePolicies[0].expiryDate) : '—'} />
                                     </div>
 
                                     {/* Supplier Contact Info */}
@@ -1478,7 +1471,7 @@ const VehicleDetail = () => {
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
                                     <InfoRow label={t('management.vehicles.vehicleDetail.labels.result')} value={vehicle.inspection?.status || t('management.vehicles.vehicleDetail.inspectionPassed')} />
-                                    <InfoRow label={t('management.vehicles.vehicleDetail.labels.date')} value={vehicle.inspection?.date ? new Date(vehicle.inspection.date).toLocaleDateString() : '—'} />
+                                    <InfoRow label={t('management.vehicles.vehicleDetail.labels.date')} value={vehicle.inspection?.date ? formatDate(vehicle.inspection.date) : '—'} />
                                 </div>
                                 <div className="pt-2 border-t" style={{ borderColor: 'var(--border-main)' }}>
                                     <div className="flex items-center justify-between text-[10px] font-bold uppercase mb-2" style={{ color: 'var(--text-dim)' }}>

@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, CheckCircle, AlertTriangle, DollarSign, Calendar, Wrench, FileText, Play, Trash2, Edit2, Archive } from 'lucide-react';
@@ -272,7 +273,7 @@ const FixedAssetDetail = () => {
                             {asset.warrantyExpirationDate && (
                                 <div className="flex justify-between border-b border-white/5 pb-2">
                                     <span style={{ color: 'var(--text-dim)' }}>Warranty Exp.</span>
-                                    <span className="font-semibold" style={{ color: 'var(--text-main)' }}>{new Date(asset.warrantyExpirationDate).toLocaleDateString()}</span>
+                                    <span className="font-semibold" style={{ color: 'var(--text-main)' }}>{formatDate(asset.warrantyExpirationDate)}</span>
                                 </div>
                             )}
                             {asset.description && (
@@ -294,8 +295,8 @@ const FixedAssetDetail = () => {
                                 <div>
                                     <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Purchase & Start Dates</p>
                                     <p className="font-semibold text-xs" style={{ color: 'var(--text-main)' }}>
-                                        Purchased: {new Date(asset.purchaseDate).toLocaleDateString()}
-                                        {asset.depreciationStartDate && ` | Starts: ${new Date(asset.depreciationStartDate).toLocaleDateString()}`}
+                                        Purchased: {formatDate(asset.purchaseDate)}
+                                        {asset.depreciationStartDate && ` | Starts: ${formatDate(asset.depreciationStartDate)}`}
                                     </p>
                                 </div>
                             </div>
@@ -449,7 +450,7 @@ const FixedAssetDetail = () => {
                                                 <tr key={entry.periodIndex} className="hover:bg-white/5 transition-colors">
                                                     <td className="px-6 py-4 font-bold text-sm" style={{ color: 'var(--text-main)' }}>#{entry.periodIndex}</td>
                                                     <td className="px-6 py-4 text-xs" style={{ color: 'var(--text-dim)' }}>
-                                                        {new Date(entry.periodDate).toLocaleDateString()}
+                                                        {formatDate(entry.periodDate)}
                                                     </td>
                                                     <td className="px-6 py-4 text-xs" style={{ color: 'var(--text-main)' }}>
                                                         ${entry.depreciationAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -471,7 +472,7 @@ const FixedAssetDetail = () => {
                                                         <td className="px-6 py-4 text-right">
                                                             {isPosted ? (
                                                                 <span className="text-[10px] text-dim font-mono" style={{ color: 'var(--text-dim)' }}>
-                                                                    Posted on {entry.postedDate ? new Date(entry.postedDate).toLocaleDateString() : 'N/A'}
+                                                                    Posted on {entry.postedDate ? formatDate(entry.postedDate) : 'N/A'}
                                                                 </span>
                                                             ) : (
                                                                 <button

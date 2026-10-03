@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
     X, 
@@ -46,23 +47,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
     'EXPENSE': { bg: 'rgba(239,68,68,0.15)', text: '#f87171', border: 'rgba(239,68,68,0.3)' },
 };
 
-const formatJournalDisplayDate = (val: string | Date | undefined): string => {
-    if (!val) return '—';
-    if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
-        const [y, m, d] = val.split('T')[0].split('-');
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const mIdx = parseInt(m, 10) - 1;
-        return `${parseInt(d, 10)} ${monthNames[mIdx] || m} ${y}`;
-    }
-    const dObj = new Date(val);
-    if (isNaN(dObj.getTime())) return '—';
-    return dObj.toLocaleDateString('en-GB', {
-        timeZone: 'UTC',
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
-    });
-};
+const formatJournalDisplayDate = (val: string | Date | undefined): string => formatDate(val);
 
 /**
  * Custom Searchable Account Selector in Ola Dark Theme

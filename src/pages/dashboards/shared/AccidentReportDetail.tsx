@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -185,7 +186,7 @@ const AccidentReportDetail = () => {
                         <div className="px-4 border-r" style={{ borderColor: 'var(--border-main)' }}>
                             <p className="text-[8px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>Time of Accident</p>
                             <p className="text-xs font-bold mt-1" style={{ color: 'var(--text-main)' }}>
-                                {new Date(report.accidentDate).toLocaleDateString()}
+                                {formatDate(report.accidentDate)}
                             </p>
                         </div>
                         <div className="px-4">

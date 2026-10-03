@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -458,7 +459,7 @@ const BranchDetails = () => {
                                     axisLine={false}
                                     tickFormatter={(str) => {
                                         const d = new Date(str);
-                                        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                                        return formatDate(d);
                                     }}
                                 />
                                 <YAxis stroke="var(--text-dim)" fontSize={10} tickLine={false} axisLine={false} />

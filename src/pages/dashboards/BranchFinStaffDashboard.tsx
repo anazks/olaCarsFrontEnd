@@ -1,3 +1,4 @@
+import { formatDate } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Wallet, Receipt, Calculator, AlertCircle, ClipboardList, RefreshCw, BarChart3, Eye, CheckCircle } from 'lucide-react';
@@ -240,7 +241,7 @@ const BranchFinStaffDashboard = () => {
                                             <div className="text-xs font-medium text-dim">{typeof po.supplier === 'object' ? po.supplier.name : 'Unknown Supplier'}</div>
                                         </td>
                                         <td className="px-8 py-5">
-                                            <div className="text-xs font-medium text-dim">{new Date(po.createdAt).toLocaleDateString()}</div>
+                                            <div className="text-xs font-medium text-dim">{formatDate(po.createdAt)}</div>
                                         </td>
                                         <td className="px-8 py-5 text-right">
                                             <div className="text-sm font-black text-white">
@@ -302,7 +303,7 @@ const BranchFinStaffDashboard = () => {
                             {transactions.map((tx) => {
                                 const entryDateStr = tx.entryDate || tx.createdAt || tx.date;
                                 const dateObj = new Date(entryDateStr);
-                                const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString() : entryDateStr;
+                                const formattedDate = !isNaN(dateObj.getTime()) ? formatDate(dateObj) : entryDateStr;
                                 const isIncome = tx.accountingCode?.category?.toUpperCase() === 'INCOME';
 
                                 return (

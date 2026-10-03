@@ -13,6 +13,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import toast from 'react-hot-toast';
+import { formatDate } from '../../../../utils/dateUtils';
 
 interface BillReference {
     billId: string;
@@ -72,7 +73,7 @@ const VendorPayment = () => {
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Payment Number": p.paymentNumber || 'N/A',
                 "Vendor": p.supplier?.name || 'N/A',
-                "Date": p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : 'N/A',
+                "Date": formatDate(p.paymentDate, 'N/A'),
                 "Method": p.paymentMethod || 'N/A',
                 "Ref Number": p.referenceNumber || '—',
                 "Status": p.status || 'N/A',
@@ -112,7 +113,7 @@ const VendorPayment = () => {
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Payment Number": p.paymentNumber || 'N/A',
                 "Vendor": p.supplier?.name || 'N/A',
-                "Date": p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : 'N/A',
+                "Date": formatDate(p.paymentDate, 'N/A'),
                 "Method": p.paymentMethod || 'N/A',
                 "Ref Number": p.referenceNumber || '—',
                 "Status": p.status || 'N/A',
@@ -153,14 +154,14 @@ const VendorPayment = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             const head = [["Sl No.", "Payment Number", "Vendor", "Date", "Method", "Status", "Amount"]];
             const body = payments.map((p, idx) => [
                 String(idx + 1).padStart(2, '0'),
                 p.paymentNumber || 'N/A',
                 p.supplier?.name || 'N/A',
-                p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : 'N/A',
+                formatDate(p.paymentDate, 'N/A'),
                 p.paymentMethod || 'N/A',
                 p.status || 'N/A',
                 `$${(p.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
@@ -467,7 +468,7 @@ const VendorPayment = () => {
                                                 <div className="text-[9px] text-dim font-medium mt-0.5">Ref: {pmt.referenceNumber}</div>
                                             )}
                                         </td>
-                                        <td className="p-6 text-xs text-dim">{new Date(pmt.paymentDate).toLocaleDateString()}</td>
+                                        <td className="p-6 text-xs text-dim">{formatDate(pmt.paymentDate)}</td>
                                         <td className="p-6 text-right font-black text-brand-lime">${pmt.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                         <td className="p-6 text-xs font-semibold" style={{ color: 'var(--text-main)' }}>
                                              <div className="flex items-center gap-1.5">

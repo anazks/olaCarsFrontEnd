@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import {
     DollarSign, Clock, CheckCircle, XCircle, Banknote,
@@ -10,7 +11,6 @@ import {
     updatePaymentRequestStatus,
     type PaymentRequest,
 } from '../../../services/paymentRequestService';
-import { format } from 'date-fns';
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
@@ -157,7 +157,7 @@ const StatusUpdateModal = ({ request, onClose, onSuccess }: StatusModalProps) =>
                             </span>
                             <span className="flex items-center gap-1">
                                 <Calendar size={11} />
-                                Due: {format(new Date(request.expectedPaymentDate), 'dd MMM yyyy')}
+                                Due: {formatDate(request.expectedPaymentDate)}
                             </span>
                         </div>
                     </div>
@@ -456,7 +456,7 @@ const FinancialAdminPaymentRequests = () => {
                                                 </span>
                                             )}
                                             <span className="flex items-center gap-1">
-                                                <Calendar size={10} /> Due: {format(new Date(req.expectedPaymentDate), 'dd MMM yyyy')}
+                                                <Calendar size={10} /> Due: {formatDate(req.expectedPaymentDate)}
                                             </span>
                                         </div>
                                     </div>
@@ -467,7 +467,7 @@ const FinancialAdminPaymentRequests = () => {
                                             {req.currency} {req.amount.toLocaleString()}
                                         </div>
                                         <div className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                                            {format(new Date(req.createdAt), 'dd MMM yyyy')}
+                                            {formatDate(req.createdAt)}
                                         </div>
                                     </div>
 
@@ -516,13 +516,13 @@ const FinancialAdminPaymentRequests = () => {
                                                         <div className="flex items-center justify-between py-1.5 border-b" style={{ borderColor: 'var(--border-main)' }}>
                                                             <span style={{ color: 'var(--text-dim)' }}>Expected Date</span>
                                                             <span className="font-semibold" style={{ color: 'var(--text-main)' }}>
-                                                                {format(new Date(req.expectedPaymentDate), 'EEEE, dd MMM yyyy')}
+                                                                {formatDate(req.expectedPaymentDate)}
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center justify-between py-1.5 border-b" style={{ borderColor: 'var(--border-main)' }}>
                                                             <span style={{ color: 'var(--text-dim)' }}>Submitted</span>
                                                             <span className="font-semibold" style={{ color: 'var(--text-main)' }}>
-                                                                {format(new Date(req.createdAt), 'dd MMM yyyy, HH:mm')}
+                                                                {formatDateTime(req.createdAt)}
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center justify-between py-1.5 border-b" style={{ borderColor: 'var(--border-main)' }}>
@@ -598,7 +598,7 @@ const FinancialAdminPaymentRequests = () => {
                                                                         <div className="flex-1">
                                                                             <div className="flex items-center justify-between">
                                                                                 <span className={`font-bold ${hCfg?.color || ''}`}>{hCfg?.label || h.status}</span>
-                                                                                <span style={{ color: 'var(--text-dim)' }}>{format(new Date(h.timestamp), 'dd MMM, HH:mm')}</span>
+                                                                                <span style={{ color: 'var(--text-dim)' }}>{formatDateTime(h.timestamp)}</span>
                                                                             </div>
                                                                             {h.notes && <p className="mt-0.5" style={{ color: 'var(--text-dim)' }}>{h.notes}</p>}
                                                                         </div>

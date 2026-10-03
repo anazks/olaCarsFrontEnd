@@ -1,3 +1,4 @@
+import { formatDate, formatSpan } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo } from 'react';
 import { 
      Calendar, MapPin, Building, 
@@ -252,7 +253,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                 "Fleet Number": item.fleetNumber || 'N/A',
                 "Branch": item.branch || 'N/A',
                 "Country": item.country || 'N/A',
-                "Due Date": item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : 'N/A',
+                "Due Date": item.dueDate ? formatDate(item.dueDate) : 'N/A',
                 "Days Overdue": item.daysOverdue || 0,
                 "Gross Billed ($)": item.totalAmountDue || 0,
                 "Net Settled ($)": item.amountPaid || 0,
@@ -337,7 +338,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
             const csvRows = [
                 headers.join(','),
                 ...items.map((item, idx) => {
-                    const formattedDate = item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : '';
+                    const formattedDate = item.dueDate ? formatDate(item.dueDate) : '';
                     return [
                         idx + 1,
                         item.invoiceNumber,
@@ -409,7 +410,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
             doc.setFontSize(18);
             doc.text(meta.title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
             if (filters.startDate || filters.endDate) {
                 doc.text(`Period: ${filters.startDate || 'N/A'} to ${filters.endDate || 'N/A'}`, 14, 35);
             }
@@ -440,7 +441,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                 item.fleetNumber || '—',
                 item.branch || '—',
                 item.country || '—',
-                item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : '—',
+                item.dueDate ? formatDate(item.dueDate) : '—',
                 String(item.daysOverdue || 0),
                 `$${(item.totalAmountDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                 `$${(item.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
@@ -473,7 +474,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
             doc.setFontSize(18);
             doc.text("Collection Invoice Statement", 14, 20);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 28);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 28);
             
             doc.setFontSize(11);
             doc.text(`Invoice #: ${item.invoiceNumber || 'N/A'}`, 14, 38);
@@ -481,7 +482,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
             doc.text(`Customer ID: ${item.driverId || 'N/A'}`, 14, 52);
             doc.text(`Vehicle Number: ${item.vehicleNumber || 'N/A'} (Fleet #${item.fleetNumber || 'N/A'})`, 14, 59);
             doc.text(`Branch / Location: ${item.branch || 'N/A'} (${item.country || 'N/A'})`, 14, 66);
-            doc.text(`Due Date: ${item.dueDate ? format(new Date(item.dueDate), 'yyyy-MM-dd') : 'N/A'}`, 14, 73);
+            doc.text(`Due Date: ${item.dueDate ? formatDate(item.dueDate) : 'N/A'}`, 14, 73);
             doc.text(`Status: ${item.status || 'N/A'}`, 14, 80);
 
             autoTable(doc, {
@@ -522,7 +523,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                         <span className="text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
                             ({type === 'GENERAL' ? (
                                 filters.startDate || filters.endDate 
-                                    ? `Span: ${filters.startDate ? format(new Date(filters.startDate), 'MMM d') : 'Start'} - ${filters.endDate ? format(new Date(filters.endDate), 'MMM d') : 'Now'}`
+                                    ? formatSpan(filters.startDate, filters.endDate)
                                     : 'All-Time Dataset'
                             ) : (
                                 type === 'OVERDUE' ? 'Historical Aging' : 'Future Projections'
@@ -787,7 +788,7 @@ const CollectionsLedgerView = ({ type }: CollectionsLedgerViewProps) => {
                                                 <div className="text-[10px] font-black uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.country}</div>
                                             </td>
                                             <td className="py-4 px-3 font-bold" style={{ color: 'var(--text-muted)' }}>
-                                                {format(new Date(item.dueDate), 'MMMM dd, yyyy')}
+                                                {formatDate(item.dueDate)}
                                             </td>
                                             
                                             {type === 'OVERDUE' && (

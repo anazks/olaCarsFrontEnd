@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -163,7 +164,7 @@ const InsuranceClaimDetail = () => {
                         Claim {claim.claimNumber}
                     </h1>
                     <p className="mt-1 font-medium text-sm" style={{ color: 'var(--text-muted)' }}>
-                        Filed on {new Date(claim.createdAt).toLocaleDateString()}
+                        Filed on {formatDate(claim.createdAt)}
                     </p>
                 </div>
                 
@@ -286,7 +287,7 @@ const InsuranceClaimDetail = () => {
                                         </div>
                                         <div>
                                             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Payment Date</p>
-                                            <p className="font-medium">{claim.paymentDate ? new Date(claim.paymentDate).toLocaleDateString() : 'N/A'}</p>
+                                            <p className="font-medium">{claim.paymentDate ? formatDate(claim.paymentDate) : 'N/A'}</p>
                                         </div>
                                     </>
                                 )}

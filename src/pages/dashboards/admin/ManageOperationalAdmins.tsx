@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -416,7 +417,7 @@ const ManageOperationalAdmins = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-left text-[11px] transition-colors" style={{ color: 'var(--text-dim)' }}>
-                                            {admin.createdAt ? new Date(admin.createdAt).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                            {admin.createdAt ? formatDate(admin.createdAt) : '—'}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-2">

@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -156,9 +157,7 @@ const AccountingTransactionDetailPage = () => {
     const catStyle = CATEGORY_STYLES[category] || CATEGORY_STYLES['ASSET'];
 
     const entryDateObj = new Date(entry.entryDate || entry.createdAt || Date.now());
-    const formattedDate = !isNaN(entryDateObj.getTime())
-        ? `${entryDateObj.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })} ${entryDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-        : entry.entryDate;
+    const formattedDate = formatDateTime(entryDateObj, entry.entryDate);
 
     const isDebit = entry.type === 'DEBIT';
     const debitAmount = entry.amount !== undefined ? (isDebit ? entry.amount : 0) : (entry.debit || 0);

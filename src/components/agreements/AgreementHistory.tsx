@@ -1,3 +1,4 @@
+import { formatDate } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { History, X, User, Shield, FileText } from 'lucide-react';
@@ -89,7 +90,7 @@ const AgreementHistory = ({ agreement, onClose }: AgreementHistoryProps) => {
                                                 v{version.version}
                                             </span>
                                             <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
-                                                {new Date(version.createdAt).toLocaleDateString()}
+                                                {formatDate(version.createdAt)}
                                             </span>
                                         </div>
                                         <div className="flex flex-col gap-1">

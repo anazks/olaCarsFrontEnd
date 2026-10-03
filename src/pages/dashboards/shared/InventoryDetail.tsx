@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -548,7 +549,7 @@ const InventoryDetail = () => {
                       {assetLedger.map((entry) => (
                         <tr key={entry._id} className="hover:bg-white/[0.02] transition-colors">
                           <td className="py-3.5 px-4 font-mono opacity-80" style={{ color: "var(--text-muted)" }}>
-                            {entry.date ? new Date(entry.date).toLocaleDateString() : new Date(entry.createdAt || "").toLocaleDateString()}
+                            {formatDate(entry.date || entry.createdAt)}
                           </td>
                           <td className="py-3.5 px-4 font-bold max-w-sm truncate" style={{ color: "var(--text-main)" }} title={entry.description}>
                             {entry.description}
@@ -603,7 +604,7 @@ const InventoryDetail = () => {
                       {debitLedger.map((entry) => (
                         <tr key={entry._id} className="hover:bg-white/[0.02] transition-colors">
                           <td className="py-3.5 px-4 font-mono opacity-80" style={{ color: "var(--text-muted)" }}>
-                            {entry.date ? new Date(entry.date).toLocaleDateString() : new Date(entry.createdAt || "").toLocaleDateString()}
+                            {formatDate(entry.date || entry.createdAt)}
                           </td>
                           <td className="py-3.5 px-4 font-bold max-w-sm truncate" style={{ color: "var(--text-main)" }} title={entry.description}>
                             {entry.description}
@@ -658,7 +659,7 @@ const InventoryDetail = () => {
                       {creditLedger.map((entry) => (
                         <tr key={entry._id} className="hover:bg-white/[0.02] transition-colors">
                           <td className="py-3.5 px-4 font-mono opacity-80" style={{ color: "var(--text-muted)" }}>
-                            {entry.date ? new Date(entry.date).toLocaleDateString() : new Date(entry.createdAt || "").toLocaleDateString()}
+                            {formatDate(entry.date || entry.createdAt)}
                           </td>
                           <td className="py-3.5 px-4 font-bold max-w-sm truncate" style={{ color: "var(--text-main)" }} title={entry.description}>
                             {entry.description}

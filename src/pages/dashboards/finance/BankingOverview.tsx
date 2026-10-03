@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -332,7 +333,7 @@ const BankingOverview = () => {
             const netDaily = (d.income || 0) - (d.expenses || 0);
             runningBalance += netDaily;
             return {
-                date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+                date: formatDate(d.date),
                 balance: runningBalance,
                 inflow: d.income || 0,
                 outflow: d.expenses || 0

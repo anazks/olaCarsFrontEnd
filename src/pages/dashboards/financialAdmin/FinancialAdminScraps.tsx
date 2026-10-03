@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -368,7 +369,7 @@ const FinancialAdminScraps = () => {
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-4 font-bold text-xs" style={{ color: 'var(--text-muted)' }}>
-                                                    {new Date(item.scrappedDate || item.createdAt).toLocaleDateString()}
+                                                    {formatDate(item.scrappedDate || item.createdAt)}
                                                 </td>
                                                 <td className="py-4 px-4 text-right font-bold font-mono" style={{ color: item.currentAmount ? 'var(--text-main)' : 'var(--text-muted)' }}>
                                                     {item.currentAmount ? `$${item.currentAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}

@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -202,7 +203,7 @@ const DashboardHub = () => {
         const curr = new Date(start);
         let limit = 0;
         while (curr <= end && limit < 366) {
-            const dateKey = curr.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const dateKey = formatDate(curr);
             datesList.push(dateKey);
             dailyMap[dateKey] = {};
             
@@ -229,7 +230,7 @@ const DashboardHub = () => {
             incomeEntries.forEach(entry => {
                 if (!entry.entryDate || !entry.amount) return;
                 const entryDate = new Date(entry.entryDate);
-                const dateKey = entryDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const dateKey = formatDate(entryDate);
 
                 if (dailyMap[dateKey]) {
                     const branchId = typeof entry.branch === 'object' ? entry.branch?._id : entry.branch;

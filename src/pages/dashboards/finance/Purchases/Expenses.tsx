@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import toast from 'react-hot-toast';
+import { formatDate } from '../../../../utils/dateUtils';
 
 const Expenses = () => {
     const navigate = useNavigate();
@@ -71,7 +72,7 @@ const Expenses = () => {
             const exportData = sortedExpenses.map((exp, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Expense Number": exp.expenseNumber || 'N/A',
-                "Date": exp.expenseDate ? new Date(exp.expenseDate).toLocaleDateString() : 'N/A',
+                "Date": formatDate(exp.expenseDate, 'N/A'),
                 "Debit Account": exp.expenseAccount?.name || 'N/A',
                 "Debit Account Code": exp.expenseAccount?.code || 'N/A',
                 "Paid Through": exp.paidThroughAccount?.name || 'N/A',
@@ -114,7 +115,7 @@ const Expenses = () => {
             const exportData = sortedExpenses.map((exp, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Expense Number": exp.expenseNumber || 'N/A',
-                "Date": exp.expenseDate ? new Date(exp.expenseDate).toLocaleDateString() : 'N/A',
+                "Date": formatDate(exp.expenseDate, 'N/A'),
                 "Debit Account": exp.expenseAccount?.name || 'N/A',
                 "Debit Account Code": exp.expenseAccount?.code || 'N/A',
                 "Paid Through": exp.paidThroughAccount?.name || 'N/A',
@@ -161,13 +162,13 @@ const Expenses = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             const head = [["Sl No.", "Expense #", "Date", "Debit Account", "Paid Through", "Vendor", "Customer", "Amount"]];
             const body = sortedExpenses.map((exp, idx) => [
                 String(idx + 1).padStart(2, '0'),
                 exp.expenseNumber || 'N/A',
-                exp.expenseDate ? new Date(exp.expenseDate).toLocaleDateString() : 'N/A',
+                formatDate(exp.expenseDate, 'N/A'),
                 exp.expenseAccount?.name || 'N/A',
                 exp.paidThroughAccount?.name || 'N/A',
                 exp.supplier?.name || 'N/A',
@@ -528,7 +529,7 @@ const Expenses = () => {
 
                                             {/* Date */}
                                             <td className="py-4 px-6 text-dim">
-                                                {new Date(exp.expenseDate).toLocaleDateString()}
+                                                {formatDate(exp.expenseDate)}
                                             </td>
 
                                             {/* Debit Account */}

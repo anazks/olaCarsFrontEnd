@@ -8,6 +8,7 @@ import {
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import api from '../../../../services/api';
 import toast from 'react-hot-toast';
+import { formatDate } from '../../../../utils/dateUtils';
 
 interface BillReference {
     billId: string;
@@ -190,7 +191,7 @@ const VendorPaymentDetail = () => {
                         <div className="font-medium text-right sm:text-right">
                             <span className="text-[9px] font-black uppercase tracking-widest text-dim opacity-50 block">Payment Date</span>
                             <span className="text-xs font-bold text-white mt-1 block" style={{ color: 'var(--text-main)' }}>
-                                {new Date(payment.paymentDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                {formatDate(payment.paymentDate)}
                             </span>
                         </div>
                     </div>

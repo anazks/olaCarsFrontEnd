@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { 
     X, 
@@ -180,7 +181,7 @@ const ViewVoucher = ({ voucherId, onClose }: ViewVoucherProps) => {
                             <Calendar size={12} /> Voucher Date
                         </span>
                         <p className="text-sm font-semibold text-[color:var(--text-main)] print:text-black">
-                            {new Date(voucher.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {formatDate(voucher.date)}
                         </p>
                     </div>
                     <div className="space-y-1">

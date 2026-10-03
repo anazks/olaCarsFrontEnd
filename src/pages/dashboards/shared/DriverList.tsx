@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Search, Filter, Plus, FileText, ChevronRight, Calendar, ChevronDown, RefreshCw, ChevronLeft, Upload, Database } from 'lucide-react';
@@ -119,7 +120,7 @@ const DriverList = () => {
                 "Phone": d.personalInfo?.phone || (d as any).phone || 'N/A',
                 "Branch": typeof (d as any).branch === 'object' ? (d as any).branch?.name : 'N/A',
                 "Status": (d as any).status || 'N/A',
-                "Onboarding Date": (d as any).createdAt ? new Date((d as any).createdAt).toLocaleDateString() : 'N/A'
+                "Onboarding Date": (d as any).createdAt ? formatDate((d as any).createdAt, 'N/A') : 'N/A'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -159,7 +160,7 @@ const DriverList = () => {
                 "Phone": d.personalInfo?.phone || (d as any).phone || 'N/A',
                 "Branch": typeof (d as any).branch === 'object' ? (d as any).branch?.name : 'N/A',
                 "Status": (d as any).status || 'N/A',
-                "Onboarding Date": (d as any).createdAt ? new Date((d as any).createdAt).toLocaleDateString() : 'N/A'
+                "Onboarding Date": (d as any).createdAt ? formatDate((d as any).createdAt, 'N/A') : 'N/A'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -196,7 +197,7 @@ const DriverList = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             const head = [["Sl No.", "Driver ID", "Name", "Email", "Phone", "Branch", "Status"]];
             const body = drivers.map((d, idx) => [

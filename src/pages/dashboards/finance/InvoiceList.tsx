@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -881,10 +882,10 @@ const InvoiceList = () => {
                                                 </span>
                                             </td>
                                             <td className="py-4 px-6 font-bold text-dim">
-                                                {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : (invoice.generatedAt ? new Date(invoice.generatedAt).toLocaleDateString() : (invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : 'N/A'))}
+                                                {formatDate(invoice.invoiceDate || invoice.generatedAt || invoice.createdAt, 'N/A')}
                                             </td>
                                             <td className="py-4 px-6 font-bold text-dim">
-                                                {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
+                                                {invoice.dueDate ? formatDate(invoice.dueDate) : 'N/A'}
                                             </td>
                                             <td className="py-4 px-6 text-center" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-center gap-1.5">

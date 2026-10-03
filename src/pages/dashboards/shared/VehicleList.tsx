@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, RefreshCw, Search, Car, AlertTriangle, Eye, ChevronLeft, ChevronRight, Users, Filter, SlidersHorizontal, Shield, ChevronDown } from 'lucide-react';
 import { getAllVehicles } from '../../../services/vehicleService';
@@ -201,7 +202,7 @@ const VehicleList = ({ mode = 'active' }: VehicleListProps) => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             const head = [["Sl No.", "Vehicle Number", "Brand", "Model", "Year", "Category", "Branch", "Status"]];
             const body = vehicles.map((v, idx) => [

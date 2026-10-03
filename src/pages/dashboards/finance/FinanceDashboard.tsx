@@ -1,5 +1,5 @@
+import { formatDate, formatSpan } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo } from 'react';
-import { format } from 'date-fns';
 import OlaLoader from '../../../components/common/OlaLoader';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../../store';
@@ -879,7 +879,7 @@ const FinanceDashboard = () => {
                         <span>Real-time institutional liquidity, tax sheets, and double-entry accounting records.</span>
                         <span className="text-brand-lime font-black" style={{ color: 'var(--brand-lime)' }}>
                             ({startDate || endDate 
-                                ? `Span: ${startDate ? format(new Date(startDate), 'MMM d, yyyy') : 'Start'} - ${endDate ? format(new Date(endDate), 'MMM d, yyyy') : 'Now'}`
+                                ? formatSpan(startDate, endDate)
                                 : 'All-Time Dataset'})
                         </span>
                     </p>
@@ -1568,7 +1568,7 @@ const FinanceDashboard = () => {
                                             {typeof po.supplier === 'object' ? (po.supplier as any).name : 'Unknown Supplier'}
                                         </td>
                                         <td className="px-6 py-4 text-dim font-medium">
-                                            {new Date(po.createdAt).toLocaleDateString()}
+                                            {formatDate(po.createdAt)}
                                         </td>
                                         <td className="px-6 py-4 text-right font-black" style={{ color: 'var(--text-main)' }}>
                                             {formatCurrency(po.totalAmount)}
@@ -1642,7 +1642,7 @@ const FinanceDashboard = () => {
                                         liveData.ledger.slice(0, 10).map((entry) => {
                                             const entryDateStr = entry.entryDate || entry.date;
                                             const dateObj = new Date(entryDateStr);
-                                            const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString(undefined, { timeZone: 'UTC' }) : entryDateStr;
+                                            const formattedDate = !isNaN(dateObj.getTime()) ? formatDate(dateObj) : entryDateStr;
                                             const amount = (entry.amount !== undefined && entry.amount !== null) ? entry.amount : ((entry.credit || 0) > 0 ? (entry.credit || 0) : (entry.debit || 0));
                                             const isDebit = (entry.amount !== undefined && entry.amount !== null) ? (entry.type === 'DEBIT') : ((entry.debit || 0) > 0);
 
@@ -1713,7 +1713,7 @@ const FinanceDashboard = () => {
                                             {task.status}
                                         </span>
                                         <span className="text-[8px] font-bold opacity-30">
-                                            Due: {new Date(task.dueDate).toLocaleDateString()}
+                                            Due: {formatDate(task.dueDate)}
                                         </span>
                                     </div>
                                 </div>
@@ -1777,10 +1777,10 @@ const FinanceDashboard = () => {
                 {rawLiveData.invoices && rawLiveData.invoices.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-white/5 text-[10px] text-dim font-medium space-y-1.5">
                         <p>
-                            <span className="font-bold text-main">First Invoice in Cache:</span> {rawLiveData.invoices[0].invoiceNumber} ({new Date(rawLiveData.invoices[0].generatedAt || rawLiveData.invoices[0].dueDate).toLocaleDateString()}) | Paid: {formatCurrency(rawLiveData.invoices[0].amountPaid || 0)} | Due: {formatCurrency(rawLiveData.invoices[0].totalAmountDue || 0)}
+                            <span className="font-bold text-main">First Invoice in Cache:</span> {rawLiveData.invoices[0].invoiceNumber} ({formatDate(rawLiveData.invoices[0].generatedAt || rawLiveData.invoices[0].dueDate)}) | Paid: {formatCurrency(rawLiveData.invoices[0].amountPaid || 0)} | Due: {formatCurrency(rawLiveData.invoices[0].totalAmountDue || 0)}
                         </p>
                         <p>
-                            <span className="font-bold text-main">Last Invoice in Cache:</span> {rawLiveData.invoices[rawLiveData.invoices.length - 1].invoiceNumber} ({new Date(rawLiveData.invoices[rawLiveData.invoices.length - 1].generatedAt || rawLiveData.invoices[rawLiveData.invoices.length - 1].dueDate).toLocaleDateString()}) | Paid: {formatCurrency(rawLiveData.invoices[rawLiveData.invoices.length - 1].amountPaid || 0)} | Due: {formatCurrency(rawLiveData.invoices[rawLiveData.invoices.length - 1].totalAmountDue || 0)}
+                            <span className="font-bold text-main">Last Invoice in Cache:</span> {rawLiveData.invoices[rawLiveData.invoices.length - 1].invoiceNumber} ({formatDate(rawLiveData.invoices[rawLiveData.invoices.length - 1].generatedAt || rawLiveData.invoices[rawLiveData.invoices.length - 1].dueDate)}) | Paid: {formatCurrency(rawLiveData.invoices[rawLiveData.invoices.length - 1].amountPaid || 0)} | Due: {formatCurrency(rawLiveData.invoices[rawLiveData.invoices.length - 1].totalAmountDue || 0)}
                         </p>
                     </div>
                 )}

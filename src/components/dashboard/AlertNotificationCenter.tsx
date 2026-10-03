@@ -1,3 +1,4 @@
+import { formatDate } from '../../utils/dateUtils';
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, AlertTriangle, Info, Calendar, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -129,7 +130,7 @@ const AlertNotificationCenter: React.FC = () => {
                                                 {alert.type}
                                             </p>
                                             <p className="text-[10px]" style={{ color: 'var(--text-dim)' }}>
-                                                {new Date(alert.createdAt).toLocaleDateString()}
+                                                {formatDate(alert.createdAt)}
                                             </p>
                                         </div>
                                         <p className="text-sm leading-relaxed mb-2" style={{ color: 'var(--text-main)' }}>

@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -186,7 +187,7 @@ const StaffPerformanceDetails = () => {
                         <div className="space-y-0.5">
                             <span className="text-[8px] font-black uppercase tracking-widest opacity-45">Tenure</span>
                             <p className="text-xs font-bold flex items-center gap-1.5 text-[var(--text-main)]">
-                                <Calendar size={12} className="text-lime" /> {new Date(profile.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                <Calendar size={12} className="text-lime" /> {formatDate(profile.createdAt)}
                             </p>
                         </div>
                     </div>

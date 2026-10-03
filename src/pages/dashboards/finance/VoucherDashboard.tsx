@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -39,7 +40,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import toast from 'react-hot-toast';
 
-const formatDate = (date: Date) => {
+const formatDateForInput = (date: Date) => {
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, '0');
     const dd = String(date.getDate()).padStart(2, '0');
@@ -61,8 +62,8 @@ const VoucherDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState<VoucherType | 'ALL'>('ALL');
-    const [startDate, setStartDate] = useState(formatDate(oneMonthAgo));
-    const [endDate, setEndDate] = useState(formatDate(today));
+    const [startDate, setStartDate] = useState(formatDateForInput(oneMonthAgo));
+    const [endDate, setEndDate] = useState(formatDateForInput(today));
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedVoucherId, setSelectedVoucherId] = useState<string | null>(null);
     const [voucherToCancel, setVoucherToCancel] = useState<Voucher | null>(null);
@@ -158,7 +159,7 @@ const VoucherDashboard = () => {
             doc.setTextColor(100, 100, 100);
             doc.text(`Voucher Number: ${voucher.voucherNumber}`, 14, 28);
             doc.text(`Status: ${voucher.status}`, 14, 34);
-            doc.text(`Date: ${new Date(voucher.date).toLocaleDateString('en-GB')}`, 14, 40);
+            doc.text(`Date: ${formatDate(voucher.date)}`, 14, 40);
             doc.text(`Branch: ${voucher.branch?.name || 'Main Branch'}`, 14, 46);
             
             // Reference Info
@@ -458,7 +459,7 @@ const VoucherDashboard = () => {
                                             <div className="flex flex-col gap-0.5">
                                                 <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--text-main)' }}>
                                                     <Calendar size={12} style={{ color: 'var(--text-dim)' }} />
-                                                    {new Date(voucher.date).toLocaleDateString('en-GB')}
+                                                    {formatDate(voucher.date)}
                                                 </div>
                                                 <div className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-dim)' }}>
                                                     <Building2 size={11} />

@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -428,7 +429,7 @@ const SupplierDetail = () => {
                             <span className="text-xs font-mono font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{supplier.category.toUpperCase()}</span>
                             <span className="w-1 h-1 rounded-full bg-white/20" />
                             <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
-                                Registered {supplier.createdAt ? new Date(supplier.createdAt).toLocaleDateString() : '—'}
+                                Registered {supplier.createdAt ? formatDate(supplier.createdAt) : '—'}
                             </span>
                         </div>
                     </div>
@@ -649,7 +650,7 @@ const SupplierDetail = () => {
                             <SectionCard title="Custom Fields" icon={<Tag size={18} />}>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                                     <InfoRow label="CF.FLEET NO" value={supplier.cfFleetNo} />
-                                    <InfoRow label="CF.ACTIVE DATE" value={supplier.cfActiveDate ? new Date(supplier.cfActiveDate).toLocaleDateString() : '—'} />
+                                    <InfoRow label="CF.ACTIVE DATE" value={supplier.cfActiveDate ? formatDate(supplier.cfActiveDate) : '—'} />
                                     <InfoRow label="CF.RUC" value={supplier.cfRuc} />
                                     <InfoRow label="CF.DV" value={supplier.cfDv} />
                                     <InfoRow label="Location ID" value={supplier.locationId} />
@@ -821,7 +822,7 @@ const SupplierDetail = () => {
                                                 return (
                                                     <tr key={idx} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
                                                         <td className="px-6 py-4 text-xs font-medium text-dim" style={{ color: 'var(--text-dim)' }}>
-                                                            {item.date.toLocaleDateString()}
+                                                            {formatDate(item.date)}
                                                         </td>
                                                         <td className="px-6 py-4 font-black text-xs text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
                                                             {item.refNumber}
@@ -893,7 +894,7 @@ const SupplierDetail = () => {
                                                 onClick={() => navigate(`/purchase-orders/${po._id}`)}
                                             >
                                                 <td className="px-6 py-4 font-black text-xs text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{po.purchaseOrderNumber}</td>
-                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(po.purchaseOrderDate).toLocaleDateString()}</td>
+                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{formatDate(po.purchaseOrderDate)}</td>
                                                 <td className="px-6 py-4 text-xs font-bold uppercase">{po.purpose}</td>
                                                 <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>${po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                 <td className="px-6 py-4 text-center">
@@ -941,8 +942,8 @@ const SupplierDetail = () => {
                                                 onClick={() => navigate(`/admin/financial-admin/bills/${b._id}`)}
                                             >
                                                 <td className="px-6 py-4 font-black text-xs text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{b.billNumber}</td>
-                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(b.billDate).toLocaleDateString()}</td>
-                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(b.dueDate).toLocaleDateString()}</td>
+                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{formatDate(b.billDate)}</td>
+                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{formatDate(b.dueDate)}</td>
                                                 <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>${b.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                 <td className="px-6 py-4 text-right text-xs font-bold text-rose-400" style={{ color: 'var(--status-failed)' }}>${b.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                 <td className="px-6 py-4 text-center">
@@ -984,7 +985,7 @@ const SupplierDetail = () => {
                                         payments.map((pmt) => (
                                             <tr key={pmt._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
                                                 <td className="px-6 py-4 font-black text-xs text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{pmt.paymentCode}</td>
-                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(pmt.paymentDate).toLocaleDateString()}</td>
+                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{formatDate(pmt.paymentDate)}</td>
                                                 <td className="px-6 py-4 text-xs font-bold text-white uppercase">{pmt.paymentMethod}</td>
                                                 <td className="px-6 py-4 text-xs font-medium text-dim">{pmt.referenceNumber || '—'}</td>
                                                 <td className="px-6 py-4 text-right text-xs font-black text-emerald-400" style={{ color: 'var(--status-active)' }}>${pmt.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
@@ -1020,7 +1021,7 @@ const SupplierDetail = () => {
                                         debitNotes.map((dn) => (
                                             <tr key={dn._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
                                                 <td className="px-6 py-4 font-black text-xs text-brand-lime cursor-pointer hover:underline" onClick={() => navigate(`/admin/admin/sales/debit-notes/${dn._id}`)} style={{ color: 'var(--brand-lime)' }}>{dn.debitNoteNumber}</td>
-                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{dn.debitNoteDate ? new Date(dn.debitNoteDate).toLocaleDateString() : 'N/A'}</td>
+                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{dn.debitNoteDate ? formatDate(dn.debitNoteDate) : 'N/A'}</td>
                                                 <td className="px-6 py-4 text-xs font-bold italic truncate max-w-[200px]" style={{ color: 'var(--text-dim)' }}>{dn.reason}</td>
                                                 <td className="px-6 py-4 text-right text-xs font-black text-amber-400">${(dn.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                                 <td className="px-6 py-4 text-right text-xs font-bold text-emerald-400">${(dn.amountPaid !== undefined ? dn.amountPaid : (dn.status === 'PAID' ? dn.amount : 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
@@ -1067,7 +1068,7 @@ const SupplierDetail = () => {
                                         creditNotes.map((cn) => (
                                             <tr key={cn._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
                                                 <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{cn.creditNoteNumber}</td>
-                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(cn.creditNoteDate).toLocaleDateString()}</td>
+                                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{formatDate(cn.creditNoteDate)}</td>
                                                 <td className="px-6 py-4 text-xs font-bold italic truncate max-w-[200px]" style={{ color: 'var(--text-dim)' }}>{cn.reason}</td>
                                                 <td className="px-6 py-4 text-right text-xs font-black text-indigo-400">− ${cn.amount.toLocaleString()}</td>
                                                 <td className="px-6 py-4 text-center">
@@ -1250,7 +1251,7 @@ const SupplierDetail = () => {
                                                 return (
                                                     <tr key={idx} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
                                                         <td className="px-6 py-4 text-xs font-medium text-dim" style={{ color: 'var(--text-dim)' }}>
-                                                            {r.date.toLocaleDateString()}
+                                                            {formatDate(r.date)}
                                                         </td>
                                                         <td className="px-6 py-4">
                                                             <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${

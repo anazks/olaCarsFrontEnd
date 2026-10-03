@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
@@ -1089,7 +1090,7 @@ const CreateVoucherPage = () => {
                                                                 )}
                                                             </td>
                                                             <td className="px-3.5 py-2.5" style={{ color: textDimColor }}>
-                                                                {doc.dueDate ? new Date(doc.dueDate).toLocaleDateString() : 'N/A'}
+                                                                {doc.dueDate ? formatDate(doc.dueDate) : 'N/A'}
                                                             </td>
                                                             <td className="px-3.5 py-2.5 text-right font-mono" style={{ color: textDimColor }}>
                                                                 ${doc.totalAmount.toFixed(2)}

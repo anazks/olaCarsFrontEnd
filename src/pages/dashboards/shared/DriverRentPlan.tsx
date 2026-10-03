@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileText, Download, CheckCircle2, AlertCircle, TrendingUp, Eye, Car, Layers } from 'lucide-react';
@@ -285,7 +286,7 @@ const DriverRentPlan = () => {
                                             </td>
                                         )}
                                         <td className="p-6 text-xs font-mono text-dim">
-                                            {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '-'}
+                                            {item.dueDate ? formatDate(item.dueDate) : '-'}
                                         </td>
                                         <td className="p-6 text-xs font-mono font-bold text-white">
                                             ${(item.amount || 0).toLocaleString()}

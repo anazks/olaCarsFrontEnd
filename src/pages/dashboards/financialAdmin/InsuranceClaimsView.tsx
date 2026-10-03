@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { ShieldAlert, Search, PlusCircle, Filter, Eye } from 'lucide-react';
 import { getClaims } from '../../../services/insuranceClaimService';
@@ -125,7 +126,7 @@ const InsuranceClaimsView = () => {
                                 </td>
                                 <td className="py-4 px-6 font-medium opacity-80">{claim.policyNumber}</td>
                                 <td className="py-4 px-6 font-bold text-right">${claim.claimAmount.toLocaleString()}</td>
-                                <td className="py-4 px-6 font-medium opacity-80 text-right">{new Date(claim.incidentDate).toLocaleDateString()}</td>
+                                <td className="py-4 px-6 font-medium opacity-80 text-right">{formatDate(claim.incidentDate)}</td>
                                 <td className="py-4 px-6 flex items-center justify-end gap-2">
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); navigate(`/admin/${basePath}/insurance-claims/${claim._id}`); }}

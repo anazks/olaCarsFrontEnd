@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -74,7 +75,7 @@ const GpsVehicles = () => {
                 let label = '';
                 try {
                     const date = new Date(trip.startTime);
-                    label = `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+                    label = formatDateTime(date);
                 } catch {
                     label = trip.startTime;
                 }
