@@ -88,6 +88,90 @@ const BillList = () => {
         return await billService.getAllBills(queryParams);
     };
 
+    const getSupplierName = (supplier: any) => (typeof supplier === 'object' && supplier ? supplier.name : supplier) || 'N/A';
+
+    interface BillExportRow {
+        "Sl No.": string;
+        "Bill Number": string;
+        "Status": string;
+        "Vendor": string;
+        "Bill Date": string;
+        "Due Date": string;
+        "Item #": string;
+        "Item Name": string;
+        "Item Description": string;
+        "Item Account": string;
+        "Item Qty": number;
+        "Item Unit Price ($)": number;
+        "Item Line Total ($)": number;
+        "Total Amount ($)": number;
+        "Amount Paid ($)": number;
+        "Balance Due ($)": number;
+    }
+
+    const formatBillExportRows = (bills: any[]): BillExportRow[] => {
+        return bills.flatMap((bill, idx) => {
+            const billBase = {
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Bill Number": bill.billNumber || 'N/A',
+                "Status": String(bill.status || 'N/A'),
+                "Vendor": getSupplierName(bill.supplier),
+                "Bill Date": bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
+                "Due Date": bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
+                "Total Amount ($)": Number(bill.totalAmount) || 0,
+                "Amount Paid ($)": Number(bill.amountPaid) || 0,
+                "Balance Due ($)": Number(bill.balanceDue) || 0
+            };
+
+            if (bill.items && bill.items.length > 0) {
+                return bill.items.map((item: any, itemIdx: number): BillExportRow => {
+                    const lineTotal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+                    const accountDisplay = typeof item.accountId === 'object' && item.accountId
+                        ? `${item.accountId.code || ''} - ${item.accountId.name || ''}`.trim()
+                        : String(item.accountId || '');
+
+                    return {
+                        "Sl No.": billBase["Sl No."],
+                        "Bill Number": billBase["Bill Number"],
+                        "Status": billBase["Status"],
+                        "Vendor": billBase["Vendor"],
+                        "Bill Date": billBase["Bill Date"],
+                        "Due Date": billBase["Due Date"],
+                        "Item #": String(itemIdx + 1),
+                        "Item Name": item.itemName || 'N/A',
+                        "Item Description": item.description || '',
+                        "Item Account": accountDisplay,
+                        "Item Qty": item.quantity ?? 0,
+                        "Item Unit Price ($)": item.unitPrice ?? 0,
+                        "Item Line Total ($)": lineTotal,
+                        "Total Amount ($)": billBase["Total Amount ($)"],
+                        "Amount Paid ($)": billBase["Amount Paid ($)"],
+                        "Balance Due ($)": billBase["Balance Due ($)"]
+                    };
+                });
+            }
+
+            return [{
+                "Sl No.": billBase["Sl No."],
+                "Bill Number": billBase["Bill Number"],
+                "Status": billBase["Status"],
+                "Vendor": billBase["Vendor"],
+                "Bill Date": billBase["Bill Date"],
+                "Due Date": billBase["Due Date"],
+                "Item #": '',
+                "Item Name": '',
+                "Item Description": '',
+                "Item Account": '',
+                "Item Qty": 0,
+                "Item Unit Price ($)": 0,
+                "Item Line Total ($)": 0,
+                "Total Amount ($)": billBase["Total Amount ($)"],
+                "Amount Paid ($)": billBase["Amount Paid ($)"],
+                "Balance Due ($)": billBase["Balance Due ($)"]
+            }];
+        });
+    };
+
     const handleExportExcel = async () => {
         const toastId = toast.loading("Fetching all filtered bills for Excel export...");
         try {
@@ -98,29 +182,17 @@ const BillList = () => {
                 return;
             }
 
-            const getSupplierName = (supplier: any) => (typeof supplier === 'object' && supplier ? supplier.name : supplier) || 'N/A';
-
-            const exportData = allBills.map((bill, idx) => ({
-                "Sl No.": String(idx + 1).padStart(2, '0'),
-                "Bill Number": bill.billNumber || 'N/A',
-                "Status": bill.status || 'N/A',
-                "Vendor": getSupplierName(bill.supplier),
-                "Bill Date": bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
-                "Due Date": bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
-                "Total Amount ($)": bill.totalAmount || 0,
-                "Amount Paid ($)": bill.amountPaid || 0,
-                "Balance Due ($)": bill.balanceDue || 0
-            }));
+            const exportData = formatBillExportRows(allBills);
 
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Bills");
             
-            const keys = Object.keys(exportData[0]);
+            const keys = exportData.length > 0 ? (Object.keys(exportData[0]) as (keyof BillExportRow)[]) : [];
             ws["!cols"] = keys.map(key => {
                 const maxLen = Math.max(
                     key.length,
-                    ...exportData.map(row => String((row as any)[key] || "").length)
+                    ...exportData.map(row => String(row[key] ?? "").length)
                 );
                 return { wch: maxLen + 2 };
             });
@@ -144,19 +216,7 @@ const BillList = () => {
                 return;
             }
 
-            const getSupplierName = (supplier: any) => (typeof supplier === 'object' && supplier ? supplier.name : supplier) || 'N/A';
-
-            const exportData = allBills.map((bill, idx) => ({
-                "Sl No.": String(idx + 1).padStart(2, '0'),
-                "Bill Number": bill.billNumber || 'N/A',
-                "Status": bill.status || 'N/A',
-                "Vendor": getSupplierName(bill.supplier),
-                "Bill Date": bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
-                "Due Date": bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
-                "Total Amount ($)": bill.totalAmount || 0,
-                "Amount Paid ($)": bill.amountPaid || 0,
-                "Balance Due ($)": bill.balanceDue || 0
-            }));
+            const exportData = formatBillExportRows(allBills);
 
             const ws = XLSX.utils.json_to_sheet(exportData);
             const csvContent = XLSX.utils.sheet_to_csv(ws);
