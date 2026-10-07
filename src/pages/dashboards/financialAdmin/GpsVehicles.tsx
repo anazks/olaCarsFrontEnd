@@ -1093,9 +1093,10 @@ const GpsVehicles = () => {
                             </button>
                             <button
                                 onClick={handleExportCSV}
-                                className="px-4 py-2.5 rounded-xl border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] transition-all font-semibold text-xs flex items-center gap-2 cursor-pointer shadow-sm text-[var(--text-main)]"
+                                disabled={exportingCsv}
+                                className="px-4 py-2.5 rounded-xl border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] transition-all font-semibold text-xs flex items-center gap-2 cursor-pointer shadow-sm text-[var(--text-main)] disabled:opacity-50"
                             >
-                                <FileSpreadsheet size={16} /> Export CSV
+                                <FileSpreadsheet size={16} /> {exportingCsv ? 'Exporting...' : 'Export CSV'}
                             </button>
                         </>
                     )}
