@@ -43,8 +43,8 @@ import PaymentEntryDetailModal from '../../../components/paymentPortal/PaymentEn
 
 export const PaymentsPortal: React.FC = () => {
   const currentUser = getUser();
-  const userRole = getUserRole();
-  const isSuperAdmin = userRole === 'ADMIN';
+  const userRole = (getUserRole() || currentUser?.role || '').toLowerCase();
+  const isSuperAdmin = userRole === 'admin';
 
   // Auth & Portal State
   const [isUnlocked, setIsUnlocked] = useState(isSuperAdmin || isPortalUnlocked());
@@ -83,7 +83,7 @@ export const PaymentsPortal: React.FC = () => {
 
   // Navigation Tabs
   const [activeTab, setActiveTab] = useState<'my-entries' | 'approvals' | 'all-entries' | 'admin-provisioning'>(
-    userRole === 'ADMIN' ? 'all-entries' : 'my-entries'
+    isSuperAdmin ? 'all-entries' : 'my-entries'
   );
 
   // Data State
