@@ -171,6 +171,7 @@ import Expenses from "./pages/dashboards/finance/Purchases/Expenses";
 import ExpenseDetail from "./pages/dashboards/finance/Purchases/ExpenseDetail";
 import VendorPayment from "./pages/dashboards/finance/Purchases/VendorPayment";
 import VendorPaymentDetail from "./pages/dashboards/finance/Purchases/VendorPaymentDetail";
+import PaymentsPortal from "./pages/dashboards/financialAdmin/PaymentsPortal";
 
 function App() {
   // Wire up intersection-observer scroll reveals globally
@@ -536,6 +537,7 @@ function App() {
               <Route path="expenses/:id" element={<ExpenseDetail />} />
               <Route path="vendor-payment" element={<VendorPayment />} />
               <Route path="vendor-payment/:id" element={<VendorPaymentDetail />} />
+              <Route path="payments-portal" element={<PaymentsPortal />} />
               <Route path="scraps" element={<FinancialAdminScraps />} />
               <Route path="write-offs" element={<FinancialAdminWriteOffs />} />
               <Route path="inventory" element={<InventoryList />} />
@@ -1099,6 +1101,7 @@ function App() {
               <Route path="expenses/:id" element={<ExpenseDetail />} />
               <Route path="vendor-payment" element={<VendorPayment />} />
               <Route path="vendor-payment/:id" element={<VendorPaymentDetail />} />
+              <Route path="payments-portal" element={<PaymentsPortal />} />
               <Route
                 path="payment-requests"
                 element={<FinancialAdminPaymentRequests />}

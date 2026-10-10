@@ -227,6 +227,10 @@ const FinancialAdminSidebar = ({
           label: t("sidebar.items.paymentsMade"),
           path: "/admin/financial-admin/vendor-payment",
         },
+        {
+          label: t("sidebar.items.paymentsPortal"),
+          path: "/admin/financial-admin/payments-portal",
+        },
       ],
     },
     {

@@ -2,7 +2,7 @@ import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, DollarSign, ChevronDown, Filter, ChevronLeft, ChevronRight, AlertTriangle, Eye, Unlock } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, DollarSign, ChevronDown, Filter, ChevronLeft, ChevronRight, AlertTriangle, Eye, EyeOff, Unlock, KeyRound } from 'lucide-react';
 import {
     getAllFinancialAdmins,
     createFinancialAdmin,
@@ -17,6 +17,8 @@ import {
 import PermissionSelector from '../../../components/common/PermissionSelector';
 import { getUser, getUserRole } from '../../../utils/auth';
 import HasPermission from '../../../components/HasPermission';
+import AdminMpinModal from '../../../components/paymentPortal/AdminMpinModal';
+import { getFinanceAdminsWithAccess, type FinanceAdminAccessItem } from '../../../services/paymentPortalService';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -32,6 +34,13 @@ const ManageFinancialAdmins = () => {
     const [admins, setAdmins] = useState<FinancialAdmin[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedAdminForMpin, setSelectedAdminForMpin] = useState<FinanceAdminAccessItem | null>(null);
+    const [showMpinModal, setShowMpinModal] = useState(false);
+    const [mpinAccessMap, setMpinAccessMap] = useState<Record<string, FinanceAdminAccessItem>>({});
+    const [revealedPins, setRevealedPins] = useState<Record<string, boolean>>({});
+    const toggleRevealPin = (id: string) => {
+        setRevealedPins(prev => ({ ...prev, [id]: !prev[id] }));
+    };
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
     // Filter State
@@ -89,9 +98,44 @@ const ManageFinancialAdmins = () => {
             if (startDate) filters.startDate = startDate;
             if (endDate) filters.endDate = endDate;
 
-            const response = await getAllFinancialAdmins(filters);
-            setAdmins(response.data || []);
+            const [response, accessListRes] = await Promise.all([
+                getAllFinancialAdmins(filters),
+                getFinanceAdminsWithAccess().catch((err) => {
+                    console.warn('Failed to fetch MPIN access list:', err);
+                    return [] as FinanceAdminAccessItem[];
+                })
+            ]);
+            const adminList = response.data || [];
+            setAdmins(adminList);
             setPagination(response.pagination);
+
+            const map: Record<string, FinanceAdminAccessItem> = {};
+            if (Array.isArray(accessListRes)) {
+                accessListRes.forEach((item) => {
+                    if (item && item._id) {
+                        map[item._id] = item;
+                    }
+                });
+            }
+            adminList.forEach((item: any) => {
+                if (!map[item._id] && item.isMpinSet !== undefined) {
+                    map[item._id] = {
+                        _id: item._id,
+                        fullName: item.fullName,
+                        email: item.email,
+                        adminStatus: item.status,
+                        isMpinSet: !!item.isMpinSet,
+                        mpin: item.mpin || null,
+                        hasEntryAccess: !!item.hasEntryAccess,
+                        hasApprovalAccess: !!item.hasApprovalAccess,
+                        portalStatus: item.portalStatus || (item.isMpinSet ? 'ACTIVE' : 'NOT_CONFIGURED'),
+                        failedAttempts: item.failedAttempts || 0,
+                    };
+                } else if (map[item._id] && item.mpin && !map[item._id].mpin) {
+                    map[item._id].mpin = item.mpin;
+                }
+            });
+            setMpinAccessMap(map);
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || t('management.finAdmins.fetchFailed', { defaultValue: 'Failed to fetch financial admins' }));
         } finally {
@@ -377,6 +421,7 @@ const ManageFinancialAdmins = () => {
                                     </button>
                                 </th>
                                 <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-dim)' }}>{t('management.common.table.status')}</th>
+                                <th className="text-left px-6 py-4 text-xs font-bold uppercase tracking-wider transition-colors" style={{ color: 'var(--text-dim)' }}>Payments MPIN</th>
                                 <th className="px-6 py-4">
                                     <button onClick={() => handleSort('createdAt')} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider outline-none hover:text-lime transition-colors" style={{ color: 'var(--text-dim)' }}>
                                         {t('management.common.table.created')} <SortIcon field="createdAt" />
@@ -403,6 +448,90 @@ const ManageFinancialAdmins = () => {
                                             <span className="px-3 py-1 rounded-full text-[10px] font-black tracking-wider transition-colors" style={{ background: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}>
                                                 {t(`management.common.status.${admin.status.toLowerCase()}`, { defaultValue: admin.status })}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-left">
+                                            {(() => {
+                                                const accessInfo = mpinAccessMap[admin._id] || (admin as any);
+                                                const isSet = Boolean(accessInfo?.isMpinSet || (admin as any)?.isMpinSet);
+                                                const pinValue = accessInfo?.mpin || (admin as any)?.mpin;
+                                                const hasEntry = Boolean(accessInfo?.hasEntryAccess ?? (admin as any)?.hasEntryAccess);
+                                                const hasApproval = Boolean(accessInfo?.hasApprovalAccess ?? (admin as any)?.hasApprovalAccess);
+                                                const isLocked = (accessInfo?.portalStatus || (admin as any)?.portalStatus) === 'LOCKED';
+                                                const isRevealed = Boolean(revealedPins[admin._id]);
+
+                                                if (isLocked) {
+                                                    return (
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-500/15 text-red-400 border border-red-500/30 flex items-center gap-1 w-fit">
+                                                                <AlertTriangle size={11} /> Locked
+                                                            </span>
+                                                            {pinValue && (
+                                                                <div className="flex items-center gap-1.5 text-xs font-mono text-gray-400">
+                                                                    <span>PIN:</span>
+                                                                    <span className="font-bold text-white tracking-widest">{isRevealed ? pinValue : '••••'}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => { e.stopPropagation(); toggleRevealPin(admin._id); }}
+                                                                        className="p-1 text-gray-400 hover:text-white transition"
+                                                                        title={isRevealed ? 'Hide PIN' : 'Show PIN'}
+                                                                    >
+                                                                        {isRevealed ? <EyeOff size={12} /> : <Eye size={12} />}
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                }
+
+                                                if (isSet) {
+                                                    return (
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                {pinValue ? (
+                                                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-bold">
+                                                                        <KeyRound size={12} className="text-emerald-400" />
+                                                                        <span className="text-gray-400 font-sans text-[10px] uppercase font-bold tracking-wider">PIN:</span>
+                                                                        <span className="tracking-widest font-black text-white text-[13px]">
+                                                                            {isRevealed ? pinValue : '••••'}
+                                                                        </span>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => { e.stopPropagation(); toggleRevealPin(admin._id); }}
+                                                                            className="ml-1 text-emerald-400 hover:text-white transition p-0.5 cursor-pointer rounded hover:bg-emerald-500/20"
+                                                                            title={isRevealed ? 'Hide PIN' : 'Show PIN'}
+                                                                        >
+                                                                            {isRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                                                                        <KeyRound size={11} /> Configured
+                                                                    </span>
+                                                                )}
+
+                                                                <div className="flex items-center gap-1">
+                                                                    {hasEntry && (
+                                                                        <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 text-[9px] font-bold border border-blue-500/30" title="Entry Access (Maker)">
+                                                                            Maker
+                                                                        </span>
+                                                                    )}
+                                                                    {hasApproval && (
+                                                                        <span className="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 text-[9px] font-bold border border-purple-500/30" title="Approval Access (Checker)">
+                                                                            Checker
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1 w-fit">
+                                                        <AlertTriangle size={11} /> Not Set
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                         <td className="px-6 py-4 text-left text-[11px] transition-colors" style={{ color: 'var(--text-dim)' }}>
                                             {admin.createdAt ? formatDate(admin.createdAt) : '—'}
@@ -431,6 +560,31 @@ const ManageFinancialAdmins = () => {
                                                     title="View Performance Profile"
                                                 >
                                                     <Eye size={15} />
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const accessItem = mpinAccessMap[admin._id] || {
+                                                            _id: admin._id,
+                                                            fullName: admin.fullName,
+                                                            email: admin.email,
+                                                            adminStatus: admin.status,
+                                                            isMpinSet: false,
+                                                            hasEntryAccess: true,
+                                                            hasApprovalAccess: false,
+                                                            portalStatus: 'NOT_CONFIGURED',
+                                                            failedAttempts: 0,
+                                                        };
+                                                        setSelectedAdminForMpin(accessItem);
+                                                        setShowMpinModal(true);
+                                                    }}
+                                                    className="p-2 rounded-lg transition-colors cursor-pointer hover:bg-[#C8E600]/25 flex items-center gap-1.5"
+                                                    style={{ background: 'rgba(200, 230, 0, 0.12)', color: '#C8E600', border: '1px solid rgba(200, 230, 0, 0.25)' }}
+                                                    title="Set / Manage Payments Portal MPIN & Capabilities"
+                                                >
+                                                    <KeyRound size={15} />
+                                                    <span className="text-[11px] font-bold hidden sm:inline">
+                                                        {(mpinAccessMap[admin._id]?.isMpinSet || (admin as any)?.isMpinSet) ? 'Manage MPIN' : 'Set MPIN'}
+                                                    </span>
                                                 </button>
                                                 <button
                                                     onClick={() => navigate(`edit/${admin._id}`)}
@@ -655,6 +809,15 @@ const ManageFinancialAdmins = () => {
             )}
 
             {/* ───── Delete Confirmation Modal ───── */}
+            <AdminMpinModal
+                isOpen={showMpinModal}
+                onClose={() => setShowMpinModal(false)}
+                adminUser={selectedAdminForMpin}
+                onSuccess={() => {
+                    fetchAdmins();
+                }}
+            />
+
             {deleteTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
                     <div

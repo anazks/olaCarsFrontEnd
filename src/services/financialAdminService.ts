@@ -14,6 +14,10 @@ export interface FinancialAdmin {
     creatorRole?: string;
     createdAt?: string;
     updatedAt?: string;
+    isMpinSet?: boolean;
+    hasEntryAccess?: boolean;
+    hasApprovalAccess?: boolean;
+    portalStatus?: string;
 }
 
 export interface PaginationMetadata {

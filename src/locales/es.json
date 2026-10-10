@@ -220,7 +220,8 @@
       "writeOffs": "Baja de Activos",
       "inventory": "Inventario",
       "addJournalEntry": "Agregar Asiento Contable",
-      "taskDelegation": "Delegación de Tareas"
+      "taskDelegation": "Delegación de Tareas",
+      "paymentsPortal": "Portal de Pagos"
     }
   },
   "dashboards": {
@@ -547,7 +548,6 @@
         "details": "Detalles Básicos",
         "permissions": "Permisos"
       },
-      "allBranches": "Todas las Sucursales",
       "loading": "Cargando",
       "noPhone": "Sin teléfono",
       "view": "Ver",
