@@ -1,3 +1,4 @@
+import { formatDate } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StatCard } from '../../components/dashboard/widgets/StatusCards';
@@ -121,7 +122,7 @@ const BranchManagerDashboard = () => {
                         task: a.message,
                         priority: a.priority,
                         time: new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                        due: new Date(a.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+                        due: formatDate(a.createdAt),
                         rawDate: a.createdAt
                     })));
                 }
@@ -214,7 +215,7 @@ const BranchManagerDashboard = () => {
                         </div>
                         <div className="flex items-center justify-end gap-2 text-dim text-xs mt-1">
                             <Calendar size={14} />
-                            <span>{currentTime.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+                            <span>{formatDate(currentTime)}</span>
                         </div>
                     </div>
                 </div>

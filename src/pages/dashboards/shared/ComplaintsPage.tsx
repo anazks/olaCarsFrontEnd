@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import React, { useState, useEffect } from 'react';
 import { getAllEnquiries, updateEnquiryStatus, deleteEnquiry } from '../../../services/enquiryService';
 import { MessageSquare, Clock, Search, Filter, Trash2, Reply, ShieldAlert, Info, ChevronRight } from 'lucide-react';
@@ -204,7 +205,7 @@ const ComplaintsPage = () => {
                                                 <td className="px-6 py-4">
                                                     <div className="space-y-1">
                                                         <p className="text-[11px] font-black text-lime uppercase tracking-widest">{e.category}</p>
-                                                        <p className="text-[10px] font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(e.createdAt).toLocaleDateString()}</p>
+                                                        <p className="text-[10px] font-medium" style={{ color: 'var(--text-dim)' }}>{formatDate(e.createdAt)}</p>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 max-w-xs">

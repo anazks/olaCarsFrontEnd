@@ -267,6 +267,10 @@ const ExecutiveSidebar = ({
           label: t("sidebar.items.paymentsMade"),
           path: "/admin/admin/vendor-payment",
         },
+        {
+          label: t("sidebar.items.paymentsPortal"),
+          path: "/admin/admin/payments-portal",
+        },
       ],
     },
     {

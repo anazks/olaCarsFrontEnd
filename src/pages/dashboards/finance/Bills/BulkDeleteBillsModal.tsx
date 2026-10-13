@@ -3,6 +3,7 @@ import { X, Trash2, AlertTriangle, RefreshCw, CreditCard } from 'lucide-react';
 import * as billService from '../../../../services/billService';
 import type { BulkDeletePreviewResponse, BulkDeleteResolution } from '../../../../services/billService';
 import toast from 'react-hot-toast';
+import { formatDate } from '../../../../utils/dateUtils';
 
 interface Props {
     isOpen: boolean;
@@ -311,7 +312,7 @@ export const BulkDeleteBillsModal: React.FC<Props> = ({ isOpen, billIds, onClose
                                                                             >
                                                                                 {bill.otherOpenBills?.map(ob => (
                                                                                     <option key={ob._id} value={ob._id}>
-                                                                                        {ob.billNumber} — Due: ${(ob.balanceDue || 0).toFixed(2)} {ob.dueDate ? `(Due: ${new Date(ob.dueDate).toLocaleDateString()})` : ''}
+                                                                                        {ob.billNumber} — Due: ${(ob.balanceDue || 0).toFixed(2)} {ob.dueDate ? `(Due: ${formatDate(ob.dueDate)})` : ''}
                                                                                     </option>
                                                                                 ))}
                                                                             </select>

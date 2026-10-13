@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import React, { useState, useEffect } from 'react';
 import { 
     Shield, 
@@ -18,15 +19,7 @@ import { downloadFile } from '../../../utils/fileDownloader';
 import { getUserRole } from '../../../utils/auth';
 import { API_ROLE_TO_ROUTE } from '../../../services/authService';
 
-const formatDate = (dateString?: string | Date) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '-';
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-};
+// formatDate imported from dateUtils
 
 const VehiclePolicyList = () => {
     useTranslation();

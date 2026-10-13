@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -347,7 +348,7 @@ const ChartOfAccounts = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
             doc.setFontSize(16);
             doc.text(title, 14, 18);
             doc.setFontSize(9);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()} | Total Accounts: ${dataToExport.length}`, 14, 25);
+            doc.text(`Generated on: ${formatDate(new Date())} | Total Accounts: ${dataToExport.length}`, 14, 25);
 
             const head = [["Sl No.", "Code", "Name", "Spanish Name", "Category", "Account Type", "Parent Account", "Status"]];
             const body = dataToExport.map((c, idx) => {

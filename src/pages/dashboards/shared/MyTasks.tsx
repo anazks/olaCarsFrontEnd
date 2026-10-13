@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo } from 'react';
 import { 
     CheckCircle, Search, 
@@ -210,10 +211,10 @@ const MyTasks = () => {
                                                 <div className="flex flex-col gap-1 items-center">
                                                     <div className="flex items-center gap-1.5 text-gray-900 dark:text-white">
                                                         <Clock size={12} className="text-indigo-600 dark:text-indigo-400" />
-                                                        <span className="text-xs font-black">{new Date(task.dueDate).toLocaleDateString()}</span>
+                                                        <span className="text-xs font-black">{formatDate(task.dueDate)}</span>
                                                     </div>
                                                     {task.completedAt && (
-                                                        <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">Resolved {new Date(task.completedAt).toLocaleDateString()}</span>
+                                                        <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">Resolved {formatDate(task.completedAt)}</span>
                                                     )}
                                                 </div>
                                             </td>

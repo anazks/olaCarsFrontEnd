@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import { Plus, Search, Calendar, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, BookOpen, AlertCircle, CheckCircle2, RefreshCw, FileText, Eye, Upload, Pencil } from 'lucide-react';
 import { getManualJournals, getLedgerEntries } from '../../../services/ledgerService';
@@ -46,23 +47,7 @@ const ManualJournals = () => {
     const [limit] = useState(10);
     const [pagination, setPagination] = useState<{ total: number, page: number, limit: number, totalPages: number } | null>(null);
 
-    const formatJournalDisplayDate = (val: string | Date | undefined): string => {
-        if (!val) return '—';
-        if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
-            const [y, m, d] = val.split('T')[0].split('-');
-            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const mIdx = parseInt(m, 10) - 1;
-            return `${parseInt(d, 10)} ${monthNames[mIdx] || m} ${y}`;
-        }
-        const dObj = new Date(val);
-        if (isNaN(dObj.getTime())) return '—';
-        return dObj.toLocaleDateString('en-GB', {
-            timeZone: 'UTC',
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric'
-        });
-    };
+    const formatJournalDisplayDate = (val: string | Date | undefined): string => formatDate(val);
 
     const handleExportExcel = () => {
         if (journals.length === 0) {
@@ -156,7 +141,7 @@ const ManualJournals = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             const head = [["Sl No.", "Journal Number", "Reference #", "Journal Date", "Status", "Amount", "Created By"]];
             const body = journals.map((j, idx) => [

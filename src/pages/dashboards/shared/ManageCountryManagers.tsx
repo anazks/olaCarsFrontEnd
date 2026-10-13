@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -498,7 +499,7 @@ const ManageCountryManagers = () => {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-xs" style={{ color: 'var(--text-dim)' }}>
-                                                {manager.createdAt ? new Date(manager.createdAt).toLocaleDateString() : '—'}
+                                                {manager.createdAt ? formatDate(manager.createdAt) : '—'}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-end gap-2">

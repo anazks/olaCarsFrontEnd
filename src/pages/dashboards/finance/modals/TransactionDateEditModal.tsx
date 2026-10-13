@@ -1,3 +1,4 @@
+import { formatDate } from '../../../../utils/dateUtils';
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, Save, Loader2, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -47,7 +48,7 @@ export const TransactionDateEditModal: React.FC<TransactionDateEditModalProps> =
         ? originalDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
         : 'N/A';
     const originalFormattedFull = hasValidOrigDate
-        ? `${originalDateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} at ${originalFormattedTime}`
+        ? `${formatDate(originalDateObj)} at ${originalFormattedTime}`
         : 'N/A';
 
     const handleSave = async (e: React.FormEvent) => {

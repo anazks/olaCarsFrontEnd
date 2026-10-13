@@ -26,19 +26,7 @@ import EditBillModal from './EditBillModal';
 import type { RootState } from '../../../../store';
 import { setFinanceDashboardData } from '../../../../store/dashboardSlice';
 
-const formatDateDDMMYY = (dateStr?: string | Date | null): string => {
-    if (!dateStr) return 'Not Specified';
-    if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-        const [year, month, day] = dateStr.slice(0, 10).split('-');
-        return `${day}/${month}/${year.slice(-2)}`;
-    }
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return String(dateStr);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = String(d.getFullYear()).slice(-2);
-    return `${day}/${month}/${year}`;
-};
+import { formatDate, formatDateDDMMYY } from '../../../../utils/dateUtils';
 
 const BillDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -261,7 +249,7 @@ const BillDetail = () => {
                                     {bill.ledgerEntries.map((entry: any, idx: number) => {
                                         const entryDateStr = entry.entryDate || entry.createdAt;
                                         const dateObj = new Date(entryDateStr);
-                                        const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString(undefined, { timeZone: 'UTC' }) : entryDateStr;
+                                        const formattedDate = !isNaN(dateObj.getTime()) ? formatDate(dateObj) : entryDateStr;
 
                                         return (
                                             <tr
@@ -445,7 +433,7 @@ const BillDetail = () => {
                                                     +${Number(p.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </span>
                                                 <span className="text-[10px] opacity-70" style={{ color: 'var(--text-dim)' }}>
-                                                    {p.paidAt ? new Date(p.paidAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : ''}
+                                                    {p.paidAt ? formatDate(p.paidAt) : ''}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between items-center text-[11px]" style={{ color: 'var(--text-dim)' }}>

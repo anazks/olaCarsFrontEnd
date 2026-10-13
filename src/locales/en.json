@@ -220,7 +220,8 @@
       "writeOffs": "Write Offs",
       "inventory": "Inventory",
       "addJournalEntry": "Add Journal Entry",
-      "taskDelegation": "Task Delegation"
+      "taskDelegation": "Task Delegation",
+      "paymentsPortal": "Payments Portal"
     }
   },
   "dashboards": {
@@ -547,7 +548,6 @@
         "details": "Basic Details",
         "permissions": "Permissions"
       },
-      "allBranches": "All Branches",
       "loading": "Loading",
       "noPhone": "No phone",
       "view": "View",

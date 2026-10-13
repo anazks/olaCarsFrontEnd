@@ -1,6 +1,7 @@
+import { formatDate } from './dateUtils';
 export const generateInvoiceHTML = (invoice: any, driver: any, vehicle: any) => {
-    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const dueDate = new Date(invoice.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const today = formatDate(new Date());
+    const dueDate = formatDate(invoice.dueDate);
     const isPaid = invoice.status === 'PAID';
     
     let paymentsHtml = '';
@@ -19,7 +20,7 @@ export const generateInvoiceHTML = (invoice: any, driver: any, vehicle: any) => 
                     <tbody>
                         ${invoice.payments.map((p: any) => `
                             <tr>
-                                <td style="padding: 10pt; border-bottom: 1px solid #eee;">${new Date(p.paidAt).toLocaleDateString()}</td>
+                                <td style="padding: 10pt; border-bottom: 1px solid #eee;">${formatDate(p.paidAt)}</td>
                                 <td style="padding: 10pt; border-bottom: 1px solid #eee;">${p.paymentMethod || 'Cash'}</td>
                                 <td style="padding: 10pt; border-bottom: 1px solid #eee; text-align: right; font-weight: bold;">$${(p.amount || 0).toLocaleString()}</td>
                             </tr>

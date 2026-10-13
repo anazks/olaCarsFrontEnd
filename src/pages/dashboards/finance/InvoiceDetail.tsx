@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -411,7 +412,7 @@ const InvoiceDetail = () => {
                                 <div>
                                     <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Lease Due Date</p>
                                     <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>
-                                        {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}
+                                        {invoice.dueDate ? formatDate(invoice.dueDate) : 'N/A'}
                                     </p>
                                 </div>
                             </div>
@@ -454,7 +455,7 @@ const InvoiceDetail = () => {
                                     {ledgerEntries.map((entry, idx) => {
                                         const entryDateStr = entry.entryDate || entry.date;
                                         const dateObj = new Date(entryDateStr);
-                                        const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString(undefined, { timeZone: 'UTC' }) : entryDateStr;
+                                        const formattedDate = !isNaN(dateObj.getTime()) ? formatDate(dateObj) : entryDateStr;
 
                                         return (
                                             <tr
@@ -662,7 +663,7 @@ const InvoiceDetail = () => {
                                             )}
                                             <div className="flex items-center justify-between gap-2">
                                                 <p className="text-[10px] font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                                    {new Date(pay.paidAt).toLocaleDateString()}
+                                                    {formatDate(pay.paidAt)}
                                                 </p>
                                                 {prNumber ? (
                                                     <button

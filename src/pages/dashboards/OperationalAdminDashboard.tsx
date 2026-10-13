@@ -1,3 +1,4 @@
+import { formatDate } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { 
     AlertTriangle, 
@@ -149,7 +150,7 @@ const OperationalAdminDashboard = () => {
                     <div className="bg-card-glow p-1.5 md:p-2 rounded-2xl border border-white/5 backdrop-blur-md flex items-center flex-1 lg:flex-none">
                         <div className="px-3 md:px-4 py-2 rounded-xl text-xs md:text-sm font-bold flex items-center gap-2 w-full justify-center" style={{ background: 'var(--bg-input)', color: 'var(--text-main)' }}>
                             <Clock size={16} />
-                            {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                            {formatDate(new Date())}
                         </div>
                     </div>
                 </div>

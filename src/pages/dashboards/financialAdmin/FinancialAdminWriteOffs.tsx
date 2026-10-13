@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -345,7 +346,7 @@ const FinancialAdminWriteOffs = () => {
                                                 <td className="py-4 px-4" style={{ color: 'var(--text-muted)' }}>
                                                     <div className="flex items-center gap-1.5 text-xs">
                                                         <Calendar size={13} />
-                                                        {new Date(item.createdAt).toLocaleDateString()}
+                                                        {formatDate(item.createdAt)}
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-4">

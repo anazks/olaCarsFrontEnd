@@ -1,3 +1,4 @@
+import { formatDate } from '../../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
@@ -124,7 +125,7 @@ const PaymentsReceived = () => {
                 "Receipt Number": pmt.paymentNumber,
                 "Customer Name": pmt.customerId?.name || pmt.driverId?.personalInfo?.fullName || pmt.driverId?.name || 'System Pool',
                 "Customer/Driver ID": pmt.customerId?.customerId || pmt.driverId?.driverId || 'N/A',
-                "Payment Date": pmt.paymentDate ? new Date(pmt.paymentDate).toLocaleDateString() : 'N/A',
+                "Payment Date": pmt.paymentDate ? formatDate(pmt.paymentDate) : 'N/A',
                 "Amount Received": pmt.amountReceived || 0,
                 "Method": pmt.paymentMethod || 'N/A',
                 "Reference Number": pmt.referenceNumber || 'N/A',
@@ -166,7 +167,7 @@ const PaymentsReceived = () => {
                 "Receipt Number": pmt.paymentNumber,
                 "Customer Name": pmt.customerId?.name || pmt.driverId?.personalInfo?.fullName || pmt.driverId?.name || 'System Pool',
                 "Customer/Driver ID": pmt.customerId?.customerId || pmt.driverId?.driverId || 'N/A',
-                "Payment Date": pmt.paymentDate ? new Date(pmt.paymentDate).toLocaleDateString() : 'N/A',
+                "Payment Date": pmt.paymentDate ? formatDate(pmt.paymentDate) : 'N/A',
                 "Amount Received": pmt.amountReceived || 0,
                 "Method": pmt.paymentMethod || 'N/A',
                 "Reference Number": pmt.referenceNumber || 'N/A',
@@ -208,7 +209,7 @@ const PaymentsReceived = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
             if (startDate || endDate) {
                 doc.text(`Period: ${startDate || 'N/A'} to ${endDate || 'N/A'}`, 14, 35);
             }
@@ -219,7 +220,7 @@ const PaymentsReceived = () => {
                 pmt.paymentNumber || 'N/A',
                 pmt.customerId?.name || pmt.driverId?.personalInfo?.fullName || pmt.driverId?.name || 'System Pool',
                 pmt.customerId?.customerId || pmt.driverId?.driverId || 'N/A',
-                pmt.paymentDate ? new Date(pmt.paymentDate).toLocaleDateString() : 'N/A',
+                pmt.paymentDate ? formatDate(pmt.paymentDate) : 'N/A',
                 `$${(pmt.amountReceived || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                 pmt.paymentMethod || 'N/A',
                 pmt.status || 'COMPLETED'
@@ -674,7 +675,7 @@ const PaymentsReceived = () => {
                                                 <span className="text-dim">N/A</span>
                                             )}
                                         </td>
-                                        <td className="p-6 text-xs text-dim">{new Date(pmt.paymentDate).toLocaleDateString()}</td>
+                                        <td className="p-6 text-xs text-dim">{formatDate(pmt.paymentDate)}</td>
                                         <td className="p-6 text-right font-black text-brand-lime">${pmt.amountReceived.toLocaleString()}</td>
                                         <td className="p-6 text-xs font-medium">{pmt.paymentMethod}</td>
                                         <td className="p-6 text-center">

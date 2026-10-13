@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -373,7 +374,7 @@ const PurchaseOrderDetail = () => {
                                 <div>
                                     <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Payment Date</p>
                                     <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>
-                                        {po.paymentDate ? new Date(po.paymentDate).toLocaleDateString() : 'Not Specified'}
+                                        {po.paymentDate ? formatDate(po.paymentDate) : 'Not Specified'}
                                     </p>
                                 </div>
                             </div>
@@ -600,7 +601,7 @@ const PurchaseOrderDetail = () => {
                             </div>
                             <div>
                                 <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{po.approverRole}</p>
-                                <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>Actioned on {new Date(po.updatedAt).toLocaleDateString()}</p>
+                                <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>Actioned on {formatDate(po.updatedAt)}</p>
                             </div>
                         </div>
                     )}
@@ -619,7 +620,7 @@ const PurchaseOrderDetail = () => {
                                             <div className="absolute left-[3px] top-4 w-[2px] h-[calc(100%+8px)] bg-white/10" />
                                         )}
                                         <p className="text-[10px] font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            {new Date(entry.updatedAt || entry.editedAt || '').toLocaleDateString()} at {new Date(entry.updatedAt || entry.editedAt || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {formatDateTime(entry.updatedAt || entry.editedAt)}
                                         </p>
                                         <p className="text-sm mt-1 mb-1 font-bold" style={{ color: 'var(--text-main)' }}>
                                             {typeof entry.editedBy === 'object' 
@@ -650,7 +651,7 @@ const PurchaseOrderDetail = () => {
                                                 <div className="absolute left-[3px] top-4 w-[2px] h-[calc(100%+8px)] bg-white/10" />
                                             )}
                                             <p className="text-[10px] font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                                {new Date(entry.editedAt).toLocaleDateString()} at {new Date(entry.editedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {formatDateTime(entry.editedAt)}
                                             </p>
                                             <p className="text-sm mt-1 mb-1 font-bold" style={{ color: 'var(--text-main)' }}>
                                                 {typeof entry.editedBy === 'object' 

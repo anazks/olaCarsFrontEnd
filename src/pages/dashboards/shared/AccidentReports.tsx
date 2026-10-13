@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -233,7 +234,7 @@ const AccidentReports = () => {
                                                             <div>
                                                                 <p className="text-xs font-bold leading-tight" style={{ color: 'var(--text-main)' }}>{r.accidentLocation}</p>
                                                                 <p className="text-[10px] font-bold mt-1 uppercase tracking-tighter flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
-                                                                    <Clock size={10}/> {new Date(r.accidentDate).toLocaleDateString()} at {new Date(r.accidentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                    <Clock size={10}/> {formatDateTime(r.accidentDate)}
                                                                 </p>
                                                             </div>
                                                         </div>

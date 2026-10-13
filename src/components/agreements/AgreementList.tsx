@@ -1,3 +1,4 @@
+import { formatDate } from '../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileText, Edit, History, Plus, Search, Globe, Download } from 'lucide-react';
@@ -35,7 +36,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                 "Type": a.type || 'N/A',
                 "Version": a.version || 0,
                 "Status": a.status || 'N/A',
-                "Last Updated": a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : 'N/A'
+                "Last Updated": a.updatedAt ? formatDate(a.updatedAt) : 'N/A'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -74,7 +75,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                 "Type": a.type || 'N/A',
                 "Version": a.version || 0,
                 "Status": a.status || 'N/A',
-                "Last Updated": a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : 'N/A'
+                "Last Updated": a.updatedAt ? formatDate(a.updatedAt) : 'N/A'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -111,7 +112,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             const head = [["Sl No.", "Title", "Country", "Type", "Version", "Status", "Last Updated"]];
             const body = filteredAgreements.map((a, idx) => [
@@ -121,7 +122,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                 a.type || 'N/A',
                 String(a.version || 0),
                 a.status || 'N/A',
-                a.updatedAt ? new Date(a.updatedAt).toLocaleDateString() : 'N/A'
+                a.updatedAt ? formatDate(a.updatedAt) : 'N/A'
             ]);
 
             autoTable(doc, {
@@ -173,7 +174,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                 <div style="border-bottom: 2pt solid #A3E635; padding-bottom: 10pt; margin-bottom: 20pt;">
                     <h1 style="font-size: 24pt; margin: 0; color: #111;">${agreement.title}</h1>
                     <p style="font-size: 10pt; color: #666; margin: 5pt 0 0 0;">
-                        Country: ${agreement.country} | Version: ${agreement.version} | Date: ${new Date().toLocaleDateString()}
+                        Country: ${agreement.country} | Version: ${agreement.version} | Date: ${formatDate(new Date())}
                     </p>
                 </div>
                 <div style="font-size: 11pt; color: #333;">
@@ -369,7 +370,7 @@ const AgreementList = ({ onViewHistory }: AgreementListProps) => {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-sm text-dim">
-                                                {new Date(agreement.updatedAt || agreement.createdAt).toLocaleDateString()}
+                                                {formatDate(agreement.updatedAt || agreement.createdAt)}
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2 transition-opacity opacity-100">

@@ -1,3 +1,4 @@
+import { formatDate } from '../../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -366,7 +367,7 @@ const CreditNoteDetail = () => {
                                 <h1 className="text-lg font-black uppercase tracking-wide leading-none" style={{ color: 'var(--text-main)' }}>{note.creditNoteNumber || 'LEGACY'}</h1>
                                 <StatusBadge status={note.status} />
                             </div>
-                            <p className="text-[10px] font-semibold mt-1 uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Value Dated: {new Date(note.creditNoteDate || note.createdAt).toLocaleDateString()}</p>
+                            <p className="text-[10px] font-semibold mt-1 uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Value Dated: {formatDate(note.creditNoteDate || note.createdAt)}</p>
                         </div>
                     </div>
 
@@ -504,7 +505,7 @@ const CreditNoteDetail = () => {
                                     <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter" style={{ color: 'var(--text-main)' }}>Credit Note</h2>
                                     <div className="grid grid-cols-2 gap-x-5 gap-y-2 text-left text-[11px] mt-4 border p-4 rounded-2xl" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
                                         <span className="font-bold" style={{ color: 'var(--text-dim)' }}>Note Identifier</span><span className="font-black" style={{ color: 'var(--text-main)' }}>: {note.creditNoteNumber || 'LEGACY'}</span>
-                                        <span className="font-bold" style={{ color: 'var(--text-dim)' }}>Recorded Date</span><span className="font-black" style={{ color: 'var(--text-main)' }}>: {new Date(note.creditNoteDate || note.createdAt).toLocaleDateString()}</span>
+                                        <span className="font-bold" style={{ color: 'var(--text-dim)' }}>Recorded Date</span><span className="font-black" style={{ color: 'var(--text-main)' }}>: {formatDate(note.creditNoteDate || note.createdAt)}</span>
                                         <span className="font-bold" style={{ color: 'var(--text-dim)' }}>Primary Reason</span><span className="font-black truncate max-w-[120px]" style={{ color: 'var(--text-main)' }}>: {note.reason || 'Legacy'}</span>
                                     </div>
                                 </div>
@@ -658,14 +659,14 @@ const CreditNoteDetail = () => {
                                 </thead>
                                 <tbody className="divide-y divide-white/5" style={{ borderColor: 'var(--border-main)' }}>
                                     <tr className="hover:bg-white/[0.02] transition-colors">
-                                        <td className="py-4 pr-4 font-bold text-dim" style={{ color: 'var(--text-dim)' }}>{new Date(note.createdAt).toLocaleDateString()}</td>
+                                        <td className="py-4 pr-4 font-bold text-dim" style={{ color: 'var(--text-dim)' }}>{formatDate(note.createdAt)}</td>
                                         <td className="py-4 px-4 font-black uppercase tracking-wider text-indigo-400">Credit Issuance</td>
                                         <td className="py-4 px-4 italic font-medium text-dim">Initial creation of ledger note draft.</td>
                                         <td className="py-4 pl-4 text-right font-black" style={{ color: 'var(--text-main)' }}>${note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                     </tr>
                                     {note.status === 'CLOSED' && (
                                         <tr className="hover:bg-white/[0.02] transition-colors">
-                                            <td className="py-4 pr-4 font-bold text-dim" style={{ color: 'var(--text-dim)' }}>{new Date(note.updatedAt || note.createdAt).toLocaleDateString()}</td>
+                                            <td className="py-4 pr-4 font-bold text-dim" style={{ color: 'var(--text-dim)' }}>{formatDate(note.updatedAt || note.createdAt)}</td>
                                             <td className="py-4 px-4 font-black uppercase tracking-wider text-emerald-400">Applied Adjustment</td>
                                             <td className="py-4 px-4 italic font-medium text-dim">Direct offset deduction executed on Invoice {note.invoiceId?.invoiceNumber || 'Target'}.</td>
                                             <td className="py-4 pl-4 text-right font-black text-rose-400">-${note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
@@ -673,7 +674,7 @@ const CreditNoteDetail = () => {
                                     )}
                                     {note.status === 'VOID' && (
                                         <tr className="hover:bg-white/[0.02] transition-colors">
-                                            <td className="py-4 pr-4 font-bold text-dim" style={{ color: 'var(--text-dim)' }}>{new Date(note.updatedAt || note.createdAt).toLocaleDateString()}</td>
+                                            <td className="py-4 pr-4 font-bold text-dim" style={{ color: 'var(--text-dim)' }}>{formatDate(note.updatedAt || note.createdAt)}</td>
                                             <td className="py-4 px-4 font-black uppercase tracking-wider text-rose-500">Void Cancellation</td>
                                             <td className="py-4 px-4 italic font-medium text-dim">Ledger reversal posted - note rendered inactive.</td>
                                             <td className="py-4 pl-4 text-right font-black text-rose-500">-${note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>

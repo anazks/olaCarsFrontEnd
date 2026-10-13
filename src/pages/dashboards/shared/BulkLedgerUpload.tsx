@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Upload, FileText, X, Download, AlertTriangle, CheckCircle, Loader2, Info, Trash2, ChevronDown, ChevronRight, ChevronLeft, Search, AlertCircle, Zap, ArrowLeft, Eye, Layers } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -827,26 +828,7 @@ interface SetOffPreview {
         return isNaN(parsed) ? 0 : parsed;
     };
 
-    const formatDateDMY = (dateStr: any): string => {
-        if (!dateStr) return '-';
-        if (typeof dateStr === 'string') {
-            const trimmed = dateStr.trim();
-            const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
-            if (isoMatch) {
-                return `${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`;
-            }
-            const dmyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-            if (dmyMatch) {
-                return `${dmyMatch[1].padStart(2, '0')}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[3]}`;
-            }
-        }
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return String(dateStr);
-        const day = String(d.getUTCDate()).padStart(2, '0');
-        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-        const year = d.getUTCFullYear();
-        return `${day}-${month}-${year}`;
-    };
+    const formatDateDMY = (dateStr: any): string => formatDate(dateStr);
 
     const validateRow = useCallback((
         row: any,

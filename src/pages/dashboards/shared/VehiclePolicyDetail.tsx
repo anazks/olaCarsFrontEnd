@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -168,11 +169,11 @@ const VehiclePolicyDetail = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Start Date</p>
-                                <p className="font-medium">{policy.startDate ? new Date(policy.startDate).toLocaleDateString() : 'N/A'}</p>
+                                <p className="font-medium">{policy.startDate ? formatDate(policy.startDate) : 'N/A'}</p>
                             </div>
                             <div>
                                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Expiry Date</p>
-                                <p className="font-medium">{policy.expiryDate ? new Date(policy.expiryDate).toLocaleDateString() : 'N/A'}</p>
+                                <p className="font-medium">{policy.expiryDate ? formatDate(policy.expiryDate) : 'N/A'}</p>
                             </div>
                         </div>
                         {policy.certificate && (

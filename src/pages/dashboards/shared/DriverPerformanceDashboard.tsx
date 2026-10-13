@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo, useRef, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, TrendingUp, AlertCircle, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Building2, Filter, BarChart3, ArrowUpRight, Activity, Eye, Car } from 'lucide-react';
@@ -1486,7 +1487,7 @@ const DriverPerformanceDashboard = () => {
                                                                                         </span>
                                                                                     </td>
                                                                                     <td className="px-3 py-2 text-dim">
-                                                                                        {new Date(inv.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                                                        {formatDate(inv.dueDate)}
                                                                                     </td>
                                                                                     <td className="px-3 py-2 font-bold text-white">${inv.totalAmountDue.toLocaleString()}</td>
                                                                                     <td className="px-3 py-2 font-bold text-brand-lime">${inv.amountPaid.toLocaleString()}</td>

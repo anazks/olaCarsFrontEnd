@@ -1,3 +1,4 @@
+import { formatDate } from '../../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -135,7 +136,7 @@ const CreditNotes = () => {
                 "Customer Name": note.customerId?.name || note.driverId?.personalInfo?.fullName || 'Legacy Customer',
                 "Customer/Driver ID": note.customerId?.customerId || note.driverId?.driverId || 'N/A',
                 "Linked Invoice": note.invoiceId?.invoiceNumber || 'N/A',
-                "Issued Date": note.creditNoteDate ? new Date(note.creditNoteDate).toLocaleDateString() : (note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'N/A'),
+                "Issued Date": note.creditNoteDate ? formatDate(note.creditNoteDate) : (note.createdAt ? formatDate(note.createdAt) : 'N/A'),
                 "Amount": note.amount || 0,
                 "Reason": note.reason || 'N/A',
                 "Notes": note.notes || 'N/A',
@@ -177,7 +178,7 @@ const CreditNotes = () => {
                 "Customer Name": note.customerId?.name || note.driverId?.personalInfo?.fullName || 'Legacy Customer',
                 "Customer/Driver ID": note.customerId?.customerId || note.driverId?.driverId || 'N/A',
                 "Linked Invoice": note.invoiceId?.invoiceNumber || 'N/A',
-                "Issued Date": note.creditNoteDate ? new Date(note.creditNoteDate).toLocaleDateString() : (note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'N/A'),
+                "Issued Date": note.creditNoteDate ? formatDate(note.creditNoteDate) : (note.createdAt ? formatDate(note.createdAt) : 'N/A'),
                 "Amount": note.amount || 0,
                 "Reason": note.reason || 'N/A',
                 "Notes": note.notes || 'N/A',
@@ -218,7 +219,7 @@ const CreditNotes = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
             if (startDate || endDate) {
                 doc.text(`Period: ${startDate || 'N/A'} to ${endDate || 'N/A'}`, 14, 35);
             }
@@ -230,7 +231,7 @@ const CreditNotes = () => {
                 note.customerId?.name || note.driverId?.personalInfo?.fullName || 'Legacy Customer',
                 note.customerId?.customerId || note.driverId?.driverId || 'N/A',
                 note.invoiceId?.invoiceNumber || 'N/A',
-                note.creditNoteDate ? new Date(note.creditNoteDate).toLocaleDateString() : (note.createdAt ? new Date(note.createdAt).toLocaleDateString() : 'N/A'),
+                note.creditNoteDate ? formatDate(note.creditNoteDate) : (note.createdAt ? formatDate(note.createdAt) : 'N/A'),
                 `$${(note.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                 note.status || 'APPROVED'
             ]);
@@ -676,7 +677,7 @@ const CreditNotes = () => {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6 font-bold text-dim">
-                                                {new Date(note.creditNoteDate || note.createdAt).toLocaleDateString()}
+                                                {formatDate(note.creditNoteDate || note.createdAt)}
                                             </td>
                                             <td className="py-4 px-6 text-right font-black text-sm text-indigo-400">
                                                 ${note.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}

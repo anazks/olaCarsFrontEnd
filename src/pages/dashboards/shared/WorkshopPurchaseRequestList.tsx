@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw, FileText, AlertTriangle, ChevronLeft, ChevronRight, ShoppingBag, Search, Filter, Eye, ChevronDown } from 'lucide-react';
@@ -120,7 +121,7 @@ const WorkshopPurchaseRequestList = () => {
                     "Branch": req.branch?.name || 'N/A',
                     "Status": req.status || 'N/A',
                     "Requested By": req.requestedBy?.fullName || 'N/A',
-                    "Date": req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'N/A'
+                    "Date": req.createdAt ? formatDate(req.createdAt) : 'N/A'
                 };
             });
 
@@ -168,7 +169,7 @@ const WorkshopPurchaseRequestList = () => {
                     "Branch": req.branch?.name || 'N/A',
                     "Status": req.status || 'N/A',
                     "Requested By": req.requestedBy?.fullName || 'N/A',
-                    "Date": req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'N/A'
+                    "Date": req.createdAt ? formatDate(req.createdAt) : 'N/A'
                 };
             });
 
@@ -206,7 +207,7 @@ const WorkshopPurchaseRequestList = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             const head = [["Sl No.", "Req Number", "Part Name", "Quantity", "Branch", "Status", "Total Amount"]];
             const body = requests.map((req, idx) => {
@@ -575,7 +576,7 @@ const WorkshopPurchaseRequestList = () => {
                                             <td className="px-6 py-6">
                                                 <div className="flex flex-col">
                                                     <div className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
-                                                        {new Date(req.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                        {formatDate(req.createdAt)}
                                                     </div>
                                                     <div className="text-[10px] opacity-30 mt-0.5" style={{ color: 'var(--text-dim)' }}>
                                                         {new Date(req.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}

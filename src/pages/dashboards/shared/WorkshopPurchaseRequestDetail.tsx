@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getWorkshopProcurementRequestById, financeApproveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
@@ -384,7 +385,7 @@ const WorkshopPurchaseRequestDetail = () => {
                                 <div>
                                     <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Submission Date</p>
                                     <p className="font-bold text-sm" style={{ color: 'var(--text-main)' }}>
-                                        {new Date(request.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(request.createdAt).toLocaleTimeString()}
+                                        {formatDateTime(request.createdAt)}
                                     </p>
                                 </div>
                             </div>
@@ -452,7 +453,7 @@ const WorkshopPurchaseRequestDetail = () => {
                                 <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{request.approvedBy?.fullName}</p>
                                 <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>Scoped as {request.approvedByRole}</p>
                                 <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
-                                    Processed on {new Date(request.updatedAt).toLocaleDateString()}
+                                    Processed on {formatDate(request.updatedAt)}
                                 </p>
                             </div>
                         </div>
@@ -535,7 +536,7 @@ const WorkshopPurchaseRequestDetail = () => {
                                             <div className="absolute left-[3px] top-4 w-[2px] h-[calc(100%+8px)] bg-white/10" />
                                         )}
                                         <p className="text-[10px] font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            {new Date(entry.editedAt).toLocaleDateString()} at {new Date(entry.editedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {formatDateTime(entry.editedAt)}
                                         </p>
                                         <p className="text-sm mt-1 mb-1 font-bold" style={{ color: 'var(--text-main)' }}>
                                             {typeof entry.editedBy === 'object' 
@@ -566,7 +567,7 @@ const WorkshopPurchaseRequestDetail = () => {
                                                 <div className="absolute left-[3px] top-4 w-[2px] h-[calc(100%+8px)] bg-white/10" />
                                             )}
                                             <p className="text-[10px] font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                                {new Date(entry.editedAt || entry.updatedAt).toLocaleDateString()} at {new Date(entry.editedAt || entry.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {formatDateTime(entry.editedAt || entry.updatedAt)}
                                             </p>
                                             <p className="text-sm mt-1 mb-1 font-bold" style={{ color: 'var(--text-main)' }}>
                                                 {typeof entry.editedBy === 'object' 

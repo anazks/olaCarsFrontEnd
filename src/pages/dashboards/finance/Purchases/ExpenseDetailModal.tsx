@@ -1,3 +1,4 @@
+import { formatDate } from '../../../../utils/dateUtils';
 import { X, FolderOpen, User, ShoppingBag, Landmark, Tag, FileText, Printer, CheckCircle } from 'lucide-react';
 import type { Expense } from '../../../../services/expenseService';
 import api from '../../../../services/api';
@@ -98,7 +99,7 @@ const ExpenseDetailModal = ({ expense, onClose }: Props) => {
                         <div className="text-right sm:text-right font-medium">
                             <p className="text-[10px] font-black uppercase text-dim opacity-60">Date of Expense</p>
                             <p className="text-xs font-bold text-white mt-0.5" style={{ color: 'var(--text-main)' }}>
-                                {new Date(expense.expenseDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                {formatDate(expense.expenseDate)}
                             </p>
                         </div>
                     </div>

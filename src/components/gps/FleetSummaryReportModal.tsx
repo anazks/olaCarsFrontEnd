@@ -1,3 +1,4 @@
+import { formatDate } from '../../utils/dateUtils';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     X,
@@ -95,7 +96,7 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
         { key: 'maxSpeed', label: 'Maximum Speed', unit: 'km/h', visible: true, align: 'center', format: (val) => `${val || 0} km/h` },
         { key: 'engineHoursFormatted', label: 'Engine Hours', unit: 'Hours', visible: true, align: 'center' },
         { key: 'fuelConsumed', label: 'Fuel Consumed', unit: 'L', visible: true, align: 'right', format: (val) => `${Number(val || 0).toFixed(1)} L` },
-        { key: 'startDate', label: 'Start Date', visible: true, align: 'center' },
+        { key: 'startDate', label: 'Start Date', visible: true, align: 'center', format: (val) => formatDate(val) },
         { key: 'odometerStart', label: 'Odometer Start', unit: 'km', visible: true, align: 'right', format: (val) => `${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` },
         { key: 'odometerEnd', label: 'Odometer End', unit: 'km', visible: true, align: 'right', format: (val) => `${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` },
         { key: 'averageSpeed', label: 'Average Speed', unit: 'km/h', visible: true, align: 'center', format: (val) => `${Number(val || 0).toFixed(2)} km/h` },

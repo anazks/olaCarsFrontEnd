@@ -1,3 +1,4 @@
+import { formatDate } from './dateUtils';
 export interface AggregatedExecutiveData {
     financeTotals: any[];
     vehicleData: any[];
@@ -257,7 +258,7 @@ export const aggregateExecutiveData = (
                 // if (wd < startD || wd > endD) return;
                 
                 const pKey = groupByDay 
-                    ? wd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                    ? formatDate(wd)
                     : wd.toLocaleDateString(undefined, { year: '2-digit', month: 'short' });
                 
                 const curr = rentMap.get(pKey) || { period: pKey, Paid: 0, Pending: 0, Overdue: 0 };
@@ -336,7 +337,7 @@ export const aggregateExecutiveData = (
             if (pd < startD || pd > endD) return;
             
             const pKey = groupByDay 
-                ? pd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                ? formatDate(pd)
                 : pd.toLocaleDateString(undefined, { year: '2-digit', month: 'short' });
                 
             const curr = poMap.get(pKey) || { period: pKey, Approved: 0, Pending: 0, Rejected: 0 };

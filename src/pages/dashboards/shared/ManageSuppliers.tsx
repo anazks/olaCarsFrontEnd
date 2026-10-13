@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag, Eye, Upload, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
@@ -217,7 +218,7 @@ const ManageSuppliers = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             const head = [["Sl No.", "Vendor No.", "Supplier Name", "Contact Person", "Email", "Phone", "Category", "Status"]];
             const body = allSuppliers.map((s, idx) => [

@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, RefreshCw, Layers, Clipboard, AlertTriangle, ArrowUpRight, Search, Tag, Edit2, Trash2, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -107,7 +108,7 @@ const FixedAssets = () => {
                 "Asset Name": a.name || 'N/A',
                 "Asset Type": typeof a.fixedAssetType === 'object' ? (a.fixedAssetType as any)?.name : 'N/A',
                 "Serial Number": a.serialNumber || '—',
-                "Purchase Date": a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString() : 'N/A',
+                "Purchase Date": a.purchaseDate ? formatDate(a.purchaseDate) : 'N/A',
                 "Purchase Cost ($)": a.purchasePrice || 0,
                 "Current Value ($)": a.currentValue || 0,
                 "Depreciation Rate (%)": (a as any).depreciationRate || 0,
@@ -150,7 +151,7 @@ const FixedAssets = () => {
                 "Asset Name": a.name || 'N/A',
                 "Asset Type": typeof a.fixedAssetType === 'object' ? (a.fixedAssetType as any)?.name : 'N/A',
                 "Serial Number": a.serialNumber || '—',
-                "Purchase Date": a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString() : 'N/A',
+                "Purchase Date": a.purchaseDate ? formatDate(a.purchaseDate) : 'N/A',
                 "Purchase Cost ($)": a.purchasePrice || 0,
                 "Current Value ($)": a.currentValue || 0,
                 "Depreciation Rate (%)": (a as any).depreciationRate || 0,
@@ -192,7 +193,7 @@ const FixedAssets = () => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             const head = [["Sl No.", "Asset Code", "Asset Name", "Asset Type", "Purchase Date", "Cost ($)", "Status"]];
             const body = assets.map((a, idx) => [
@@ -200,7 +201,7 @@ const FixedAssets = () => {
                 a.code || 'N/A',
                 a.name || 'N/A',
                 typeof a.fixedAssetType === 'object' ? (a.fixedAssetType as any)?.name : 'N/A',
-                a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString() : 'N/A',
+                a.purchaseDate ? formatDate(a.purchaseDate) : 'N/A',
                 `$${(a.purchasePrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                 a.status || 'N/A'
             ]);
@@ -530,7 +531,7 @@ const FixedAssets = () => {
                                             {typeof asset.fixedAssetAccount === 'object' ? asset.fixedAssetAccount.name : '—'}
                                         </td>
                                         <td className="px-6 py-4 text-xs" style={{ color: 'var(--text-dim)' }}>
-                                            {new Date(asset.purchaseDate).toLocaleDateString()}
+                                            {formatDate(asset.purchaseDate)}
                                         </td>
                                         <td className="px-6 py-4 text-xs" style={{ color: 'var(--text-dim)' }}>
                                             {asset.usefulLifeYears} Years ({asset.depreciationInterval})

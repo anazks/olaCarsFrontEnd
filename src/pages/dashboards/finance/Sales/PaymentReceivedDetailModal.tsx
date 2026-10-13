@@ -1,3 +1,4 @@
+import { formatDate } from '../../../../utils/dateUtils';
 import { X, Calendar, User, Landmark, Coins, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -180,7 +181,7 @@ const PaymentReceivedDetailModal = ({ payment, onClose }: Props) => {
                                 <div>
                                     <span className="text-[9px] font-black uppercase text-dim block tracking-widest">Received Date</span>
                                     <span className="text-xs font-semibold text-white block mt-0.5" style={{ color: 'var(--text-main)' }}>
-                                        {new Date(payment.paymentDate).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}
+                                        {formatDate(payment.paymentDate)}
                                     </span>
                                 </div>
                             </div>

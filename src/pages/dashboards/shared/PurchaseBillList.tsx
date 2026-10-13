@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
@@ -301,7 +302,7 @@ const PurchaseBillList = () => {
                                                         </div>
                                                         <div>
                                                             <p className="text-sm font-black" style={{ color: 'var(--text-main)' }}>
-                                                                {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'N/A'}
+                                                                {p.createdAt ? formatDate(p.createdAt) : 'N/A'}
                                                             </p>
                                                             <p className="text-[10px] uppercase font-black opacity-30 tracking-widest mt-0.5">{p.paymentMethod.replace('_', ' ')}</p>
                                                         </div>

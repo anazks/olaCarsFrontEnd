@@ -1,3 +1,4 @@
+import { formatDate } from '../../../../utils/dateUtils';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -294,7 +295,7 @@ const DebitNotes = () => {
             "Sl No.": idx + 1,
             "DN Number": note.debitNoteNumber || 'N/A',
             "Customer / Supplier": note.supplierId ? (note.supplierId.name || note.supplierId.companyName) : (note.customerId?.name || note.driverId?.personalInfo?.fullName || 'N/A'),
-            "Issue Date": note.debitNoteDate ? new Date(note.debitNoteDate).toLocaleDateString() : 'N/A',
+            "Issue Date": note.debitNoteDate ? formatDate(note.debitNoteDate) : 'N/A',
             "Amount ($)": note.amount || 0,
             "Reason": note.reason || 'N/A',
             "Notes": note.notes || 'N/A',
@@ -317,13 +318,13 @@ const DebitNotes = () => {
         doc.setFontSize(16);
         doc.text("Debit Notes Ledger Report", 14, 15);
         doc.setFontSize(10);
-        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 22);
+        doc.text(`Generated on: ${formatDate(new Date())}`, 14, 22);
 
         const tableData = debitNotes.map((note, idx) => [
             String(idx + 1),
             note.debitNoteNumber || 'N/A',
             note.supplierId ? (note.supplierId.name || note.supplierId.companyName || 'Vendor/Supplier') : (note.customerId?.name || note.driverId?.personalInfo?.fullName || 'N/A'),
-            note.debitNoteDate ? new Date(note.debitNoteDate).toLocaleDateString() : 'N/A',
+            note.debitNoteDate ? formatDate(note.debitNoteDate) : 'N/A',
             `$${(note.amount || 0).toLocaleString()}`,
             note.reason || 'N/A',
             note.status || 'OPEN'
@@ -532,7 +533,7 @@ const DebitNotes = () => {
                                             {dn.supplierId ? (dn.supplierId.name || dn.supplierId.companyName || 'Vendor/Supplier') : (dn.customerId?.name || dn.driverId?.personalInfo?.fullName || 'N/A')}
                                         </td>
                                         <td className="p-4 text-dim">
-                                            {dn.debitNoteDate ? new Date(dn.debitNoteDate).toLocaleDateString() : 'N/A'}
+                                            {dn.debitNoteDate ? formatDate(dn.debitNoteDate) : 'N/A'}
                                         </td>
                                         <td className="p-4 text-right font-black text-amber-400">
                                             ${(dn.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

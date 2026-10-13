@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -1544,7 +1545,7 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                                                         {inv.invoiceType}
                                                                                     </td>
                                                                                     <td className="py-2 px-3 text-dim font-mono">
-                                                                                        {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : '—'}
+                                                                                        {inv.dueDate ? formatDate(inv.dueDate) : '—'}
                                                                                     </td>
                                                                                     <td className="py-2 px-3 text-center font-bold">
                                                                                         {inv.daysOverdue <= 0 ? (
@@ -1625,7 +1626,7 @@ export const InvoiceAgingSummary: React.FC = () => {
                                                                                         {dn.debitNoteNumber}
                                                                                     </td>
                                                                                     <td className="py-2 px-3 text-dim font-mono">
-                                                                                        {dn.debitNoteDate ? new Date(dn.debitNoteDate).toLocaleDateString() : '—'}
+                                                                                        {dn.debitNoteDate ? formatDate(dn.debitNoteDate) : '—'}
                                                                                     </td>
                                                                                     <td className="py-2 px-3 text-dim font-medium">
                                                                                         {dn.reason || 'Deposit Charge'}

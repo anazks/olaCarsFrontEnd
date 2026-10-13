@@ -33,6 +33,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import toast from 'react-hot-toast';
+import { formatDate, formatDateTime } from '../../../../utils/dateUtils';
 
 const BillList = () => {
     const navigate = useNavigate();
@@ -88,6 +89,90 @@ const BillList = () => {
         return await billService.getAllBills(queryParams);
     };
 
+    const getSupplierName = (supplier: any) => (typeof supplier === 'object' && supplier ? supplier.name : supplier) || 'N/A';
+
+    interface BillExportRow {
+        "Sl No.": string;
+        "Bill Number": string;
+        "Status": string;
+        "Vendor": string;
+        "Bill Date": string;
+        "Due Date": string;
+        "Item #": string;
+        "Item Name": string;
+        "Item Description": string;
+        "Item Account": string;
+        "Item Qty": number;
+        "Item Unit Price ($)": number;
+        "Item Line Total ($)": number;
+        "Total Amount ($)": number;
+        "Amount Paid ($)": number;
+        "Balance Due ($)": number;
+    }
+
+    const formatBillExportRows = (bills: any[]): BillExportRow[] => {
+        return bills.flatMap((bill, idx) => {
+            const billBase = {
+                "Sl No.": String(idx + 1).padStart(2, '0'),
+                "Bill Number": bill.billNumber || 'N/A',
+                "Status": String(bill.status || 'N/A'),
+                "Vendor": getSupplierName(bill.supplier),
+                "Bill Date": formatDate(bill.billDate, 'N/A'),
+                "Due Date": formatDate(bill.dueDate, 'N/A'),
+                "Total Amount ($)": Number(bill.totalAmount) || 0,
+                "Amount Paid ($)": Number(bill.amountPaid) || 0,
+                "Balance Due ($)": Number(bill.balanceDue) || 0
+            };
+
+            if (bill.items && bill.items.length > 0) {
+                return bill.items.map((item: any, itemIdx: number): BillExportRow => {
+                    const lineTotal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+                    const accountDisplay = typeof item.accountId === 'object' && item.accountId
+                        ? `${item.accountId.code || ''} - ${item.accountId.name || ''}`.trim()
+                        : String(item.accountId || '');
+
+                    return {
+                        "Sl No.": billBase["Sl No."],
+                        "Bill Number": billBase["Bill Number"],
+                        "Status": billBase["Status"],
+                        "Vendor": billBase["Vendor"],
+                        "Bill Date": billBase["Bill Date"],
+                        "Due Date": billBase["Due Date"],
+                        "Item #": String(itemIdx + 1),
+                        "Item Name": item.itemName || 'N/A',
+                        "Item Description": item.description || '',
+                        "Item Account": accountDisplay,
+                        "Item Qty": item.quantity ?? 0,
+                        "Item Unit Price ($)": item.unitPrice ?? 0,
+                        "Item Line Total ($)": lineTotal,
+                        "Total Amount ($)": billBase["Total Amount ($)"],
+                        "Amount Paid ($)": billBase["Amount Paid ($)"],
+                        "Balance Due ($)": billBase["Balance Due ($)"]
+                    };
+                });
+            }
+
+            return [{
+                "Sl No.": billBase["Sl No."],
+                "Bill Number": billBase["Bill Number"],
+                "Status": billBase["Status"],
+                "Vendor": billBase["Vendor"],
+                "Bill Date": billBase["Bill Date"],
+                "Due Date": billBase["Due Date"],
+                "Item #": '',
+                "Item Name": '',
+                "Item Description": '',
+                "Item Account": '',
+                "Item Qty": 0,
+                "Item Unit Price ($)": 0,
+                "Item Line Total ($)": 0,
+                "Total Amount ($)": billBase["Total Amount ($)"],
+                "Amount Paid ($)": billBase["Amount Paid ($)"],
+                "Balance Due ($)": billBase["Balance Due ($)"]
+            }];
+        });
+    };
+
     const handleExportExcel = async () => {
         const toastId = toast.loading("Fetching all filtered bills for Excel export...");
         try {
@@ -98,29 +183,17 @@ const BillList = () => {
                 return;
             }
 
-            const getSupplierName = (supplier: any) => (typeof supplier === 'object' && supplier ? supplier.name : supplier) || 'N/A';
-
-            const exportData = allBills.map((bill, idx) => ({
-                "Sl No.": String(idx + 1).padStart(2, '0'),
-                "Bill Number": bill.billNumber || 'N/A',
-                "Status": bill.status || 'N/A',
-                "Vendor": getSupplierName(bill.supplier),
-                "Bill Date": bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
-                "Due Date": bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
-                "Total Amount ($)": bill.totalAmount || 0,
-                "Amount Paid ($)": bill.amountPaid || 0,
-                "Balance Due ($)": bill.balanceDue || 0
-            }));
+            const exportData = formatBillExportRows(allBills);
 
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Bills");
             
-            const keys = Object.keys(exportData[0]);
+            const keys = exportData.length > 0 ? (Object.keys(exportData[0]) as (keyof BillExportRow)[]) : [];
             ws["!cols"] = keys.map(key => {
                 const maxLen = Math.max(
                     key.length,
-                    ...exportData.map(row => String((row as any)[key] || "").length)
+                    ...exportData.map(row => String(row[key] ?? "").length)
                 );
                 return { wch: maxLen + 2 };
             });
@@ -144,19 +217,7 @@ const BillList = () => {
                 return;
             }
 
-            const getSupplierName = (supplier: any) => (typeof supplier === 'object' && supplier ? supplier.name : supplier) || 'N/A';
-
-            const exportData = allBills.map((bill, idx) => ({
-                "Sl No.": String(idx + 1).padStart(2, '0'),
-                "Bill Number": bill.billNumber || 'N/A',
-                "Status": bill.status || 'N/A',
-                "Vendor": getSupplierName(bill.supplier),
-                "Bill Date": bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
-                "Due Date": bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
-                "Total Amount ($)": bill.totalAmount || 0,
-                "Amount Paid ($)": bill.amountPaid || 0,
-                "Balance Due ($)": bill.balanceDue || 0
-            }));
+            const exportData = formatBillExportRows(allBills);
 
             const ws = XLSX.utils.json_to_sheet(exportData);
             const csvContent = XLSX.utils.sheet_to_csv(ws);
@@ -207,10 +268,10 @@ const BillList = () => {
             doc.setFont("helvetica", "normal");
             doc.setTextColor(100, 116, 139);
             const periodText = (filterFromDate || filterToDate) 
-                ? `Filter Period: ${filterFromDate || 'Start'} to ${filterToDate || 'Current'}`
+                ? `Filter Period: ${formatDate(filterFromDate) || 'Start'} to ${formatDate(filterToDate) || 'Current'}`
                 : 'Filter Period: All Time';
             const statusText = filterStatus !== 'ALL' ? `  |  Status: ${filterStatus}` : '';
-            doc.text(`${periodText}${statusText}  |  Generated on: ${new Date().toLocaleString()}  |  Total Bills: ${allBills.length}`, 14, 23);
+            doc.text(`${periodText}${statusText}  |  Generated on: ${formatDateTime(new Date())}  |  Total Bills: ${allBills.length}`, 14, 23);
 
             // KPI Summary Table
             autoTable(doc, {
@@ -255,8 +316,8 @@ const BillList = () => {
                 bill.billNumber || 'N/A',
                 bill.status || 'N/A',
                 (typeof bill.supplier === 'object' && bill.supplier ? bill.supplier.name : bill.supplier) || 'N/A',
-                bill.billDate ? new Date(bill.billDate).toLocaleDateString() : 'N/A',
-                bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A',
+                formatDate(bill.billDate, 'N/A'),
+                formatDate(bill.dueDate, 'N/A'),
                 `$${(bill.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                 `$${(bill.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                 `$${(bill.balanceDue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -859,13 +920,13 @@ const BillList = () => {
                                             <td className="py-4 px-5">
                                                 <div className="flex items-center gap-1.5">
                                                     <Calendar size={12} className="opacity-40" />
-                                                    {bill.billDate ? new Date(bill.billDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                                                    {formatDate(bill.billDate, 'N/A')}
                                                 </div>
                                             </td>
                                             <td className="py-4 px-5">
                                                 <div className="flex items-center gap-1.5">
                                                     <Calendar size={12} className="opacity-40" />
-                                                    {bill.dueDate ? new Date(bill.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                                                    {formatDate(bill.dueDate, 'N/A')}
                                                 </div>
                                             </td>
                                             <td className="py-4 px-5 text-right font-black text-sm">

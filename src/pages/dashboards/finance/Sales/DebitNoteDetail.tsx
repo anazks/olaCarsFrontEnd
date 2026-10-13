@@ -1,3 +1,4 @@
+import { formatDate } from '../../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -171,7 +172,7 @@ const DebitNoteDetail = () => {
         doc.setFontSize(18);
         doc.text(`DEBIT NOTE: ${note.debitNoteNumber}`, 14, 20);
         doc.setFontSize(10);
-        doc.text(`Date: ${note.debitNoteDate ? new Date(note.debitNoteDate).toLocaleDateString() : 'N/A'}`, 14, 28);
+        doc.text(`Date: ${note.debitNoteDate ? formatDate(note.debitNoteDate) : 'N/A'}`, 14, 28);
         doc.text(`Status: ${note.status}`, 14, 34);
 
         doc.setFontSize(12);
@@ -291,7 +292,7 @@ const DebitNoteDetail = () => {
                         </div>
                         <div>
                             <span className="text-[10px] font-black uppercase text-dim block">Issue Date</span>
-                            <span className="text-sm font-bold block mt-1" style={{ color: 'var(--text-main)' }}>{note.debitNoteDate ? new Date(note.debitNoteDate).toLocaleDateString() : 'N/A'}</span>
+                            <span className="text-sm font-bold block mt-1" style={{ color: 'var(--text-main)' }}>{note.debitNoteDate ? formatDate(note.debitNoteDate) : 'N/A'}</span>
                         </div>
                     </div>
 
@@ -365,7 +366,7 @@ const DebitNoteDetail = () => {
                     ? note.supportingDocument.name
                     : 'Supporting Document';
                 const uploadedAt = typeof note.supportingDocument === 'object' && note.supportingDocument?.uploadedAt
-                    ? new Date(note.supportingDocument.uploadedAt).toLocaleDateString()
+                    ? formatDate(note.supportingDocument.uploadedAt)
                     : null;
 
                 const fullDocUrl = docPath

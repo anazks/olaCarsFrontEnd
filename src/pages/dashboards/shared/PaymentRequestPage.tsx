@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from '../../../utils/dateUtils';
 import { useState, useEffect, useRef } from 'react';
 import {
     Plus, FileText, Clock, CheckCircle, XCircle, Banknote,
@@ -12,7 +13,6 @@ import {
     type CreatePaymentRequestPayload,
 } from '../../../services/paymentRequestService';
 import { getUser } from '../../../utils/auth';
-import { format } from 'date-fns';
 
 const CATEGORIES = [
     'OPERATIONAL',
@@ -496,7 +496,7 @@ const PaymentRequestPage = () => {
                                             {req.currency} {req.amount.toLocaleString()}
                                         </div>
                                         <div className="text-xs" style={{ color: 'var(--text-dim)' }}>
-                                            Due: {format(new Date(req.expectedPaymentDate), 'dd MMM yyyy')}
+                                            Due: {formatDate(req.expectedPaymentDate)}
                                         </div>
                                     </div>
 
@@ -540,12 +540,12 @@ const PaymentRequestPage = () => {
                                                 <div>
                                                     <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-dim)' }}>Expected Payment Date</p>
                                                     <p className="text-sm font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-main)' }}>
-                                                        <Calendar size={13} /> {format(new Date(req.expectedPaymentDate), 'EEEE, dd MMMM yyyy')}
+                                                        <Calendar size={13} /> {formatDate(req.expectedPaymentDate)}
                                                     </p>
                                                 </div>
                                                 <div>
                                                     <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-dim)' }}>Submitted</p>
-                                                    <p className="text-sm" style={{ color: 'var(--text-main)' }}>{format(new Date(req.createdAt), 'dd MMM yyyy, HH:mm')}</p>
+                                                    <p className="text-sm" style={{ color: 'var(--text-main)' }}>{formatDateTime(req.createdAt)}</p>
                                                 </div>
                                                 {req.additionalNotes && (
                                                     <div>
@@ -596,7 +596,7 @@ const PaymentRequestPage = () => {
                                                                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_CONFIG[h.status]?.color.split(' ')[0] || 'bg-gray-400'}`} />
                                                                     <span className="font-bold" style={{ color: 'var(--text-main)' }}>{STATUS_CONFIG[h.status]?.label || h.status}</span>
                                                                     <span style={{ color: 'var(--text-dim)' }}>·</span>
-                                                                    <span style={{ color: 'var(--text-dim)' }}>{format(new Date(h.timestamp), 'dd MMM, HH:mm')}</span>
+                                                                    <span style={{ color: 'var(--text-dim)' }}>{formatDateTime(h.timestamp)}</span>
                                                                 </div>
                                                             ))}
                                                         </div>

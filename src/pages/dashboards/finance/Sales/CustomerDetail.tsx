@@ -1,3 +1,4 @@
+import { formatDate } from '../../../../utils/dateUtils';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { 
@@ -714,9 +715,9 @@ const CustomerDetail = () => {
             items.push({
                 period: i + 1,
                 label: frequency === 'WEEKLY'
-                    ? `Week ${i + 1} (${dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`
-                    : `Month ${i + 1} (${dueDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })})`,
-                dueDate: dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                    ? `Week ${i + 1} (${formatDate(dueDate)})`
+                    : `Month ${i + 1} (${formatDate(dueDate)})`,
+                dueDate: formatDate(dueDate),
                 amount
             });
         }
@@ -815,7 +816,7 @@ const CustomerDetail = () => {
                 ['Customer ID', customer.customerId || 'TEMP-ID'],
                 ['Email', customer.email || 'N/A'],
                 ['Phone', customer.phone || 'N/A'],
-                ['Registered Date', new Date(customer.createdAt).toLocaleDateString()],
+                ['Registered Date', formatDate(customer.createdAt)],
                 ['Account Status', customer.status || 'N/A'],
                 ['Outstanding Balance', `$${outstandingBalance.toFixed(2)}`],
                 ['Prepayment Credit Balance', `$${prepaymentBalance.toFixed(2)}`],
@@ -938,7 +939,7 @@ const CustomerDetail = () => {
             // Map to transaction rows for CSV
             const transactionRows = txList.map(tx => {
                 return [
-                    tx.date.toLocaleDateString(),
+                    formatDate(tx.date),
                     tx.type,
                     tx.refNumber,
                     tx.description,
@@ -1101,7 +1102,7 @@ const CustomerDetail = () => {
                             <span className="text-xs font-mono font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{customer.customerId || 'TEMP-ID'}</span>
                             <span className="w-1 h-1 rounded-full bg-white/20" />
                             <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
-                                Registered {new Date(customer.createdAt).toLocaleDateString()}
+                                Registered {formatDate(customer.createdAt)}
                             </span>
                         </div>
                     </div>
@@ -1839,7 +1840,7 @@ const CustomerDetail = () => {
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
-                                            <History size={12} className="text-brand-lime" /> Repayment Plan Preview (From {new Date(activationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
+                                            <History size={12} className="text-brand-lime" /> Repayment Plan Preview (From {formatDate(activationDate)})
                                         </label>
                                         <span className="text-[9px] font-mono text-dim">Next {repaymentPreview.length} Installments</span>
                                     </div>
@@ -1943,7 +1944,7 @@ const OverviewTab = ({
         || driver?.activation?.activatedDate 
         || customer.cfActiveDate;
     const activeDateFormatted = rawActiveDate 
-        ? new Date(rawActiveDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) 
+        ? formatDate(rawActiveDate) 
         : '—';
 
     // 5. End Date
@@ -1953,7 +1954,7 @@ const OverviewTab = ({
         : (activeAssignment?.endDate || driver?.deactivationDate || customer.cfEndDate);
 
     const endDateFormatted = rawEndDate 
-        ? new Date(rawEndDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) 
+        ? formatDate(rawEndDate) 
         : (isCurrentlyActive ? 'Ongoing / Active' : (rawActiveDate ? 'Ongoing / Active' : '—'));
 
     // 6. Fleet Number (if assigned)
@@ -2324,11 +2325,11 @@ const OverviewTab = ({
                                                 </span>
                                             </td>
                                             <td className="py-3 px-3 text-dim font-mono text-[11px]">
-                                                {start ? start.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
+                                                {start ? formatDate(start) : '—'}
                                             </td>
                                             <td className="py-3 px-3 font-mono text-[11px]">
                                                 {end ? (
-                                                    <span className="text-amber-400">{end.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                                    <span className="text-amber-400">{formatDate(end)}</span>
                                                 ) : (
                                                     <span className="text-emerald-400 font-bold">Ongoing / Active</span>
                                                 )}
@@ -2446,7 +2447,7 @@ const OverviewTab = ({
                                                 </div>
                                             </td>
                                             <td className="py-3 px-3 text-white font-medium">
-                                                {hist.effectiveDate ? new Date(hist.effectiveDate).toLocaleDateString() : '—'}
+                                                {hist.effectiveDate ? formatDate(hist.effectiveDate) : '—'}
                                             </td>
                                             <td className="py-3 px-3">
                                                 <div className="flex items-center gap-1.5">
@@ -2768,11 +2769,11 @@ function VehicleHistoryTab({ customer }: { customer: Customer }) {
                                                 </span>
                                             </td>
                                             <td className="py-3 px-3 text-dim font-mono text-[11px]">
-                                                {start ? start.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
+                                                {start ? formatDate(start) : '—'}
                                             </td>
                                             <td className="py-3 px-3 font-mono text-[11px]">
                                                 {end ? (
-                                                    <span className="text-amber-400">{end.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                                    <span className="text-amber-400">{formatDate(end)}</span>
                                                 ) : (
                                                     <span className="text-emerald-400 font-bold">Ongoing / Active</span>
                                                 )}
@@ -2843,7 +2844,7 @@ const EMITab = ({ customer, invoices }: { customer: Customer, invoices: Invoice[
                                                 <div className="w-7 h-7 rounded bg-black/40 flex items-center justify-center text-[10px] font-black" style={{ color: 'var(--text-main)' }}>{item.weekNumber}</div>
                                                 <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>{item.weekLabel}</span>
                                             </td>
-                                            <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '—'}</td>
+                                            <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{item.dueDate ? formatDate(item.dueDate) : '—'}</td>
                                             <td className="px-6 py-4 text-right text-xs font-black" style={{ color: 'var(--text-main)' }}>${item.amount.toLocaleString()}</td>
                                             <td className="px-6 py-4 text-right text-xs font-bold text-brand-lime" style={{ color: 'var(--brand-lime)' }}>${(invoice?.amountPaid || 0).toLocaleString()}</td>
                                             <td className="px-6 py-4 text-center">
@@ -3114,7 +3115,7 @@ const PaymentsTab = ({ payments }: { payments: any[] }) => {
                                     return (
                                         <tr key={pmt._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
                                             <td className="px-6 py-4 font-black text-xs" style={{ color: 'var(--text-main)' }}>{pmt.paymentNumber}</td>
-                                            <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(pmt.paymentDate).toLocaleDateString()}</td>
+                                            <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{formatDate(pmt.paymentDate)}</td>
                                             <td className="px-6 py-4 text-xs font-bold text-brand-lime uppercase" style={{ color: 'var(--brand-lime)' }}>{pmt.paymentMethod}</td>
                                             <td className="px-6 py-4 text-right text-xs font-black text-emerald-400" style={{ color: 'var(--status-active)' }}>+ ${pmt.amountReceived.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                             <td className="px-6 py-4 text-right text-xs font-bold text-white">${applied.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
@@ -3525,7 +3526,7 @@ const CreditNotesTab = ({ creditNotes, navigate, basePath }: { creditNotes: Cred
                         creditNotes.map((cn) => (
                             <tr key={cn._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
                                 <td className="px-6 py-4 font-black text-xs text-brand-lime cursor-pointer hover:underline" onClick={() => navigate(`${basePath}/credit-notes/${cn._id}`)} style={{ color: 'var(--brand-lime)' }}>{cn.creditNoteNumber}</td>
-                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{new Date(cn.creditNoteDate).toLocaleDateString()}</td>
+                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{formatDate(cn.creditNoteDate)}</td>
                                 <td className="px-6 py-4 text-xs font-bold italic truncate max-w-[200px]" style={{ color: 'var(--text-dim)' }}>{cn.reason}</td>
                                 <td className="px-6 py-4 text-right text-xs font-black text-indigo-400">− ${cn.amount.toLocaleString()}</td>
                                 <td className="px-6 py-4 text-center">
@@ -3578,7 +3579,7 @@ const DebitNotesTab = ({ debitNotes, navigate, basePath }: { debitNotes: any[]; 
                         debitNotes.map((dn) => (
                             <tr key={dn._id} className="hover:bg-white/[0.02] transition-all" style={{ borderBottom: '1px solid var(--border-main)' }}>
                                 <td className="px-6 py-4 font-black text-xs text-brand-lime cursor-pointer hover:underline" onClick={() => navigate(`${basePath}/debit-notes/${dn._id}`)} style={{ color: 'var(--brand-lime)' }}>{dn.debitNoteNumber}</td>
-                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{dn.debitNoteDate ? new Date(dn.debitNoteDate).toLocaleDateString() : 'N/A'}</td>
+                                <td className="px-6 py-4 text-xs font-medium" style={{ color: 'var(--text-dim)' }}>{dn.debitNoteDate ? formatDate(dn.debitNoteDate) : 'N/A'}</td>
                                 <td className="px-6 py-4 text-xs font-bold italic truncate max-w-[200px]" style={{ color: 'var(--text-dim)' }}>{dn.reason}</td>
                                 <td className="px-6 py-4 text-right text-xs font-black text-amber-400">${(dn.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                 <td className="px-6 py-4 text-right text-xs font-bold text-emerald-400">${(dn.amountPaid !== undefined ? dn.amountPaid : (dn.status === 'PAID' ? dn.amount : 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>

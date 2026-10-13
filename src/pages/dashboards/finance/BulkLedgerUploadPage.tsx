@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -1539,7 +1540,7 @@ const BulkLedgerUploadPage = () => {
                                         <div className="grid grid-cols-2 gap-y-1.5 text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>
                                             <div className="flex items-center gap-1">
                                                 <Calendar size={11} />
-                                                <span>{new Date(h.startTime).toLocaleDateString()}</span>
+                                                <span>{formatDate(h.startTime)}</span>
                                             </div>
                                             <div className="flex items-center gap-1 justify-end">
                                                 <Clock size={11} />

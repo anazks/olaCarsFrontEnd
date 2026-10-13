@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, RefreshCw, Calculator, AlertTriangle, Check, X, Search, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -77,7 +78,7 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                 "Tax Name": t.name || 'N/A',
                 "Rate (%)": t.rate || 0,
                 "Status": t.isActive ? 'Active' : 'Inactive',
-                "Created At": t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A'
+                "Created At": t.createdAt ? formatDate(t.createdAt) : 'N/A'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -114,7 +115,7 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                 "Tax Name": t.name || 'N/A',
                 "Rate (%)": t.rate || 0,
                 "Status": t.isActive ? 'Active' : 'Inactive',
-                "Created At": t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A'
+                "Created At": t.createdAt ? formatDate(t.createdAt) : 'N/A'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -151,7 +152,7 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
             doc.setFontSize(18);
             doc.text(title, 14, 22);
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 29);
+            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
 
             const head = [["Sl No.", "Tax Name", "Rate (%)", "Status", "Created At"]];
             const body = taxes.map((t, idx) => [
@@ -159,7 +160,7 @@ const TaxManagement = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
                 t.name || 'N/A',
                 `${t.rate || 0}%`,
                 t.isActive ? 'Active' : 'Inactive',
-                t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'N/A'
+                t.createdAt ? formatDate(t.createdAt) : 'N/A'
             ]);
 
             autoTable(doc, {

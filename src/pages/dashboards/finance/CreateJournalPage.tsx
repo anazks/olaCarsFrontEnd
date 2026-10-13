@@ -1,3 +1,4 @@
+import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -1292,7 +1293,7 @@ const CreateJournalPage = () => {
                                                                         )}
                                                                     </td>
                                                                     <td className="px-3.5 py-2.5 text-dim">
-                                                                        {doc.dueDate ? new Date(doc.dueDate).toLocaleDateString() : 'N/A'}
+                                                                        {doc.dueDate ? formatDate(doc.dueDate) : 'N/A'}
                                                                     </td>
                                                                     <td className="px-3.5 py-2.5 text-right font-mono text-dim">
                                                                         ${doc.totalAmount.toFixed(2)}
@@ -1425,7 +1426,7 @@ const CreateJournalPage = () => {
                                                                         )}
                                                                     </td>
                                                                     <td className="px-3.5 py-2.5 text-dim">
-                                                                        {doc.dueDate ? new Date(doc.dueDate).toLocaleDateString() : 'N/A'}
+                                                                        {doc.dueDate ? formatDate(doc.dueDate) : 'N/A'}
                                                                     </td>
                                                                     <td className="px-3.5 py-2.5 text-right font-mono text-dim">
                                                                         ${doc.totalAmount.toFixed(2)}
