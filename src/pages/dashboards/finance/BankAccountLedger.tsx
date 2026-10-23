@@ -2333,8 +2333,15 @@ const BankAccountLedger = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-6">
                 <div>
                     <button
-                        onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted hover:text-brand-black dark:hover:text-lime transition-colors mb-4 group"
+                        onClick={() => {
+                            const basePath = location.pathname.split('/bank-accounts/')[0];
+                            if (window.history.length > 1) {
+                                navigate(-1);
+                            } else {
+                                navigate(`${basePath}/bank-accounts`);
+                            }
+                        }}
+                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted hover:text-brand-black dark:hover:text-lime transition-colors mb-4 group cursor-pointer"
                     >
                         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back to Accounts
                     </button>
@@ -2655,9 +2662,13 @@ const BankAccountLedger = () => {
                                             key={entry._id}
                                             className={`border-b last:border-0 hover:bg-white/5 transition-colors cursor-pointer ${isSelected ? 'bg-[#C8E600]/10 hover:bg-[#C8E600]/15' : ''}`}
                                             style={{ borderColor: 'var(--border-main)' }}
-                                            onClick={() => {
+                                            onClick={(e) => {
                                                 const basePath = location.pathname.split('/bank-accounts/')[0];
-                                                window.open(`${basePath}/bank-transactions/${entry._id}`, '_blank');
+                                                if (e.ctrlKey || e.metaKey) {
+                                                    window.open(`${basePath}/bank-transactions/${entry._id}`, '_blank');
+                                                } else {
+                                                    navigate(`${basePath}/bank-transactions/${entry._id}`);
+                                                }
                                             }}
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>

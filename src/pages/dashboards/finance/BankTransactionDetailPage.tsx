@@ -1,6 +1,6 @@
 import { formatDate, formatDateTime } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
     ArrowLeft, 
     Clock, 
@@ -709,6 +709,21 @@ const detectTxClassification = (tx: any): TxClassification => {
 const BankTransactionDetailPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const handleBackToLedger = () => {
+        const accountId = transaction?.bankAccount?._id 
+            || (typeof transaction?.bankAccount === 'string' ? transaction?.bankAccount : null)
+            || transaction?.bankAccountId;
+        const basePath = location.pathname.split('/bank-transactions/')[0];
+        if (accountId) {
+            navigate(`${basePath}/bank-accounts/${accountId}/ledger`);
+        } else if (window.history.length > 1) {
+            navigate(-1);
+        } else {
+            navigate(`${basePath}/bank-accounts`);
+        }
+    };
     
     const [transaction, setTransaction] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
@@ -759,8 +774,8 @@ const BankTransactionDetailPage = () => {
                 <h2 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>Error Loading Transaction</h2>
                 <p style={{ color: 'var(--text-muted)' }}>{error || 'Transaction not found'}</p>
                 <button 
-                    onClick={() => navigate(-1)} 
-                    className="px-4 py-2 mt-4 rounded-xl transition-all font-semibold border"
+                    onClick={handleBackToLedger} 
+                    className="px-4 py-2 mt-4 rounded-xl transition-all font-semibold border cursor-pointer"
                     style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                 >
                     Go Back
@@ -798,8 +813,8 @@ const BankTransactionDetailPage = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-6" style={{ borderColor: 'var(--border-main)' }}>
                 <div>
                     <button 
-                        onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-lime hover:text-brand-lime/80 transition-colors mb-4 group"
+                        onClick={handleBackToLedger}
+                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-lime hover:text-brand-lime/80 transition-colors mb-4 group cursor-pointer"
                         style={{ color: 'var(--brand-lime)' }}
                     >
                         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Back to Account Ledger
