@@ -23,6 +23,29 @@ const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string
     'EQUITY': { bg: 'rgba(168,85,247,0.1)', text: '#a855f7', border: 'rgba(168,85,247,0.3)' }, // Purple
 };
 
+const formatToDDMMYYYY = (dateInput: any): string => {
+    if (!dateInput) return '-';
+    if (typeof dateInput === 'string') {
+        const trimmed = dateInput.trim();
+        const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) {
+            const [, y, m, d] = isoMatch;
+            return `${d}/${m}/${y}`;
+        }
+        const dmyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (dmyMatch) {
+            const [, d, m, y] = dmyMatch;
+            return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+        }
+    }
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return String(dateInput || '-');
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+};
+
 const GeneralLedger = () => {
     const [entries, setEntries] = useState<LedgerEntry[]>([]);
     const [accountingCodes, setAccountingCodes] = useState<AccountingCode[]>([]);
@@ -207,10 +230,7 @@ const GeneralLedger = () => {
 
             const exportData = dataToExport.map((entry, idx) => {
                 const entryDateStr = entry.entryDate || entry.date;
-                const dateObj = new Date(entryDateStr);
-                const formattedDate = !isNaN(dateObj.getTime())
-                    ? formatDateTime(dateObj)
-                    : entryDateStr;
+                const formattedDate = formatToDDMMYYYY(entryDateStr);
 
                 const debitVal = entry.amount !== undefined
                     ? (entry.type === 'DEBIT' ? entry.amount : 0)
@@ -269,10 +289,7 @@ const GeneralLedger = () => {
 
             const exportData = dataToExport.map((entry, idx) => {
                 const entryDateStr = entry.entryDate || entry.date;
-                const dateObj = new Date(entryDateStr);
-                const formattedDate = !isNaN(dateObj.getTime())
-                    ? formatDateTime(dateObj)
-                    : entryDateStr;
+                const formattedDate = formatToDDMMYYYY(entryDateStr);
 
                 const debitVal = entry.amount !== undefined
                     ? (entry.type === 'DEBIT' ? entry.amount : 0)
@@ -348,10 +365,7 @@ const GeneralLedger = () => {
             const head = [["Date", "Description", "Account", "Category", "Debit", "Credit"]];
             const body = dataToExport.map((entry) => {
                 const entryDateStr = entry.entryDate || entry.date;
-                const dateObj = new Date(entryDateStr);
-                const formattedDate = !isNaN(dateObj.getTime())
-                    ? formatDateTime(dateObj)
-                    : entryDateStr;
+                const formattedDate = formatToDDMMYYYY(entryDateStr);
 
                 const debitVal = entry.amount !== undefined
                     ? (entry.type === 'DEBIT' ? entry.amount : 0)
@@ -834,10 +848,7 @@ const GeneralLedger = () => {
                                 {entries.map((entry) => {
                                     // Formatting the date
                                     const entryDateStr = entry.entryDate || entry.date;
-                                    const dateObj = new Date(entryDateStr);
-                                    const formattedDate = !isNaN(dateObj.getTime())
-                                        ? formatDateTime(dateObj)
-                                        : entryDateStr;
+                                    const formattedDate = formatToDDMMYYYY(entryDateStr);
 
                                     const style = CATEGORY_STYLES[entry.accountingCode?.category] || { bg: 'transparent', text: 'var(--text-main)', border: 'transparent' };
 
