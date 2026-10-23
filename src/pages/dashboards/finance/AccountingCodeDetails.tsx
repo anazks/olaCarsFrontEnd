@@ -29,6 +29,29 @@ const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string
     'EQUITY': { bg: 'rgba(168,85,247,0.1)', text: '#a855f7', border: 'rgba(168,85,247,0.3)' }, // Purple
 };
 
+const formatToDDMMYYYY = (dateInput: any): string => {
+    if (!dateInput) return '-';
+    if (typeof dateInput === 'string') {
+        const trimmed = dateInput.trim();
+        const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) {
+            const [, y, m, d] = isoMatch;
+            return `${d}/${m}/${y}`;
+        }
+        const dmyMatch = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (dmyMatch) {
+            const [, d, m, y] = dmyMatch;
+            return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+        }
+    }
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return String(dateInput || '-');
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+};
+
 const AccountingCodeDetails = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -54,7 +77,7 @@ const AccountingCodeDetails = () => {
             const year = d.getFullYear();
             const month = String(d.getMonth() + 1).padStart(2, '0');
             const day = String(d.getDate()).padStart(2, '0');
-            return `${month}/${day}/${year}`;
+            return `${day}/${month}/${year}`;
         };
         return { 
             startISO: formatISO(startOfYear), 
@@ -121,16 +144,7 @@ const AccountingCodeDetails = () => {
             const headers = ["Date", "Description", "Audit Trace", "Debit", "Credit", "Amount"];
             const rows = allEntries.map((entry: any) => {
                 const entryDateStr = entry.entryDate || entry.date;
-                const dateObj = new Date(entryDateStr);
-                let formattedDate = entryDateStr;
-                if (!dateObj || isNaN(dateObj.getTime())) {
-                    formattedDate = String(entryDateStr || "");
-                } else {
-                    const day = String(dateObj.getDate()).padStart(2, '0');
-                    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                    const year = dateObj.getFullYear();
-                    formattedDate = `${month}/${day}/${year}`;
-                }
+                const formattedDate = formatToDDMMYYYY(entryDateStr);
 
                 const debitVal = entry.amount !== undefined
                     ? (entry.type === 'DEBIT' ? entry.amount : 0)
@@ -624,15 +638,7 @@ const AccountingCodeDetails = () => {
                             <tbody>
                                 {entries.map((entry) => {
                                     const entryDateStr = entry.entryDate || entry.date;
-                                    const dateObj = new Date(entryDateStr);
-                                    let formattedDate = entryDateStr;
-                                    if (!isNaN(dateObj.getTime())) {
-                                        const day = String(dateObj.getDate()).padStart(2, '0');
-                                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                                        const year = dateObj.getFullYear();
-                                        const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                                        formattedDate = `${month}/${day}/${year} ${timeStr}`;
-                                    }
+                                    const formattedDate = formatToDDMMYYYY(entryDateStr);
 
                                     const debitVal = entry.amount !== undefined
                                         ? (entry.type === 'DEBIT' ? entry.amount : 0)
