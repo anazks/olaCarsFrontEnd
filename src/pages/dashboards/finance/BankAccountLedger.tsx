@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     RefreshCw,
@@ -20,7 +20,8 @@ import {
     ArrowUpRight,
     DollarSign,
     UserCheck,
-    Zap
+    Zap,
+    MoreVertical
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getBankAccountById, type BankAccount, uploadBankStatement, recordManualPayment, getAllBankAccounts, getBankAccountTransactions, downloadBankAccountLedgerPdf, recalculateBankAccountBalances } from '../../../services/bankAccountService';
@@ -118,6 +119,33 @@ const BankAccountLedger = () => {
     const [showDownloadModal, setShowDownloadModal] = useState(false);
     const [dlFrom, setDlFrom] = useState('');
     const [dlTo, setDlTo] = useState('');
+    const [exportingExcel, setExportingExcel] = useState(false);
+
+    // Actions dropdown menu state
+    const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+    const actionsMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target as Node)) {
+                setIsActionsMenuOpen(false);
+            }
+        };
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIsActionsMenuOpen(false);
+            }
+        };
+
+        if (isActionsMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('keydown', handleKeyDown);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isActionsMenuOpen]);
 
     // Pagination
     const [page, setPage] = useState(1);
@@ -1538,6 +1566,84 @@ const BankAccountLedger = () => {
         }
     };
 
+    const handleExportExcel = async (exportFrom?: string, exportTo?: string) => {
+        if (!id) return;
+        setExportingExcel(true);
+        const toastId = toast.loading('Generating ledger Excel report...');
+        try {
+            const fromDate = exportFrom !== undefined ? exportFrom : (startDate || undefined);
+            const toDate = exportTo !== undefined ? exportTo : (endDate || undefined);
+
+            const filters: any = {
+                limit: 25000,
+                sort: sortDirection,
+                startDate: fromDate || undefined,
+                endDate: toDate || undefined,
+                search: search || undefined,
+                balance: balance || undefined
+            };
+            const txRes = await getBankAccountTransactions(id, filters);
+            const dataRows: LedgerEntry[] = Array.isArray(txRes.data) ? txRes.data : [];
+
+            if (dataRows.length === 0) {
+                toast.error('No transactions found to export.', { id: toastId });
+                return;
+            }
+
+            const exportData = dataRows.map((entry, idx) => {
+                const entryDateStr = entry.entryDate || entry.date;
+                const formattedDate = formatToDDMMYYYY(entryDateStr);
+
+                const debitVal = entry.amount !== undefined
+                    ? (entry.type === 'DEBIT' ? entry.amount : 0)
+                    : (entry.debit || 0);
+
+                const creditVal = entry.amount !== undefined
+                    ? (entry.type === 'CREDIT' ? entry.amount : 0)
+                    : (entry.credit || 0);
+
+                const runBal = (entry.runningBalance !== undefined && entry.runningBalance !== null)
+                    ? entry.runningBalance
+                    : (runningBalancesMap[entry._id] !== undefined ? runningBalancesMap[entry._id] : undefined);
+
+                return {
+                    "Sl No.": idx + 1,
+                    "Date": formattedDate,
+                    "Description": entry.description || '',
+                    "Reference ID": entry.referenceId || '',
+                    "Audit Trace": entry.creatorRole || 'SYSTEM',
+                    "Deposits ($)": debitVal > 0 ? Number(debitVal.toFixed(2)) : 0,
+                    "Withdrawals ($)": creditVal > 0 ? Number(creditVal.toFixed(2)) : 0,
+                    "Running Balance ($)": runBal !== undefined ? Number(Number(runBal).toFixed(2)) : ''
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Account Ledger");
+
+            // Auto-fit column widths
+            const keys = Object.keys(exportData[0] || {});
+            ws["!cols"] = keys.map(key => {
+                const maxLen = Math.max(
+                    key.length,
+                    ...exportData.map(row => String((row as any)[key] || "").length)
+                );
+                return { wch: Math.min(Math.max(maxLen + 3, 10), 60) };
+            });
+
+            const dateStr = new Date().toISOString().split('T')[0];
+            const safeName = ((account?.accountName || account?.bankName || 'bank') as string).replace(/\s+/g, '_');
+            XLSX.writeFile(wb, `${safeName}_ledger_${dateStr}.xlsx`);
+            toast.success('Ledger Excel downloaded successfully!', { id: toastId });
+        } catch (err: any) {
+            console.error('Failed to export Excel:', err);
+            toast.error(err?.response?.data?.message || err.message || 'Failed to generate Excel file', { id: toastId });
+        } finally {
+            setExportingExcel(false);
+        }
+    };
+
     const handleBulkDeleteSubmit = async () => {
         if (!id) return;
         const validSelectedIds = selectedIds.filter(id => {
@@ -2497,52 +2603,129 @@ const BankAccountLedger = () => {
                     </div>
                     <p className="text-sm font-mono" style={{ color: 'var(--text-dim)' }}>Code: {account.accountCode || 'N/A'} | Num: {account.accountNumber}</p>
                 </div>
-                <div className="flex flex-wrap items-center gap-4 mt-4 sm:mt-0">
-                    <button
-                        onClick={() => setIsRecordPaymentModalOpen(true)}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-black/5 hover:bg-black/10 text-brand-black border border-black/10 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-white/10 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
-                    >
-                        <Plus size={14} strokeWidth={3} /> Record Payment
-                    </button>
-                    <button
-                        onClick={() => {
-                            setDlFrom(startDate);
-                            setDlTo(endDate);
-                            setShowDownloadModal(true);
-                        }}
-                        disabled={downloading}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 border border-emerald-500/30 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <FileText size={14} strokeWidth={3} /> {downloading ? 'Downloading...' : 'Download PDF'}
-                    </button>
-                    <button
-                        onClick={() => {
-                            const basePath = location.pathname.split('/bank-accounts/')[0];
-                            navigate(`${basePath}/bulk-bank-upload?accountId=${account._id}`);
-                        }}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 border border-amber-500/30 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
-                    >
-                        <FileSpreadsheet size={14} strokeWidth={3} /> Bulk Re-entry
-                    </button>
-                    <button
-                        onClick={() => {
-                            const basePath = location.pathname.split('/bank-accounts/')[0];
-                            navigate(`${basePath}/bulk-bank-upload?accountId=${account._id}`);
-                        }}
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-brand-lime text-[#0A0A0A] transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
-                        style={{ backgroundColor: 'var(--brand-lime)' }}
-                    >
-                        <Upload size={14} strokeWidth={3} /> Import Statement
-                    </button>
-                    <button
-                        onClick={handleRecalculateBalances}
-                        disabled={recalculating}
-                        title="Recalculate running balances for this account"
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 border border-blue-500/30 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <RefreshCw size={14} strokeWidth={3} className={recalculating ? "animate-spin" : ""} />
-                        {recalculating ? 'Recalculating...' : 'Recalculate Balances'}
-                    </button>
+                <div className="flex items-center gap-3 mt-4 sm:mt-0">
+                    <div className="relative" ref={actionsMenuRef}>
+                        <button
+                            type="button"
+                            onClick={() => setIsActionsMenuOpen(prev => !prev)}
+                            title="Actions menu"
+                            aria-label="Actions menu"
+                            className="flex items-center justify-center w-10 h-10 rounded-xl bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 text-brand-black dark:text-white border border-black/10 dark:border-white/10 transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer"
+                        >
+                            <MoreVertical size={18} />
+                        </button>
+
+                        {isActionsMenuOpen && (
+                            <div
+                                className="absolute right-0 mt-2 w-56 rounded-2xl border shadow-2xl py-2 z-50 animate-fade-in"
+                                style={{
+                                    background: 'var(--bg-card)',
+                                    borderColor: 'var(--border-main)',
+                                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.25)'
+                                }}
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsActionsMenuOpen(false);
+                                        setIsRecordPaymentModalOpen(true);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors hover:bg-black/5 dark:hover:bg-white/5 text-left cursor-pointer"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    <div className="w-7 h-7 rounded-lg bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0">
+                                        <Plus size={14} strokeWidth={2.5} />
+                                    </div>
+                                    <span>Record Payment</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsActionsMenuOpen(false);
+                                        setDlFrom(startDate);
+                                        setDlTo(endDate);
+                                        setShowDownloadModal(true);
+                                    }}
+                                    disabled={downloading}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors hover:bg-black/5 dark:hover:bg-white/5 text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                        <FileText size={14} strokeWidth={2.5} />
+                                    </div>
+                                    <span>{downloading ? 'Downloading...' : 'Export PDF'}</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsActionsMenuOpen(false);
+                                        handleExportExcel();
+                                    }}
+                                    disabled={exportingExcel}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors hover:bg-black/5 dark:hover:bg-white/5 text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                        <FileSpreadsheet size={14} strokeWidth={2.5} />
+                                    </div>
+                                    <span>{exportingExcel ? 'Exporting...' : 'Export Excel'}</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsActionsMenuOpen(false);
+                                        const basePath = location.pathname.split('/bank-accounts/')[0];
+                                        navigate(`${basePath}/bulk-bank-upload?accountId=${account._id}`);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors hover:bg-black/5 dark:hover:bg-white/5 text-left cursor-pointer"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                                        <FileSpreadsheet size={14} strokeWidth={2.5} />
+                                    </div>
+                                    <span>Bulk Re-entry</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsActionsMenuOpen(false);
+                                        const basePath = location.pathname.split('/bank-accounts/')[0];
+                                        navigate(`${basePath}/bulk-bank-upload?accountId=${account._id}`);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors hover:bg-black/5 dark:hover:bg-white/5 text-left cursor-pointer"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    <div className="w-7 h-7 rounded-lg bg-[#C8E600]/20 text-brand-black dark:text-[#C8E600] flex items-center justify-center shrink-0">
+                                        <Upload size={14} strokeWidth={2.5} />
+                                    </div>
+                                    <span>Import Statement</span>
+                                </button>
+
+                                <div className="my-1 border-t" style={{ borderColor: 'var(--border-main)' }} />
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsActionsMenuOpen(false);
+                                        handleRecalculateBalances();
+                                    }}
+                                    disabled={recalculating}
+                                    title="Recalculate running balances for this account"
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors hover:bg-black/5 dark:hover:bg-white/5 text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{ color: 'var(--text-main)' }}
+                                >
+                                    <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                        <RefreshCw size={14} strokeWidth={2.5} className={recalculating ? "animate-spin" : ""} />
+                                    </div>
+                                    <span>{recalculating ? 'Recalculating...' : 'Recalculate Balances'}</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -3699,7 +3882,7 @@ const BankAccountLedger = () => {
                             <div className="flex items-center gap-3">
                                 <FileText className="text-brand-lime" size={24} style={{ color: 'var(--brand-lime)' }} />
                                 <div>
-                                    <h2 className="text-md font-black" style={{ color: 'var(--text-main)' }}>Export PDF Statement</h2>
+                                    <h2 className="text-md font-black" style={{ color: 'var(--text-main)' }}>Export Ledger Statement</h2>
                                     <p className="text-[10px] font-black uppercase tracking-widest mt-1 text-lime" style={{ color: 'var(--brand-lime)' }}>Define Report Criteria</p>
                                 </div>
                             </div>
@@ -3735,26 +3918,41 @@ const BankAccountLedger = () => {
                                 </div>
                             </div>
 
-                            <div className="flex gap-4 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
                                 <button
                                     type="button"
                                     onClick={() => setShowDownloadModal(false)}
-                                    className="flex-1 py-3.5 bg-black/5 dark:bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-all border cursor-pointer"
+                                    className="flex-1 py-3 bg-black/5 dark:bg-white/5 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-black/10 dark:hover:bg-white/10 transition-all border cursor-pointer"
                                     style={{ color: 'var(--text-dim)', borderColor: 'var(--border-main)' }}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        setShowDownloadModal(false);
+                                        handleExportExcel(dlFrom, dlTo);
+                                    }}
+                                    disabled={exportingExcel}
+                                    className="flex-1 py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer disabled:opacity-30"
+                                >
+                                    <FileSpreadsheet size={13} />
+                                    {exportingExcel ? 'Exporting...' : 'Export Excel'}
+                                </button>
+                                <button
+                                    type="button"
                                     onClick={handleDownloadPdf}
                                     disabled={downloading}
-                                    className="flex-1 py-3.5 bg-brand-lime text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-30"
+                                    className="flex-1 py-3 bg-brand-lime text-black text-[10px] font-black uppercase tracking-wider rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer disabled:opacity-30"
                                     style={{ backgroundColor: 'var(--brand-lime)' }}
                                 >
                                     {downloading ? (
                                         <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
                                     ) : (
-                                        <>Download PDF</>
+                                        <>
+                                            <FileText size={13} />
+                                            Download PDF
+                                        </>
                                     )}
                                 </button>
                             </div>
