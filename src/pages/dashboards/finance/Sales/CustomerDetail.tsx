@@ -1978,6 +1978,57 @@ const OverviewTab = ({
         ? `$${Number(rawWeeklyRent).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         : '—';
 
+    // Modal state for editing contact information
+    const [isEditContactModalOpen, setIsEditContactModalOpen] = useState(false);
+    const [contactFormData, setContactFormData] = useState({
+        email: '',
+        phone: '',
+        whatsappNumber: '',
+        address: '',
+        city: '',
+        state: '',
+        country: ''
+    });
+    const [isSavingContact, setIsSavingContact] = useState(false);
+
+    const handleOpenEditContact = () => {
+        setContactFormData({
+            email: customer.email || '',
+            phone: customer.phone || '',
+            whatsappNumber: customer.whatsappNumber || '',
+            address: customer.address || '',
+            city: customer.city || '',
+            state: customer.state || '',
+            country: customer.country || ''
+        });
+        setIsEditContactModalOpen(true);
+    };
+
+    const handleSaveContact = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSavingContact(true);
+        const toastId = toast.loading("Updating contact information...");
+        try {
+            await updateCustomer(customer._id, {
+                email: contactFormData.email.trim(),
+                phone: contactFormData.phone.trim(),
+                whatsappNumber: contactFormData.whatsappNumber.trim(),
+                address: contactFormData.address.trim(),
+                city: contactFormData.city.trim(),
+                state: contactFormData.state.trim(),
+                country: contactFormData.country.trim()
+            });
+            toast.success("Contact information updated successfully!", { id: toastId });
+            setIsEditContactModalOpen(false);
+            if (onRefresh) onRefresh();
+        } catch (err: any) {
+            console.error("Failed to update contact info:", err);
+            toast.error(err?.response?.data?.message || err.message || "Failed to update contact information", { id: toastId });
+        } finally {
+            setIsSavingContact(false);
+        }
+    };
+
     // Modal state for changing weekly rent
     const [isRentModalOpen, setIsRentModalOpen] = useState(false);
     const [newRentAmount, setNewRentAmount] = useState('');
@@ -2021,7 +2072,21 @@ const OverviewTab = ({
         <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-2 duration-300">
                 {/* Personal Details */}
-                <SectionCard title="Contact Information" icon={<Phone size={18} />}>
+                <SectionCard 
+                    title="Contact Information" 
+                    icon={<Phone size={18} />}
+                    action={
+                        <button
+                            type="button"
+                            onClick={handleOpenEditContact}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/5 hover:bg-brand-lime/10 text-dim hover:text-brand-lime border border-white/10 hover:border-brand-lime/30 transition-all cursor-pointer shadow-sm active:scale-95"
+                            title="Edit Contact Information"
+                        >
+                            <Pencil size={12} />
+                            <span>Edit</span>
+                        </button>
+                    }
+                >
                     <div className="space-y-4 pt-2">
                         <InfoRow label="Email Address" value={customer.email} icon={<Mail size={14} />} />
                         <InfoRow label="Phone Number" value={customer.phone} icon={<Phone size={14} />} />
@@ -2467,6 +2532,152 @@ const OverviewTab = ({
                                 })}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Contact Information Modal */}
+            {isEditContactModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200">
+                    <div className="w-full max-w-lg p-6 sm:p-8 rounded-[2rem] border shadow-2xl relative animate-in zoom-in-95 duration-200 space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-brand-lime/10 text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                                    <Phone size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-white">Edit Contact Information</h3>
+                                    <p className="text-[10px] font-medium text-dim mt-0.5">Update customer phone numbers, email address, and billing address</p>
+                                </div>
+                            </div>
+                            <button 
+                                type="button"
+                                onClick={() => setIsEditContactModalOpen(false)} 
+                                className="p-2 rounded-xl text-dim hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSaveContact} className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                    <Mail size={12} /> Email Address
+                                </label>
+                                <input
+                                    type="email"
+                                    placeholder="e.g. customer@example.com"
+                                    value={contactFormData.email}
+                                    onChange={(e) => setContactFormData(prev => ({ ...prev, email: e.target.value }))}
+                                    className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                        <Phone size={12} /> Phone Number
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        placeholder="e.g. +61 400 000 000"
+                                        value={contactFormData.phone}
+                                        onChange={(e) => setContactFormData(prev => ({ ...prev, phone: e.target.value }))}
+                                        className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                        <Phone size={12} /> WhatsApp Number
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        placeholder="e.g. +61 400 000 000"
+                                        value={contactFormData.whatsappNumber}
+                                        onChange={(e) => setContactFormData(prev => ({ ...prev, whatsappNumber: e.target.value }))}
+                                        className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
+                                    <MapPin size={12} /> Street Address
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. 123 Main Street, Suite 4"
+                                    value={contactFormData.address}
+                                    onChange={(e) => setContactFormData(prev => ({ ...prev, address: e.target.value }))}
+                                    className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                    style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">City</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Sydney"
+                                        value={contactFormData.city}
+                                        onChange={(e) => setContactFormData(prev => ({ ...prev, city: e.target.value }))}
+                                        className="w-full px-4 py-2 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">State</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. NSW"
+                                        value={contactFormData.state}
+                                        onChange={(e) => setContactFormData(prev => ({ ...prev, state: e.target.value }))}
+                                        className="w-full px-4 py-2 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">Country</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Australia"
+                                        value={contactFormData.country}
+                                        onChange={(e) => setContactFormData(prev => ({ ...prev, country: e.target.value }))}
+                                        className="w-full px-4 py-2 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditContactModalOpen(false)}
+                                    className="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/5 transition-all border border-white/10 cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSavingContact}
+                                    className="px-6 py-2.5 rounded-xl text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                                    style={{ background: 'var(--brand-lime)' }}
+                                >
+                                    {isSavingContact ? (
+                                        <>
+                                            <RefreshCw size={14} className="animate-spin" /> Saving...
+                                        </>
+                                    ) : (
+                                        'Save Changes'
+                                    )}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
@@ -3618,11 +3829,14 @@ const DebitNotesTab = ({ debitNotes, navigate, basePath }: { debitNotes: any[]; 
    UI HELPERS
    ───────────────────────────────────────────────────────────────────────────── */
 
-const SectionCard = ({ title, icon, children }: any) => (
+const SectionCard = ({ title, icon, children, action }: any) => (
     <div className="p-6 rounded-[1.8rem] border shadow-xl flex flex-col" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-        <div className="flex items-center gap-2 pb-4 mb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
-            <div className="p-2 rounded-xl bg-brand-lime/10 text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{icon}</div>
-            <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>{title}</h3>
+        <div className="flex items-center justify-between pb-4 mb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+            <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-brand-lime/10 text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{icon}</div>
+                <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>{title}</h3>
+            </div>
+            {action && <div>{action}</div>}
         </div>
         {children}
     </div>

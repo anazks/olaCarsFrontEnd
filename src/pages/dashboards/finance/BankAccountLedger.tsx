@@ -335,6 +335,14 @@ const BankAccountLedger = () => {
     const [customerInvoices, setCustomerInvoices] = useState<Invoice[]>([]);
     const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
 
+    // Vendor Selection States
+    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [supplierSearch, setSupplierSearch] = useState('');
+    const [showSupplierList, setShowSupplierList] = useState(false);
+    const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+    const [supplierBills, setSupplierBills] = useState<Bill[]>([]);
+    const [selectedBillId, setSelectedBillId] = useState('');
+
     const selectedFromAccountObj = chartAccounts.find(acc => acc._id === fromAccountId);
 
     const filteredToAccounts = React.useMemo(() => {
@@ -353,6 +361,77 @@ const BankAccountLedger = () => {
         c.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
         c.customerId?.toLowerCase().includes(customerSearch.toLowerCase())
     );
+
+    const filteredSuppliers = suppliers.filter(s =>
+        (s.name || s.companyName || '').toLowerCase().includes(supplierSearch.toLowerCase()) ||
+        (s.vendorNumber || '').toLowerCase().includes(supplierSearch.toLowerCase())
+    );
+
+    const liveVendorSetOffPreview = React.useMemo(() => {
+        if (!selectedSupplier || !supplierBills || supplierBills.length === 0) {
+            return null;
+        }
+        const amt = Number(paymentAmount) || 0;
+        if (amt <= 0) return null;
+
+        const isOverdue = (bill: Bill) => {
+            if (bill.dueDate) {
+                return new Date(bill.dueDate).getTime() < Date.now();
+            }
+            return false;
+        };
+
+        const overdueBills = supplierBills
+            .filter(b => isOverdue(b))
+            .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+        const partialBills = supplierBills
+            .filter(b => !isOverdue(b) && String(b.status).toUpperCase() === 'PARTIALLY_PAID')
+            .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+        const openBills = supplierBills
+            .filter(b => !isOverdue(b) && String(b.status).toUpperCase() !== 'PARTIALLY_PAID')
+            .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+
+        const sortedBills = [...overdueBills, ...partialBills, ...openBills];
+
+        let remaining = amt;
+        const allocations: Array<{
+            bill: Bill;
+            currentBalance: number;
+            amountApplied: number;
+            newBalance: number;
+            newStatus: string;
+        }> = [];
+
+        let totalSetOff = 0;
+        for (const bill of sortedBills) {
+            if (remaining <= 0.01) break;
+            const curBal = bill.balanceDue !== undefined ? bill.balanceDue : ((bill.totalAmount || 0) - (bill.amountPaid || 0));
+            if (curBal <= 0) continue;
+
+            const applied = Math.min(remaining, curBal);
+            const newBal = Math.max(0, curBal - applied);
+            const newStatus = newBal <= 0 ? 'PAID' : 'PARTIALLY_PAID';
+
+            allocations.push({
+                bill,
+                currentBalance: curBal,
+                amountApplied: applied,
+                newBalance: newBal,
+                newStatus
+            });
+
+            totalSetOff += applied;
+            remaining -= applied;
+        }
+
+        return {
+            allocations,
+            totalSetOff,
+            excessAdvance: Math.max(0, amt - totalSetOff)
+        };
+    }, [selectedSupplier, supplierBills, paymentAmount]);
 
     const liveSetOffPreview = React.useMemo(() => {
         if (!selectedCustomer || !customerInvoices || customerInvoices.length === 0) {
@@ -417,10 +496,11 @@ const BankAccountLedger = () => {
             const fetchAccountsAndCustomers = async () => {
                 setLoadingAccounts(true);
                 try {
-                    const [bankRes, codeRes, custRes] = await Promise.all([
+                    const [bankRes, codeRes, custRes, supRes] = await Promise.all([
                         getAllBankAccounts({ limit: 100 }),
                         getAllAccountingCodes({ limit: 1000 }),
-                        getAllCustomers({ status: 'ACTIVE', limit: 200 })
+                        getAllCustomers({ status: 'ACTIVE', limit: 200 }),
+                        getAllSuppliers({ limit: 500 })
                     ]);
 
                     const bankList = (bankRes.data || [])
@@ -448,6 +528,7 @@ const BankAccountLedger = () => {
 
                     setChartAccounts([...bankList, ...codeList]);
                     setCustomers(custRes.data || (custRes as any).customers || []);
+                    setSuppliers(supRes.data || (supRes as any).suppliers || []);
                 } catch (err) {
                     console.error('Failed to fetch accounts and customers', err);
                     toast.error('Failed to load accounts list');
@@ -480,6 +561,28 @@ const BankAccountLedger = () => {
             setSelectedInvoiceId('');
         }
     }, [selectedCustomer]);
+
+    useEffect(() => {
+        if (selectedSupplier) {
+            const fetchSupplierBills = async () => {
+                try {
+                    const billsRes = await getAllBills({ supplier: selectedSupplier._id, limit: 100 });
+                    const billsList = billsRes.data || (billsRes as any).bills || [];
+                    const openBills = billsList.filter((b: Bill) =>
+                        b.status === 'OPEN' || b.status === 'PARTIALLY_PAID' || b.status === 'DRAFT'
+                    );
+                    setSupplierBills(openBills);
+                } catch (err) {
+                    console.error('Failed to fetch supplier bills', err);
+                    toast.error('Failed to load bills for selected vendor');
+                }
+            };
+            fetchSupplierBills();
+        } else {
+            setSupplierBills([]);
+            setSelectedBillId('');
+        }
+    }, [selectedSupplier]);
 
     interface ParsedTransaction {
         date: string;
@@ -746,8 +849,8 @@ const BankAccountLedger = () => {
             return;
         }
 
-        if (paymentType === 'PAYMENT' && !fromAccountId) {
-            toast.error('Please select the destination account (To Account) from Chart of Accounts');
+        if (paymentType === 'PAYMENT' && !selectedSupplier && !fromAccountId) {
+            toast.error('Please select either a Vendor (for auto set-off) or a To Account from Chart of Accounts');
             return;
         }
 
@@ -772,10 +875,16 @@ const BankAccountLedger = () => {
             if (supportingDocFile) {
                 formData.append('supportingDocument', supportingDocFile);
             }
-            if (selectedCustomer) {
+            if (selectedCustomer && paymentType === 'RECEIPT') {
                 formData.append('customerId', selectedCustomer._id);
                 if (selectedInvoiceId) {
                     formData.append('invoiceId', selectedInvoiceId);
+                }
+            }
+            if (selectedSupplier && paymentType === 'PAYMENT') {
+                formData.append('supplierId', selectedSupplier._id);
+                if (selectedBillId) {
+                    formData.append('billId', selectedBillId);
                 }
             }
 
@@ -794,6 +903,11 @@ const BankAccountLedger = () => {
             setShowCustomerList(false);
             setSelectedInvoiceId('');
             setCustomerInvoices([]);
+            setSelectedSupplier(null);
+            setSupplierSearch('');
+            setShowSupplierList(false);
+            setSupplierBills([]);
+            setSelectedBillId('');
             setPaymentType('RECEIPT');
 
             // Reload ledger
@@ -2994,7 +3108,12 @@ const BankAccountLedger = () => {
                                 <div className="flex gap-3 p-1.5 rounded-2xl bg-black/5 dark:bg-white/5 border" style={{ borderColor: 'var(--border-main)' }}>
                                     <button
                                         type="button"
-                                        onClick={() => setPaymentType('RECEIPT')}
+                                        onClick={() => {
+                                            setPaymentType('RECEIPT');
+                                            setSelectedSupplier(null);
+                                            setSupplierSearch('');
+                                            setSelectedBillId('');
+                                        }}
                                         className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer border ${
                                             paymentType === 'RECEIPT'
                                                 ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 shadow-sm'
@@ -3229,8 +3348,138 @@ const BankAccountLedger = () => {
                                 </div>
                             )}
 
+                            {/* Section: Vendor Selection for PAYMENT */}
+                            {paymentType === 'PAYMENT' && (
+                                <div className="space-y-4 p-4 rounded-2xl border bg-black/5 dark:bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-black uppercase tracking-wider text-lime" style={{ color: 'var(--brand-lime)' }}>Vendor Payment & Auto Set-Off</span>
+                                        <span className="text-[10px] text-dim font-medium">Select a vendor to route payment to Accounts Payable & auto set-off bills</span>
+                                    </div>
+
+                                    <div className="space-y-1 relative">
+                                        <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+                                            Select Vendor (Auto routes to Accounts Payable 2.1.01)
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                placeholder="Search vendor by name or ID..."
+                                                value={selectedSupplier ? `${selectedSupplier.name || selectedSupplier.companyName} (${selectedSupplier.vendorNumber || 'No ID'})` : supplierSearch}
+                                                onChange={e => { setSupplierSearch(e.target.value); setSelectedSupplier(null); setShowSupplierList(true); }}
+                                                onFocus={() => setShowSupplierList(true)}
+                                                onBlur={() => setTimeout(() => setShowSupplierList(false), 200)}
+                                                className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none pr-10"
+                                                style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                            />
+                                            {showSupplierList && filteredSuppliers.length > 0 && !selectedSupplier && (
+                                                <div className="absolute z-50 w-full mt-1 border rounded-2xl shadow-2xl max-h-52 overflow-auto custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                                    {filteredSuppliers.slice(0, 15).map(s => (
+                                                        <button
+                                                            type="button"
+                                                            key={s._id}
+                                                            onMouseDown={() => { setSelectedSupplier(s); setSupplierSearch(''); setShowSupplierList(false); }}
+                                                            className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-3 transition-colors cursor-pointer border-b border-white/5 last:border-none"
+                                                        >
+                                                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 dark:bg-brand-lime/10 dark:border-brand-lime/20 flex items-center justify-center flex-shrink-0">
+                                                                <Building2 size={14} className="text-emerald-700 dark:text-lime" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-black" style={{ color: 'var(--text-main)' }}>{s.name || s.companyName}</p>
+                                                                <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-dim)' }}>{s.vendorNumber || 'VENDOR'}</p>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {selectedSupplier && (
+                                            <div className="flex items-center justify-between mt-1 text-xs">
+                                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Selected Vendor: {selectedSupplier.name || selectedSupplier.companyName} ({selectedSupplier.vendorNumber || 'No ID'})</span>
+                                                <button type="button" onClick={() => { setSelectedSupplier(null); setSupplierSearch(''); }} className="text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 font-bold cursor-pointer">Clear Vendor Selection</button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Live Auto Set-Off Allocation Preview Breakdown Card for Bills */}
+                                    {liveVendorSetOffPreview && (
+                                        <div className="space-y-3 p-4 rounded-2xl border bg-emerald-500/5 border-emerald-500/30 animate-in fade-in slide-in-from-top-1 duration-200">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Coins size={16} className="text-emerald-500" />
+                                                    <span className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                                                        Live Auto Set-Off Breakdown (Bills)
+                                                    </span>
+                                                </div>
+                                                <div className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                                    Amount: ${Number(paymentAmount).toFixed(2)}
+                                                </div>
+                                            </div>
+
+                                            <div className="overflow-x-auto max-h-48 custom-scrollbar border rounded-xl border-emerald-500/20 bg-black/5 dark:bg-black/20">
+                                                <table className="w-full text-left text-[11px] border-collapse">
+                                                    <thead>
+                                                        <tr className="border-b border-white/10 text-dim">
+                                                            <th className="p-2 font-bold">Bill #</th>
+                                                            <th className="p-2 font-bold text-right">Open Due</th>
+                                                            <th className="p-2 font-bold text-right text-emerald-400">Applied</th>
+                                                            <th className="p-2 font-bold text-right">Rem. Due</th>
+                                                            <th className="p-2 font-bold text-center">New Status</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-white/5">
+                                                        {liveVendorSetOffPreview.allocations.map((alloc, i) => (
+                                                            <tr key={i} className="hover:bg-white/5">
+                                                                <td className="p-2 font-mono font-bold text-main" style={{ color: 'var(--text-main)' }}>
+                                                                    {alloc.bill.billNumber || 'Bill'}
+                                                                </td>
+                                                                <td className="p-2 text-right font-mono text-dim">
+                                                                    ${alloc.currentBalance.toFixed(2)}
+                                                                </td>
+                                                                <td className="p-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                                                    +${alloc.amountApplied.toFixed(2)}
+                                                                </td>
+                                                                <td className="p-2 text-right font-mono font-bold text-main" style={{ color: 'var(--text-main)' }}>
+                                                                    ${alloc.newBalance.toFixed(2)}
+                                                                </td>
+                                                                <td className="p-2 text-center">
+                                                                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest ${
+                                                                        alloc.newStatus === 'PAID'
+                                                                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                                                                            : 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                                                                    }`}>
+                                                                        {alloc.newStatus}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            <div className="flex items-center justify-between text-xs font-bold pt-1 border-t border-emerald-500/20">
+                                                <span className="text-dim">Total Set-off Against Bills:</span>
+                                                <span className="font-mono text-emerald-600 dark:text-emerald-400">${liveVendorSetOffPreview.totalSetOff.toFixed(2)}</span>
+                                            </div>
+
+                                            {liveVendorSetOffPreview.excessAdvance > 0 && (
+                                                <div className="flex items-center justify-between text-xs font-bold p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400">
+                                                    <span>Logged as Vendor Advance Paid (1.1.08 / Asset):</span>
+                                                    <span className="font-mono">${liveVendorSetOffPreview.excessAdvance.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {selectedSupplier && supplierBills.length === 0 && (
+                                        <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 text-xs text-amber-500">
+                                            No open or unpaid bills found for this vendor. Total amount (${Number(paymentAmount || 0).toFixed(2)}) will be recorded as a Vendor Advance.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Section: Chart of Accounts Selection for To Account */}
-                            {(!selectedCustomer || paymentType === 'PAYMENT') && (
+                            {((paymentType === 'RECEIPT' && !selectedCustomer) || (paymentType === 'PAYMENT' && !selectedSupplier)) && (
                                 <div className="space-y-1 relative">
                                     <label className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
                                         {paymentType === 'RECEIPT' ? 'To Account (Income / Category / Offset Account) *' : 'To Account (Expense / Supplier / Offset Account) *'}
@@ -3250,7 +3499,7 @@ const BankAccountLedger = () => {
                                                 onBlur={() => setTimeout(() => setShowToAccountList(false), 200)}
                                                 className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none pr-10"
                                                 style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
-                                                required={!selectedCustomer}
+                                                required={(!selectedCustomer && paymentType === 'RECEIPT') || (!selectedSupplier && paymentType === 'PAYMENT')}
                                             />
                                             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-dim">
                                                 <Search size={16} />
@@ -3301,6 +3550,13 @@ const BankAccountLedger = () => {
                                 <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-2">
                                     <Info size={16} className="flex-shrink-0" />
                                     <span>Offset account automatically routed to <strong>Accounts Receivable (1.1.03)</strong> for Customer Receipt.</span>
+                                </div>
+                            )}
+
+                            {selectedSupplier && paymentType === 'PAYMENT' && (
+                                <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-2">
+                                    <Info size={16} className="flex-shrink-0" />
+                                    <span>Offset account automatically routed to <strong>Accounts Payable (2.1.01)</strong> for Vendor Payment.</span>
                                 </div>
                             )}
 

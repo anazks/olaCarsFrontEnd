@@ -1146,6 +1146,16 @@ interface SetOffPreview {
             const matchedCustomer = row.customer || matchCustomerHelper(driverNameVal ? String(driverNameVal) : (customerNameVal ? String(customerNameVal) : undefined), allCustomers);
             const matchedSupplier = row.supplier || matchSupplierHelper(supplierNameVal ? String(supplierNameVal) : undefined, allSuppliers);
 
+            if (supplierNameVal && String(supplierNameVal).trim() && !matchedSupplier) {
+                errors.push(`Vendor "${String(supplierNameVal).trim()}" not found in system. Please match supplier or create vendor.`);
+            }
+            if (driverNameVal && String(driverNameVal).trim() && !matchedCustomer) {
+                errors.push(`Driver "${String(driverNameVal).trim()}" not found in system. Please match driver or create driver.`);
+            }
+            if (customerNameVal && String(customerNameVal).trim() && !matchedCustomer && !driverNameVal) {
+                errors.push(`Customer "${String(customerNameVal).trim()}" not found in system. Please match customer or create customer.`);
+            }
+
             return {
                 ...row,
                 "Running Balance": balanceAccum,
@@ -1202,7 +1212,7 @@ interface SetOffPreview {
     const getErrorCategory = useCallback((err: string): 'duplicate' | 'account' | 'branch' | 'missing' | 'other' => {
         const l = err.toLowerCase();
         if (l.includes('already exists') || l.includes('duplicate')) return 'duplicate';
-        if (l.includes('chart of accounts') || l.includes('bank accounts') || l.includes('bank name mismatch') || l.includes('parent account') || l.includes('accounts name')) return 'account';
+        if (l.includes('chart of accounts') || l.includes('bank accounts') || l.includes('bank name mismatch') || l.includes('parent account') || l.includes('accounts name') || l.includes('vendor') || l.includes('supplier') || l.includes('driver') || l.includes('customer')) return 'account';
         if (l.includes('branch')) return 'branch';
         if (l.includes('missing') || l.includes('format') || l.includes('receipt') || l.includes('payment') || l.includes('amount') || l.includes('entity')) return 'missing';
         return 'other';
@@ -1356,6 +1366,16 @@ interface SetOffPreview {
 
                     const matchedCustomer = matchCustomerHelper(driverNameVal ? String(driverNameVal) : (customerNameVal ? String(customerNameVal) : undefined), allCustomers);
                     const matchedSupplier = matchSupplierHelper(supplierNameVal ? String(supplierNameVal) : undefined, allSuppliers);
+
+                    if (supplierNameVal && String(supplierNameVal).trim() && !matchedSupplier) {
+                        rowErrors.push(`Vendor "${String(supplierNameVal).trim()}" not found in system. Please match supplier or create vendor.`);
+                    }
+                    if (driverNameVal && String(driverNameVal).trim() && !matchedCustomer) {
+                        rowErrors.push(`Driver "${String(driverNameVal).trim()}" not found in system. Please match driver or create driver.`);
+                    }
+                    if (customerNameVal && String(customerNameVal).trim() && !matchedCustomer && !driverNameVal) {
+                        rowErrors.push(`Customer "${String(customerNameVal).trim()}" not found in system. Please match customer or create customer.`);
+                    }
 
                     const receiptVal = cleanNumber(rawReceipt);
                     const paymentVal = cleanNumber(rawPayment);
@@ -2310,21 +2330,25 @@ interface SetOffPreview {
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                            ) : row.customerName ? (
+                                                            ) : (row.driverName || row.customerName) ? (
                                                                 <div className="flex flex-col gap-1 mt-1">
-                                                                    <div className="flex items-center gap-1 text-[9px] text-amber-400 font-bold" title={`Unmatched in preview: "${row.customerName}". Backend will auto-resolve on upload or select manually below.`}>
+                                                                    <div className="flex items-center gap-1 text-[9px] text-amber-400 font-bold" title={`Unmatched in preview: "${row.driverName || row.customerName}". Select manually below to validate row.`}>
                                                                         <AlertCircle size={10} />
-                                                                        <span className="truncate max-w-[120px]">{row.customerName}</span>
+                                                                        <span className="truncate max-w-[120px]">{row.driverName || row.customerName}</span>
                                                                     </div>
                                                                     <select
                                                                         className="text-[10px] py-0.5 px-1 rounded bg-black/40 border border-white/10 text-white max-w-[140px] cursor-pointer"
                                                                         value={(row.customer as any)?._id || ''}
                                                                         onChange={(e) => {
                                                                             const selectedCust = allCustomers.find(c => c._id === e.target.value);
-                                                                            setRows(prev => prev.map((r, i) => i === idx ? { ...r, customer: selectedCust } : r));
+                                                                            const targetAccount = accounts.find(acc => acc._id === selectedAccountId);
+                                                                            setRows(prev => {
+                                                                                const next = prev.map((r, i) => i === idx ? { ...r, customer: selectedCust } : r);
+                                                                                return revalidateAndRecalculateRows(next, targetAccount);
+                                                                            });
                                                                         }}
                                                                     >
-                                                                        <option value="">-- Match Customer --</option>
+                                                                        <option value="">{row.driverName ? '-- Match Driver --' : '-- Match Customer --'}</option>
                                                                         {allCustomers.map(c => (
                                                                             <option key={c._id} value={c._id}>
                                                                                 {c.name} { (c as any).companyName ? `(${(c as any).companyName})` : '' }
@@ -2334,7 +2358,7 @@ interface SetOffPreview {
                                                                 </div>
                                                             ) : row.supplierName ? (
                                                                 <div className="flex flex-col gap-1 mt-1">
-                                                                    <div className="flex items-center gap-1 text-[9px] text-amber-400 font-bold" title={`Unmatched in preview: "${row.supplierName}". Backend will auto-resolve on upload or select manually below.`}>
+                                                                    <div className="flex items-center gap-1 text-[9px] text-amber-400 font-bold" title={`Unmatched in preview: "${row.supplierName}". Select manually below to validate row.`}>
                                                                         <AlertCircle size={10} />
                                                                         <span className="truncate max-w-[120px]">{row.supplierName}</span>
                                                                     </div>
@@ -2343,7 +2367,11 @@ interface SetOffPreview {
                                                                         value={(row.supplier as any)?._id || ''}
                                                                         onChange={(e) => {
                                                                             const selectedSup = allSuppliers.find(s => s._id === e.target.value);
-                                                                            setRows(prev => prev.map((r, i) => i === idx ? { ...r, supplier: selectedSup } : r));
+                                                                            const targetAccount = accounts.find(acc => acc._id === selectedAccountId);
+                                                                            setRows(prev => {
+                                                                                const next = prev.map((r, i) => i === idx ? { ...r, supplier: selectedSup } : r);
+                                                                                return revalidateAndRecalculateRows(next, targetAccount);
+                                                                            });
                                                                         }}
                                                                     >
                                                                         <option value="">-- Match Supplier --</option>
