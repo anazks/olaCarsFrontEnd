@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Paperclip, Upload, FileText, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import Modal from '../Modal';
 import { createSupplier, type Supplier } from '../../services/supplierService';
 import toast from 'react-hot-toast';
@@ -171,7 +171,7 @@ export const QuickAddSupplierModal = ({ isOpen, onClose, onSuccess }: QuickAddSu
                 <div className="pt-4 flex gap-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
                     <button
                         type="button"
-                        onClick={() => { setSelectedFiles([]); onClose(); }}
+                        onClick={onClose}
                         disabled={submitting}
                         className="flex-1 px-5 py-2.5 rounded-xl border font-bold hover:bg-white/5 active:scale-95 transition-all cursor-pointer"
                         style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}

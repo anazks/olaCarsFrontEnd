@@ -1,7 +1,7 @@
 import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag, Eye, Upload, ChevronLeft, ChevronRight, FileText, Paperclip, ExternalLink, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag, Eye, Upload, ChevronLeft, ChevronRight, FileText, Paperclip, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BulkSupplierUpload from './BulkSupplierUpload';
 import {

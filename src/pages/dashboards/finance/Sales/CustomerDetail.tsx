@@ -2816,7 +2816,7 @@ const OverviewTab = ({
                 </div>
                 {customer.documents && customer.documents.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                        {customer.documents.map((doc, idx) => (
+                        {customer.documents.map((doc: any, idx: number) => (
                             <div key={doc._id || idx} className="p-3 rounded-xl border flex items-center justify-between gap-3 bg-white/[0.02]" style={{ borderColor: 'var(--border-main)' }}>
                                 <div className="flex items-center gap-2.5 truncate">
                                     <FileText size={18} className="text-brand-lime shrink-0" />

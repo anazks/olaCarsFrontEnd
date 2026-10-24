@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { 
-    X, User, Mail, Phone, MapPin, Building2, Globe, Check, RefreshCw, UserPlus, Car, Search, ChevronDown, Clock, CheckCircle2, AlertTriangle 
+    X, User, Mail, Phone, MapPin, Building2, Globe, Check, RefreshCw, UserPlus, Car, Search, ChevronDown, Clock, CheckCircle2, AlertTriangle, Paperclip, Upload, FileText 
 } from 'lucide-react';
-import { createCustomer, type Customer, type CreateCustomerPayload } from '../../services/customerService';
+import { createCustomer, type Customer } from '../../services/customerService';
 import { type Branch } from '../../services/branchService';
 import { getAllVehicles, type Vehicle } from '../../services/vehicleService';
 import toast from 'react-hot-toast';

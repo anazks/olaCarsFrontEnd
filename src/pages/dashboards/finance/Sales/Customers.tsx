@@ -8,7 +8,7 @@ import {
     ArrowUpDown, ArrowUp, ArrowDown, DollarSign, FileText, UserPlus,
     X, User, Mail, Phone, MapPin, Building2, Globe, Check, Car, Clock, CheckCircle2, ChevronDown, AlertTriangle, Paperclip, Upload
 } from 'lucide-react';
-import { getAllCustomers, createCustomer, type Customer, type CreateCustomerPayload } from '../../../../services/customerService';
+import { getAllCustomers, createCustomer, type Customer } from '../../../../services/customerService';
 import type { PaginationMetadata } from '../../../../services/driverService';
 import { getAllBranches, type Branch } from '../../../../services/branchService';
 import { getAllVehicles, type Vehicle } from '../../../../services/vehicleService';

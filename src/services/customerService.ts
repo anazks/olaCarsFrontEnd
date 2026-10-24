@@ -17,7 +17,6 @@ export interface Customer {
         _id: string;
         driverId?: string;
         status?: string;
-    documents?: CustomerDocument[];
         activationDate?: string;
         deactivationDate?: string;
         activation?: {
@@ -34,7 +33,6 @@ export interface Customer {
             phone?: string;
         };
         weeklyRent?: number;
-    documents?: (File | CustomerDocument)[];
     durationWeeks?: number;
         currentVehicle?: {
             _id?: string;
@@ -112,6 +110,7 @@ export interface Customer {
     cfWeeklyRent?: number | string;
     cfVehicleModel?: string;
     cfVinNumber?: string;
+    documents?: CustomerDocument[];
     status: 'ACTIVE' | 'INACTIVE';
     isDeleted: boolean;
     createdAt: string;
@@ -133,6 +132,7 @@ export interface CreateCustomerPayload {
     startDate?: string;
     durationWeeks?: number;
     weeklyRent?: number;
+    documents?: (File | CustomerDocument)[];
 }
 
 export const getAllCustomers = async (params: any = {}) => {
