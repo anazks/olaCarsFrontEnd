@@ -706,7 +706,11 @@
         "addressPlaceholder": "Dirección completa, ciudad, estado",
         "status": "Estado del Proveedor",
         "statusToggle": "Alternar para activar o desactivar este proveedor",
-        "specifyCategory": "Por favor, especifique una categoría"
+        "specifyCategory": "Por favor, especifique una categoría",
+        "documents": "Adjuntar Documentos (Opcional)",
+        "documentsPlaceholder": "Haga clic o arrastre documentos aquí para adjuntar (PDF, PNG, JPG - máx 20MB)",
+        "documentsHint": "Subir documentos de registro, contratos, certificados fiscales o acuerdos",
+        "existingDocuments": "Documentos Existentes"
       },
       "categories": {
         "all": "Todas las Categorías",

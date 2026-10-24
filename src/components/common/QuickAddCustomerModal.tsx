@@ -356,6 +356,33 @@ export const QuickAddCustomerModal = ({ isOpen, onClose, onSuccess, branches }: 
     const [durationWeeks, setDurationWeeks] = useState<number>(60);
     const [weeklyRent, setWeeklyRent] = useState<string | number>('');
     const [availableVehicles, setAvailableVehicles] = useState<Vehicle[]>([]);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const newFiles = Array.from(e.target.files);
+            const validFiles = newFiles.filter(file => {
+                if (file.size > 20 * 1024 * 1024) {
+                    toast.error(`${file.name} exceeds 20MB limit`);
+                    return false;
+                }
+                return true;
+            });
+            setSelectedFiles(prev => [...prev, ...validFiles]);
+        }
+        e.target.value = '';
+    };
+
+    const removeSelectedFile = (index: number) => {
+        setSelectedFiles(prev => prev.filter((_, idx) => idx !== index));
+    };
+
+    const formatFileSize = (bytes?: number) => {
+        if (!bytes) return '';
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
     const [loadingVehicles, setLoadingVehicles] = useState(false);
 
     // Fetch all available vehicles when driver toggle is enabled
@@ -375,6 +402,7 @@ export const QuickAddCustomerModal = ({ isOpen, onClose, onSuccess, branches }: 
             .catch(err => {
                 console.error('Failed to fetch available vehicles:', err);
                 if (isMounted) setAvailableVehicles([]);
+        setSelectedFiles([]);
             })
             .finally(() => {
                 if (isMounted) setLoadingVehicles(false);
@@ -427,24 +455,28 @@ export const QuickAddCustomerModal = ({ isOpen, onClose, onSuccess, branches }: 
         setSubmitting(true);
         const toastId = toast.loading('Creating customer...');
         try {
-            const payload: CreateCustomerPayload = {
-                name: name.trim(),
-                email: email.trim() || undefined,
-                phone: phone.trim() || undefined,
-                whatsappNumber: whatsappNumber.trim() || undefined,
-                branch,
-                address: address.trim() || undefined,
-                city: city.trim() || undefined,
-                state: state.trim() || undefined,
-                country: country.trim() || undefined,
-                status,
-                isDriver,
-                vehicleId: isDriver && vehicleId ? vehicleId : undefined,
-                startDate: isDriver && startDate ? startDate : undefined,
-                durationWeeks: isDriver && vehicleId ? Number(durationWeeks) : undefined,
-                weeklyRent: isDriver && weeklyRent !== '' && !isNaN(Number(weeklyRent)) ? Number(weeklyRent) : undefined,
-            };
-            const res = await createCustomer(payload);
+            const formDataPayload = new FormData();
+            formDataPayload.append('name', name.trim());
+            if (email.trim()) formDataPayload.append('email', email.trim());
+            if (phone.trim()) formDataPayload.append('phone', phone.trim());
+            if (whatsappNumber.trim()) formDataPayload.append('whatsappNumber', whatsappNumber.trim());
+            formDataPayload.append('branch', branch);
+            if (address.trim()) formDataPayload.append('address', address.trim());
+            if (city.trim()) formDataPayload.append('city', city.trim());
+            if (state.trim()) formDataPayload.append('state', state.trim());
+            if (country.trim()) formDataPayload.append('country', country.trim());
+            formDataPayload.append('status', status);
+            formDataPayload.append('isDriver', String(isDriver));
+            if (isDriver && vehicleId) formDataPayload.append('vehicleId', vehicleId);
+            if (isDriver && startDate) formDataPayload.append('startDate', startDate);
+            if (isDriver && vehicleId) formDataPayload.append('durationWeeks', String(durationWeeks));
+            if (isDriver && weeklyRent !== '' && !isNaN(Number(weeklyRent))) {
+                formDataPayload.append('weeklyRent', String(weeklyRent));
+            }
+            selectedFiles.forEach(file => {
+                formDataPayload.append('documents', file);
+            });
+            const res = await createCustomer(formDataPayload);
             toast.success(
                 isDriver 
                     ? (vehicleId ? 'Customer & Driver profile created with assigned vehicle!' : 'Customer & connected Driver profile created!')
@@ -855,6 +887,80 @@ export const QuickAddCustomerModal = ({ isOpen, onClose, onSuccess, branches }: 
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                                        {/* ── Section: Supporting Documents (Optional) ── */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+                                <Paperclip size={12} className="text-lime-400" /> Attached Documents (Optional)
+                            </p>
+                            <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>
+                                PDF, PNG, JPG (Max 20MB)
+                            </span>
+                        </div>
+
+                        {/* Dropzone */}
+                        <div
+                            className="relative border-2 border-dashed rounded-2xl p-4 text-center transition-all cursor-pointer group hover:border-lime-400/60"
+                            style={{
+                                borderColor: 'var(--border-main)',
+                                background: 'var(--bg-input)'
+                            }}
+                        >
+                            <input
+                                type="file"
+                                multiple
+                                accept="image/*,application/pdf"
+                                onChange={handleFileChange}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                            />
+                            <div className="flex flex-col items-center justify-center py-2">
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-transform group-hover:scale-110" style={{ background: 'rgba(200, 230, 0, 0.1)', color: 'var(--brand-lime, #C8E600)' }}>
+                                    <Upload size={18} />
+                                </div>
+                                <p className="text-xs font-semibold" style={{ color: 'var(--text-main)' }}>
+                                    Click or drag documents here to attach
+                                </p>
+                                <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                                    ID proof, driver license, contracts, visa or agreements
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Selected Files List */}
+                        {selectedFiles.length > 0 && (
+                            <div className="space-y-1.5 pt-1">
+                                <span className="text-[10px] font-black tracking-widest uppercase text-lime-400">
+                                    Files to Attach ({selectedFiles.length})
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {selectedFiles.map((file, idx) => (
+                                        <div
+                                            key={idx}
+                                            className="flex items-center justify-between p-2.5 rounded-xl border text-xs transition"
+                                            style={{ background: 'rgba(200,230,0,0.04)', borderColor: 'rgba(200,230,0,0.25)' }}
+                                        >
+                                            <div className="flex items-center gap-2 truncate pr-2">
+                                                <FileText size={15} className="text-lime-400 shrink-0" />
+                                                <div className="truncate">
+                                                    <p className="truncate font-semibold" style={{ color: 'var(--text-main)' }}>{file.name}</p>
+                                                    <p className="text-[10px]" style={{ color: 'var(--text-dim)' }}>{formatFileSize(file.size)}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeSelectedFile(idx)}
+                                                className="p-1 hover:text-red-400 text-dim transition cursor-pointer"
+                                                title="Remove file"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* ── Actions ── */}

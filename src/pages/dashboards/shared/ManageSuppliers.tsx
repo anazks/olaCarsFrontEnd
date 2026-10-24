@@ -1,7 +1,7 @@
 import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag, Eye, Upload, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, RefreshCw, Search, Users, AlertTriangle, MapPin, Mail, Phone, Tag, Eye, Upload, ChevronLeft, ChevronRight, FileText, Paperclip, ExternalLink, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import BulkSupplierUpload from './BulkSupplierUpload';
 import {
@@ -76,6 +76,40 @@ const ManageSuppliers = () => {
     });
     const [formError, setFormError] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
+
+    // Document attachments state
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [existingDocs, setExistingDocs] = useState<any[]>([]);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const newFiles = Array.from(e.target.files);
+            const validFiles = newFiles.filter(file => {
+                if (file.size > 20 * 1024 * 1024) {
+                    toast.error(`${file.name} exceeds 20MB limit`);
+                    return false;
+                }
+                return true;
+            });
+            setSelectedFiles(prev => [...prev, ...validFiles]);
+        }
+        e.target.value = '';
+    };
+
+    const removeSelectedFile = (index: number) => {
+        setSelectedFiles(prev => prev.filter((_, idx) => idx !== index));
+    };
+
+    const removeExistingDoc = (docIndexOrId: number | string) => {
+        setExistingDocs(prev => prev.filter((doc, idx) => (doc._id ? doc._id !== docIndexOrId : idx !== docIndexOrId)));
+    };
+
+    const formatFileSize = (bytes?: number) => {
+        if (!bytes) return '';
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
 
     // Delete confirmation
     const [deleteTarget, setDeleteTarget] = useState<Supplier | null>(null);
@@ -911,7 +945,121 @@ const ManageSuppliers = () => {
                                 />
                             </div>
 
-                            {/* Status and Toggle */}
+                                                        {/* Attach Documents (Optional) */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: "var(--text-dim)" }}>
+                                        <Paperclip size={13} className="text-lime-400" />
+                                        {t('management.suppliers.form.documents', { defaultValue: 'Attach Documents (Optional)' })}
+                                    </label>
+                                    <span className="text-[11px]" style={{ color: "var(--text-dim)" }}>
+                                        PDF, PNG, JPG (Max 20MB)
+                                    </span>
+                                </div>
+
+                                {/* Dropzone */}
+                                <div
+                                    className="relative border-2 border-dashed rounded-xl p-4 text-center transition-all cursor-pointer group hover:border-lime-400/60"
+                                    style={{
+                                        borderColor: "var(--border-main)",
+                                        background: "var(--bg-input)"
+                                    }}
+                                >
+                                    <input
+                                        type="file"
+                                        multiple
+                                        accept="image/*,application/pdf"
+                                        onChange={handleFileChange}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                    />
+                                    <div className="flex flex-col items-center justify-center py-2">
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-transform group-hover:scale-110" style={{ background: "rgba(200, 230, 0, 0.1)", color: "var(--brand-lime, #C8E600)" }}>
+                                            <Upload size={18} />
+                                        </div>
+                                        <p className="text-xs font-medium" style={{ color: "var(--text-main)" }}>
+                                            {t('management.suppliers.form.documentsPlaceholder', { defaultValue: 'Click or drag documents here to attach' })}
+                                        </p>
+                                        <p className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+                                            {t('management.suppliers.form.documentsHint', { defaultValue: 'Registration docs, contracts, tax certificates or agreements' })}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Existing Documents in Edit Mode */}
+                                {existingDocs.length > 0 && (
+                                    <div className="space-y-1.5 pt-1">
+                                        <span className="text-[11px] font-semibold tracking-wider uppercase" style={{ color: "var(--text-dim)" }}>
+                                            {t('management.suppliers.form.existingDocuments', { defaultValue: 'Existing Documents' })} ({existingDocs.length})
+                                        </span>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {existingDocs.map((doc, idx) => (
+                                                <div
+                                                    key={doc._id || idx}
+                                                    className="flex items-center justify-between p-2.5 rounded-xl border text-xs transition"
+                                                    style={{ background: "rgba(255,255,255,0.02)", borderColor: "var(--border-main)" }}
+                                                >
+                                                    <a
+                                                        href={doc.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-2 truncate pr-2 hover:text-lime-400 transition"
+                                                        style={{ color: "var(--text-main)" }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <FileText size={15} className="text-lime-400 shrink-0" />
+                                                        <span className="truncate font-medium">{doc.name || 'Document'}</span>
+                                                        <ExternalLink size={12} className="opacity-50 shrink-0" />
+                                                    </a>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeExistingDoc(doc._id || idx)}
+                                                        className="p-1 hover:text-red-400 text-dim transition cursor-pointer"
+                                                        title="Remove document"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Newly Selected Files */}
+                                {selectedFiles.length > 0 && (
+                                    <div className="space-y-1.5 pt-1">
+                                        <span className="text-[11px] font-semibold tracking-wider uppercase text-lime-400">
+                                            New Files to Upload ({selectedFiles.length})
+                                        </span>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {selectedFiles.map((file, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="flex items-center justify-between p-2.5 rounded-xl border text-xs transition"
+                                                    style={{ background: "rgba(200,230,0,0.04)", borderColor: "rgba(200,230,0,0.25)" }}
+                                                >
+                                                    <div className="flex items-center gap-2 truncate pr-2">
+                                                        <FileText size={15} className="text-lime-400 shrink-0" />
+                                                        <div className="truncate">
+                                                            <p className="truncate font-medium" style={{ color: "var(--text-main)" }}>{file.name}</p>
+                                                            <p className="text-[10px]" style={{ color: "var(--text-dim)" }}>{formatFileSize(file.size)}</p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeSelectedFile(idx)}
+                                                        className="p-1 hover:text-red-400 text-dim transition cursor-pointer"
+                                                        title="Remove file"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+{/* Status and Toggle */}
                             <div className="flex items-center justify-between p-4 rounded-xl border" style={{ background: "rgba(255,255,255,0.02)", borderColor: "var(--border-main)" }}>
                                 <div>
                                     <div className="text-sm font-semibold" style={{ color: "var(--text-main)" }}>{t('management.suppliers.form.status')}</div>

@@ -2,7 +2,7 @@ import { formatDate } from '../../../../utils/dateUtils';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { 
-    User, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
+    User, Mail, Phone, Paperclip, MapPin, CreditCard, DollarSign, FileText, 
     RefreshCw, Calendar, FileSpreadsheet,
     Download, CheckCircle2, AlertCircle,
     ArrowLeft, Zap, Briefcase, Filter, X,
@@ -2797,6 +2797,55 @@ const OverviewTab = ({
                     </div>
                 </div>
             )}
+
+                        {/* Attached Documents Card */}
+            <div className="p-6 rounded-[1.8rem] border shadow-xl animate-in slide-in-from-bottom-2 duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                <div className="flex items-center justify-between pb-4 mb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-brand-lime/10 text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                            <Paperclip size={18} />
+                        </div>
+                        <div>
+                            <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Attached Documents</h3>
+                            <p className="text-[10px]" style={{ color: 'var(--text-dim)' }}>Supporting customer documents, agreements, IDs & proofs</p>
+                        </div>
+                    </div>
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10" style={{ color: 'var(--text-main)' }}>
+                        {customer.documents?.length || 0} files
+                    </span>
+                </div>
+                {customer.documents && customer.documents.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        {customer.documents.map((doc, idx) => (
+                            <div key={doc._id || idx} className="p-3 rounded-xl border flex items-center justify-between gap-3 bg-white/[0.02]" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center gap-2.5 truncate">
+                                    <FileText size={18} className="text-brand-lime shrink-0" />
+                                    <div className="truncate">
+                                        <p className="text-xs font-bold truncate" style={{ color: 'var(--text-main)' }}>{doc.name || 'Document'}</p>
+                                        <p className="text-[10px]" style={{ color: 'var(--text-dim)' }}>
+                                            {doc.uploadedAt ? formatDate(doc.uploadedAt) : ''} {doc.size ? `• ${(doc.size / 1024).toFixed(0)} KB` : ''}
+                                        </p>
+                                    </div>
+                                </div>
+                                <a
+                                    href={doc.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1.5 rounded-lg border hover:bg-white/10 text-brand-lime transition shrink-0 cursor-pointer"
+                                    style={{ borderColor: 'var(--border-main)' }}
+                                    title="Download / View Document"
+                                >
+                                    <Download size={14} />
+                                </a>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-xs italic py-2" style={{ color: 'var(--text-dim)' }}>
+                        No documents attached to this customer profile.
+                    </p>
+                )}
+            </div>
 
             {/* Extra Payment Tally Alert */}
             {prepaymentBalance > 0 ? (

@@ -706,7 +706,11 @@
         "addressPlaceholder": "Complete street address, city, state",
         "status": "Supplier Status",
         "statusToggle": "Toggle to activate or deactivate this supplier",
-        "specifyCategory": "Please specify a category"
+        "specifyCategory": "Please specify a category",
+        "documents": "Attach Documents (Optional)",
+        "documentsPlaceholder": "Click or drag documents here to attach (PDF, PNG, JPG - max 20MB)",
+        "documentsHint": "Upload registration, contracts, tax certificates, or agreements",
+        "existingDocuments": "Existing Documents"
       },
       "categories": {
         "all": "All Categories",

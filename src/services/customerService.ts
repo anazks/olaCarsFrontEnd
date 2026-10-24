@@ -1,5 +1,14 @@
 import api from './api';
 
+export interface CustomerDocument {
+    _id?: string;
+    name: string;
+    url: string;
+    mimeType?: string;
+    size?: number;
+    uploadedAt?: string | Date;
+}
+
 export interface Customer {
     _id: string;
     customerId: string;
@@ -8,6 +17,7 @@ export interface Customer {
         _id: string;
         driverId?: string;
         status?: string;
+    documents?: CustomerDocument[];
         activationDate?: string;
         deactivationDate?: string;
         activation?: {
@@ -24,6 +34,7 @@ export interface Customer {
             phone?: string;
         };
         weeklyRent?: number;
+    documents?: (File | CustomerDocument)[];
     durationWeeks?: number;
         currentVehicle?: {
             _id?: string;
@@ -137,13 +148,19 @@ export const getCustomerById = async (id: string) => {
     return res.data;
 };
 
-export const createCustomer = async (payload: CreateCustomerPayload) => {
-    const res = await api.post('/api/customers', payload);
+export const createCustomer = async (payload: CreateCustomerPayload | FormData) => {
+    const isFormData = typeof FormData !== 'undefined' && payload instanceof FormData;
+    const res = await api.post('/api/customers', payload, {
+        headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined
+    });
     return res.data;
 };
 
 export const updateCustomer = async (id: string, payload: any) => {
-    const res = await api.put(`/api/customers/${id}`, payload);
+    const isFormData = typeof FormData !== 'undefined' && payload instanceof FormData;
+    const res = await api.put(`/api/customers/${id}`, payload, {
+        headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined
+    });
     return res.data;
 };
 

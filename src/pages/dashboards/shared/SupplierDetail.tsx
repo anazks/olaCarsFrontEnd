@@ -2,11 +2,11 @@ import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
-    Users, Mail, Phone, MapPin, CreditCard, DollarSign, FileText, 
+    Users, Mail, Phone, MapPin, DollarSign, FileText, 
     RefreshCw, FileSpreadsheet,
     Download, CheckCircle2, AlertCircle, 
-    ArrowLeft, Edit2, Zap, Briefcase, Tag, ShoppingBag, Coins, X,
-    Scale, Eye
+    ArrowLeft, Edit2, Zap, Briefcase, ShoppingBag, Coins, X,
+    Scale, Eye, Paperclip, Upload, ExternalLink
 } from 'lucide-react';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -63,12 +63,55 @@ const SupplierDetail = () => {
 
     // Edit Supplier Form State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [existingDocs, setExistingDocs] = useState<any[]>([]);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const newFiles = Array.from(e.target.files);
+            const validFiles = newFiles.filter(file => {
+                if (file.size > 20 * 1024 * 1024) {
+                    toast.error(`${file.name} exceeds 20MB limit`);
+                    return false;
+                }
+                return true;
+            });
+            setSelectedFiles(prev => [...prev, ...validFiles]);
+        }
+        e.target.value = '';
+    };
+
+    const removeSelectedFile = (index: number) => {
+        setSelectedFiles(prev => prev.filter((_, idx) => idx !== index));
+    };
+
+    const removeExistingDoc = (docIndexOrId: number | string) => {
+        setExistingDocs(prev => prev.filter((doc, idx) => (doc._id ? doc._id !== docIndexOrId : idx !== docIndexOrId)));
+    };
+
+    const formatFileSize = (bytes?: number) => {
+        if (!bytes) return '';
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
     const [formData, setFormData] = useState({
         name: '',
+        companyName: '',
+        displayName: '',
+        vendorNumber: '',
         contactPerson: '',
+        salutation: '',
+        firstName: '',
+        lastName: '',
         email: '',
         phone: '',
+        mobilePhone: '',
         address: '',
+        website: '',
+        source: '',
+        companyId: '',
+        primaryContactId: '',
         category: CATEGORIES[0],
         customCategory: '',
         isActive: true
@@ -80,15 +123,28 @@ const SupplierDetail = () => {
         if (!supplier) return;
         const isPredefined = CATEGORIES.includes(supplier.category);
         setFormData({
-            name: supplier.name,
+            name: supplier.name || supplier.companyName || supplier.displayName || '',
+            companyName: supplier.companyName || supplier.name || '',
+            displayName: supplier.displayName || supplier.name || '',
+            vendorNumber: supplier.vendorNumber || '',
             contactPerson: supplier.contactPerson || '',
+            salutation: supplier.salutation || '',
+            firstName: supplier.firstName || '',
+            lastName: supplier.lastName || '',
             email: supplier.email || '',
             phone: supplier.phone || '',
+            mobilePhone: supplier.mobilePhone || '',
             address: supplier.address || '',
+            website: supplier.website || '',
+            source: supplier.source || '',
+            companyId: supplier.companyId || '',
+            primaryContactId: supplier.primaryContactId || '',
             category: isPredefined ? supplier.category : 'Other',
             customCategory: isPredefined ? '' : supplier.category,
             isActive: supplier.isActive
         });
+        setExistingDocs(supplier.documents || []);
+        setSelectedFiles([]);
         setFormError(null);
         setIsEditModalOpen(true);
     };
@@ -100,7 +156,7 @@ const SupplierDetail = () => {
         setFormError(null);
 
         // Validate email format if provided
-        if (formData.email.trim()) {
+        if (formData.email && formData.email.trim()) {
             const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             if (!emailRegex.test(formData.email.trim())) {
                 setFormError('Please enter a valid email address.');
@@ -109,12 +165,14 @@ const SupplierDetail = () => {
             }
         }
 
-        // Validate phone number using the centralized helper
-        const phoneValidation = validatePhoneDetails(formData.phone);
-        if (!phoneValidation.isValid) {
-            setFormError(phoneValidation.defaultMessage || 'Please enter a valid phone number.');
-            setFormLoading(false);
-            return;
+        // Validate phone number using the centralized helper if provided
+        if (formData.phone && formData.phone.trim()) {
+            const phoneValidation = validatePhoneDetails(formData.phone);
+            if (!phoneValidation.isValid) {
+                setFormError(phoneValidation.defaultMessage || 'Please enter a valid phone number.');
+                setFormLoading(false);
+                return;
+            }
         }
 
         const finalCategory = formData.category === 'Other' ? formData.customCategory : formData.category;
@@ -125,18 +183,65 @@ const SupplierDetail = () => {
             return;
         }
 
+        const primaryName = (formData.companyName || formData.name || formData.displayName || '').trim();
+        if (!primaryName) {
+            setFormError('Please enter a Company Name or Supplier Name.');
+            setFormLoading(false);
+            return;
+        }
+
         try {
-            const payload: UpdateSupplierPayload = {
-                id,
-                name: formData.name,
-                contactPerson: formData.contactPerson,
-                email: formData.email,
-                phone: formData.phone,
-                address: formData.address,
-                category: finalCategory,
-                isActive: formData.isActive
-            };
-            await updateSupplier(payload);
+            if (selectedFiles.length > 0 || (supplier.documents && existingDocs.length !== supplier.documents.length)) {
+                const fd = new FormData();
+                fd.append('id', id);
+                fd.append('name', primaryName);
+                fd.append('companyName', formData.companyName || primaryName);
+                fd.append('displayName', formData.displayName || primaryName);
+                fd.append('vendorNumber', formData.vendorNumber || '');
+                fd.append('contactPerson', formData.contactPerson || '');
+                fd.append('salutation', formData.salutation || '');
+                fd.append('firstName', formData.firstName || '');
+                fd.append('lastName', formData.lastName || '');
+                fd.append('email', formData.email || '');
+                fd.append('phone', formData.phone || '');
+                fd.append('mobilePhone', formData.mobilePhone || '');
+                fd.append('address', formData.address || '');
+                fd.append('website', formData.website || '');
+                fd.append('source', formData.source || '');
+                fd.append('companyId', formData.companyId || '');
+                fd.append('primaryContactId', formData.primaryContactId || '');
+                fd.append('category', finalCategory);
+                fd.append('isActive', String(formData.isActive));
+                fd.append('existingDocuments', JSON.stringify(existingDocs));
+                selectedFiles.forEach(file => {
+                    fd.append('files', file);
+                });
+                await updateSupplier(fd);
+            } else {
+                const payload: UpdateSupplierPayload = {
+                    id,
+                    name: primaryName,
+                    companyName: formData.companyName || primaryName,
+                    displayName: formData.displayName || primaryName,
+                    vendorNumber: formData.vendorNumber,
+                    contactPerson: formData.contactPerson,
+                    salutation: formData.salutation,
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    email: formData.email,
+                    phone: formData.phone,
+                    mobilePhone: formData.mobilePhone,
+                    address: formData.address,
+                    website: formData.website,
+                    source: formData.source,
+                    companyId: formData.companyId,
+                    primaryContactId: formData.primaryContactId,
+                    category: finalCategory,
+                    isActive: formData.isActive,
+                    existingDocuments: existingDocs
+                };
+                await updateSupplier(payload);
+            }
             toast.success('Supplier profile updated successfully.');
             setIsEditModalOpen(false);
             fetchData();
@@ -147,7 +252,7 @@ const SupplierDetail = () => {
         }
     };
 
-    const fetchData = useCallback(async () => {
+        const fetchData = useCallback(async () => {
         if (!id) return;
         setRefreshing(true);
         try {
@@ -472,7 +577,7 @@ const SupplierDetail = () => {
                 />
                 <QuickStatCard 
                     label="Accounts Payable" 
-                    value={`$${outstandingLiability.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} 
+                    value={`${outstandingLiability.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} 
                     icon={<DollarSign size={16} />} 
                     color={outstandingLiability > 0 ? 'rose' : 'emerald'}
                 />
@@ -491,7 +596,7 @@ const SupplierDetail = () => {
             {/* Tab Navigation */}
             <div className="flex items-center gap-1 p-1.5 rounded-2xl border bg-black/20 overflow-x-auto no-scrollbar" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
                 {[
-                    { id: 'overview', label: 'Overview', icon: <Users size={14} /> },
+                    { id: 'overview', label: 'Business Profile', icon: <Briefcase size={14} /> },
                     { id: 'reconciliation', label: 'Balance Reconciliation', icon: <Scale size={14} /> },
                     { id: 'pos', label: 'Procurements (POs)', icon: <ShoppingBag size={14} /> },
                     { id: 'bills', label: 'Supplier Bills', icon: <FileText size={14} /> },
@@ -541,11 +646,23 @@ const SupplierDetail = () => {
                 {/* 1. OVERVIEW TAB */}
                 {activeTab === 'overview' && (
                     <div className="space-y-6">
-                        {/* Overview Tab Grid Row 1 */}
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-2 duration-300">
+                        {/* Profile Grid: Business Profile with Edit Option & Balance Reconciliation */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in slide-in-from-bottom-2 duration-300">
                             
-                            {/* Business Profile Details */}
-                            <SectionCard title="Business Profile" icon={<Briefcase size={18} />}>
+                            {/* Business Profile Details with Edit Option */}
+                            <SectionCard 
+                                title="Business Profile" 
+                                icon={<Briefcase size={18} />}
+                                action={
+                                    <button
+                                        onClick={openEditModal}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-200 hover:bg-white/10 active:scale-95 border cursor-pointer"
+                                        style={{ borderColor: 'var(--border-main)', color: 'var(--brand-lime)' }}
+                                    >
+                                        <Edit2 size={12} /> Edit Profile
+                                    </button>
+                                }
+                            >
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                                     <InfoRow label="Vendor Number" value={supplier.vendorNumber} />
                                     <InfoRow label="Company Name" value={supplier.companyName} />
@@ -557,6 +674,7 @@ const SupplierDetail = () => {
                                     <InfoRow label="Email Address" value={supplier.email} icon={<Mail size={14} />} />
                                     <InfoRow label="Phone Number" value={supplier.phone} icon={<Phone size={14} />} />
                                     <InfoRow label="Mobile Phone" value={supplier.mobilePhone} icon={<Phone size={14} />} />
+                                    <InfoRow label="Address" value={supplier.address} icon={<MapPin size={14} />} />
                                     <InfoRow label="Website" value={supplier.website} />
                                     <InfoRow label="Source" value={supplier.source} />
                                     <InfoRow label="Company ID" value={supplier.companyId} />
@@ -564,33 +682,20 @@ const SupplierDetail = () => {
                                 </div>
                             </SectionCard>
 
-                            {/* Tax & Financial Preferences */}
-                            <SectionCard title="Tax & Payments" icon={<CreditCard size={18} />}>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                                    <InfoRow 
-                                        label="Accounts Payable" 
-                                        value={
-                                            supplier.accountsPayable 
-                                                ? (typeof supplier.accountsPayable === 'object' 
-                                                    ? `${supplier.accountsPayable.code || ''} - ${supplier.accountsPayable.name || ''}` 
-                                                    : supplier.accountsPayable) 
-                                                : '—'
-                                        } 
-                                    />
-                                    <InfoRow label="Payment Terms" value={supplier.paymentTerms} />
-                                    <InfoRow label="Payment Terms Label" value={supplier.paymentTermsLabel} />
-                                    <InfoRow label="Taxable" value={supplier.taxable !== undefined ? (supplier.taxable ? 'Yes' : 'No') : '—'} />
-                                    <InfoRow label="Tax Name" value={supplier.taxName} />
-                                    <InfoRow label="Tax Percentage" value={supplier.taxPercentage !== undefined ? `${supplier.taxPercentage}%` : '—'} />
-                                    <InfoRow label="Tax Type" value={supplier.taxType} />
-                                    <InfoRow label="Opening Balance" value={supplier.openingBalance !== undefined ? `$${fmt(supplier.openingBalance)}` : '—'} />
-                                    <InfoRow label="Currency" value={supplier.currencyCode} />
-                                    <InfoRow label="Category" value={supplier.category} />
-                                </div>
-                            </SectionCard>
-
                             {/* Balance Reconciliation Summary */}
-                            <SectionCard title="Balance Reconciliation" icon={<Scale size={18} />}>
+                            <SectionCard 
+                                title="Balance Reconciliation" 
+                                icon={<Scale size={18} />}
+                                action={
+                                    <button
+                                        onClick={() => setActiveTab('reconciliation')}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-200 hover:bg-white/10 active:scale-95 border cursor-pointer"
+                                        style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    >
+                                        <Eye size={12} /> View Full
+                                    </button>
+                                }
+                            >
                                 <div className="space-y-4 pt-2">
                                     <InfoRow label="Total Billed" value={`$${totalBilledAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
                                     <InfoRow label="Total Disbursed" value={`$${totalPaidAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
@@ -614,53 +719,56 @@ const SupplierDetail = () => {
                             </SectionCard>
                         </div>
 
-                        {/* Overview Tab Grid Row 2 */}
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-2 duration-300">
-                            {/* Billing Address details */}
-                            <SectionCard title="Billing Address" icon={<MapPin size={18} />}>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                                    <InfoRow label="Attention" value={supplier.billingAttention} />
-                                    <InfoRow label="Street Address" value={supplier.billingAddress} />
-                                    <InfoRow label="Street Address 2" value={supplier.billingStreet2} />
-                                    <InfoRow label="City" value={supplier.billingCity} />
-                                    <InfoRow label="State" value={supplier.billingState} />
-                                    <InfoRow label="Country" value={supplier.billingCountry} />
-                                    <InfoRow label="Postal Code" value={supplier.billingCode} />
-                                    <InfoRow label="Phone" value={supplier.billingPhone} />
-                                    <InfoRow label="Fax" value={supplier.billingFax} />
+                        {/* Attached Documents Card */}
+                        <div className="p-6 rounded-[1.8rem] border shadow-xl animate-in slide-in-from-bottom-2 duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center justify-between pb-4 mb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center gap-2.5">
+                                    <div className="p-2 rounded-xl bg-brand-lime/10 text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                                        <Paperclip size={18} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Attached Documents</h3>
+                                        <p className="text-[10px]" style={{ color: 'var(--text-dim)' }}>Supporting vendor documents, contracts & certificates</p>
+                                    </div>
                                 </div>
-                            </SectionCard>
-
-                            {/* Shipping Address details */}
-                            <SectionCard title="Shipping Address" icon={<MapPin size={18} />}>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                                    <InfoRow label="Attention" value={supplier.shippingAttention} />
-                                    <InfoRow label="Street Address" value={supplier.shippingAddress} />
-                                    <InfoRow label="Street Address 2" value={supplier.shippingStreet2} />
-                                    <InfoRow label="City" value={supplier.shippingCity} />
-                                    <InfoRow label="State" value={supplier.shippingState} />
-                                    <InfoRow label="Country" value={supplier.shippingCountry} />
-                                    <InfoRow label="Postal Code" value={supplier.shippingCode} />
-                                    <InfoRow label="Phone" value={supplier.shippingPhone} />
-                                    <InfoRow label="Fax" value={supplier.shippingFax} />
+                                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10" style={{ color: 'var(--text-main)' }}>
+                                    {supplier.documents?.length || 0} files
+                                </span>
+                            </div>
+                            {supplier.documents && supplier.documents.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                    {supplier.documents.map((doc, idx) => (
+                                        <div key={doc._id || idx} className="p-3 rounded-xl border flex items-center justify-between gap-3 bg-white/[0.02]" style={{ borderColor: 'var(--border-main)' }}>
+                                            <div className="flex items-center gap-2.5 truncate">
+                                                <FileText size={18} className="text-brand-lime shrink-0" />
+                                                <div className="truncate">
+                                                    <p className="text-xs font-bold truncate" style={{ color: 'var(--text-main)' }}>{doc.name || 'Document'}</p>
+                                                    <p className="text-[10px]" style={{ color: 'var(--text-dim)' }}>
+                                                        {doc.uploadedAt ? formatDate(doc.uploadedAt) : ''} {doc.size ? `• ${(doc.size / 1024).toFixed(0)} KB` : ''}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <a
+                                                href={doc.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="p-1.5 rounded-lg border hover:bg-white/10 text-brand-lime transition shrink-0 cursor-pointer"
+                                                style={{ borderColor: 'var(--border-main)' }}
+                                                title="Download / View Document"
+                                            >
+                                                <Download size={14} />
+                                            </a>
+                                        </div>
+                                    ))}
                                 </div>
-                            </SectionCard>
-
-                            {/* Custom Fields */}
-                            <SectionCard title="Custom Fields" icon={<Tag size={18} />}>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                                    <InfoRow label="CF.FLEET NO" value={supplier.cfFleetNo} />
-                                    <InfoRow label="CF.ACTIVE DATE" value={supplier.cfActiveDate ? formatDate(supplier.cfActiveDate) : '—'} />
-                                    <InfoRow label="CF.RUC" value={supplier.cfRuc} />
-                                    <InfoRow label="CF.DV" value={supplier.cfDv} />
-                                    <InfoRow label="Location ID" value={supplier.locationId} />
-                                    <InfoRow label="Location Name" value={supplier.locationName} />
-                                    <InfoRow label="Contact Address ID" value={supplier.contactAddressId} />
-                                </div>
-                            </SectionCard>
+                            ) : (
+                                <p className="text-xs italic py-2" style={{ color: 'var(--text-dim)' }}>
+                                    No documents attached to this vendor profile.
+                                </p>
+                            )}
                         </div>
 
-                        {/* Supplier Notes */}
+{/* Supplier Notes */}
                         {supplier.notes && (
                             <div className="p-6 rounded-[1.8rem] border shadow-xl animate-in slide-in-from-bottom-2 duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                                 <div className="flex items-center gap-2 pb-4 mb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
@@ -1318,142 +1426,490 @@ const SupplierDetail = () => {
                         </div>
 
                         <form onSubmit={handleEditSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Supplier Name */}
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                        Supplier Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
-                                        style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        placeholder="Enter supplier name"
-                                    />
+                            {/* SECTION 1: Company Profile */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 pb-2 border-b" style={{ borderColor: "var(--border-main)" }}>
+                                    <Briefcase size={16} className="text-brand-lime" />
+                                    <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: "var(--text-main)" }}>Company Information</h3>
                                 </div>
-
-                                {/* Contact Person */}
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                        Contact Person
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
-                                        style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
-                                        value={formData.contactPerson}
-                                        onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                                        placeholder="Enter contact person name"
-                                    />
-                                </div>
-
-                                {/* Email */}
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                        Email Address
-                                    </label>
-                                    <input
-                                        type="email"
-                                        className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
-                                        style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        placeholder="Enter email address"
-                                    />
-                                </div>
-
-                                {/* Phone */}
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                        Phone Number
-                                    </label>
-                                    <PhoneInput
-                                        country={"in"}
-                                        value={formData.phone}
-                                        onChange={(phone) => setFormData({ ...formData, phone })}
-                                        containerStyle={{ width: "100%" }}
-                                        inputStyle={{
-                                            width: "100%",
-                                            height: "42px",
-                                            background: "var(--bg-input)",
-                                            border: "1px solid var(--border-main)",
-                                            color: "var(--text-main)",
-                                            borderRadius: "12px",
-                                            fontSize: "14px"
-                                        }}
-                                        buttonStyle={{
-                                            background: "var(--bg-input)",
-                                            border: "1px solid var(--border-main)",
-                                            borderRadius: "12px 0 0 12px"
-                                        }}
-                                        dropdownStyle={{
-                                            background: "var(--bg-card)",
-                                            color: "var(--text-main)",
-                                            border: "1px solid var(--border-main)",
-                                            borderRadius: "12px",
-                                            marginTop: "4px",
-                                            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)"
-                                        }}
-                                    />
-                                </div>
-
-                                {/* Category Dropdown */}
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                        Category
-                                    </label>
-                                    <select
-                                        value={formData.category}
-                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
-                                        style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
-                                    >
-                                        {CATEGORIES.map(cat => (
-                                            <option key={cat} value={cat}>{cat}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Custom Category */}
-                                {formData.category === 'Other' && (
-                                    <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Company Name */}
+                                    <div className="space-y-1.5">
                                         <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                            Custom Category
+                                            Company Name *
                                         </label>
                                         <input
                                             type="text"
                                             required
                                             className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
                                             style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
-                                            value={formData.customCategory}
-                                            onChange={(e) => setFormData({ ...formData, customCategory: e.target.value })}
-                                            placeholder="Specify custom category"
+                                            value={formData.companyName}
+                                            onChange={(e) => setFormData({ ...formData, companyName: e.target.value, name: e.target.value })}
+                                            placeholder="Enter company name"
                                         />
+                                    </div>
+
+                                    {/* Display Name */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            Display Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                            style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                            value={formData.displayName}
+                                            onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+                                            placeholder="Enter public display name"
+                                        />
+                                    </div>
+
+                                    {/* Vendor Number */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            Vendor Number
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                            style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                            value={formData.vendorNumber}
+                                            onChange={(e) => setFormData({ ...formData, vendorNumber: e.target.value })}
+                                            placeholder="e.g. VEN-00124"
+                                        />
+                                    </div>
+
+                                    {/* Company ID */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            Company ID
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                            style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                            value={formData.companyId}
+                                            onChange={(e) => setFormData({ ...formData, companyId: e.target.value })}
+                                            placeholder="e.g. COMP-9812"
+                                        />
+                                    </div>
+
+                                    {/* Category Dropdown */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            Operating Category
+                                        </label>
+                                        <select
+                                            value={formData.category}
+                                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                            style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                        >
+                                            {CATEGORIES.map(cat => (
+                                                <option key={cat} value={cat}>{cat}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Custom Category if Other or Source */}
+                                    {formData.category === 'Other' ? (
+                                        <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-200">
+                                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                                Custom Category
+                                            </label>
+                                            <input
+                                                type="text"
+                                                required
+                                                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                                style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                                value={formData.customCategory}
+                                                onChange={(e) => setFormData({ ...formData, customCategory: e.target.value })}
+                                                placeholder="Specify custom category"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                                Source
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                                style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                                value={formData.source}
+                                                onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                                                placeholder="e.g. Referral, Trade Show, Direct"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {formData.category === 'Other' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                                Source
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                                style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                                value={formData.source}
+                                                onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                                                placeholder="e.g. Referral, Trade Show, Direct"
+                                            />
+                                        </div>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Address */}
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                                    Address
-                                </label>
-                                <textarea
-                                    required
-                                    rows={3}
-                                    className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all resize-none"
-                                    style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
-                                    value={formData.address}
-                                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                    placeholder="Enter physical address"
-                                />
+                            {/* SECTION 2: Contact Details */}
+                            <div className="space-y-4 pt-2">
+                                <div className="flex items-center gap-2 pb-2 border-b" style={{ borderColor: "var(--border-main)" }}>
+                                    <Users size={16} className="text-brand-lime" />
+                                    <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: "var(--text-main)" }}>Contact Details</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {/* Salutation */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            Salutation
+                                        </label>
+                                        <input
+                                            type="text"
+                                            list="salutation-options"
+                                            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                            style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                            value={formData.salutation}
+                                            onChange={(e) => setFormData({ ...formData, salutation: e.target.value })}
+                                            placeholder="e.g. Mr. / Ms. / Dr."
+                                        />
+                                        <datalist id="salutation-options">
+                                            <option value="Mr." />
+                                            <option value="Mrs." />
+                                            <option value="Ms." />
+                                            <option value="Dr." />
+                                            <option value="Prof." />
+                                            <option value="Eng." />
+                                        </datalist>
+                                    </div>
+
+                                    {/* First Name */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            First Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                            style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                            value={formData.firstName}
+                                            onChange={(e) => {
+                                                const fn = e.target.value;
+                                                const combined = `${fn} ${formData.lastName}`.trim();
+                                                setFormData({ 
+                                                    ...formData, 
+                                                    firstName: fn, 
+                                                    contactPerson: formData.contactPerson && formData.contactPerson !== `${formData.firstName} ${formData.lastName}`.trim() ? formData.contactPerson : combined 
+                                                });
+                                            }}
+                                            placeholder="First name"
+                                        />
+                                    </div>
+
+                                    {/* Last Name */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            Last Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                            style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                            value={formData.lastName}
+                                            onChange={(e) => {
+                                                const ln = e.target.value;
+                                                const combined = `${formData.firstName} ${ln}`.trim();
+                                                setFormData({ 
+                                                    ...formData, 
+                                                    lastName: ln, 
+                                                    contactPerson: formData.contactPerson && formData.contactPerson !== `${formData.firstName} ${formData.lastName}`.trim() ? formData.contactPerson : combined 
+                                                });
+                                            }}
+                                            placeholder="Last name"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Contact Person */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            Contact Person (Full Name)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                            style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                            value={formData.contactPerson}
+                                            onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                                            placeholder="Full contact person name"
+                                        />
+                                    </div>
+
+                                    {/* Email */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            Email Address
+                                        </label>
+                                        <input
+                                            type="email"
+                                            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                            style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                            value={formData.email}
+                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            placeholder="e.g. contact@supplier.com"
+                                        />
+                                    </div>
+
+                                    {/* Phone */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            Phone Number
+                                        </label>
+                                        <PhoneInput
+                                            country={"in"}
+                                            value={formData.phone}
+                                            onChange={(phone) => setFormData({ ...formData, phone })}
+                                            containerStyle={{ width: "100%" }}
+                                            inputStyle={{
+                                                width: "100%",
+                                                height: "42px",
+                                                background: "var(--bg-input)",
+                                                border: "1px solid var(--border-main)",
+                                                color: "var(--text-main)",
+                                                borderRadius: "12px",
+                                                fontSize: "14px"
+                                            }}
+                                            buttonStyle={{
+                                                background: "var(--bg-input)",
+                                                border: "1px solid var(--border-main)",
+                                                borderRadius: "12px 0 0 12px"
+                                            }}
+                                            dropdownStyle={{
+                                                background: "var(--bg-card)",
+                                                color: "var(--text-main)",
+                                                border: "1px solid var(--border-main)",
+                                                borderRadius: "12px",
+                                                marginTop: "4px",
+                                                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)"
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Mobile Phone */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            Mobile Phone
+                                        </label>
+                                        <PhoneInput
+                                            country={"in"}
+                                            value={formData.mobilePhone}
+                                            onChange={(mobilePhone) => setFormData({ ...formData, mobilePhone })}
+                                            containerStyle={{ width: "100%" }}
+                                            inputStyle={{
+                                                width: "100%",
+                                                height: "42px",
+                                                background: "var(--bg-input)",
+                                                border: "1px solid var(--border-main)",
+                                                color: "var(--text-main)",
+                                                borderRadius: "12px",
+                                                fontSize: "14px"
+                                            }}
+                                            buttonStyle={{
+                                                background: "var(--bg-input)",
+                                                border: "1px solid var(--border-main)",
+                                                borderRadius: "12px 0 0 12px"
+                                            }}
+                                            dropdownStyle={{
+                                                background: "var(--bg-card)",
+                                                color: "var(--text-main)",
+                                                border: "1px solid var(--border-main)",
+                                                borderRadius: "12px",
+                                                marginTop: "4px",
+                                                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)"
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Status and Toggle */}
+                            {/* SECTION 3: Web & Location */}
+                            <div className="space-y-4 pt-2">
+                                <div className="flex items-center gap-2 pb-2 border-b" style={{ borderColor: "var(--border-main)" }}>
+                                    <MapPin size={16} className="text-brand-lime" />
+                                    <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: "var(--text-main)" }}>Online & Location Details</h3>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Website */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            Website
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                            style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                            value={formData.website}
+                                            onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                                            placeholder="e.g. https://company.com"
+                                        />
+                                    </div>
+
+                                    {/* Primary Contact ID */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                            Primary Contact ID
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all"
+                                            style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                            value={formData.primaryContactId}
+                                            onChange={(e) => setFormData({ ...formData, primaryContactId: e.target.value })}
+                                            placeholder="e.g. CONT-8842"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Address */}
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                                        Address
+                                    </label>
+                                    <textarea
+                                        rows={2}
+                                        className="w-full px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-lime transition-all resize-none"
+                                        style={{ background: "var(--bg-input)", border: "1px solid var(--border-main)", color: "var(--text-main)" }}
+                                        value={formData.address}
+                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                        placeholder="Enter physical address"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Attach Documents (Optional) */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: "var(--text-dim)" }}>
+                                        <Paperclip size={13} className="text-brand-lime" />
+                                        Attach Documents (Optional)
+                                    </label>
+                                    <span className="text-[11px]" style={{ color: "var(--text-dim)" }}>
+                                        PDF, PNG, JPG (Max 20MB)
+                                    </span>
+                                </div>
+
+                                <div
+                                    className="relative border-2 border-dashed rounded-xl p-4 text-center transition-all cursor-pointer group hover:border-brand-lime/60"
+                                    style={{
+                                        borderColor: "var(--border-main)",
+                                        background: "var(--bg-input)"
+                                    }}
+                                >
+                                    <input
+                                        type="file"
+                                        multiple
+                                        accept="image/*,application/pdf"
+                                        onChange={handleFileChange}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                    />
+                                    <div className="flex flex-col items-center justify-center py-2">
+                                        <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-transform group-hover:scale-110" style={{ background: "rgba(200, 230, 0, 0.1)", color: "var(--brand-lime, #C8E600)" }}>
+                                            <Upload size={18} />
+                                        </div>
+                                        <p className="text-xs font-medium" style={{ color: "var(--text-main)" }}>
+                                            Click or drag documents here to attach
+                                        </p>
+                                        <p className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+                                            Registration docs, contracts, tax certificates or agreements
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {existingDocs.length > 0 && (
+                                    <div className="space-y-1.5 pt-1">
+                                        <span className="text-[11px] font-semibold tracking-wider uppercase" style={{ color: "var(--text-dim)" }}>
+                                            Existing Documents ({existingDocs.length})
+                                        </span>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {existingDocs.map((doc, idx) => (
+                                                <div
+                                                    key={doc._id || idx}
+                                                    className="flex items-center justify-between p-2.5 rounded-xl border text-xs transition"
+                                                    style={{ background: "rgba(255,255,255,0.02)", borderColor: "var(--border-main)" }}
+                                                >
+                                                    <a
+                                                        href={doc.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-2 truncate pr-2 hover:text-brand-lime transition"
+                                                        style={{ color: "var(--text-main)" }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <FileText size={15} className="text-brand-lime shrink-0" />
+                                                        <span className="truncate font-medium">{doc.name || 'Document'}</span>
+                                                        <ExternalLink size={12} className="opacity-50 shrink-0" />
+                                                    </a>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeExistingDoc(doc._id || idx)}
+                                                        className="p-1 hover:text-red-400 text-dim transition cursor-pointer"
+                                                        title="Remove document"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedFiles.length > 0 && (
+                                    <div className="space-y-1.5 pt-1">
+                                        <span className="text-[11px] font-semibold tracking-wider uppercase text-brand-lime">
+                                            New Files to Upload ({selectedFiles.length})
+                                        </span>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {selectedFiles.map((file, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="flex items-center justify-between p-2.5 rounded-xl border text-xs transition"
+                                                    style={{ background: "rgba(200,230,0,0.04)", borderColor: "rgba(200,230,0,0.25)" }}
+                                                >
+                                                    <div className="flex items-center gap-2 truncate pr-2">
+                                                        <FileText size={15} className="text-brand-lime shrink-0" />
+                                                        <div className="truncate">
+                                                            <p className="truncate font-medium" style={{ color: "var(--text-main)" }}>{file.name}</p>
+                                                            <p className="text-[10px]" style={{ color: "var(--text-dim)" }}>{formatFileSize(file.size)}</p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeSelectedFile(idx)}
+                                                        className="p-1 hover:text-red-400 text-dim transition cursor-pointer"
+                                                        title="Remove file"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+{/* Status and Toggle */}
                             <div className="flex items-center justify-between p-4 rounded-xl border" style={{ background: "rgba(255,255,255,0.02)", borderColor: "var(--border-main)" }}>
                                 <div>
                                     <div className="text-sm font-semibold" style={{ color: "var(--text-main)" }}>Status</div>
@@ -1513,11 +1969,14 @@ const SupplierDetail = () => {
    UI HELPERS
    ───────────────────────────────────────────────────────────────────────────── */
 
-const SectionCard = ({ title, icon, children }: any) => (
+const SectionCard = ({ title, icon, action, children }: any) => (
     <div className="p-6 rounded-[1.8rem] border shadow-xl flex flex-col" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-        <div className="flex items-center gap-2 pb-4 mb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
-            <div className="p-2 rounded-xl bg-brand-lime/10 text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{icon}</div>
-            <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>{title}</h3>
+        <div className="flex items-center justify-between pb-4 mb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+            <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-brand-lime/10 text-brand-lime" style={{ color: 'var(--brand-lime)' }}>{icon}</div>
+                <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>{title}</h3>
+            </div>
+            {action}
         </div>
         {children}
     </div>

@@ -1,5 +1,14 @@
 import api from './api';
 
+export interface SupplierDocument {
+    _id?: string;
+    name: string;
+    url: string;
+    mimeType?: string;
+    size?: number;
+    uploadedAt?: string | Date;
+}
+
 export interface Supplier {
     _id: string;
     name: string;
@@ -9,6 +18,7 @@ export interface Supplier {
     address?: string;
     category: string;
     isActive: boolean;
+    documents?: SupplierDocument[];
     createdAt?: string;
     updatedAt?: string;
 
@@ -68,10 +78,23 @@ export interface CreateSupplierPayload {
     address?: string;
     category: string;
     isActive?: boolean;
+    vendorNumber?: string;
+    companyName?: string;
+    displayName?: string;
+    salutation?: string;
+    firstName?: string;
+    lastName?: string;
+    mobilePhone?: string;
+    website?: string;
+    source?: string;
+    companyId?: string;
+    primaryContactId?: string;
 }
 
 export interface UpdateSupplierPayload extends Partial<CreateSupplierPayload> {
     id: string;
+    documents?: any[];
+    existingDocuments?: any[];
 }
 
 export interface PaginationMetadata {
@@ -119,8 +142,18 @@ export const createSupplier = async (payload: CreateSupplierPayload): Promise<Su
 
 // put api is passing id in body
 // PUT update supplier
-export const updateSupplier = async (payload: UpdateSupplierPayload): Promise<Supplier> => {
-    const response = await api.put(`/api/supplier/${payload.id}`, payload);
+export const updateSupplier = async (payload: UpdateSupplierPayload | FormData): Promise<Supplier> => {
+    let id: string;
+    let isFormData = false;
+    if (typeof FormData !== 'undefined' && payload instanceof FormData) {
+        id = payload.get('id') as string;
+        isFormData = true;
+    } else {
+        id = (payload as UpdateSupplierPayload).id;
+    }
+    const response = await api.put(`/api/supplier/${id}`, payload, {
+        headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined
+    });
     return response.data;
 };
 
