@@ -62,7 +62,7 @@ export interface Driver {
         signedS3Key?: string;
     };
     assignedVehicle?: string | any;
-    currentVehicle?: string;
+    currentVehicle?: string | any;
     rejection?: {
         reason: string;
         notes?: string;
@@ -85,8 +85,9 @@ export interface Driver {
         gpsMonitoringActive?: boolean;
         activatedDate?: string;
     };
-    status: 'DRAFT' | 'PENDING REVIEW' | 'VERIFICATION' | 'CREDIT CHECK' | 'MANAGER REVIEW' | 'APPROVED' | 'CONTRACT PENDING' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED';
+    status: 'DRAFT' | 'PENDING REVIEW' | 'VERIFICATION' | 'CREDIT CHECK' | 'MANAGER REVIEW' | 'APPROVED' | 'CONTRACT PENDING' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED' | 'INACTIVE';
     branch: string | Branch;
+    customer?: any;
     experienceYears?: number;
     performance?: {
         avgSpeed: number;
@@ -227,8 +228,8 @@ export const deleteDriver = async (id: string): Promise<void> => {
     await api.delete(`/api/driver/${id}`);
 };
 
-export const cancelContract = async (id: string, notes?: string, endDate?: string): Promise<Driver> => {
-    const response = await api.put(`/api/driver/${id}/cancel-contract`, { notes, endDate });
+export const cancelContract = async (id: string, notes?: string, endDate?: string, target?: 'CUSTOMER' | 'DRIVER'): Promise<Driver> => {
+    const response = await api.put(`/api/driver/${id}/cancel-contract`, { notes, endDate, target });
     return response.data.data;
 };
 

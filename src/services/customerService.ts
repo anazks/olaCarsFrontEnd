@@ -188,7 +188,7 @@ export const updateCustomerWeeklyRent = async (id: string, payload: { weeklyRent
 export const assignVehicleToCustomer = async (
     id: string, 
     payload: { 
-        vehicleId: string; 
+        vehicleId?: string; 
         startDate?: string; 
         durationWeeks?: number; 
         weeklyRent?: number;

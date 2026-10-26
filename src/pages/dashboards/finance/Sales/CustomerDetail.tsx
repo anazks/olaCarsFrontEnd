@@ -7,11 +7,11 @@ import {
     Download, CheckCircle2, AlertCircle,
     ArrowLeft, Zap, Briefcase, Filter, X,
     ChevronLeft, ChevronRight, Search, Eye,
-    Car, Hash, Tag, Pencil, History, Clock, ChevronDown, Check, AlertTriangle
+    Car, Hash, Tag, Pencil, History, Clock, ChevronDown, Check, AlertTriangle, UserCheck, ExternalLink
 } from 'lucide-react';
 import { getCustomerById, updateCustomer, updateCustomerWeeklyRent, assignVehicleToCustomer, type Customer } from '../../../../services/customerService';
 import { driverService } from '../../../../services/driverService';
-import { getAllVehicles, assignVehicleToDriver, type Vehicle } from '../../../../services/vehicleService';
+import { getAllVehicles, type Vehicle } from '../../../../services/vehicleService';
 import { getInvoicesByCustomer, type Invoice } from '../../../../services/invoiceService';
 import { getAllCreditNotes, type CreditNote } from '../../../../services/creditNoteService';
 import api from '../../../../services/api';
@@ -458,6 +458,19 @@ const CustomerDetail = () => {
         }
     };
 
+    const customerDriver = customer?.driver as any;
+    const hasDriverProfile = Boolean(
+        customerDriver && (customerDriver._id || customerDriver.driverId || customerDriver.status)
+    );
+    const isCustomerDriver = Boolean(customer?.isDriver || hasDriverProfile);
+    const customerVehicle = customerDriver?.currentVehicle;
+    const activeAssignment = customerDriver?.assignmentHistory?.find((a: any) => a.status === 'ACTIVE');
+    const hasAssignedVehicle = isCustomerDriver && Boolean(
+        (customerVehicle && (customerVehicle.legalDocs?.registrationNumber || customerVehicle.plateNumber || customerVehicle.basicDetails?.plateNumber) && customerVehicle.status !== 'INACTIVE') ||
+        (activeAssignment && activeAssignment.status === 'ACTIVE') ||
+        (customer?.cfVehicleNo && !['nill', 'nil', 'na', 'n/a', 'none', '-', '—', ''].includes(String(customer.cfVehicleNo).trim().toLowerCase()) && customerDriver?.status === 'ACTIVE')
+    );
+
     // ── Customer & Driver Status / Contract Management ──
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [cancelNotes, setCancelNotes] = useState('');
@@ -467,6 +480,8 @@ const CustomerDetail = () => {
 
     // ── Assign Vehicle State (Modal matching Customer Creation flow) ──
     const [isAssignVehicleModalOpen, setIsAssignVehicleModalOpen] = useState(false);
+    const [availableVehicles, setAvailableVehicles] = useState<Vehicle[]>([]);
+    const [loadingVehicles, setLoadingVehicles] = useState(false);
     const [assignVehicleId, setAssignVehicleId] = useState('');
     const [assignStartDate, setAssignStartDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [assignDurationWeeks, setAssignDurationWeeks] = useState<number>(60);
@@ -510,34 +525,48 @@ const CustomerDetail = () => {
     const handleConfirmAssignVehicle = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!customer) return;
-        if (!assignVehicleId) {
+
+        if (isCustomerDriver && !assignVehicleId) {
             toast.error('Please select an available vehicle.');
             return;
         }
-        if (!assignStartDate) {
-            toast.error('Start date is required.');
-            return;
-        }
-        if (assignWeeklyRent === '' || isNaN(Number(assignWeeklyRent)) || Number(assignWeeklyRent) <= 0) {
-            toast.error('Please enter a valid weekly rent.');
-            return;
+
+        if (assignVehicleId) {
+            if (!assignStartDate) {
+                toast.error('Start date is required.');
+                return;
+            }
+            if (assignWeeklyRent === '' || isNaN(Number(assignWeeklyRent)) || Number(assignWeeklyRent) <= 0) {
+                toast.error('Please enter a valid weekly rent.');
+                return;
+            }
         }
 
         setIsSubmittingAssign(true);
-        const toastId = toast.loading('Assigning vehicle to customer...');
+        const toastId = toast.loading(assignVehicleId ? 'Assigning vehicle to customer...' : 'Registering customer as driver...');
         try {
-            await assignVehicleToCustomer(customer._id, {
-                vehicleId: assignVehicleId,
+            const res = await assignVehicleToCustomer(customer._id, {
+                vehicleId: assignVehicleId || undefined,
                 startDate: assignStartDate,
-                durationWeeks: Number(assignDurationWeeks),
-                weeklyRent: Number(assignWeeklyRent)
+                durationWeeks: Number(assignDurationWeeks) || 60,
+                weeklyRent: assignWeeklyRent !== '' ? Number(assignWeeklyRent) : undefined
             });
-            toast.success('Vehicle assigned & contract created successfully!', { id: toastId });
+            toast.success(
+                assignVehicleId
+                    ? customerDriver?.status !== 'ACTIVE' && isCustomerDriver
+                        ? 'Driver activated, vehicle assigned & contract created successfully!'
+                        : 'Vehicle assigned & driver contract created successfully!'
+                    : 'Customer registered as driver successfully!',
+                { id: toastId }
+            );
             setIsAssignVehicleModalOpen(false);
+            if (res?.data) {
+                setCustomer(res.data);
+            }
             await fetchData();
         } catch (err: any) {
-            console.error('Failed to assign vehicle:', err);
-            toast.error(err.response?.data?.message || err.message || 'Failed to assign vehicle', { id: toastId });
+            console.error('Failed to assign vehicle / make driver:', err);
+            toast.error(err.response?.data?.message || err.message || 'Failed to complete request', { id: toastId });
         } finally {
             setIsSubmittingAssign(false);
         }
@@ -559,14 +588,8 @@ const CustomerDetail = () => {
         }
 
         // Deactivating Customer:
-        // Check if customer is assigned with any vehicle or linked driver
-        const isAssignedVehicle = Boolean(
-            customer.driver?.currentVehicle || 
-            (customer.driver as any)?.assignedVehicle ||
-            (customer.cfVehicleNo && !['nill', 'nil', 'na', 'n/a', 'none', '-', '—', ''].includes(String(customer.cfVehicleNo).trim().toLowerCase()))
-        );
-
-        if (customer.driver || isAssignedVehicle) {
+        // Only pop up the Cancel Contract modal if customer/driver is actively connected to a vehicle!
+        if (hasAssignedVehicle) {
             setCancelTarget('CUSTOMER');
             setCancelEndDate(new Date().toISOString().split('T')[0]);
             setCancelNotes('');
@@ -580,6 +603,38 @@ const CustomerDetail = () => {
             } catch (err: any) {
                 console.error('Failed to update customer status:', err);
                 toast.error(err.message || 'Failed to update status', { id: toastId });
+            }
+        }
+    };
+
+    const handleToggleDriverStatus = async () => {
+        if (!customerDriver?._id) return;
+
+        if (customerDriver.status !== 'ACTIVE') {
+            openAssignVehicleModal();
+            return;
+        }
+
+        // Deactivating Driver:
+        // Only pop up the Cancel Contract modal if driver is actively connected to a vehicle!
+        if (hasAssignedVehicle) {
+            setCancelTarget('DRIVER');
+            setCancelEndDate(new Date().toISOString().split('T')[0]);
+            setCancelNotes('');
+            setIsCancelModalOpen(true);
+        } else {
+            // Driver has NO vehicle assigned: directly deactivate driver without popping up contract modal
+            const toastId = toast.loading('Deactivating driver...');
+            try {
+                await driverService.updateDriver(customerDriver._id, { 
+                    status: 'INACTIVE', 
+                    deactivationDate: new Date().toISOString() 
+                });
+                toast.success('Driver deactivated successfully', { id: toastId });
+                await fetchData();
+            } catch (err: any) {
+                console.error('Failed to deactivate driver:', err);
+                toast.error(err.response?.data?.message || err.message || 'Failed to deactivate driver', { id: toastId });
             }
         }
     };
@@ -603,10 +658,11 @@ const CustomerDetail = () => {
                 await driverService.cancelContract(
                     customer.driver._id, 
                     cancelNotes || (cancelTarget === 'CUSTOMER' ? 'Deactivated from customer profile' : 'Driver contract cancelled'),
-                    cancelEndDate
+                    cancelEndDate,
+                    cancelTarget
                 );
             }
-            if (customer?._id) {
+            if (cancelTarget === 'CUSTOMER' && customer?._id) {
                 await updateCustomer(customer._id, { status: 'INACTIVE' });
             }
             toast.success(
@@ -626,139 +682,7 @@ const CustomerDetail = () => {
         }
     };
 
-    // ── Driver Reactivation & Vehicle Assignment State ──
-    const [isActivateModalOpen, setIsActivateModalOpen] = useState(false);
-    const [availableVehicles, setAvailableVehicles] = useState<Vehicle[]>([]);
-    const [loadingVehicles, setLoadingVehicles] = useState(false);
-    const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
-    const [activationDate, setActivationDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
-    const [frequency, setFrequency] = useState<'MONTHLY' | 'WEEKLY'>('WEEKLY');
-    const [durationWeeks, setDurationWeeks] = useState<number>(24);
-    const [durationMonths, setDurationMonths] = useState<number>(6);
-    const [weeklyRent, setWeeklyRent] = useState<number>(0);
-    const [monthlyRent, setMonthlyRent] = useState<number>(0);
-    const [depositAmount, setDepositAmount] = useState<number>(0);
-    const [activationNotes, setActivationNotes] = useState<string>('');
-    const [isSubmittingActivation, setIsSubmittingActivation] = useState(false);
-    const [vehicleSearchQuery, setVehicleSearchQuery] = useState('');
 
-    const openActivateModal = async () => {
-        setIsActivateModalOpen(true);
-        setLoadingVehicles(true);
-        setSelectedVehicleId('');
-        setActivationDate(new Date().toISOString().split('T')[0]);
-        setDepositAmount(0);
-        setActivationNotes('');
-        setVehicleSearchQuery('');
-        try {
-            const res = await getAllVehicles({ limit: 2000 });
-            const list = Array.isArray(res) ? res : ((res as any)?.data || []);
-            setAvailableVehicles(list);
-        } catch (err: any) {
-            console.error('Failed to load available vehicles:', err);
-            toast.error('Failed to load available vehicles');
-        } finally {
-            setLoadingVehicles(false);
-        }
-    };
-
-    const handleSelectVehicle = (v: Vehicle) => {
-        setSelectedVehicleId(v._id);
-        const sellingValue = v.basicDetails?.sellingValue || 0;
-        const defaultWeekly = (v as any).basicDetails?.weeklyRent || (sellingValue > 0 && durationWeeks > 0 ? Math.ceil(sellingValue / durationWeeks) : 150);
-        const defaultMonthly = (v as any).basicDetails?.monthlyRent || (sellingValue > 0 && durationMonths > 0 ? Math.ceil(sellingValue / durationMonths) : defaultWeekly * 4);
-        setWeeklyRent(defaultWeekly);
-        setMonthlyRent(defaultMonthly);
-    };
-
-    const filteredAvailableVehicles = useMemo(() => {
-        if (!vehicleSearchQuery.trim()) return availableVehicles;
-        const q = vehicleSearchQuery.toLowerCase();
-        return availableVehicles.filter(v => 
-            (v.basicDetails?.make || '').toLowerCase().includes(q) ||
-            (v.basicDetails?.model || '').toLowerCase().includes(q) ||
-            (v.legalDocs?.registrationNumber || (v as any).plateNumber || '').toLowerCase().includes(q) ||
-            (v.basicDetails?.vin || '').toLowerCase().includes(q) ||
-            (v.basicDetails?.fleetNumber || '').toLowerCase().includes(q)
-        );
-    }, [availableVehicles, vehicleSearchQuery]);
-
-    // Calculate repayment preview dates based on activationDate and frequency
-    const repaymentPreview = useMemo(() => {
-        if (!activationDate) return [];
-        const baseDate = new Date(activationDate);
-        if (isNaN(baseDate.getTime())) return [];
-
-        const count = frequency === 'WEEKLY' ? Math.min(durationWeeks || 24, 6) : Math.min(durationMonths || 6, 6);
-        const amount = frequency === 'WEEKLY' ? weeklyRent : monthlyRent;
-        const items = [];
-
-        let nextDueDate = new Date(baseDate);
-        if (frequency === 'WEEKLY') {
-            const currentDay = nextDueDate.getDay();
-            const daysUntilTarget = (3 - currentDay + 7) % 7;
-            const offset = daysUntilTarget === 0 ? 7 : daysUntilTarget;
-            nextDueDate.setDate(nextDueDate.getDate() + offset);
-        } else {
-            nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-            nextDueDate.setDate(1);
-        }
-
-        for (let i = 0; i < count; i++) {
-            const dueDate = new Date(nextDueDate);
-            if (frequency === 'WEEKLY') {
-                dueDate.setDate(nextDueDate.getDate() + (i * 7));
-            } else {
-                dueDate.setMonth(nextDueDate.getMonth() + i);
-                dueDate.setDate(1);
-            }
-            items.push({
-                period: i + 1,
-                label: frequency === 'WEEKLY'
-                    ? `Week ${i + 1} (${formatDate(dueDate)})`
-                    : `Month ${i + 1} (${formatDate(dueDate)})`,
-                dueDate: formatDate(dueDate),
-                amount
-            });
-        }
-        return items;
-    }, [activationDate, frequency, weeklyRent, monthlyRent, durationWeeks, durationMonths]);
-
-    const handleConfirmActivation = async () => {
-        if (!customer?.driver?._id) return;
-        if (!selectedVehicleId) {
-            toast.error('Please select an available vehicle.');
-            return;
-        }
-        const effRent = frequency === 'WEEKLY' ? weeklyRent : monthlyRent;
-        if (!effRent || effRent <= 0) {
-            toast.error('Please enter a valid rental amount.');
-            return;
-        }
-
-        setIsSubmittingActivation(true);
-        const toastId = toast.loading('Activating driver & assigning vehicle...');
-        try {
-            await assignVehicleToDriver(selectedVehicleId, customer.driver._id, {
-                durationMonths: frequency === 'MONTHLY' ? Number(durationMonths) : Math.ceil(Number(durationWeeks) / 4),
-                durationWeeks: frequency === 'WEEKLY' ? Number(durationWeeks) : Number(durationMonths) * 4,
-                monthlyRent: frequency === 'MONTHLY' ? Number(monthlyRent) : Number(weeklyRent) * 4,
-                weeklyRent: frequency === 'WEEKLY' ? Number(weeklyRent) : Math.ceil(Number(monthlyRent) / 4),
-                frequency,
-                depositAmount: Number(depositAmount) || 0,
-                notes: activationNotes || `Reactivated from customer profile on ${activationDate}`,
-                activationDate: activationDate
-            });
-            toast.success('Driver activated, vehicle assigned & repayment plan generated!', { id: toastId });
-            setIsActivateModalOpen(false);
-            await fetchData();
-        } catch (err: any) {
-            console.error('Failed to activate driver:', err);
-            toast.error(err.response?.data?.message || err.message || 'Failed to activate driver', { id: toastId });
-        } finally {
-            setIsSubmittingActivation(false);
-        }
-    };
 
     if (loading) {
         return (
@@ -1017,15 +941,7 @@ const CustomerDetail = () => {
         }
     };
 
-    const customerDriver = customer?.driver as any;
-    const isCustomerDriver = Boolean(customer?.isDriver || customerDriver);
-    const customerVehicle = customerDriver?.currentVehicle;
-    const activeAssignment = customerDriver?.assignmentHistory?.find((a: any) => a.status === 'ACTIVE');
-    const hasAssignedVehicle = isCustomerDriver && Boolean(
-        (customerVehicle && (customerVehicle.legalDocs?.registrationNumber || customerVehicle.plateNumber || customerVehicle.basicDetails?.plateNumber) && customerVehicle.status !== 'INACTIVE') ||
-        (activeAssignment && activeAssignment.status === 'ACTIVE') ||
-        (customer?.cfVehicleNo && !['nill', 'nil', 'na', 'n/a', 'none', '-', '—', ''].includes(String(customer.cfVehicleNo).trim().toLowerCase()) && customerDriver?.status === 'ACTIVE')
-    );
+
 
     return (
         <div className="container-responsive space-y-6 pb-20 animate-in fade-in duration-500">
@@ -1117,13 +1033,35 @@ const CustomerDetail = () => {
                         <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
                     </button>
 
+                    {/* View Driver Profile button (only shown if the customer has a driver profile) */}
+                    {hasDriverProfile && (typeof customerDriver === 'string' ? customerDriver : customerDriver?._id) && (
+                        <button 
+                            type="button"
+                            onClick={() => {
+                                const driverId = typeof customerDriver === 'string' ? customerDriver : customerDriver?._id;
+                                if (driverId) {
+                                    navigate(`${basePath ? `${basePath}` : ''}/drivers/${driverId}`);
+                                }
+                            }}
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm active:scale-95 border cursor-pointer hover:bg-white/10"
+                            style={{ 
+                                background: 'var(--bg-input)', 
+                                border: '1px solid var(--border-main)', 
+                                color: 'var(--text-main)' 
+                            }}
+                            title="Go to Driver Profile"
+                        >
+                            <ExternalLink size={14} className="text-brand-lime" /> View Driver Profile
+                        </button>
+                    )}
+
                     {isCustomerDriver && !hasAssignedVehicle && (
                         <button 
                             type="button"
                             onClick={openAssignVehicleModal}
-                            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm active:scale-95 border cursor-pointer bg-lime-500/15 hover:bg-lime-500/25 text-lime-800 border-lime-500/30 dark:bg-brand-lime/10 dark:hover:bg-brand-lime/20 dark:text-brand-lime dark:border-brand-lime/30"
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm active:scale-95 border cursor-pointer bg-lime-500/15 hover:bg-lime-500/25 border-lime-500/30 text-white dark:bg-brand-lime/10 dark:hover:bg-brand-lime/20 dark:text-white dark:border-brand-lime/30"
                         >
-                            <Car size={14} className="text-lime-700 dark:text-brand-lime" /> Assign Vehicle
+                            <Car size={14} className="text-white" /> Assign Vehicle
                         </button>
                     )}
 
@@ -1138,22 +1076,26 @@ const CustomerDetail = () => {
                         <Zap size={14} /> {customer.status === 'ACTIVE' ? 'Deactivate Customer' : 'Activate Customer'}
                     </button>
 
-                    {customer.driver && (
+                    {/* Driver status button (for drivers) OR Make as Driver button (for customers only) */}
+                    {isCustomerDriver && hasDriverProfile ? (
                         <button 
-                            onClick={() => {
-                                if (customer.driver?.status === 'ACTIVE') {
-                                    setIsCancelModalOpen(true);
-                                } else {
-                                    openActivateModal();
-                                }
-                            }}
+                            type="button"
+                            onClick={handleToggleDriverStatus}
                             className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm active:scale-95 border cursor-pointer ${
-                                customer.driver.status === 'ACTIVE' 
+                                customerDriver.status === 'ACTIVE' 
                                     ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border-rose-500/20' 
                                     : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border-emerald-500/20'
                             }`}
                         >
-                            <User size={14} /> {customer.driver.status === 'ACTIVE' ? 'Deactivate Driver' : 'Activate Driver'}
+                            <User size={14} /> {customerDriver.status === 'ACTIVE' ? 'Deactivate Driver' : 'Activate Driver'}
+                        </button>
+                    ) : (
+                        <button 
+                            type="button"
+                            onClick={openAssignVehicleModal}
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-300 shadow-sm active:scale-95 border cursor-pointer bg-lime-500/15 hover:bg-lime-500/25 border-lime-500/30 text-white dark:bg-brand-lime/10 dark:hover:bg-brand-lime/20 dark:text-white dark:border-brand-lime/30"
+                        >
+                            <UserCheck size={14} className="text-white" /> Make as Driver
                         </button>
                     )}
 
@@ -1480,11 +1422,16 @@ const CustomerDetail = () => {
                                             VEHICLE ASSIGNMENT
                                         </h3>
                                         <span className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-white/5 text-dim border border-white/10">
-                                            DIRECT ASSIGN
+                                            {isCustomerDriver ? 'DIRECT ASSIGN' : 'OPTIONAL'}
                                         </span>
                                     </div>
                                     <p className="text-[11px] text-neutral-400 mt-0.5">
-                                        Assign fleet car to <span className="font-bold" style={{ color: 'var(--text-main)' }}>{customer.name}</span>
+                                        {customerDriver?.status !== 'ACTIVE' && isCustomerDriver
+                                            ? <>Activate driver and assign fleet car to <span className="font-bold" style={{ color: 'var(--text-main)' }}>{customer.name}</span></>
+                                            : isCustomerDriver 
+                                            ? <>Assign fleet car to <span className="font-bold" style={{ color: 'var(--text-main)' }}>{customer.name}</span></>
+                                            : <>Make <span className="font-bold" style={{ color: 'var(--text-main)' }}>{customer.name}</span> a driver and assign vehicle</>
+                                        }
                                     </p>
                                 </div>
                             </div>
@@ -1626,265 +1573,29 @@ const CustomerDetail = () => {
                             <button
                                 type="button"
                                 onClick={handleConfirmAssignVehicle}
-                                disabled={isSubmittingAssign || !assignVehicleId}
+                                disabled={isSubmittingAssign || (isCustomerDriver && !assignVehicleId)}
                                 className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-xl cursor-pointer disabled:opacity-50 hover:opacity-90" style={{ background: 'var(--brand-lime)', color: '#0A0A0A' }}
                             >
-                                {isSubmittingAssign ? 'Assigning Vehicle...' : 'Confirm Vehicle Assignment'}
+                                {isSubmittingAssign ? (
+                                    <span className="flex items-center gap-2">
+                                        <RefreshCw size={12} className="animate-spin" /> Processing...
+                                    </span>
+                                ) : assignVehicleId ? (
+                                    customerDriver?.status !== 'ACTIVE' && isCustomerDriver
+                                        ? 'Activate Driver & Assign Vehicle'
+                                        : isCustomerDriver
+                                        ? 'Confirm Vehicle Assignment'
+                                        : 'Assign & Make Driver'
+                                ) : (
+                                    'Make as Driver'
+                                )}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Activate Driver & Assign Vehicle Modal */}
-            {isActivateModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 transition-all overflow-y-auto">
-                    <div className="w-full max-w-2xl my-8 p-6 sm:p-8 rounded-[2rem] border shadow-2xl relative animate-in zoom-in-95 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                        <div className="flex items-center justify-between pb-4 mb-6 border-b" style={{ borderColor: 'var(--border-main)' }}>
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                    <Car size={22} />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-black uppercase tracking-widest text-white">Activate Driver & Assign Vehicle</h3>
-                                    <p className="text-[11px] font-medium text-dim mt-0.5">
-                                        Assign an available car & generate repayment schedule for <span className="text-white font-bold">{customer.driver?.personalInfo?.fullName || customer.name}</span>
-                                    </p>
-                                </div>
-                            </div>
-                            <button onClick={() => setIsActivateModalOpen(false)} className="text-dim hover:text-white transition-all text-sm font-bold cursor-pointer">&times;</button>
-                        </div>
 
-                        <div className="space-y-6">
-                            {/* 1. Activation Date & Vehicle Selection */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
-                                        <Calendar size={12} /> Activation Date (Contract Start)
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={activationDate}
-                                        onChange={(e) => setActivationDate(e.target.value)}
-                                        className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
-                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                    />
-                                    <span className="text-[9px] text-dim block">Repayment installments will be calibrated from this date.</span>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
-                                        <Search size={12} /> Filter Available Cars
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={vehicleSearchQuery}
-                                        onChange={(e) => setVehicleSearchQuery(e.target.value)}
-                                        placeholder="Search by make, model, plate..."
-                                        className="w-full px-4 py-2.5 rounded-xl text-xs font-medium outline-none border focus:border-brand-lime transition-all"
-                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Vehicle List */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">
-                                        Select Vehicle ({filteredAvailableVehicles.length} available)
-                                    </label>
-                                    {selectedVehicleId && (
-                                        <span className="text-[10px] font-black text-brand-lime uppercase tracking-wider">Vehicle Selected</span>
-                                    )}
-                                </div>
-
-                                {loadingVehicles ? (
-                                    <div className="p-8 text-center text-xs text-dim animate-pulse">Loading available fleet...</div>
-                                ) : filteredAvailableVehicles.length === 0 ? (
-                                    <div className="p-6 rounded-xl border border-dashed text-center text-xs text-dim" style={{ borderColor: 'var(--border-main)' }}>
-                                        No available vehicles found matching your search.
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
-                                        {filteredAvailableVehicles.map(v => {
-                                            const isSelected = selectedVehicleId === v._id;
-                                            const plate = (v as any).plateNumber || v.legalDocs?.registrationNumber || 'No Plate';
-                                            const fleet = v.basicDetails?.fleetNumber ? `Fleet #${v.basicDetails.fleetNumber}` : '';
-                                            return (
-                                                <div
-                                                    key={v._id}
-                                                    onClick={() => handleSelectVehicle(v)}
-                                                    className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                                                        isSelected 
-                                                            ? 'border-brand-lime bg-brand-lime/10 shadow-md' 
-                                                            : 'hover:bg-white/5 border-transparent'
-                                                    }`}
-                                                    style={!isSelected ? { borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' } : {}}
-                                                >
-                                                    <div className="min-w-0 flex-1">
-                                                        <p className="text-xs font-bold truncate text-white">
-                                                            {v.basicDetails?.make} {v.basicDetails?.model} {v.basicDetails?.year ? `(${v.basicDetails.year})` : ''}
-                                                        </p>
-                                                        <p className="text-[10px] font-mono text-dim mt-0.5 flex items-center gap-1.5">
-                                                            <span className="font-bold text-brand-lime">{plate}</span>
-                                                            {fleet && <span>• {fleet}</span>}
-                                                        </p>
-                                                    </div>
-                                                    <div className="text-right ml-2">
-                                                        <span className="text-xs font-black text-white">
-                                                            ${(v.basicDetails?.sellingValue || 0).toLocaleString()}
-                                                        </span>
-                                                        <span className="text-[9px] block text-dim">Value</span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* 2. Rent Terms */}
-                            <div className="p-4 rounded-2xl border space-y-4" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-dim">Billing Frequency</label>
-                                        <div className="grid grid-cols-2 gap-1 p-1 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
-                                            <button
-                                                type="button"
-                                                onClick={() => setFrequency('WEEKLY')}
-                                                className={`py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                                    frequency === 'WEEKLY' ? 'bg-brand-lime text-black' : 'text-dim hover:text-white'
-                                                }`}
-                                            >
-                                                Weekly
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setFrequency('MONTHLY')}
-                                                className={`py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                                    frequency === 'MONTHLY' ? 'bg-brand-lime text-black' : 'text-dim hover:text-white'
-                                                }`}
-                                            >
-                                                Monthly
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-dim">
-                                            {frequency === 'WEEKLY' ? 'Duration (Weeks)' : 'Duration (Months)'}
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            value={frequency === 'WEEKLY' ? durationWeeks : durationMonths}
-                                            onChange={(e) => {
-                                                const val = Math.max(1, Number(e.target.value));
-                                                if (frequency === 'WEEKLY') setDurationWeeks(val);
-                                                else setDurationMonths(val);
-                                            }}
-                                            className="w-full px-4 py-2 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime"
-                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-dim">
-                                            {frequency === 'WEEKLY' ? 'Weekly Rent ($)' : 'Monthly Rent ($)'}
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            value={frequency === 'WEEKLY' ? weeklyRent : monthlyRent}
-                                            onChange={(e) => {
-                                                const val = Math.max(0, Number(e.target.value));
-                                                if (frequency === 'WEEKLY') setWeeklyRent(val);
-                                                else setMonthlyRent(val);
-                                            }}
-                                            className="w-full px-4 py-2 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime"
-                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-dim">Security Deposit ($)</label>
-                                        <input
-                                            type="number"
-                                            min={0}
-                                            value={depositAmount}
-                                            onChange={(e) => setDepositAmount(Math.max(0, Number(e.target.value)))}
-                                            placeholder="Optional down payment / deposit"
-                                            className="w-full px-4 py-2 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime"
-                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-dim">Agreement / Assignment Notes</label>
-                                        <input
-                                            type="text"
-                                            value={activationNotes}
-                                            onChange={(e) => setActivationNotes(e.target.value)}
-                                            placeholder="Optional notes or remarks"
-                                            className="w-full px-4 py-2 rounded-xl text-xs font-medium outline-none border focus:border-brand-lime"
-                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 3. Live Repayment Plan Preview */}
-                            {repaymentPreview.length > 0 && (
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
-                                            <History size={12} className="text-brand-lime" /> Repayment Plan Preview (From {formatDate(activationDate)})
-                                        </label>
-                                        <span className="text-[9px] font-mono text-dim">Next {repaymentPreview.length} Installments</span>
-                                    </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                        {repaymentPreview.map(item => (
-                                            <div
-                                                key={item.period}
-                                                className="p-2.5 rounded-xl border text-xs"
-                                                style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}
-                                            >
-                                                <span className="text-[9px] font-black uppercase text-dim block truncate">{item.label}</span>
-                                                <div className="flex items-center justify-between mt-1">
-                                                    <span className="font-bold text-white">${item.amount}</span>
-                                                    <span className="text-[9px] text-emerald-400 font-medium">{item.dueDate}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsActivateModalOpen(false)}
-                                    disabled={isSubmittingActivation}
-                                    className="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/5 transition-all border border-white/10 cursor-pointer"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleConfirmActivation}
-                                    disabled={isSubmittingActivation || !selectedVehicleId}
-                                    className="px-6 py-2.5 rounded-xl text-black font-black text-[10px] uppercase tracking-widest bg-brand-lime hover:scale-105 active:scale-95 transition-all shadow-xl cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
-                                >
-                                    {isSubmittingActivation ? 'Activating & Assigning...' : 'Activate Driver & Confirm Assignment'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
