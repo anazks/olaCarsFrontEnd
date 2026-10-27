@@ -102,6 +102,8 @@ export interface Driver {
         lastUpdated: string;
     };
     rentTracking?: Array<{
+        _id?: string;
+        assignmentId?: string;
         vehicle?: any | string;
         weekNumber: number;
         weekLabel: string;
@@ -120,6 +122,20 @@ export interface Driver {
             transactionId?: string;
             note?: string;
         }>;
+    }>;
+    assignmentHistory?: Array<{
+        _id: string;
+        vehicle?: any;
+        plateNumber?: string;
+        fleetNumber?: string;
+        vehicleModel?: string;
+        weeklyRent?: number;
+        durationWeeks?: number;
+        startDate?: string;
+        endDate?: string | null;
+        status: 'ACTIVE' | 'CANCELLED' | 'COMPLETED';
+        cancelledBy?: string;
+        cancelNotes?: string;
     }>;
     additionalPayments?: Array<{
         _id: string;

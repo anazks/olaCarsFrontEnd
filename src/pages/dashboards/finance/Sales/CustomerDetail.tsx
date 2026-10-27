@@ -9,7 +9,7 @@ import {
     ChevronLeft, ChevronRight, Search, Eye,
     Car, Hash, Tag, Pencil, History, Clock, ChevronDown, Check, AlertTriangle, UserCheck, ExternalLink
 } from 'lucide-react';
-import { getCustomerById, updateCustomer, updateCustomerWeeklyRent, assignVehicleToCustomer, type Customer } from '../../../../services/customerService';
+import { getCustomerById, updateCustomer, updateCustomerWeeklyRent, updateCustomerContractWeeks, assignVehicleToCustomer, type Customer } from '../../../../services/customerService';
 import { driverService } from '../../../../services/driverService';
 import { getAllVehicles, type Vehicle } from '../../../../services/vehicleService';
 import { getInvoicesByCustomer, type Invoice } from '../../../../services/invoiceService';
@@ -1619,8 +1619,17 @@ const OverviewTab = ({
     totalInvoiced: number;
     onRefresh?: () => void;
 }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const getBasePath = (pathname: string) => {
+        const m = pathname.match(/^(\/admin\/[^/]+)/);
+        return m ? m[1] : '';
+    };
+    const basePath = getBasePath(location.pathname);
+
     const isDriver = !!customer.driver;
     const driver = customer.driver as any;
+    const driverId = driver?._id || (typeof customer.driver === 'string' ? customer.driver : null);
     const vehicle = driver?.currentVehicle;
     const activeAssignment = driver?.assignmentHistory?.find((a: any) => a.status === 'ACTIVE')
         || (driver?.assignmentHistory && driver.assignmentHistory.length > 0
@@ -1688,6 +1697,82 @@ const OverviewTab = ({
     const weeklyRentFormatted = rawWeeklyRent !== null && rawWeeklyRent !== undefined && !isNaN(Number(rawWeeklyRent)) && Number(rawWeeklyRent) > 0
         ? `$${Number(rawWeeklyRent).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         : '—';
+
+    // 8. Contract Duration / Weeks
+    const explicitDurationWeeks = activeAssignment?.durationWeeks 
+        || driver?.durationWeeks 
+        || (driver as any)?.contract?.durationWeeks
+        || (customer as any)?.cfDurationWeeks;
+
+    const currentVehicleId = vehicle?._id 
+        ? String(vehicle._id) 
+        : (typeof vehicle === 'string' ? vehicle : (activeAssignment?.vehicle?._id ? String(activeAssignment.vehicle._id) : (typeof activeAssignment?.vehicle === 'string' ? activeAssignment.vehicle : null)));
+
+    // When counting rent tracking weeks, count only installments that belong to the active contract/vehicle
+    const activeRentTracking = Array.isArray(driver?.rentTracking) && driver.rentTracking.length > 0
+        ? driver.rentTracking.filter((t: any) => {
+            // Exclude cancelled installments from past deactivations
+            if (t.status === 'CANCELLED') return false;
+            // Match current vehicle if vehicle is tagged on installment
+            const itemVehId = t.vehicle?._id ? String(t.vehicle._id) : (t.vehicle ? String(t.vehicle) : null);
+            if (currentVehicleId && itemVehId && itemVehId !== currentVehicleId) {
+                return false;
+            }
+            // Match assignmentId if tagged on installment
+            if (activeAssignment?._id && t.assignmentId && String(t.assignmentId) !== String(activeAssignment._id)) {
+                return false;
+            }
+            // If active assignment has a start date, only include installments for this active contract period
+            if (rawActiveDate && t.dueDate) {
+                const itemDate = new Date(t.dueDate);
+                const actDate = new Date(rawActiveDate);
+                actDate.setHours(0, 0, 0, 0);
+                if (itemDate < actDate) return false;
+            }
+            return true;
+        })
+        : [];
+    const rentTrackingWeeks = activeRentTracking.length > 0 ? activeRentTracking.length : null;
+
+    let computedDurationWeeks: number | null = null;
+    if (explicitDurationWeeks && !isNaN(Number(explicitDurationWeeks))) {
+        computedDurationWeeks = Number(explicitDurationWeeks);
+    } else if (rentTrackingWeeks && rentTrackingWeeks > 0) {
+        computedDurationWeeks = rentTrackingWeeks;
+    } else if (rawActiveDate && rawEndDate && !isNaN(new Date(rawActiveDate).getTime()) && !isNaN(new Date(rawEndDate).getTime())) {
+        const diffMs = Math.abs(new Date(rawEndDate).getTime() - new Date(rawActiveDate).getTime());
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        computedDurationWeeks = Math.max(1, Math.round(diffDays / 7));
+    } else if (vehicleDurationWeeks && !isNaN(Number(vehicleDurationWeeks))) {
+        computedDurationWeeks = Number(vehicleDurationWeeks);
+    }
+
+    // Elapsed weeks calculation if active date exists
+    let elapsedWeeks: number | null = null;
+    if (rawActiveDate && !isNaN(new Date(rawActiveDate).getTime())) {
+        const startMs = new Date(rawActiveDate).getTime();
+        const endMs = rawEndDate && !isNaN(new Date(rawEndDate).getTime()) ? new Date(rawEndDate).getTime() : Date.now();
+        const elapsedDays = Math.max(0, Math.floor((endMs - startMs) / (1000 * 60 * 60 * 24)));
+        elapsedWeeks = Math.floor(elapsedDays / 7);
+    }
+
+    let contractWeeksFormatted = '—';
+    let contractWeeksSubtext = '';
+
+    if (computedDurationWeeks && computedDurationWeeks > 0) {
+        contractWeeksFormatted = `${computedDurationWeeks} ${computedDurationWeeks === 1 ? 'Week' : 'Weeks'}`;
+        if (elapsedWeeks !== null && elapsedWeeks >= 0) {
+            if (rawEndDate && !isNaN(new Date(rawEndDate).getTime()) && new Date(rawEndDate) <= new Date()) {
+                contractWeeksSubtext = `Completed (${elapsedWeeks}w)`;
+            } else {
+                const currentWeek = Math.min(computedDurationWeeks, elapsedWeeks + 1);
+                contractWeeksSubtext = `Week ${currentWeek} of ${computedDurationWeeks}`;
+            }
+        }
+    } else if (elapsedWeeks !== null && elapsedWeeks >= 0) {
+        contractWeeksFormatted = `${elapsedWeeks} ${elapsedWeeks === 1 ? 'Week' : 'Weeks'}`;
+        contractWeeksSubtext = 'Elapsed to date';
+    }
 
     // Modal state for editing contact information
     const [isEditContactModalOpen, setIsEditContactModalOpen] = useState(false);
@@ -1776,6 +1861,74 @@ const OverviewTab = ({
             toast.error(err?.response?.data?.message || err.message || "Failed to update weekly rent", { id: toastId });
         } finally {
             setIsUpdatingRent(false);
+        }
+    };
+
+    // Modal state for editing contract weeks
+    const [isEditWeeksModalOpen, setIsEditWeeksModalOpen] = useState(false);
+    const [selectedDurationWeeks, setSelectedDurationWeeks] = useState<number | string>(60);
+    const [isCustomWeeks, setIsCustomWeeks] = useState(false);
+    const [customWeeksInput, setCustomWeeksInput] = useState('');
+    const [weeksRemark, setWeeksRemark] = useState('');
+    const [isUpdatingWeeks, setIsUpdatingWeeks] = useState(false);
+
+    // Calculate maximum week number that has already been paid or partially paid
+    const maxPaidWeek = useMemo(() => {
+        let maxW = 0;
+        if (Array.isArray(activeRentTracking)) {
+            activeRentTracking.forEach((t: any) => {
+                const isPaid = t.status === 'PAID' || (t.amountPaid && Number(t.amountPaid) > 0);
+                if (isPaid && Number(t.weekNumber) > maxW) {
+                    maxW = Number(t.weekNumber);
+                }
+            });
+        }
+        return maxW;
+    }, [activeRentTracking]);
+
+    const handleOpenEditWeeks = () => {
+        const curWeeks = computedDurationWeeks && computedDurationWeeks > 0 ? computedDurationWeeks : 60;
+        setSelectedDurationWeeks(curWeeks);
+        setIsCustomWeeks(false);
+        setCustomWeeksInput(String(curWeeks));
+        setWeeksRemark('');
+        setIsEditWeeksModalOpen(true);
+    };
+
+    const handleWeeksSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const targetWeeks = isCustomWeeks ? parseInt(customWeeksInput, 10) : Number(selectedDurationWeeks);
+        if (isNaN(targetWeeks) || targetWeeks <= 0) {
+            toast.error("Please enter a valid contract duration in weeks");
+            return;
+        }
+
+        if (maxPaidWeek > 0 && targetWeeks < maxPaidWeek) {
+            toast.error(`Cannot reduce contract to ${targetWeeks} weeks. The customer has already paid up to Week ${maxPaidWeek}. Minimum allowable contract duration is ${maxPaidWeek} weeks.`);
+            return;
+        }
+
+        if (!weeksRemark.trim()) {
+            toast.error("Please provide a reason / remark for the contract duration adjustment");
+            return;
+        }
+
+        setIsUpdatingWeeks(true);
+        const toastId = toast.loading("Updating contract duration...");
+        try {
+            await updateCustomerContractWeeks(customer._id, {
+                durationWeeks: targetWeeks,
+                remark: weeksRemark.trim()
+            });
+            toast.success(`Contract duration successfully updated to ${targetWeeks} weeks!`, { id: toastId });
+            setIsEditWeeksModalOpen(false);
+            setWeeksRemark('');
+            if (onRefresh) onRefresh();
+        } catch (err: any) {
+            console.error("Failed to update contract weeks:", err);
+            toast.error(err?.response?.data?.message || err.message || "Failed to update contract duration", { id: toastId });
+        } finally {
+            setIsUpdatingWeeks(false);
         }
     };
 
@@ -1873,28 +2026,52 @@ const OverviewTab = ({
                                 <Car size={20} />
                             </div>
                             <div>
-                                <h3 className="text-xs font-black uppercase tracking-widest text-white">
+                                <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>
                                     Assigned Vehicle & Contract Lifecycle
                                 </h3>
-                                <p className="text-[10px] font-medium text-dim mt-0.5">
-                                    Vehicle specifications, weekly rental rate, active license plate, identification, and contract dates
+                                <p className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                                    Vehicle specifications, weekly rental rate, contract duration, active license plate, identification, and contract dates
                                 </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            {/* Button on left side of fleet tag */}
+                            {/* Button on left side of fleet tag: Change Rent */}
                             <button
                                 onClick={() => {
                                     setNewRentAmount(rawWeeklyRent ? String(rawWeeklyRent) : '');
                                     setRentRemark('');
                                     setEffectiveDate(new Date().toISOString().split('T')[0]);
                                     setIsRentModalOpen(true);
-                                }}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-brand-lime hover:bg-brand-lime/90 text-black shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                }} 
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider text-white bg-neutral-900 hover:bg-black dark:bg-white/10 dark:hover:bg-white/20 border border-neutral-800 dark:border-white/20 shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
                                 title="Change Weekly Rent"
                             >
-                                <Pencil size={12} /> Change Rent
+                                <Pencil size={12} className="text-white shrink-0" />
+                                <span className="text-white">Edit Rent Amount</span>
                             </button>
+
+                            {/* Button: Edit Contract Weeks */}
+                            <button
+                                onClick={handleOpenEditWeeks}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider text-white bg-neutral-900 hover:bg-black dark:bg-white/10 dark:hover:bg-white/20 border border-neutral-800 dark:border-white/20 shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                title="Edit Contract Duration (Weeks)"
+                            >
+                                <Clock size={12} className="text-white shrink-0" />
+                                <span className="text-white">Edit Contract Week Plan</span>
+                            </button>
+
+                            {/* Button: View Rent Repayment Plan */}
+                            {driverId && (
+                                <button
+                                    type="button"
+                                    onClick={() => navigate(`${basePath ? `${basePath}` : ''}/drivers/${driverId}/rent-plan`)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider text-white bg-neutral-900 hover:bg-black dark:bg-white/10 dark:hover:bg-white/20 border border-neutral-800 dark:border-white/20 shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                    title="View Full Rent Repayment Plan"
+                                >
+                                    <FileText size={12} className="text-white shrink-0" />
+                                    <span className="text-white">Rent Repayment Plan</span>
+                                </button>
+                            )}
 
                             {fleetNo ? (
                                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-brand-lime/10 text-brand-lime border border-brand-lime/20" style={{ color: 'var(--brand-lime)' }}>
@@ -1908,14 +2085,14 @@ const OverviewTab = ({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-4">
                         {/* 1. Vehicle Plate Number */}
                         <div className="p-4 rounded-2xl border flex flex-col justify-between space-y-2.5" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
                             <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
                                 <CreditCard size={12} className="text-brand-lime" /> Plate Number
                             </span>
                             <div>
-                                <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-mono font-black tracking-wider bg-white/10 text-white border border-white/20">
+                                <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-mono font-black tracking-wider bg-neutral-900/5 dark:bg-white/10 border border-neutral-300 dark:border-white/20" style={{ color: 'var(--text-main)' }}>
                                     {plateNumber}
                                 </span>
                             </div>
@@ -1926,7 +2103,7 @@ const OverviewTab = ({
                             <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
                                 <Car size={12} className="text-brand-lime" /> Vehicle Model
                             </span>
-                            <p className="text-xs font-bold text-white truncate" title={vehicleModel}>
+                            <p className="text-xs font-bold truncate" style={{ color: 'var(--text-main)' }} title={vehicleModel}>
                                 {vehicleModel}
                             </p>
                         </div>
@@ -1936,7 +2113,7 @@ const OverviewTab = ({
                             <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
                                 <Tag size={12} className="text-brand-lime" /> VIN Number
                             </span>
-                            <p className="text-xs font-mono font-bold text-white truncate" title={vinNumber}>
+                            <p className="text-xs font-mono font-bold truncate" style={{ color: 'var(--text-main)' }} title={vinNumber}>
                                 {vinNumber}
                             </p>
                         </div>
@@ -1951,7 +2128,34 @@ const OverviewTab = ({
                             </p>
                         </div>
 
-                        {/* 5. Active Date */}
+                        {/* 5. Contract Weeks */}
+                        <div className="p-4 rounded-2xl border flex flex-col justify-between space-y-2.5" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                    <Clock size={12} className="text-brand-lime" /> Contract Weeks
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={handleOpenEditWeeks}
+                                    className="p-1 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-all cursor-pointer"
+                                    title="Edit Contract Weeks"
+                                >
+                                    <Pencil size={11} className="text-white" />
+                                </button>
+                            </span>
+                            <div>
+                                <p className="text-xs font-black text-brand-lime">
+                                    {contractWeeksFormatted}
+                                </p>
+                                {contractWeeksSubtext && (
+                                    <p className="text-[9px] font-semibold text-dim mt-0.5">
+                                        {contractWeeksSubtext}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 6. Active Date */}
                         <div className="p-4 rounded-2xl border flex flex-col justify-between space-y-2.5" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
                             <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
                                 <Calendar size={12} className="text-emerald-400" /> Active Date
@@ -1961,7 +2165,7 @@ const OverviewTab = ({
                             </p>
                         </div>
 
-                        {/* 6. End Date */}
+                        {/* 7. End Date */}
                         <div className="p-4 rounded-2xl border flex flex-col justify-between space-y-2.5" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
                             <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
                                 <Calendar size={12} className="text-amber-400" /> End Date
@@ -1971,12 +2175,12 @@ const OverviewTab = ({
                             </p>
                         </div>
 
-                        {/* 7. Fleet Number */}
+                        {/* 8. Fleet Number */}
                         <div className="p-4 rounded-2xl border flex flex-col justify-between space-y-2.5" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
                             <span className="text-[9px] font-black uppercase tracking-widest text-dim flex items-center gap-1.5">
                                 <Hash size={12} className="text-brand-lime" /> Fleet Number
                             </span>
-                            <p className="text-xs font-bold text-white">
+                            <p className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
                                 {fleetNo ? `#${fleetNo}` : 'Not Assigned'}
                             </p>
                         </div>
@@ -2508,6 +2712,241 @@ const OverviewTab = ({
                     </div>
                 </div>
             )}
+
+            {/* Edit Contract Weeks Modal */}
+            {isEditWeeksModalOpen && (() => {
+                const currentDuration = computedDurationWeeks && computedDurationWeeks > 0 ? computedDurationWeeks : 60;
+                const effectiveTargetWeeks = isCustomWeeks ? (parseInt(customWeeksInput, 10) || 0) : Number(selectedDurationWeeks);
+                const diff = effectiveTargetWeeks > 0 ? effectiveTargetWeeks - currentDuration : 0;
+                const newEndDate = rawActiveDate && effectiveTargetWeeks > 0
+                    ? new Date(new Date(rawActiveDate).getTime() + (effectiveTargetWeeks * 7 * 24 * 60 * 60 * 1000))
+                    : null;
+
+                const standardOptions = [
+                    { value: 4, label: '4 Weeks (~1 Month)' },
+                    { value: 8, label: '8 Weeks (~2 Months)' },
+                    { value: 12, label: '12 Weeks (~3 Months)' },
+                    { value: 16, label: '16 Weeks (~4 Months)' },
+                    { value: 20, label: '20 Weeks (~5 Months)' },
+                    { value: 24, label: '24 Weeks (~6 Months)' },
+                    { value: 36, label: '36 Weeks (~9 Months)' },
+                    { value: 48, label: '48 Weeks (~11 Months)' },
+                    { value: 52, label: '52 Weeks (1 Year)' },
+                    { value: 60, label: '60 Weeks (~14 Months)' },
+                    { value: 78, label: '78 Weeks (~1.5 Years)' },
+                    { value: 104, label: '104 Weeks (2 Years)' },
+                    { value: 156, label: '156 Weeks (3 Years)' },
+                    { value: 208, label: '208 Weeks (4 Years)' },
+                    { value: 260, label: '260 Weeks (5 Years)' },
+                ];
+
+                const isBelowMin = maxPaidWeek > 0 && effectiveTargetWeeks > 0 && effectiveTargetWeeks < maxPaidWeek;
+
+                return (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200">
+                        <div className="w-full max-w-lg p-6 sm:p-8 rounded-[2rem] border shadow-2xl relative animate-in zoom-in-95 duration-200 space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center justify-between pb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 rounded-xl bg-brand-lime/10 text-brand-lime" style={{ color: 'var(--brand-lime)' }}>
+                                        <Clock size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-white">Adjust Contract Weeks</h3>
+                                        <p className="text-[10px] font-medium text-dim mt-0.5">
+                                            Extend or shorten the contract term for {plateNumber !== '—' ? plateNumber : 'assigned vehicle'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => setIsEditWeeksModalOpen(false)} 
+                                    className="p-2 rounded-xl text-dim hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            {/* Guard banner if customer has already paid installments */}
+                            {maxPaidWeek > 0 && (
+                                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
+                                    <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+                                    <div className="text-[11px] leading-relaxed">
+                                        <span className="font-bold text-amber-300">Protected Paid Installments: </span>
+                                        <span className="text-gray-300">
+                                            The customer has already paid up to <strong className="text-white font-mono">Week {maxPaidWeek}</strong>. To protect collected revenue, contract duration cannot be reduced below <strong className="text-white font-mono">{maxPaidWeek} weeks</strong>.
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Summary row */}
+                            <div className="grid grid-cols-3 gap-3 p-3.5 rounded-2xl border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                                <div>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-dim block mb-1">Current</span>
+                                    <span className="text-xs font-black text-white">{currentDuration} Weeks</span>
+                                </div>
+                                <div>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-dim block mb-1">Paid to Date</span>
+                                    <span className="text-xs font-black text-emerald-400">
+                                        {maxPaidWeek > 0 ? `Wk 1 – ${maxPaidWeek}` : '0 Weeks'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-dim block mb-1">Min Allowed</span>
+                                    <span className="text-xs font-black text-brand-lime">
+                                        {maxPaidWeek > 0 ? `${maxPaidWeek} Weeks` : '1 Week'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleWeeksSubmit} className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim block">
+                                        Select Duration Mode / Preset <span className="text-rose-500">*</span>
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={isCustomWeeks ? 'custom' : selectedDurationWeeks}
+                                            onChange={(e) => {
+                                                if (e.target.value === 'custom') {
+                                                    setIsCustomWeeks(true);
+                                                    if (!customWeeksInput) setCustomWeeksInput(String(currentDuration));
+                                                } else {
+                                                    setIsCustomWeeks(false);
+                                                    setSelectedDurationWeeks(Number(e.target.value));
+                                                }
+                                            }}
+                                            className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all appearance-none cursor-pointer"
+                                            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        >
+                                            {standardOptions.map(opt => {
+                                                const disabled = maxPaidWeek > 0 && opt.value < maxPaidWeek;
+                                                return (
+                                                    <option 
+                                                        key={opt.value} 
+                                                        value={opt.value} 
+                                                        disabled={disabled}
+                                                        style={{ background: 'var(--bg-card)', color: disabled ? '#888' : 'var(--text-main)' }}
+                                                    >
+                                                        {opt.label} {opt.value === currentDuration ? ' (Current)' : ''} {disabled ? `(Disabled — Paid to Wk ${maxPaidWeek})` : ''}
+                                                    </option>
+                                                );
+                                            })}
+                                            <option value="custom" style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+                                                Custom Number of Weeks...
+                                            </option>
+                                        </select>
+                                        <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-dim" />
+                                    </div>
+                                </div>
+
+                                {isCustomWeeks && (
+                                    <div className="space-y-1.5 animate-in fade-in duration-200">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-dim flex items-center justify-between">
+                                            <span>Custom Total Weeks <span className="text-rose-500">*</span></span>
+                                            {maxPaidWeek > 0 && (
+                                                <span className="text-[9px] text-amber-400 font-semibold">Min: {maxPaidWeek} Weeks</span>
+                                            )}
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min={maxPaidWeek > 0 ? maxPaidWeek : 1}
+                                            max={520}
+                                            required
+                                            value={customWeeksInput}
+                                            onChange={(e) => setCustomWeeksInput(e.target.value)}
+                                            placeholder={`e.g. ${currentDuration}`}
+                                            className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all"
+                                            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Error warning if user types custom weeks < maxPaidWeek */}
+                                {isBelowMin && (
+                                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px] font-bold flex items-center gap-2">
+                                        <AlertCircle size={14} className="shrink-0" />
+                                        <span>Cannot reduce below {maxPaidWeek} weeks. Week 1 to {maxPaidWeek} are already paid.</span>
+                                    </div>
+                                )}
+
+                                {/* Real-time Preview */}
+                                <div className="p-4 rounded-2xl border space-y-2" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-dim">Adjustment Effect</span>
+                                        {diff > 0 ? (
+                                            <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                +{diff} Weeks (Extension / Append)
+                                            </span>
+                                        ) : diff < 0 ? (
+                                            <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                {diff} Weeks (Reduction / Deduct)
+                                            </span>
+                                        ) : (
+                                            <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-white/5 text-dim border border-white/10">
+                                                No Change
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="text-[11px] text-gray-300">
+                                        {diff > 0 ? (
+                                            <span>Will generate and append <strong className="text-emerald-400">{diff} additional weekly installments</strong> (from Week {currentDuration + 1} to Week {effectiveTargetWeeks}) at the current rate of ${weeklyRentFormatted}/wk.</span>
+                                        ) : diff < 0 ? (
+                                            <span>Will safely remove <strong className="text-amber-400">{Math.abs(diff)} future unpaid installments</strong> and void any generated unpaid invoices beyond Week {effectiveTargetWeeks}.</span>
+                                        ) : (
+                                            <span>Contract duration will remain unchanged at {currentDuration} weeks.</span>
+                                        )}
+                                    </div>
+                                    {newEndDate && (
+                                        <div className="pt-2 border-t flex items-center justify-between text-[11px]" style={{ borderColor: 'var(--border-main)' }}>
+                                            <span className="text-dim">Projected Contract End Date:</span>
+                                            <span className="font-bold text-white font-mono">{formatDate(newEndDate)}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-dim">
+                                        Reason / Remark for Duration Change <span className="text-rose-500">*</span>
+                                    </label>
+                                    <textarea
+                                        required
+                                        rows={2}
+                                        placeholder="Provide mandatory reason (e.g. driver requested 12-week extension, lease term reduction addendum)..."
+                                        value={weeksRemark}
+                                        onChange={(e) => setWeeksRemark(e.target.value)}
+                                        className="w-full px-4 py-2.5 rounded-xl text-xs font-bold outline-none border focus:border-brand-lime transition-all resize-none"
+                                        style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                    />
+                                </div>
+
+                                <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsEditWeeksModalOpen(false)}
+                                        className="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/5 transition-all border border-white/10 cursor-pointer"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isUpdatingWeeks || isBelowMin || effectiveTargetWeeks <= 0 || diff === 0}
+                                        className="px-6 py-2.5 rounded-xl text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                                        style={{ background: 'var(--brand-lime)' }}
+                                    >
+                                        {isUpdatingWeeks ? (
+                                            <>
+                                                <RefreshCw size={14} className="animate-spin" /> Updating...
+                                            </>
+                                        ) : (
+                                            'Confirm & Update Weeks'
+                                        )}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                );
+            })()}
 
                         {/* Attached Documents Card */}
             <div className="p-6 rounded-[1.8rem] border shadow-xl animate-in slide-in-from-bottom-2 duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>

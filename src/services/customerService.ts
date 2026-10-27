@@ -185,6 +185,11 @@ export const updateCustomerWeeklyRent = async (id: string, payload: { weeklyRent
     return res.data;
 };
 
+export const updateCustomerContractWeeks = async (id: string, payload: { durationWeeks: number; remark: string }) => {
+    const res = await api.put(`/api/customers/${id}/contract-weeks`, payload);
+    return res.data;
+};
+
 export const assignVehicleToCustomer = async (
     id: string, 
     payload: { 
