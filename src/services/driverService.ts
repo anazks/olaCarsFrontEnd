@@ -85,6 +85,8 @@ export interface Driver {
         gpsMonitoringActive?: boolean;
         activatedDate?: string;
     };
+    activationDate?: string;
+    deactivationDate?: string;
     status: 'DRAFT' | 'PENDING REVIEW' | 'VERIFICATION' | 'CREDIT CHECK' | 'MANAGER REVIEW' | 'APPROVED' | 'CONTRACT PENDING' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED' | 'INACTIVE';
     branch: string | Branch;
     customer?: any;

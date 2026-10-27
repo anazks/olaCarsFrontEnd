@@ -196,7 +196,7 @@ const DriverRentPlan = () => {
             const fleetLabel = fleet ? `#${fleet} • ` : '';
             const modelLabel = [make, model].filter(Boolean).join(' ') || 'Current Vehicle';
             const fullLabel = plate ? `${fleetLabel}${modelLabel} (${plate})` : `${fleetLabel}${modelLabel}`;
-            const sDate = driver.activationDate ? new Date(driver.activationDate) : null;
+            const sDate = driver.activationDate ? new Date(driver.activationDate) : (driver.activation?.activatedDate ? new Date(driver.activation.activatedDate) : null);
 
             tabs.unshift({
                 id: `active-curr-${currentVehId}`,
@@ -316,7 +316,6 @@ const DriverRentPlan = () => {
     const totalOutstanding = filteredRentTracking.reduce((sum, item) => sum + (item.balance || 0), 0);
     const periodsPaid = filteredRentTracking.filter(item => item.status === 'PAID').length;
     const totalPeriods = filteredRentTracking.length;
-    const isCancelled = (driver.status as string) === 'INACTIVE' || (selectedTab && !selectedTab.isCurrent);
 
     return (
         <div className="min-h-screen p-4 md:p-8 space-y-8" style={{ background: 'var(--bg-main)' }}>
@@ -468,7 +467,7 @@ const DriverRentPlan = () => {
                                     const invVehId = inv.vehicle ? String((inv.vehicle as any)._id || inv.vehicle) : null;
                                     const matchVeh = !invVehId || !itemVehId || invVehId === itemVehId;
                                     const invWeek = Number(inv.weekNumber);
-                                    const invDate = inv.issueDate || inv.createdAt;
+                                    const invDate = (inv as any).issueDate || inv.invoiceDate || inv.createdAt;
                                     const matchPeriod = selectedTab?.startDate && invDate 
                                         ? new Date(invDate) >= selectedTab.startDate && (!selectedTab.endDate || new Date(invDate) <= selectedTab.endDate)
                                         : true;
