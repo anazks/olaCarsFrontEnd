@@ -1747,12 +1747,18 @@ const OverviewTab = ({
         computedDurationWeeks = Number(vehicleDurationWeeks);
     }
 
-    // Elapsed weeks calculation if active date exists
+    // Elapsed weeks calculation:
+    // If the contract has ended in the past, calculate elapsed time up to the termination date.
+    // Otherwise, if the contract is active / ongoing, elapsed time is measured up to today (Date.now()).
     let elapsedWeeks: number | null = null;
     if (rawActiveDate && !isNaN(new Date(rawActiveDate).getTime())) {
         const startMs = new Date(rawActiveDate).getTime();
-        const endMs = rawEndDate && !isNaN(new Date(rawEndDate).getTime()) ? new Date(rawEndDate).getTime() : Date.now();
-        const elapsedDays = Math.max(0, Math.floor((endMs - startMs) / (1000 * 60 * 60 * 24)));
+        const isContractPast = Boolean(
+            (!isCurrentlyActive || (rawEndDate && new Date(rawEndDate) <= new Date())) &&
+            rawEndDate && !isNaN(new Date(rawEndDate).getTime())
+        );
+        const effectiveEndMs = isContractPast ? new Date(rawEndDate).getTime() : Date.now();
+        const elapsedDays = Math.max(0, Math.floor((effectiveEndMs - startMs) / (1000 * 60 * 60 * 24)));
         elapsedWeeks = Math.floor(elapsedDays / 7);
     }
 
@@ -2255,12 +2261,16 @@ const OverviewTab = ({
                                     
                                     let durationLabel = 'Ongoing';
                                     if (start) {
-                                        const endDateCalc = end || new Date();
-                                        const diffMs = endDateCalc.getTime() - start.getTime();
-                                        const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+                                        const endDateCalc = isCurrent ? new Date() : (end || new Date());
+                                        const diffMs = Math.max(0, endDateCalc.getTime() - start.getTime());
+                                        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
                                         const weeks = Math.floor(diffDays / 7);
                                         const remDays = diffDays % 7;
-                                        durationLabel = weeks > 0 ? `${weeks}w ${remDays}d` : `${diffDays}d`;
+                                        if (isCurrent) {
+                                            durationLabel = weeks > 0 ? `${weeks}w ${remDays}d (Ongoing)` : `${diffDays}d (Ongoing)`;
+                                        } else {
+                                            durationLabel = weeks > 0 ? `${weeks}w ${remDays}d` : `${diffDays}d`;
+                                        }
                                     }
 
                                     const vObj = typeof item.vehicle === 'object' && item.vehicle ? item.vehicle : null;
