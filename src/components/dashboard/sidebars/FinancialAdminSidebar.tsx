@@ -18,6 +18,7 @@ import {
   ShoppingBag,
   Wrench,
   FileText,
+  BookOpen,
 } from "lucide-react";
 import { removeToken, getUser } from "../../../utils/auth";
 import { useTranslation } from "react-i18next";
@@ -413,6 +414,12 @@ const FinancialAdminSidebar = ({
           path: "/admin/financial-admin/bulk-uploads",
         },
       ],
+    },
+    {
+      id: "documentation",
+      label: t("sidebar.sections.documentation", "Documentation"),
+      icon: <BookOpen size={22} />,
+      path: "/admin/financial-admin/documentation",
     },
   ];
 

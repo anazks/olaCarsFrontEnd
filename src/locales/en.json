@@ -98,7 +98,8 @@
       "fleet": "Fleet",
       "drivers": "Drivers",
       "gps": "GPS",
-      "workshopManagement": "Workshop Management"
+      "workshopManagement": "Workshop Management",
+      "documentation": "Documentation"
     },
     "items": {
       "dashboard": "Dashboard",

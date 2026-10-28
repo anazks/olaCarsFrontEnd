@@ -10,6 +10,7 @@ import {
   ChevronUp,
   User,
   X,
+  BookOpen,
 } from "lucide-react";
 import { removeToken, getUser } from "../../../utils/auth";
 import { useTranslation } from "react-i18next";
@@ -229,6 +230,12 @@ const OperationalAdminSidebar = ({
           path: "/admin/operational-admin/bulk-uploads",
         },
       ],
+    },
+    {
+      id: "documentation",
+      label: t("sidebar.sections.documentation", "Documentation"),
+      icon: <BookOpen size={22} />,
+      path: "/admin/operational-admin/documentation",
     },
   ];
 

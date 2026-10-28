@@ -98,7 +98,8 @@
       "fleet": "Flota",
       "drivers": "Conductores",
       "gps": "GPS",
-      "workshopManagement": "Gestión de Taller"
+      "workshopManagement": "Gestión de Taller",
+      "documentation": "Documentación"
     },
     "items": {
       "dashboard": "Tablero",

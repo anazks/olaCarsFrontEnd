@@ -11,6 +11,7 @@ import {
   User,
   X,
   FileText,
+  BookOpen,
 } from "lucide-react";
 import { removeToken, getUser } from "../../../utils/auth";
 import { useTranslation } from "react-i18next";
@@ -213,6 +214,12 @@ const BranchManagerSidebar = ({
           path: "/admin/branch-manager/bulk-uploads",
         },
       ],
+    },
+    {
+      id: "documentation",
+      label: t("sidebar.sections.documentation", "Documentation"),
+      icon: <BookOpen size={22} />,
+      path: "/admin/branch-manager/documentation",
     },
   ];
 

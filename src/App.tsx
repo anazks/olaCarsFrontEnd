@@ -172,6 +172,7 @@ import ExpenseDetail from "./pages/dashboards/finance/Purchases/ExpenseDetail";
 import VendorPayment from "./pages/dashboards/finance/Purchases/VendorPayment";
 import VendorPaymentDetail from "./pages/dashboards/finance/Purchases/VendorPaymentDetail";
 import PaymentsPortal from "./pages/dashboards/financialAdmin/PaymentsPortal";
+import DocumentationPage from "./pages/documentation/DocumentationPage";
 
 function App() {
   // Wire up intersection-observer scroll reveals globally
@@ -564,6 +565,9 @@ function App() {
                 path="collections/invoices"
                 element={<CollectionsLedgerView type="GENERAL" />}
               /> */}
+              <Route path="documentation" element={<DocumentationPage />} />
+              <Route path="documentation/:topicId" element={<DocumentationPage />} />
+              <Route path="documentation/*" element={<DocumentationPage />} />
             </Route>
           </Route>
 
@@ -786,6 +790,9 @@ function App() {
                 path="collections/invoices"
                 element={<CollectionsLedgerView type="GENERAL" />}
               />
+              <Route path="documentation" element={<DocumentationPage />} />
+              <Route path="documentation/:topicId" element={<DocumentationPage />} />
+              <Route path="documentation/*" element={<DocumentationPage />} />
             </Route>
           </Route>
 
@@ -1110,6 +1117,9 @@ function App() {
               <Route path="write-offs" element={<FinancialAdminWriteOffs />} />
               <Route path="inventory" element={<InventoryList />} />
               <Route path="inventory/:id" element={<InventoryDetail />} />
+              <Route path="documentation" element={<DocumentationPage />} />
+              <Route path="documentation/:topicId" element={<DocumentationPage />} />
+              <Route path="documentation/*" element={<DocumentationPage />} />
             </Route>
           </Route>
 
@@ -1338,6 +1348,9 @@ function App() {
                 path="collections/invoices"
                 element={<CollectionsLedgerView type="GENERAL" />}
               />
+              <Route path="documentation" element={<DocumentationPage />} />
+              <Route path="documentation/:topicId" element={<DocumentationPage />} />
+              <Route path="documentation/*" element={<DocumentationPage />} />
             </Route>
           </Route>
 
@@ -1518,6 +1531,9 @@ function App() {
                 path="collections/invoices"
                 element={<CollectionsLedgerView type="GENERAL" />}
               />
+              <Route path="documentation" element={<DocumentationPage />} />
+              <Route path="documentation/:topicId" element={<DocumentationPage />} />
+              <Route path="documentation/*" element={<DocumentationPage />} />
             </Route>
           </Route>
 
@@ -1632,6 +1648,9 @@ function App() {
                 path="collections/invoices"
                 element={<CollectionsLedgerView type="GENERAL" />}
               />
+              <Route path="documentation" element={<DocumentationPage />} />
+              <Route path="documentation/:topicId" element={<DocumentationPage />} />
+              <Route path="documentation/*" element={<DocumentationPage />} />
             </Route>
           </Route>
 
@@ -1771,6 +1790,9 @@ function App() {
                 path="collections/invoices"
                 element={<CollectionsLedgerView type="GENERAL" />}
               />
+              <Route path="documentation" element={<DocumentationPage />} />
+              <Route path="documentation/:topicId" element={<DocumentationPage />} />
+              <Route path="documentation/*" element={<DocumentationPage />} />
             </Route>
           </Route>
 
