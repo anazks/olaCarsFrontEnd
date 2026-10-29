@@ -6,7 +6,7 @@ import {
     ChevronDown, Car, ArrowLeft, AlertTriangle, Upload, CheckCircle, XCircle,
     FileText, Shield, ClipboardCheck, Calculator, Satellite, UserCheck,
     Zap, Wrench, Clock, Send, Edit2, Save, Download, Gauge, Battery, Navigation,
-    X, Search, UserMinus, Users, RefreshCw, Layers, Check, Sparkles, CheckSquare
+    X, Search, UserMinus, Users, RefreshCw, Layers, Check, Sparkles
 } from 'lucide-react';
 import { getVehicleById, progressVehicle, uploadVehicleDocuments, editVehicle, assignVehicleToDriver } from '../../../services/vehicleService';
 import { getEligibleInsurances, getVehiclePoliciesByVehicleId } from '../../../services/insuranceService';
@@ -31,7 +31,7 @@ import type { GpsVehicle, GpsLocation } from '../../../services/gpsService';
 import toast from 'react-hot-toast';
 
 // ── Status config ─────────────────────────────────────────────────────────────
-const PIPELINE: VehicleStatus[] = [
+export const PIPELINE: VehicleStatus[] = [
     'PENDING ENTRY', 'DOCUMENTS REVIEW', 'INSPECTION REQUIRED',
     'ACCOUNTING SETUP', 'GPS ACTIVATION', 'BRANCH MANAGER APPROVAL', 'ACTIVE — AVAILABLE',
 ];
@@ -532,25 +532,6 @@ const VehicleDetail = () => {
         }
     };
 
-    const executeAssignNewDriver = async (newDriverId: string) => {
-        if (!vehicle || !id) return;
-        setChangingDriver(true);
-        try {
-            const { updateDriver } = await import('../../../services/driverService');
-            await editVehicle(id, { currentDriver: newDriverId } as any);
-            await updateDriver(newDriverId, { currentVehicle: id, status: 'ACTIVE' });
-
-            toast.success('Driver assigned successfully');
-            setIsChangeDriverModalOpen(false);
-            setDriverSearchQuery('');
-            fetchVehicle();
-        } catch (err: any) {
-            toast.error(err.response?.data?.message || err.message || 'Failed to assign driver');
-        } finally {
-            setChangingDriver(false);
-        }
-    };
-
     const handleConfirmCancelContractOnVehicle = async () => {
         if (!assignedDriver || !id) return;
         setIsSubmittingCancel(true);
@@ -828,7 +809,6 @@ const VehicleDetail = () => {
 
     const isOnboarding = ONBOARDING_STATUSES.includes(vehicle.status);
     const activeMilestone = getActiveMilestoneNumber(vehicle.status);
-    const currentIdx = PIPELINE.indexOf(vehicle.status);
 
     const PhotoPreview = ({ url, label }: { url: string; label: string }) => {
         const fullUrl = toFullUrl(url);
