@@ -17,7 +17,9 @@ import {
     TrendingUp,
     Car,
     Eye,
-    Loader2
+    Loader2,
+    Paperclip,
+    ExternalLink
 } from 'lucide-react';
 import {
     ResponsiveContainer,
@@ -308,6 +310,40 @@ const BranchDetails = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Attached Documents */}
+                    {branch.documents && branch.documents.length > 0 && (
+                        <div className="p-8 rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)]">
+                            <h2 className="text-lg font-black uppercase tracking-tighter mb-4 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-6 bg-lime-500 rounded-full" />
+                                    Attached Documents
+                                </div>
+                                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-lime-500/10 text-lime-400">
+                                    {branch.documents.length}
+                                </span>
+                            </h2>
+                            <div className="space-y-2">
+                                {branch.documents.map((doc: any, idx: number) => (
+                                    <a
+                                        key={idx}
+                                        href={doc.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-between p-3 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-input)] hover:border-lime-500/50 transition group"
+                                    >
+                                        <div className="flex items-center gap-3 truncate pr-2">
+                                            <Paperclip size={16} className="text-lime-400 shrink-0" />
+                                            <span className="text-xs font-semibold truncate group-hover:underline" style={{ color: 'var(--text-main)' }}>
+                                                {doc.name}
+                                            </span>
+                                        </div>
+                                        <ExternalLink size={14} className="opacity-40 group-hover:opacity-100 transition shrink-0" />
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Staff Analytics & List */}

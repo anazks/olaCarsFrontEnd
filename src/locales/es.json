@@ -579,7 +579,22 @@
       "updateButton": "Actualizar Sucursal",
       "deleteTitle": "Confirmar Eliminación",
       "deleteConfirm": "¿Está absolutamente seguro de que desea eliminar {{name}}? Todos los datos asociados se eliminarán permanentemente.",
-      "fetchFailed": "Error al obtener sucursales"
+      "fetchFailed": "Error al obtener sucursales",
+      "shortcutAddCM": "+ Nuevo Gerente",
+      "createCountryManagerShortcut": "Creación Rápida de Gerente de País",
+      "quickAddCountryManagerTitle": "Crear Nuevo Gerente de País",
+      "quickAddCountryManagerSubtitle": "Agregue rápidamente un Gerente de País para asignarlo a esta sucursal",
+      "createNewCMOption": "+ Crear Nuevo Gerente de País...",
+      "countryManagerCreatedSuccess": "¡Gerente de País creado y asignado con éxito!",
+      "viewAllCountryManagers": "Gestionar todos los Gerentes de País",
+      "passwordMinLength": "La contraseña debe tener al menos 6 caracteres.",
+      "attachDocumentsTitle": "Adjuntar Documentos",
+      "dropzonePrompt": "Haga clic o arrastre documentos para adjuntar",
+      "dropzoneHint": "Contratos de arrendamiento, certificados de registro, permisos o fotos de la sucursal (PDF, PNG, JPG hasta 10MB)",
+      "filesToAttach": "Archivos a Adjuntar",
+      "existingDocuments": "Documentos Subidos Previamente",
+      "createdSuccess": "¡Sucursal creada exitosamente!",
+      "updatedSuccess": "¡Sucursal actualizada exitosamente!"
     },
     "branchManagers": {
       "title": "Gestionar Gerentes de Sucursal",

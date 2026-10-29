@@ -1,5 +1,13 @@
 import api from "./api";
 
+export interface BranchDocument {
+  name: string;
+  url: string;
+  mimeType?: string;
+  size?: number;
+  uploadedAt?: string | Date;
+}
+
 export interface Branch {
   _id: string;
   name: string;
@@ -26,6 +34,7 @@ export interface Branch {
     | string;
   status: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
   type?: "BRANCH" | "WORKSHOP";
+  documents?: BranchDocument[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -43,10 +52,12 @@ export interface CreateBranchPayload {
   managerId?: string;
   status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
   type?: "BRANCH" | "WORKSHOP";
+  documents?: BranchDocument[] | any;
 }
 
 export interface UpdateBranchPayload extends Partial<CreateBranchPayload> {
   id: string;
+  existingDocuments?: BranchDocument[] | string;
 }
 
 export interface PaginationMetadata {
@@ -105,17 +116,27 @@ export const getBranchById = async (id: string): Promise<Branch> => {
 
 // POST create branch
 export const createBranch = async (
-  payload: CreateBranchPayload,
+  payload: CreateBranchPayload | FormData,
 ): Promise<Branch> => {
-  const response = await api.post("/api/branch", payload);
+  const response = await api.post("/api/branch", payload, {
+    headers:
+      typeof FormData !== "undefined" && payload instanceof FormData
+        ? { "Content-Type": "multipart/form-data" }
+        : undefined,
+  });
   return response.data;
 };
 
 // PUT update branch
 export const updateBranch = async (
-  payload: UpdateBranchPayload,
+  payload: UpdateBranchPayload | FormData,
 ): Promise<Branch> => {
-  const response = await api.put("/api/branch/", payload);
+  const response = await api.put("/api/branch/", payload, {
+    headers:
+      typeof FormData !== "undefined" && payload instanceof FormData
+        ? { "Content-Type": "multipart/form-data" }
+        : undefined,
+  });
   return response.data;
 };
 

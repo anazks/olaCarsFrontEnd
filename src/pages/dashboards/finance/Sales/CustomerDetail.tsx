@@ -1512,6 +1512,7 @@ const CustomerDetail = () => {
                                                     <option value={60}>60 Weeks (~14 Months)</option>
                                                     <option value={104}>104 Weeks (2 Years)</option>
                                                     <option value={156}>156 Weeks (3 Years)</option>
+                                                    <option value={160}>160 Weeks (5 Years)</option>
                                                     <option value={208}>208 Weeks (4 Years)</option>
                                                     <option value={260}>260 Weeks (5 Years)</option>
                                                 </select>
@@ -2746,6 +2747,7 @@ const OverviewTab = ({
                     { value: 78, label: '78 Weeks (~1.5 Years)' },
                     { value: 104, label: '104 Weeks (2 Years)' },
                     { value: 156, label: '156 Weeks (3 Years)' },
+                    { value: 160, label: '160 Weeks (5 Years)' },
                     { value: 208, label: '208 Weeks (4 Years)' },
                     { value: 260, label: '260 Weeks (5 Years)' },
                 ];

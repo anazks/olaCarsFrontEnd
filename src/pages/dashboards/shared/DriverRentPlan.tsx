@@ -1,7 +1,7 @@
 import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, FileText, Download, CheckCircle2, AlertCircle, TrendingUp, Eye, Car } from 'lucide-react';
+import { ChevronLeft, ChevronDown, FileText, Download, CheckCircle2, AlertCircle, TrendingUp, Eye, Car } from 'lucide-react';
 import { getDriverById } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import { getInvoicesByDriver } from '../../../services/invoiceService';
@@ -94,6 +94,12 @@ const DriverRentPlan = () => {
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedTabId, setSelectedTabId] = useState<string>('');
+    const [visibleCount, setVisibleCount] = useState<number>(30);
+
+    // Reset pagination to first 30 weeks whenever the active plan tab changes
+    useEffect(() => {
+        setVisibleCount(30);
+    }, [selectedTabId]);
 
     useEffect(() => {
         if (id) fetchData();
@@ -307,6 +313,11 @@ const DriverRentPlan = () => {
         }).sort((a, b) => (a.weekNumber || 0) - (b.weekNumber || 0));
     }, [allRentTracking, selectedTab, assignmentTabs]);
 
+    // Paginate table: initial 30 weeks with Load More
+    const displayedRentTracking = useMemo(() => {
+        return filteredRentTracking.slice(0, visibleCount);
+    }, [filteredRentTracking, visibleCount]);
+
     if (loading) return <div className="p-8 text-center animate-pulse font-bold text-dim uppercase tracking-widest">Loading Rent Plan...</div>;
     if (!driver) return <div className="p-8 text-center">Driver data not found</div>;
 
@@ -455,7 +466,7 @@ const DriverRentPlan = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                            {filteredRentTracking.map((item, index) => {
+                            {displayedRentTracking.map((item, index) => {
                                 const periodNum = item.weekNumber || (index + 1);
                                 const itemVehId = item.vehicle ? String((item.vehicle as any)._id || item.vehicle) : selectedTab?.vehicleId;
                                 const displayWeekNum = (periodNum > filteredRentTracking.length) ? index + 1 : periodNum;
@@ -532,6 +543,44 @@ const DriverRentPlan = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Load More Pagination for Rent Plan (Defaults to first 30 weeks) */}
+                {filteredRentTracking.length > visibleCount && (
+                    <div className="p-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/[0.01]" style={{ borderColor: 'var(--border-main)' }}>
+                        <p className="text-xs font-semibold text-dim">
+                            Showing <span className="font-mono text-white font-bold">{Math.min(visibleCount, filteredRentTracking.length)}</span> of <span className="font-mono text-white font-bold">{filteredRentTracking.length}</span> weeks
+                        </p>
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setVisibleCount(prev => Math.min(prev + 30, filteredRentTracking.length))}
+                                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#C8E600] text-black hover:opacity-90 active:scale-95 transition-all flex items-center gap-2 cursor-pointer shadow-md"
+                            >
+                                <ChevronDown size={15} />
+                                <span>Load More Weeks (+30)</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setVisibleCount(filteredRentTracking.length)}
+                                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white/5 border border-white/10 text-dim hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
+                            >
+                                Show All ({filteredRentTracking.length})
+                            </button>
+                        </div>
+                    </div>
+                )}
+                {filteredRentTracking.length > 30 && visibleCount >= filteredRentTracking.length && (
+                    <div className="p-4 border-t flex items-center justify-between text-xs text-dim bg-white/[0.01]" style={{ borderColor: 'var(--border-main)' }}>
+                        <span>All {filteredRentTracking.length} weeks loaded</span>
+                        <button
+                            type="button"
+                            onClick={() => setVisibleCount(30)}
+                            className="text-[11px] font-bold text-[#C8E600] hover:underline cursor-pointer"
+                        >
+                            Show Less (First 30 Weeks)
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

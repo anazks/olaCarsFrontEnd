@@ -54,9 +54,10 @@ const AgreementHistory = ({ agreement, onClose }: AgreementHistoryProps) => {
                     </div>
                     <button 
                         onClick={onClose}
-                        className="p-3 rounded-xl hover:bg-white/5 text-dim transition-all"
+                        className="p-2.5 rounded-xl hover:bg-white/5 text-dim hover:text-main transition-all cursor-pointer"
+                        title="Close"
                     >
-                        <X size={24} />
+                        <X size={20} />
                     </button>
                 </div>
 
@@ -113,24 +114,24 @@ const AgreementHistory = ({ agreement, onClose }: AgreementHistoryProps) => {
                     <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                         {selectedVersion ? (
                             <div className="max-w-3xl mx-auto space-y-8">
-                                <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                                    <div className="flex items-center gap-4 text-sm">
+                                <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-white/5 border border-white/5">
+                                    <div className="flex flex-wrap items-center gap-4 text-sm">
                                         <div className="flex flex-col">
                                             <span className="text-[10px] uppercase font-bold text-dim tracking-wider">{t('management.agreements.history.version')}</span>
                                             <span className="font-bold text-main">{t('management.agreements.history.info', { version: selectedVersion.version })}</span>
                                         </div>
-                                        <div className="w-px h-8 bg-white/10 mx-2" />
+                                        <div className="hidden sm:block w-px h-8 bg-white/10" />
                                         <div className="flex flex-col">
                                             <span className="text-[10px] uppercase font-bold text-dim tracking-wider">{t('management.agreements.history.createdBy')}</span>
                                             <span className="font-medium text-main">{selectedVersion.updatedBy} ({selectedVersion.updaterRole})</span>
                                         </div>
-                                        <div className="w-px h-8 bg-white/10 mx-2" />
+                                        <div className="hidden sm:block w-px h-8 bg-white/10" />
                                         <div className="flex flex-col">
                                             <span className="text-[10px] uppercase font-bold text-dim tracking-wider">{t('management.agreements.history.date')}</span>
-                                            <span className="font-medium text-main">{new Date(selectedVersion.createdAt).toLocaleString()}</span>
+                                            <span className="font-medium text-main">{formatDate(selectedVersion.createdAt)}</span>
                                         </div>
                                     </div>
-                                    <div className="p-2 rounded-lg bg-lime text-black font-bold text-xs uppercase tracking-wider">
+                                    <div className="px-3 py-1.5 rounded-lg bg-lime text-black font-bold text-xs uppercase tracking-wider">
                                         {t(`management.agreements.statusLabels.${selectedVersion.status}`)}
                                     </div>
                                 </div>

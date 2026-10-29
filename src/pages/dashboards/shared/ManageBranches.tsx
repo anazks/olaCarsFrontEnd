@@ -15,6 +15,11 @@ import {
   UserCircle,
   Loader2,
   Eye,
+  EyeOff,
+  UserPlus,
+  ExternalLink,
+  Upload,
+  Paperclip,
 } from "lucide-react";
 import {
   getAllBranches,
@@ -22,6 +27,7 @@ import {
   updateBranch,
   deleteBranch,
   type Branch,
+  type BranchDocument,
   type CreateBranchPayload,
   type UpdateBranchPayload,
 } from "../../../services/branchService";
@@ -115,8 +121,10 @@ const ManageBranches = () => {
   const [deleteTarget, setDeleteTarget] = useState<Branch | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Inline CM creation state
+  // Inline & Quick CM creation state
   const [showAddCM, setShowAddCM] = useState(false);
+  const [showQuickAddCM, setShowQuickAddCM] = useState(false);
+  const [showCmPassword, setShowCmPassword] = useState(false);
   const [addingCM, setAddingCM] = useState(false);
   const [cmFormError, setCmFormError] = useState<string | null>(null);
   const [cmForm, setCmForm] = useState({
@@ -126,6 +134,71 @@ const ManageBranches = () => {
     phone: "",
     country: "",
   });
+
+  const countryToIso2: Record<string, string> = {
+    Panama: "pa",
+    "United States": "us",
+    "United Kingdom": "gb",
+    Canada: "ca",
+    Australia: "au",
+    Germany: "de",
+    France: "fr",
+    India: "in",
+    Nigeria: "ng",
+    "South Africa": "za",
+    "United Arab Emirates": "ae",
+  };
+
+  const openQuickAddCM = () => {
+    setCmForm({
+      fullName: "",
+      email: "",
+      password: "",
+      phone: "",
+      country: formData.country || (countries[0] || "Panama"),
+    });
+    setCmFormError(null);
+    setShowCmPassword(false);
+    setShowQuickAddCM(true);
+  };
+
+  // Document attachment state
+  const [selectedDocs, setSelectedDocs] = useState<File[]>([]);
+  const [existingDocs, setExistingDocs] = useState<BranchDocument[]>([]);
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes || bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+      const validFiles: File[] = [];
+
+      for (const file of filesArray) {
+        if (file.size > MAX_SIZE) {
+          toast.error(`${file.name} exceeds the 10MB limit.`);
+        } else {
+          validFiles.push(file);
+        }
+      }
+      setSelectedDocs((prev) => [...prev, ...validFiles]);
+      e.target.value = "";
+    }
+  };
+
+  const removeSelectedFile = (index: number) => {
+    setSelectedDocs((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const removeExistingDoc = (index: number) => {
+    setExistingDocs((prev) => prev.filter((_, idx) => idx !== index));
+  };
 
     const handleExportExcel = () => {
         if (branches.length === 0) {
@@ -353,6 +426,15 @@ const ManageBranches = () => {
       return;
     }
 
+    if (cmForm.password.length < 6) {
+      setCmFormError(
+        t("management.branches.passwordMinLength", {
+          defaultValue: "Password must be at least 6 characters.",
+        }),
+      );
+      return;
+    }
+
     setAddingCM(true);
     setCmFormError(null);
     try {
@@ -364,11 +446,24 @@ const ManageBranches = () => {
         country: cmForm.country.trim(),
         status: "ACTIVE",
       };
-      await createCountryManager(payload);
+      const createdRes: any = await createCountryManager(payload);
+      const newCm = createdRes?.data || createdRes;
+
       // Refresh country managers list
       const response = await getAllCountryManagers({ limit: 100 });
       setCountryManagers(response.data);
+
+      // Auto-assign the newly created Country Manager in branch form
+      if (newCm?._id) {
+        setFormData((prev) => ({
+          ...prev,
+          countryManager: newCm._id,
+          country: newCm.country || prev.country,
+        }));
+      }
+
       setShowAddCM(false);
+      setShowQuickAddCM(false);
       setCmForm({
         fullName: "",
         email: "",
@@ -376,6 +471,12 @@ const ManageBranches = () => {
         phone: "",
         country: "",
       });
+      setShowCmPassword(false);
+      toast.success(
+        t("management.branches.countryManagerCreatedSuccess", {
+          defaultValue: "Country Manager created and assigned successfully!",
+        }),
+      );
     } catch (err: any) {
       setCmFormError(
         err?.response?.data?.message || "Failed to create Country Manager.",
@@ -396,6 +497,8 @@ const ManageBranches = () => {
   const openCreateBranchModal = () => {
     setModalMode("create_branch");
     setSelectedBranch(null);
+    setSelectedDocs([]);
+    setExistingDocs([]);
     setFormData({
       name: "",
       code: "",
@@ -416,6 +519,8 @@ const ManageBranches = () => {
   const openCreateWorkshopModal = () => {
     setModalMode("create_workshop");
     setSelectedBranch(null);
+    setSelectedDocs([]);
+    setExistingDocs([]);
     setFormData({
       name: "",
       code: "",
@@ -436,6 +541,8 @@ const ManageBranches = () => {
   const openEditModal = (branch: Branch) => {
     setModalMode("edit");
     setSelectedBranch(branch);
+    setSelectedDocs([]);
+    setExistingDocs(branch.documents || []);
     const cManagerId =
       typeof branch.countryManager === "object"
         ? branch.countryManager?._id
@@ -465,6 +572,8 @@ const ManageBranches = () => {
   const closeModal = () => {
     setModalMode(null);
     setSelectedBranch(null);
+    setSelectedDocs([]);
+    setExistingDocs([]);
     setFormError(null);
   };
 
@@ -523,25 +632,85 @@ const ManageBranches = () => {
 
     try {
       if (modalMode === "create_branch" || modalMode === "create_workshop") {
-        const payload: CreateBranchPayload = {
-          ...formData,
-          email: formData.email.trim(),
-          status: formData.status as any,
-          type: formData.type as any,
-        };
-        await createBranch(payload);
+        if (selectedDocs.length > 0) {
+          const formDataPayload = new FormData();
+          formDataPayload.append("name", formData.name.trim());
+          formDataPayload.append("code", formData.code.trim().toUpperCase());
+          formDataPayload.append("address", formData.address.trim());
+          formDataPayload.append("city", formData.city.trim());
+          formDataPayload.append("state", formData.state.trim());
+          formDataPayload.append("phone", formData.phone.trim());
+          formDataPayload.append("email", formData.email.trim());
+          formDataPayload.append("country", formData.country.trim());
+          if (formData.countryManager) {
+            formDataPayload.append("countryManager", formData.countryManager);
+          }
+          formDataPayload.append("status", formData.status);
+          formDataPayload.append("type", formData.type);
+          selectedDocs.forEach((file) => {
+            formDataPayload.append("documents", file);
+          });
+          await createBranch(formDataPayload);
+        } else {
+          const payload: CreateBranchPayload = {
+            ...formData,
+            email: formData.email.trim(),
+            status: formData.status as any,
+            type: formData.type as any,
+          };
+          await createBranch(payload);
+        }
       } else if (modalMode === "edit" && selectedBranch) {
-        const payload: UpdateBranchPayload = {
-          id: selectedBranch._id,
-          ...formData,
-          email: formData.email.trim(),
-          status: formData.status as any,
-          type: formData.type as any,
-        };
-        await updateBranch(payload);
+        if (
+          selectedDocs.length > 0 ||
+          existingDocs.length !== (selectedBranch.documents?.length || 0)
+        ) {
+          const formDataPayload = new FormData();
+          formDataPayload.append("id", selectedBranch._id);
+          formDataPayload.append("name", formData.name.trim());
+          formDataPayload.append("code", formData.code.trim().toUpperCase());
+          formDataPayload.append("address", formData.address.trim());
+          formDataPayload.append("city", formData.city.trim());
+          formDataPayload.append("state", formData.state.trim());
+          formDataPayload.append("phone", formData.phone.trim());
+          formDataPayload.append("email", formData.email.trim());
+          formDataPayload.append("country", formData.country.trim());
+          if (formData.countryManager) {
+            formDataPayload.append("countryManager", formData.countryManager);
+          }
+          formDataPayload.append("status", formData.status);
+          formDataPayload.append("type", formData.type);
+          formDataPayload.append(
+            "existingDocuments",
+            JSON.stringify(existingDocs),
+          );
+          selectedDocs.forEach((file) => {
+            formDataPayload.append("documents", file);
+          });
+          await updateBranch(formDataPayload);
+        } else {
+          const payload: UpdateBranchPayload = {
+            id: selectedBranch._id,
+            ...formData,
+            email: formData.email.trim(),
+            status: formData.status as any,
+            type: formData.type as any,
+            existingDocuments: existingDocs,
+          };
+          await updateBranch(payload);
+        }
       }
       closeModal();
       fetchBranches();
+      toast.success(
+        modalMode === "edit"
+          ? t("management.branches.updatedSuccess", {
+              defaultValue: "Branch updated successfully!",
+            })
+          : t("management.branches.createdSuccess", {
+              defaultValue: "Branch created successfully!",
+            }),
+      );
     } catch (err: any) {
       setFormError(
         err.response?.data?.message ||
@@ -1588,48 +1757,100 @@ const ManageBranches = () => {
                   </div>
 
                   {/* Country Manager */}
-                  <div className="space-y-1">
-                    <label
-                      className="text-xs font-medium"
-                      style={{ color: "var(--text-dim)" }}
-                    >
-                      {t("management.common.modal.countryManager")}
-                    </label>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label
+                        className="text-xs font-medium"
+                        style={{ color: "var(--text-dim)" }}
+                      >
+                        {t("management.common.modal.countryManager")} <span className="text-rose-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={openQuickAddCM}
+                        className="text-xs font-semibold flex items-center gap-1 hover:underline transition-colors cursor-pointer"
+                        style={{ color: "var(--brand-lime, #84cc16)" }}
+                        title={t("management.branches.createCountryManagerShortcut", {
+                          defaultValue: "Quick Create Country Manager",
+                        })}
+                      >
+                        <Plus size={13} />
+                        <span>
+                          {t("management.branches.shortcutAddCM", {
+                            defaultValue: "+ New Manager",
+                          })}
+                        </span>
+                      </button>
+                    </div>
 
-                    <select
-                      required
-                      value={formData.countryManager}
-                      onChange={(e) => {
-                        const managerId = e.target.value;
-                        const manager = countryManagers.find(
-                          (m) => m._id === managerId,
-                        );
-                        setFormData({
-                          ...formData,
-                          countryManager: managerId,
-                          country: manager ? manager.country : "",
-                        });
-                      }}
-                      className="w-full px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
-                      style={{
-                        background: "var(--bg-input)",
-                        border: "1px solid var(--border-main)",
-                        color: "var(--text-main)",
-                      }}
-                    >
-                      <option value="">
-                        {t("management.common.modal.selectCountryManager")}
-                      </option>
-                      {countryManagers.map((m: CountryManager) => (
-                        <option
-                          key={m._id}
-                          value={m._id}
-                          style={{ background: "var(--bg-card)" }}
-                        >
-                          {m.fullName} ({m.country})
+                    <div className="flex items-center gap-2">
+                      <select
+                        required
+                        value={formData.countryManager}
+                        onChange={(e) => {
+                          const managerId = e.target.value;
+                          if (managerId === "__CREATE_NEW_CM__") {
+                            openQuickAddCM();
+                            return;
+                          }
+                          const manager = countryManagers.find(
+                            (m) => m._id === managerId,
+                          );
+                          setFormData({
+                            ...formData,
+                            countryManager: managerId,
+                            country: manager ? manager.country : "",
+                          });
+                        }}
+                        className="flex-1 px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                        style={{
+                          background: "var(--bg-input)",
+                          border: "1px solid var(--border-main)",
+                          color: "var(--text-main)",
+                        }}
+                      >
+                        <option value="">
+                          {t("management.common.modal.selectCountryManager")}
                         </option>
-                      ))}
-                    </select>
+                        <option
+                          value="__CREATE_NEW_CM__"
+                          style={{
+                            color: "var(--brand-lime, #84cc16)",
+                            fontWeight: "600",
+                            background: "var(--bg-card)",
+                          }}
+                        >
+                          ➕ {t("management.branches.createNewCMOption", {
+                            defaultValue: "+ Create New Country Manager...",
+                          })}
+                        </option>
+                        {countryManagers.map((m: CountryManager) => (
+                          <option
+                            key={m._id}
+                            value={m._id}
+                            style={{ background: "var(--bg-card)" }}
+                          >
+                            {m.fullName} ({m.country})
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={openQuickAddCM}
+                        className="p-2 rounded-lg border flex items-center justify-center transition-all hover:brightness-110 active:scale-95 shrink-0 cursor-pointer"
+                        style={{
+                          background: "var(--bg-input)",
+                          borderColor: "var(--border-main)",
+                          color: "var(--brand-lime, #84cc16)",
+                        }}
+                        title={t("management.branches.createCountryManagerShortcut", {
+                          defaultValue: "Quick Create Country Manager",
+                        })}
+                      >
+                        <Plus size={18} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Email */}
@@ -1749,6 +1970,194 @@ const ManageBranches = () => {
                   </select>
                 </div>
 
+                {/* ATTACH DOCUMENTS (OPTIONAL) */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between">
+                    <label
+                      className="text-xs font-semibold flex items-center gap-1.5"
+                      style={{ color: "var(--text-main)" }}
+                    >
+                      <Paperclip size={14} className="text-lime" />
+                      <span>
+                        {t("management.branches.attachDocumentsTitle", {
+                          defaultValue: "Attach Documents",
+                        })}
+                      </span>
+                    </label>
+                    <span
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                      style={{
+                        background: "rgba(132, 204, 22, 0.1)",
+                        color: "var(--brand-lime, #84cc16)",
+                        border: "1px solid rgba(132, 204, 22, 0.25)",
+                      }}
+                    >
+                      {t("management.common.optional", {
+                        defaultValue: "Optional",
+                      })}
+                    </span>
+                  </div>
+
+                  {/* Dropzone container */}
+                  <div
+                    className="relative border-2 border-dashed rounded-xl p-4 text-center transition-all hover:border-lime/60 group cursor-pointer"
+                    style={{
+                      borderColor: "var(--border-main)",
+                      background: "var(--bg-input)",
+                    }}
+                  >
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div className="flex flex-col items-center justify-center py-1 pointer-events-none">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center mb-1.5 transition-transform group-hover:scale-110"
+                        style={{
+                          background: "rgba(132, 204, 22, 0.12)",
+                          color: "var(--brand-lime, #84cc16)",
+                        }}
+                      >
+                        <Upload size={18} />
+                      </div>
+                      <p
+                        className="text-xs font-semibold"
+                        style={{ color: "var(--text-main)" }}
+                      >
+                        {t("management.branches.dropzonePrompt", {
+                          defaultValue: "Click or drag documents to attach",
+                        })}
+                      </p>
+                      <p
+                        className="text-[11px] mt-0.5"
+                        style={{ color: "var(--text-dim)" }}
+                      >
+                        {t("management.branches.dropzoneHint", {
+                          defaultValue:
+                            "Rental agreements, registration certificates, permits, or branch photos (PDF, PNG, JPG up to 10MB)",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Selected Files to Upload */}
+                  {selectedDocs.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-lime">
+                        {t("management.branches.filesToAttach", {
+                          defaultValue: "Files to Attach",
+                        })}{" "}
+                        ({selectedDocs.length})
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                        {selectedDocs.map((file, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-2.5 rounded-xl border text-xs"
+                            style={{
+                              background: "rgba(132, 204, 22, 0.04)",
+                              borderColor: "rgba(132, 204, 22, 0.25)",
+                            }}
+                          >
+                            <div className="flex items-center gap-2 truncate pr-2">
+                              <FileText
+                                size={15}
+                                className="text-lime shrink-0"
+                              />
+                              <div className="truncate">
+                                <p
+                                  className="truncate font-medium text-xs"
+                                  style={{ color: "var(--text-main)" }}
+                                >
+                                  {file.name}
+                                </p>
+                                <p
+                                  className="text-[10px]"
+                                  style={{ color: "var(--text-dim)" }}
+                                >
+                                  {formatFileSize(file.size)}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeSelectedFile(idx)}
+                              className="p-1 hover:text-red-400 text-dim transition cursor-pointer"
+                              title="Remove file"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Existing Uploaded Documents (if editing) */}
+                  {existingDocs.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <span
+                        className="text-[10px] font-bold uppercase tracking-wider"
+                        style={{ color: "var(--text-dim)" }}
+                      >
+                        {t("management.branches.existingDocuments", {
+                          defaultValue: "Previously Uploaded Documents",
+                        })}{" "}
+                        ({existingDocs.length})
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                        {existingDocs.map((doc, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-2.5 rounded-xl border text-xs"
+                            style={{
+                              background: "var(--bg-input)",
+                              borderColor: "var(--border-main)",
+                            }}
+                          >
+                            <a
+                              href={doc.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 truncate pr-2 hover:underline"
+                              style={{ color: "var(--text-main)" }}
+                            >
+                              <FileText
+                                size={15}
+                                className="text-blue-400 shrink-0"
+                              />
+                              <div className="truncate">
+                                <p className="truncate font-medium text-xs">
+                                  {doc.name}
+                                </p>
+                                {doc.size && (
+                                  <p
+                                    className="text-[10px]"
+                                    style={{ color: "var(--text-dim)" }}
+                                  >
+                                    {formatFileSize(doc.size)}
+                                  </p>
+                                )}
+                              </div>
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => removeExistingDoc(idx)}
+                              className="p-1 hover:text-red-400 text-dim transition cursor-pointer"
+                              title="Remove document"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* ERROR */}
                 {formError && (
                   <div
@@ -1859,6 +2268,315 @@ const ManageBranches = () => {
                   t("management.common.delete.confirmSubmit")
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Quick Add Country Manager Modal */}
+      {showQuickAddCM && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center p-3 animate-in fade-in duration-200"
+          style={{
+            background: "rgba(0, 0, 0, 0.82)",
+            backdropFilter: "blur(8px)",
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowQuickAddCM(false);
+          }}
+        >
+          <div
+            className="rounded-2xl p-6 max-w-lg w-full mx-2 relative border shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            style={{
+              background: "var(--bg-card)",
+              borderColor: "var(--border-main)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                  style={{
+                    background: "rgba(132, 204, 22, 0.12)",
+                    color: "var(--brand-lime, #84cc16)",
+                  }}
+                >
+                  <UserPlus size={22} />
+                </div>
+                <div>
+                  <h3
+                    className="text-lg font-bold"
+                    style={{ color: "var(--text-main)" }}
+                  >
+                    {t("management.branches.quickAddCountryManagerTitle", {
+                      defaultValue: "Create New Country Manager",
+                    })}
+                  </h3>
+                  <p
+                    className="text-xs"
+                    style={{ color: "var(--text-dim)" }}
+                  >
+                    {t("management.branches.quickAddCountryManagerSubtitle", {
+                      defaultValue:
+                        "Quickly add a Country Manager to assign to this branch",
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowQuickAddCM(false)}
+                className="p-1.5 rounded-lg text-dim hover:text-[var(--text-main)] hover:bg-white/10 transition cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Error Message */}
+            {cmFormError && (
+              <div
+                className="p-3 mb-4 rounded-xl text-sm flex items-center gap-2"
+                style={{
+                  background: "rgba(239, 68, 68, 0.1)",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  color: "#ef4444",
+                }}
+              >
+                <AlertTriangle size={16} className="shrink-0" />
+                <span>{cmFormError}</span>
+              </div>
+            )}
+
+            {/* Form */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Full Name */}
+                <div className="space-y-1">
+                  <label
+                    className="text-xs font-medium"
+                    style={{ color: "var(--text-dim)" }}
+                  >
+                    {t("management.common.modal.fullName", {
+                      defaultValue: "Full Name",
+                    })}{" "}
+                    <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. John Doe"
+                    value={cmForm.fullName}
+                    onChange={(e) =>
+                      setCmForm({ ...cmForm, fullName: e.target.value })
+                    }
+                    className="w-full px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                    style={{
+                      background: "var(--bg-input)",
+                      border: "1px solid var(--border-main)",
+                      color: "var(--text-main)",
+                    }}
+                  />
+                </div>
+
+                {/* Country */}
+                <div className="space-y-1">
+                  <label
+                    className="text-xs font-medium"
+                    style={{ color: "var(--text-dim)" }}
+                  >
+                    {t("management.common.modal.country", {
+                      defaultValue: "Country",
+                    })}{" "}
+                    <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={cmForm.country}
+                    onChange={(e) =>
+                      setCmForm({ ...cmForm, country: e.target.value })
+                    }
+                    className="w-full px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                    style={{
+                      background: "var(--bg-input)",
+                      border: "1px solid var(--border-main)",
+                      color: "var(--text-main)",
+                    }}
+                  >
+                    <option value="">
+                      {t("management.common.modal.selectCountry", {
+                        defaultValue: "Select Country",
+                      })}
+                    </option>
+                    {countries.map((c) => (
+                      <option
+                        key={c}
+                        value={c}
+                        style={{ background: "var(--bg-card)" }}
+                      >
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Email */}
+                <div className="space-y-1">
+                  <label
+                    className="text-xs font-medium"
+                    style={{ color: "var(--text-dim)" }}
+                  >
+                    {t("management.common.modal.email", {
+                      defaultValue: "Email",
+                    })}{" "}
+                    <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="manager@olacars.com"
+                    value={cmForm.email}
+                    onChange={(e) =>
+                      setCmForm({ ...cmForm, email: e.target.value })
+                    }
+                    className="w-full px-3 py-2.5 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                    style={{
+                      background: "var(--bg-input)",
+                      border: "1px solid var(--border-main)",
+                      color: "var(--text-main)",
+                    }}
+                  />
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-1">
+                  <label
+                    className="text-xs font-medium"
+                    style={{ color: "var(--text-dim)" }}
+                  >
+                    {t("management.common.modal.phone", {
+                      defaultValue: "Phone",
+                    })}{" "}
+                    <span className="text-rose-500">*</span>
+                  </label>
+                  <PhoneInput
+                    country={countryToIso2[cmForm.country] || "in"}
+                    value={cmForm.phone}
+                    onChange={(phone) => setCmForm({ ...cmForm, phone })}
+                    containerStyle={{ width: "100%" }}
+                    inputStyle={{
+                      width: "100%",
+                      height: "40px",
+                      background: "var(--bg-input)",
+                      border: "1px solid var(--border-main)",
+                      color: "var(--text-main)",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                    }}
+                    buttonStyle={{
+                      background: "var(--bg-input)",
+                      border: "1px solid var(--border-main)",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1">
+                <label
+                  className="text-xs font-medium"
+                  style={{ color: "var(--text-dim)" }}
+                >
+                  {t("management.common.modal.password", {
+                    defaultValue: "Password",
+                  })}{" "}
+                  <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showCmPassword ? "text" : "password"}
+                    placeholder="Minimum 6 characters"
+                    value={cmForm.password}
+                    onChange={(e) =>
+                      setCmForm({ ...cmForm, password: e.target.value })
+                    }
+                    className="w-full px-3 py-2.5 pr-10 rounded-lg text-sm outline-none focus:ring-2 focus:ring-lime"
+                    style={{
+                      background: "var(--bg-input)",
+                      border: "1px solid var(--border-main)",
+                      color: "var(--text-main)",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCmPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-dim hover:text-[var(--text-main)] transition cursor-pointer"
+                  >
+                    {showCmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Link to full country managers page if permitted */}
+              {["/admin/admin", "/admin/operational-admin", "/admin/financial-admin"].includes(
+                location.pathname.split("/manage-branches")[0],
+              ) && (
+                <div className="pt-1 flex items-center justify-between text-xs">
+                  <span style={{ color: "var(--text-dim)" }}>
+                    Need granular permissions or roles?
+                  </span>
+                  <a
+                    href={`${location.pathname.split("/manage-branches")[0]}/manage-country-managers`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 font-medium hover:underline text-lime"
+                  >
+                    <span>
+                      {t("management.branches.viewAllCountryManagers", {
+                        defaultValue: "Manage all Country Managers",
+                      })}
+                    </span>
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
+              )}
+
+              {/* Buttons */}
+              <div className="flex justify-end gap-3 pt-3 border-t border-[var(--border-main)]">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickAddCM(false)}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium transition-all border cursor-pointer hover:bg-white/5"
+                  style={{
+                    borderColor: "var(--border-main)",
+                    color: "var(--text-dim)",
+                  }}
+                >
+                  {t("management.common.modal.cancel", { defaultValue: "Cancel" })}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateCM}
+                  disabled={addingCM}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-50 border-none cursor-pointer"
+                  style={{
+                    backgroundColor: "var(--brand-lime, #84cc16)",
+                    color: "#0A0A0A",
+                  }}
+                >
+                  {addingCM ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Plus size={16} />
+                  )}
+                  {addingCM
+                    ? t("management.common.modal.saving", {
+                        defaultValue: "Saving...",
+                      })
+                    : t("management.branches.createAndSelect", {
+                        defaultValue: "Create & Assign",
+                      })}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -58,7 +58,7 @@ const CreateVehicle = () => {
     const [formData, setFormData] = useState<Partial<CreateVehiclePayload>>({
         purchaseDetails: {
             vendorName: '',
-            purchaseDate: '',
+            purchaseDate: new Date().toISOString().split('T')[0],
             purchasePrice: 0,
             currency: 'USD',
             paymentMethod: 'Cash',
@@ -71,6 +71,8 @@ const CreateVehicle = () => {
             condition: 'New'
         } as any
     });
+
+    const hasSelectedPO = Boolean(formData.purchaseDetails?.purchaseOrder);
 
     const fetchInitialData = useCallback(async () => {
         setBranchesLoading(true);
@@ -127,7 +129,7 @@ const CreateVehicle = () => {
                 purchaseOrder: '',
                 vendorName: '',
                 purchasePrice: 0,
-                purchaseDate: '',
+                purchaseDate: new Date().toISOString().split('T')[0],
             },
             handlingStaff: '',
             basicDetails: { ...prev.basicDetails, fleetNumber: '' } as any
@@ -175,9 +177,9 @@ const CreateVehicle = () => {
                     ...prev.purchaseDetails!,
                     purchaseOrder: poId,
                     vendorName,
-                    branch: branchId || '',
+                    branch: branchId || prev.purchaseDetails?.branch || '',
                     purchasePrice: selectedPO.totalAmount || 0,
-                    purchaseDate: poDate,
+                    purchaseDate: poDate || new Date().toISOString().split('T')[0],
                 }
             }));
         } else {
@@ -185,11 +187,9 @@ const CreateVehicle = () => {
                 ...prev,
                 purchaseDetails: {
                     ...prev.purchaseDetails!,
-                    purchaseOrder: poId,
-                    vendorName: '',
-                    branch: formData.purchaseDetails?.branch || '',
-                    purchasePrice: 0,
-                    purchaseDate: '',
+                    purchaseOrder: '',
+                    branch: prev.purchaseDetails?.branch || '',
+                    purchaseDate: prev.purchaseDetails?.purchaseDate || new Date().toISOString().split('T')[0],
                 }
             }));
         }
@@ -206,13 +206,31 @@ const CreateVehicle = () => {
         e.preventDefault();
         const p = formData.purchaseDetails;
         if (!p?.branch) { setError('Branch is required'); return; }
-        if (!p?.purchaseOrder) { setError('Purchase Order is required'); return; }
         if (!formData.handlingStaff) { setError('Handling Staff is required'); return; }
+        if (p?.purchasePrice === undefined || p?.purchasePrice === null || Number(p.purchasePrice) < 0) {
+            setError('Valid purchase price is required');
+            return;
+        }
+        if (!p?.purchaseDate) {
+            setError('Purchase date is required');
+            return;
+        }
 
         setLoading(true);
         setError(null);
         try {
-            await createVehicle(formData as CreateVehiclePayload);
+            const payload: CreateVehiclePayload = {
+                ...formData as CreateVehiclePayload,
+                purchaseDetails: {
+                    ...formData.purchaseDetails!,
+                    purchaseOrder: p.purchaseOrder?.trim() ? p.purchaseOrder.trim() : undefined,
+                    vendorName: p.vendorName?.trim() || 'Direct Acquisition',
+                    purchasePrice: Number(p.purchasePrice) || 0,
+                    purchaseDate: p.purchaseDate || new Date().toISOString().split('T')[0],
+                }
+            };
+
+            await createVehicle(payload);
             setSuccess(true);
             setTimeout(() => navigate('../pending-vehicles'), 1500);
         } catch (err: any) {
@@ -239,28 +257,30 @@ const CreateVehicle = () => {
     if (success) {
         return (
             <div className="max-w-4xl mx-auto flex flex-col items-center justify-center py-20 text-center space-y-4">
-            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Form Field', active: true }]} />
+                <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Vehicles', path: '../vehicles' }, { label: 'Create New Vehicle', active: true }]} />
 
                 <div className="w-20 h-20 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center">
                     <Check size={40} />
                 </div>
                 <h1 className="text-xl font-bold" style={{ color: 'var(--text-main)' }}>Vehicle Created!</h1>
-                <p style={{ color: 'var(--text-dim)' }}>Redirecting...</p>
+                <p style={{ color: 'var(--text-dim)' }}>Redirecting to pending vehicles...</p>
             </div>
         );
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Vehicles', path: '../vehicles' }, { label: 'Create New Vehicle', active: true }]} />
+
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-lg font-bold flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-                        <Car size={28} style={{ color: '#C8E600' }} />
+                    <h1 className="text-lg font-bold flex items-center gap-2.5" style={{ color: 'var(--text-main)' }}>
+                        <Car size={26} style={{ color: 'var(--brand-lime)' }} />
                         Create New Vehicle
                     </h1>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-dim)' }}>
-                        Enter purchase details from an approved PO
+                    <p className="text-sm mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                        Enter purchase details directly or link an approved Purchase Order
                     </p>
                 </div>
                 <button
@@ -274,7 +294,7 @@ const CreateVehicle = () => {
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="rounded-2xl border p-6 space-y-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex items-center gap-2 mb-2 text-[#C8E600]">
+                    <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--brand-lime)' }}>
                         <DollarSign size={18} />
                         <h2 className="font-semibold uppercase tracking-wider text-xs">Purchase Information</h2>
                     </div>
@@ -296,28 +316,38 @@ const CreateVehicle = () => {
                             </select>
                         </FormField>
 
-                        <FormField label="Purchase Order" required>
-                            <select
-                                required
-                                value={formData.purchaseDetails?.purchaseOrder || ''}
-                                onChange={(e) => handlePOChange(e.target.value)}
-                                className={inputClass}
-                                style={inputStyle}
-                                disabled={posLoading || !formData.purchaseDetails?.branch}
-                            >
-                                <option value="">
-                                    {!formData.purchaseDetails?.branch 
-                                        ? 'Select a branch first' 
-                                        : posLoading 
-                                            ? 'Loading POs...' 
-                                            : purchaseOrders.length === 0 
-                                                ? 'No approved POs found' 
-                                                : 'Select an approved PO'}
-                                </option>
-                                {purchaseOrders.map(po => (
-                                    <option key={po._id} value={po._id}>{po.purchaseOrderNumber}</option>
-                                ))}
-                            </select>
+                        <FormField label="Purchase Order (Optional)">
+                            <div className="space-y-1.5">
+                                <select
+                                    value={formData.purchaseDetails?.purchaseOrder || ''}
+                                    onChange={(e) => handlePOChange(e.target.value)}
+                                    className={inputClass}
+                                    style={inputStyle}
+                                    disabled={posLoading || !formData.purchaseDetails?.branch}
+                                >
+                                    <option value="">
+                                        {!formData.purchaseDetails?.branch 
+                                            ? 'Select a branch first' 
+                                            : posLoading 
+                                                ? 'Loading POs...' 
+                                                : 'None (Create without PO)'}
+                                    </option>
+                                    {purchaseOrders.map(po => (
+                                        <option key={po._id} value={po._id}>
+                                            {po.purchaseOrderNumber} {typeof po.supplier === 'object' && (po.supplier as any)?.name ? `(${(po.supplier as any).name})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                {hasSelectedPO ? (
+                                    <div className="flex items-center gap-1.5 text-xs font-medium px-1" style={{ color: 'var(--brand-lime)' }}>
+                                        <Check size={13} /> Linked to Purchase Order. Vendor and pricing details are auto-filled.
+                                    </div>
+                                ) : formData.purchaseDetails?.branch ? (
+                                    <div className="text-[11px] text-dim px-1">
+                                        Optional: Select an approved PO to auto-fill, or proceed without PO.
+                                    </div>
+                                ) : null}
+                            </div>
                         </FormField>
 
                         <FormField label="Handling Staff (Finance)" required>
@@ -443,7 +473,7 @@ const CreateVehicle = () => {
                                         />
                                         {(nextFleetLoading || isCheckingFleet) && (
                                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                                <div className="w-3 h-3 border-2 border-[#C8E600] border-t-transparent rounded-full animate-spin" />
+                                                <div className="w-3 h-3 border-2 border-lime border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--brand-lime)', borderTopColor: 'transparent' }} />
                                             </div>
                                         )}
                                     </div>
@@ -477,37 +507,44 @@ const CreateVehicle = () => {
                             )}
                         </FormField>
 
-                        <FormField label="Vendor Name (from PO)">
+                        <FormField label={hasSelectedPO ? "Vendor Name (from PO)" : "Vendor Name"}>
                             <input
                                 type="text"
-                                readOnly
-                                placeholder="Auto-filled from PO"
+                                readOnly={hasSelectedPO}
+                                placeholder={hasSelectedPO ? "Auto-filled from PO" : "Enter vendor or supplier name"}
                                 value={formData.purchaseDetails?.vendorName || ''}
+                                onChange={(e) => updatePurchase('vendorName', e.target.value)}
                                 className={inputClass}
-                                style={readOnlyStyle}
+                                style={hasSelectedPO ? readOnlyStyle : inputStyle}
                             />
                         </FormField>
 
-                        <FormField label="Purchase Date (from PO)" required>
+                        <FormField label={hasSelectedPO ? "Purchase Date (from PO)" : "Purchase Date"} required>
                             <input
                                 type="date"
-                                readOnly
+                                readOnly={hasSelectedPO}
                                 required
                                 value={formData.purchaseDetails?.purchaseDate || ''}
+                                onChange={(e) => updatePurchase('purchaseDate', e.target.value)}
                                 className={inputClass}
-                                style={readOnlyStyle}
+                                style={hasSelectedPO ? readOnlyStyle : inputStyle}
                             />
                         </FormField>
 
-                        <FormField label="Purchase Price (USD)" required>
+                        <FormField label={hasSelectedPO ? "Purchase Price (USD) (from PO)" : "Purchase Price (USD)"} required>
                             <div className="flex gap-2">
                                 <div className="px-4 py-3 rounded-xl border flex items-center text-sm" style={readOnlyStyle}>USD</div>
                                 <input
                                     type="number"
-                                    readOnly
-                                    value={formData.purchaseDetails?.purchasePrice || ''}
+                                    min="0"
+                                    step="any"
+                                    required
+                                    readOnly={hasSelectedPO}
+                                    placeholder="0.00"
+                                    value={formData.purchaseDetails?.purchasePrice !== undefined ? formData.purchaseDetails.purchasePrice : ''}
+                                    onChange={(e) => updatePurchase('purchasePrice', e.target.value === '' ? '' : parseFloat(e.target.value) || 0)}
                                     className={`flex-1 ${inputClass}`}
-                                    style={readOnlyStyle}
+                                    style={hasSelectedPO ? readOnlyStyle : inputStyle}
                                 />
                             </div>
                         </FormField>
@@ -552,7 +589,7 @@ const CreateVehicle = () => {
                         type="submit"
                         disabled={loading || !!fleetError}
                         className="flex items-center gap-2 px-10 py-4 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-                        style={{ background: '#C8E600', color: '#0A0A0A' }}
+                        style={{ background: 'var(--brand-lime)', color: 'var(--brand-black)' }}
                     >
                         {loading ? 'Creating...' : 'Create Vehicle'}
                     </button>

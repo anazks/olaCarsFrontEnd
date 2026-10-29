@@ -3,10 +3,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-    Car, ArrowLeft, AlertTriangle, Upload, CheckCircle, XCircle,
+    ChevronDown, Car, ArrowLeft, AlertTriangle, Upload, CheckCircle, XCircle,
     FileText, Shield, ClipboardCheck, Calculator, Satellite, UserCheck,
     Zap, Wrench, Clock, Send, Edit2, Save, Download, Gauge, Battery, Navigation,
-    X, Search, UserMinus, Users, RefreshCw
+    X, Search, UserMinus, Users, RefreshCw, Layers, Check, Sparkles, CheckSquare
 } from 'lucide-react';
 import { getVehicleById, progressVehicle, uploadVehicleDocuments, editVehicle, assignVehicleToDriver } from '../../../services/vehicleService';
 import { getEligibleInsurances, getVehiclePoliciesByVehicleId } from '../../../services/insuranceService';
@@ -35,6 +35,82 @@ const PIPELINE: VehicleStatus[] = [
     'PENDING ENTRY', 'DOCUMENTS REVIEW', 'INSPECTION REQUIRED',
     'ACCOUNTING SETUP', 'GPS ACTIVATION', 'BRANCH MANAGER APPROVAL', 'ACTIVE — AVAILABLE',
 ];
+
+export const ONBOARDING_STATUSES: VehicleStatus[] = [
+    'PENDING ENTRY',
+    'DOCUMENTS REVIEW',
+    'INSPECTION REQUIRED',
+    'INSPECTION FAILED',
+    'REPAIR IN PROGRESS',
+    'ACCOUNTING SETUP',
+    'GPS ACTIVATION',
+    'BRANCH MANAGER APPROVAL',
+];
+
+export const ONBOARDING_MILESTONES = [
+    {
+        step: 1,
+        key: 'PENDING ENTRY',
+        title: 'Entry & Specs',
+        shortDesc: 'Basic Specs & Documents',
+        role: 'Data Entry / Fleet Staff',
+        icon: Car,
+    },
+    {
+        step: 2,
+        key: 'DOCUMENTS REVIEW',
+        title: 'Documents Review',
+        shortDesc: 'Legal & Customs Review',
+        role: 'Branch / Country Manager',
+        icon: FileText,
+    },
+    {
+        step: 3,
+        key: 'INSPECTION REQUIRED',
+        title: 'Technical Inspection',
+        shortDesc: '23-pt Physical Inspection',
+        role: 'Inspection Officer / Workshop',
+        icon: ClipboardCheck,
+    },
+    {
+        step: 4,
+        key: 'ACCOUNTING SETUP',
+        title: 'Accounting Setup',
+        shortDesc: 'Depreciation & Residual Value',
+        role: 'Financial Administrator',
+        icon: Calculator,
+    },
+    {
+        step: 5,
+        key: 'GPS ACTIVATION',
+        title: 'GPS Activation',
+        shortDesc: 'Telematics & Geofencing',
+        role: 'Fleet Operations',
+        icon: Satellite,
+    },
+    {
+        step: 6,
+        key: 'BRANCH MANAGER APPROVAL',
+        title: 'Commissioning Approval',
+        shortDesc: 'Valuation & Fleet Commission',
+        role: 'Branch Manager',
+        icon: UserCheck,
+    },
+];
+
+export const getActiveMilestoneNumber = (status: VehicleStatus) => {
+    switch (status) {
+        case 'PENDING ENTRY': return 1;
+        case 'DOCUMENTS REVIEW': return 2;
+        case 'INSPECTION REQUIRED':
+        case 'INSPECTION FAILED':
+        case 'REPAIR IN PROGRESS': return 3;
+        case 'ACCOUNTING SETUP': return 4;
+        case 'GPS ACTIVATION': return 5;
+        case 'BRANCH MANAGER APPROVAL': return 6;
+        default: return 7; // Completed / active fleet
+    }
+};
 
 const CHECKLIST_NAMES = [
     'Engine Oil Level', 'Coolant Level', 'Brake Fluid', 'Power Steering Fluid',
@@ -105,8 +181,22 @@ const VehicleDetail = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
-    const [actionError, setActionError] = useState<string | null>(null);
-    const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+    const [actionError, _setActionError] = useState<string | null>(null);
+    const [actionSuccess, _setActionSuccess] = useState<string | null>(null);
+
+    const setActionError = useCallback((msg: string | null) => {
+        _setActionError(msg);
+        if (msg) {
+            toast.error(msg, { id: msg, duration: 4000 });
+        }
+    }, []);
+
+    const setActionSuccess = useCallback((msg: string | null) => {
+        _setActionSuccess(msg);
+        if (msg) {
+            toast.success(msg, { id: msg, duration: 4000 });
+        }
+    }, []);
     const [notes, setNotes] = useState('');
     const [isInsuranceManagerOpen, setIsInsuranceManagerOpen] = useState(false);
     const userRole = getUserRole();
@@ -121,10 +211,15 @@ const VehicleDetail = () => {
     const [editBasicDetails, setEditBasicDetails] = useState<Partial<BasicDetails>>({});
     const [targetStatus, setTargetStatus] = useState<VehicleStatus | null>(null);
     const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+    const [onboardingViewMode, setOnboardingViewMode] = useState<'task' | 'full'>('task');
 
     // Change Driver modal state
     const [isChangeDriverModalOpen, setIsChangeDriverModalOpen] = useState(false);
     const [driverModalMode, setDriverModalMode] = useState<'CURRENT' | 'TEMP'>('CURRENT');
+    const [selectedDriverForAssign, setSelectedDriverForAssign] = useState<Driver | null>(null);
+    const [assignStartDate, setAssignStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [assignDurationWeeks, setAssignDurationWeeks] = useState<number>(160);
+    const [assignWeeklyRent, setAssignWeeklyRent] = useState<string>('');
     const [unassignedDrivers, setUnassignedDrivers] = useState<Driver[]>([]);
     const [loadingUnassignedDrivers, setLoadingUnassignedDrivers] = useState(false);
     const [driverSearchQuery, setDriverSearchQuery] = useState('');
@@ -356,13 +451,74 @@ const VehicleDetail = () => {
         }
     }, [isChangeDriverModalOpen, driverSearchQuery, driverModalMode, fetchUnassignedDrivers]);
 
-    const handleSelectNewDriver = (newDriverId: string) => {
-        if (assignedDriver) {
-            setPendingNewDriverId(newDriverId);
-            setCancelNotes('');
-            setIsCancelContractModalOpen(true);
-        } else {
-            executeAssignNewDriver(newDriverId);
+    const handleSelectNewDriver = (driver: Driver) => {
+        setSelectedDriverForAssign(driver);
+        setAssignStartDate(new Date().toISOString().split('T')[0]);
+        setAssignDurationWeeks(160);
+        const baseVal = vehicle?.basicDetails?.weeklyRent 
+            ? vehicle.basicDetails.weeklyRent 
+            : (vehicle?.basicDetails?.sellingValue || vehicle?.purchaseDetails?.purchasePrice || 0);
+        const defWeekly = vehicle?.basicDetails?.weeklyRent 
+            ? String(vehicle.basicDetails.weeklyRent) 
+            : (baseVal > 0 ? (baseVal / 160).toFixed(2) : '');
+        setAssignWeeklyRent(defWeekly);
+    };
+
+    const handleConfirmAssignmentWithPlan = async () => {
+        if (!vehicle || !id || !selectedDriverForAssign) return;
+
+        if (!assignStartDate) {
+            toast.error('Start date is required.');
+            return;
+        }
+        if (assignWeeklyRent === '' || isNaN(Number(assignWeeklyRent)) || Number(assignWeeklyRent) < 0) {
+            toast.error('Please enter a valid weekly rent.');
+            return;
+        }
+
+        setChangingDriver(true);
+        const toastId = toast.loading('Assigning vehicle and creating repayment plan...');
+        try {
+            // 1. If currently assigned to a different driver, cancel their contract first
+            if (assignedDriver && assignedDriver._id !== selectedDriverForAssign._id) {
+                try {
+                    await cancelContract(
+                        assignedDriver._id,
+                        `Replaced by new driver assignment (${selectedDriverForAssign.personalInfo?.fullName || 'New Driver'})`,
+                        assignStartDate
+                    );
+                } catch (cErr) {
+                    console.warn('Could not cancel previous contract:', cErr);
+                }
+            }
+
+            // 2. Create lease & repayment plan
+            const durationWeeksNum = Number(assignDurationWeeks) || 60;
+            const weeklyRentNum = Number(assignWeeklyRent);
+            const durationMonthsNum = Math.ceil(durationWeeksNum / 4);
+            const monthlyRentNum = Math.round(weeklyRentNum * 4);
+
+            await assignVehicleToDriver(id, selectedDriverForAssign._id, {
+                durationMonths: durationMonthsNum,
+                durationWeeks: durationWeeksNum,
+                monthlyRent: monthlyRentNum,
+                weeklyRent: weeklyRentNum,
+                frequency: 'WEEKLY',
+                activationDate: assignStartDate,
+                notes: `Weekly lease: ${durationWeeksNum} weeks @ ${weeklyRentNum}/wk starting ${assignStartDate}`
+            });
+
+            toast.success('Vehicle assigned & repayment plan created successfully!', { id: toastId });
+            setIsChangeDriverModalOpen(false);
+            setSelectedDriverForAssign(null);
+            setDriverSearchQuery('');
+            setAssignedDriver(selectedDriverForAssign);
+            await fetchVehicle();
+        } catch (err: any) {
+            console.error('Failed to assign driver with plan:', err);
+            toast.error(err.response?.data?.message || err.message || 'Failed to assign driver and create plan', { id: toastId });
+        } finally {
+            setChangingDriver(false);
         }
     };
 
@@ -670,7 +826,1206 @@ const VehicleDetail = () => {
         </div>
     );
 
+    const isOnboarding = ONBOARDING_STATUSES.includes(vehicle.status);
+    const activeMilestone = getActiveMilestoneNumber(vehicle.status);
     const currentIdx = PIPELINE.indexOf(vehicle.status);
+
+    const PhotoPreview = ({ url, label }: { url: string; label: string }) => {
+        const fullUrl = toFullUrl(url);
+        const isPdf = url.toLowerCase().endsWith('.pdf');
+        return (
+            <div className="aspect-square rounded-lg border overflow-hidden relative group" style={{ borderColor: 'var(--border-main)' }}>
+                {isPdf ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-2 bg-red-500/5 text-red-500">
+                        <FileText size={20} />
+                        <span className="text-[8px] font-bold mt-1 uppercase">PDF</span>
+                    </div>
+                ) : (
+                    <img src={fullUrl} alt={label} className="w-full h-full object-cover" />
+                )}
+                <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] text-white font-bold gap-1">
+                    <FileText size={10} /> View
+                </a>
+            </div>
+        );
+    };
+
+    const renderOnboardingStepper = () => (
+        <div className={`${cardClass} overflow-hidden relative border`} style={{ ...cardStyle, borderColor: 'rgba(200,230,0,0.25)' }}>
+            {/* Top accent line */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#C8E600]/30 via-[#C8E600] to-[#C8E600]/30" />
+
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#C8E600]/10 text-[#C8E600] flex items-center justify-center border border-[#C8E600]/25 shrink-0">
+                        <Sparkles size={18} />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-xs font-black uppercase tracking-wider text-white">
+                                Commissioning & Onboarding Pipeline
+                            </h3>
+                            <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/25 font-bold">
+                                Milestone {activeMilestone} of 6
+                            </span>
+                        </div>
+                        <p className="text-[11px] text-dim mt-0.5">
+                            Follow the 6 mandatory steps sequentially to approve and commission this vehicle into active fleet operations.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-3 self-end md:self-auto shrink-0">
+                    <div className="text-right">
+                        <p className="text-[9px] uppercase font-bold tracking-wider text-dim">Progress</p>
+                        <p className="text-xs font-black text-[#C8E600]">
+                            {Math.min(100, Math.round(((activeMilestone - 1) / 6) * 100))}% Completed
+                        </p>
+                    </div>
+                    <div className="w-24 sm:w-32 h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg-input)' }}>
+                        <div
+                            className="h-full bg-[#C8E600] transition-all duration-500 rounded-full"
+                            style={{ width: `${Math.max(8, Math.min(100, Math.round(((activeMilestone - 1) / 6) * 100)))}%` }}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Stepper Milestones Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-2">
+                {ONBOARDING_MILESTONES.map((m) => {
+                    const isPassed = activeMilestone > m.step;
+                    const isCurrent = activeMilestone === m.step;
+                    const isUpcoming = activeMilestone < m.step;
+                    const IconComponent = m.icon;
+
+                    let badgeText = 'Pending';
+                    let badgeClass = 'bg-white/5 text-dim border-white/5';
+
+                    if (isPassed) {
+                        badgeText = 'Done';
+                        badgeClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25';
+                    } else if (isCurrent) {
+                        if (vehicle.status === 'INSPECTION FAILED') {
+                            badgeText = 'Needs Repair';
+                            badgeClass = 'bg-red-500/10 text-red-400 border-red-500/30';
+                        } else if (vehicle.status === 'REPAIR IN PROGRESS') {
+                            badgeText = 'In Repair';
+                            badgeClass = 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+                        } else {
+                            badgeText = 'Active Task';
+                            badgeClass = 'bg-[#C8E600]/15 text-[#C8E600] border-[#C8E600]/40 animate-pulse';
+                        }
+                    }
+
+                    return (
+                        <div
+                            key={m.step}
+                            className={`p-3 rounded-xl border transition-all flex flex-col justify-between gap-2 relative ${
+                                isCurrent
+                                    ? 'ring-2 ring-[#C8E600] shadow-lg shadow-[#C8E600]/5'
+                                    : ''
+                            }`}
+                            style={{
+                                background: isCurrent
+                                    ? 'rgba(200,230,0,0.05)'
+                                    : isPassed
+                                        ? 'rgba(34,197,94,0.03)'
+                                        : 'var(--bg-sidebar)',
+                                borderColor: isCurrent
+                                    ? '#C8E600'
+                                    : isPassed
+                                        ? 'rgba(34,197,94,0.25)'
+                                        : 'var(--border-main)',
+                                opacity: isUpcoming ? 0.6 : 1,
+                            }}
+                        >
+                            <div className="flex items-center justify-between gap-1.5">
+                                <span
+                                    className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0"
+                                    style={{
+                                        background: isPassed
+                                            ? '#22c55e'
+                                            : isCurrent
+                                                ? '#C8E600'
+                                                : 'var(--bg-input)',
+                                        color: isPassed || isCurrent ? '#0A0A0A' : 'var(--text-dim)',
+                                    }}
+                                >
+                                    {isPassed ? <Check size={13} /> : m.step}
+                                </span>
+                                <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${badgeClass}`}>
+                                    {badgeText}
+                                </span>
+                            </div>
+
+                            <div>
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                    <IconComponent size={12} style={{ color: isCurrent ? '#C8E600' : isPassed ? '#22c55e' : 'var(--text-dim)' }} />
+                                    <h4 className="text-xs font-bold truncate" style={{ color: isCurrent ? '#C8E600' : 'var(--text-main)' }}>
+                                        {m.title}
+                                    </h4>
+                                </div>
+                                <p className="text-[10px] truncate" style={{ color: 'var(--text-dim)' }}>
+                                    {m.role}
+                                </p>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+
+    const renderMilestone1Task = () => {
+        const needsSpecs = (!vehicle.basicDetails?.make || !vehicle.basicDetails?.vin);
+        return (
+            <div className={cardClass} style={cardStyle}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#C8E600]/10 text-[#C8E600] flex items-center justify-center border border-[#C8E600]/25 shrink-0">
+                            <Car size={20} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-[#C8E600]/15 text-[#C8E600] border border-[#C8E600]/30 font-mono">
+                                    Stage 1 of 6
+                                </span>
+                                <h3 className="text-sm font-bold text-white">
+                                    {needsSpecs ? 'Step 1: Vehicle Specifications' : 'Step 2: Legal & Procurement Documents'}
+                                </h3>
+                            </div>
+                            <p className="text-xs text-dim mt-0.5">
+                                {needsSpecs
+                                    ? 'Enter essential vehicle identity, engine parameters, and physical specifications.'
+                                    : 'Upload legal registration certificates, road tax, and ownership transfer papers.'}
+                            </p>
+                        </div>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0 self-start sm:self-auto">
+                        Role: Fleet Ops / Data Entry
+                    </span>
+                </div>
+
+                {needsSpecs ? (
+                    <div className="space-y-4 pt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.make')} *</label>
+                                <input type="text" placeholder="e.g. Toyota" value={specData.make} onChange={e => setSpecData(p => ({ ...p, make: e.target.value }))} className={inputClass} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.model')} *</label>
+                                <input type="text" placeholder="e.g. Corolla" value={specData.model} onChange={e => setSpecData(p => ({ ...p, model: e.target.value }))} className={inputClass} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.year')} *</label>
+                                <input type="number" min="1900" max="2100" value={specData.year} onChange={e => setSpecData(p => ({ ...p, year: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.vin')} *</label>
+                                <input type="text" placeholder="JTDKN..." value={specData.vin} onChange={e => setSpecData(p => ({ ...p, vin: e.target.value.toUpperCase() }))} className={`${inputClass} font-mono`} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.category')}</label>
+                                <select value={specData.category} onChange={e => setSpecData(p => ({ ...p, category: e.target.value as VehicleCategory }))} className={inputClass} style={inputStyle}>
+                                    {CATEGORIES.map(c => <option key={c} value={c}>{t(`management.vehicles.categories.${c}`, c)}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.fuel')}</label>
+                                <select value={specData.fuelType} onChange={e => setSpecData(p => ({ ...p, fuelType: e.target.value as FuelType }))} className={inputClass} style={inputStyle}>
+                                    {FUEL_TYPES.map(f => <option key={f} value={f}>{t(`management.vehicles.fuelTypes.${f}`, f)}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.transmission')}</label>
+                                <select value={specData.transmission} onChange={e => setSpecData(p => ({ ...p, transmission: e.target.value as Transmission }))} className={inputClass} style={inputStyle}>
+                                    {TRANSMISSIONS.map(tOption => <option key={tOption} value={tOption}>{t(`management.vehicles.transmissions.${tOption}`, tOption)}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.body')}</label>
+                                <select value={specData.bodyType} onChange={e => setSpecData(p => ({ ...p, bodyType: e.target.value as BodyType }))} className={inputClass} style={inputStyle}>
+                                    <option value="">{t('common.search')}</option>
+                                    {BODY_TYPES.map(b => <option key={b} value={b}>{t(`management.vehicles.bodyTypes.${b}`, b)}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.engineCapacity')}</label>
+                                <input type="number" value={specData.engineCapacity} onChange={e => setSpecData(p => ({ ...p, engineCapacity: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.colour')}</label>
+                                <input type="text" value={specData.colour} onChange={e => setSpecData(p => ({ ...p, colour: e.target.value }))} className={inputClass} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.engineNumber')}</label>
+                                <input type="text" placeholder="e.g. 1GZ-XXXX" value={specData.engineNumber} onChange={e => setSpecData(p => ({ ...p, engineNumber: e.target.value }))} className={inputClass} style={inputStyle} />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.odometer')}</label>
+                                <div className="relative">
+                                    <input type="number" value={specData.odometer} onChange={e => setSpecData(p => ({ ...p, odometer: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-dim">KM</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <HasPermission permission="VEHICLE_EDIT">
+                            <button
+                                onClick={() => {
+                                    if (!specData.make || !specData.model || !specData.vin) {
+                                        setActionError('Make, Model, and VIN are required before saving specifications.');
+                                        return;
+                                    }
+                                    handleProgress('PENDING ENTRY', { basicDetails: specData });
+                                }}
+                                disabled={actionLoading}
+                                className="mt-4 flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-black cursor-pointer disabled:opacity-50 transition-all hover:scale-[1.01] active:scale-95"
+                                style={{ background: '#C8E600', color: '#0A0A0A' }}
+                            >
+                                {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : t('management.vehicles.vehicleDetail.actions.saveSpecs')}
+                            </button>
+                        </HasPermission>
+                    </div>
+                ) : (
+                    <div className="space-y-5 pt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {DOC_FIELDS.map(df => (
+                                <div key={df.key} className="p-3.5 rounded-xl border flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-xs font-medium text-white truncate">{t(`management.vehicles.documents.${df.key}`, df.label)}</span>
+                                        {(uploadFiles[df.key] as File)?.name ? (
+                                            <span className="text-[10px] text-green-400 font-medium truncate max-w-[180px] mt-0.5">
+                                                ✓ {(uploadFiles[df.key] as File).name}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] text-dim opacity-60 mt-0.5">Not attached</span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <input
+                                            type="file"
+                                            ref={el => { fileInputRefs.current[df.key] = el; }}
+                                            className="hidden"
+                                            onChange={e => {
+                                                if (e.target.files?.[0]) {
+                                                    const file = e.target.files[0];
+                                                    setUploadFiles(prev => {
+                                                        const next = { ...prev, [df.key]: file };
+                                                        DOC_FIELDS.forEach(f => { if (!next[f.key]) next[f.key] = file; });
+                                                        return next;
+                                                    });
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRefs.current[df.key]?.click()}
+                                            className="px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all hover:bg-[#C8E600]/20"
+                                            style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.25)' }}
+                                        >
+                                            {(uploadFiles[df.key] as File)?.name ? 'Replace' : 'Attach'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 pt-2">
+                            <button
+                                onClick={handleUpload}
+                                disabled={uploadLoading}
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                                style={{ background: 'var(--bg-sidebar)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}
+                            >
+                                {uploadLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Upload size={14} /> {t('management.vehicles.vehicleDetail.actions.uploadAll')}</>}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const firstVal = Object.values(uploadFiles).find(v => v && (v instanceof File || (Array.isArray(v) && v.length > 0)));
+                                    if (!firstVal) { setActionError('Please select at least one file first.'); return; }
+                                    const fileToUse = Array.isArray(firstVal) ? firstVal[0] : firstVal;
+                                    const autoFilled: any = {};
+                                    DOC_FIELDS.forEach(df => autoFilled[df.key] = fileToUse);
+                                    setUploadFiles(autoFilled);
+                                }}
+                                className="px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border border-dashed border-lime/30 text-lime bg-lime/5 hover:bg-lime/10"
+                            >
+                                {t('management.vehicles.vehicleDetail.actions.fillAll')}
+                            </button>
+                        </div>
+
+                        <div className="border-t pt-5 space-y-3" style={{ borderColor: 'var(--border-main)' }}>
+                            <label className="text-xs font-bold uppercase tracking-wider text-dim block">
+                                Submission Notes for Reviewer <span className="text-[10px] opacity-60 font-normal">(Optional)</span>
+                            </label>
+                            <textarea
+                                placeholder="Add any comments or procurement notes for the reviewing manager..."
+                                value={notes}
+                                onChange={e => setNotes(e.target.value)}
+                                rows={2}
+                                className={inputClass}
+                                style={inputStyle}
+                            />
+                            <HasPermission permission="VEHICLE_EDIT">
+                                <button
+                                    onClick={() => handleProgress('DOCUMENTS REVIEW')}
+                                    disabled={actionLoading}
+                                    className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50 bg-blue-600 hover:bg-blue-500 text-white shadow-lg active:scale-[0.99]"
+                                >
+                                    {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Send size={16} /> Submit Documents for Manager Review</>}
+                                </button>
+                            </HasPermission>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const renderMilestone2Task = () => (
+        <div className={cardClass} style={cardStyle}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/25 shrink-0">
+                        <FileText size={20} />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30 font-mono">
+                                Stage 2 of 6
+                            </span>
+                            <h3 className="text-sm font-bold text-white">Legal & Procurement Documents Review</h3>
+                        </div>
+                        <p className="text-xs text-dim mt-0.5">
+                            Verify registration documents, road tax, and customs documentation prior to physical workshop inspection.
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        Authority: Branch / Country Manager
+                    </span>
+                    <HasPermission permission="VEHICLE_EDIT">
+                        {!isEditingDocs ? (
+                            <button
+                                onClick={() => setIsEditingDocs(true)}
+                                className="p-2 rounded-lg hover:bg-white/5 transition-colors text-lime cursor-pointer border border-lime/20"
+                                title="Manage / Replace Documents"
+                            >
+                                <Edit2 size={14} />
+                            </button>
+                        ) : (
+                            <div className="flex gap-1.5">
+                                <button
+                                    onClick={handleUpload}
+                                    disabled={uploadLoading}
+                                    className="p-2 rounded-lg bg-lime/10 text-lime hover:bg-lime/20 transition-colors cursor-pointer disabled:opacity-50"
+                                    title="Save Uploaded Files"
+                                >
+                                    <Save size={14} />
+                                </button>
+                                <button
+                                    onClick={() => { setIsEditingDocs(false); setUploadFiles({}); }}
+                                    className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
+                                    title="Cancel"
+                                >
+                                    <XCircle size={14} />
+                                </button>
+                            </div>
+                        )}
+                    </HasPermission>
+                </div>
+            </div>
+
+            {/* Document Verification Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                {DOC_FIELDS.map(df => {
+                    const rawUrl = df.key === 'purchaseReceipt'
+                        ? vehicle.purchaseDetails?.purchaseReceipt
+                        : df.key === 'odometerPhoto'
+                            ? vehicle.inspection?.odometerPhoto
+                            : df.key === 'customsClearanceCertificate' || df.key === 'importPermit'
+                                ? (vehicle.importationDetails as any)?.[df.key]
+                                : (vehicle.legalDocs as any)?.[df.key];
+                    const docUrl = toFullUrl(rawUrl);
+
+                    return (
+                        <div key={df.key} className="p-3.5 rounded-xl border flex flex-col justify-between gap-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-xs font-bold text-white truncate">{df.label}</span>
+                                    {docUrl ? (
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-lime font-bold hover:underline flex items-center gap-1">
+                                                <FileText size={11} /> View Document
+                                            </a>
+                                            <span className="text-dim opacity-40">|</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const regNo = vehicle.legalDocs?.registrationNumber || 'vehicle';
+                                                    downloadFile(docUrl, `${df.label.replace(/\s+/g, '_')}_${regNo.replace(/\s+/g, '_')}`);
+                                                }}
+                                                className="text-[11px] text-blue-400 font-bold hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0 outline-none"
+                                            >
+                                                <Download size={11} /> Download
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <span className="text-[10px] text-red-400 font-bold mt-1 flex items-center gap-1">
+                                            <XCircle size={11} /> Not Uploaded
+                                        </span>
+                                    )}
+                                </div>
+                                {docUrl && <CheckCircle size={16} className="text-green-500 shrink-0" />}
+                            </div>
+
+                            {isEditingDocs && (
+                                <div className="mt-2 pt-2 border-t flex items-center justify-between gap-2" style={{ borderColor: 'var(--border-main)' }}>
+                                    <input
+                                        type="file"
+                                        ref={el => { fileInputRefs.current[df.key] = el; }}
+                                        className="hidden"
+                                        onChange={e => {
+                                            if (e.target.files?.[0]) {
+                                                setUploadFiles(prev => ({ ...prev, [df.key]: e.target.files![0] }));
+                                            }
+                                        }}
+                                    />
+                                    <span className="text-[9px] text-dim truncate max-w-[120px]">
+                                        {(uploadFiles[df.key] as File)?.name || 'No file chosen'}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRefs.current[df.key]?.click()}
+                                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer"
+                                        style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
+                                    >
+                                        Browse...
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Importation details */}
+            <div className="mt-6 pt-6 border-t space-y-4" style={{ borderColor: 'var(--border-main)' }}>
+                <div className="flex items-center gap-3">
+                    <input type="checkbox" id="imported-check" checked={!!importation.isImported} onChange={e => setImportation(p => ({ ...p, isImported: e.target.checked }))} className="accent-[#C8E600] w-4 h-4 rounded cursor-pointer" />
+                    <label htmlFor="imported-check" className="text-xs font-bold uppercase tracking-wider text-white cursor-pointer">
+                        This vehicle was imported (Customs & Shipping documentation required)
+                    </label>
+                </div>
+
+                {importation.isImported && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-xl border" style={{ borderColor: 'rgba(200,230,0,0.15)', background: 'rgba(200,230,0,0.03)' }}>
+                        {[
+                            { k: 'countryOfOrigin', l: t('management.vehicles.vehicleDetail.labels.countryOfOrigin') },
+                            { k: 'shippingReference', l: t('management.vehicles.vehicleDetail.labels.shippingReference') },
+                            { k: 'portOfEntry', l: t('management.vehicles.vehicleDetail.labels.portOfEntry') },
+                            { k: 'customsDeclarationNumber', l: t('management.vehicles.vehicleDetail.labels.customsDeclaration') },
+                            { k: 'arrivalDate', l: t('management.vehicles.vehicleDetail.labels.arrivalDate'), t: 'date' },
+                            { k: 'shippingCost', l: t('management.vehicles.vehicleDetail.labels.shippingCost'), t: 'number' },
+                            { k: 'customsDuty', l: t('management.vehicles.vehicleDetail.labels.customsDuty'), t: 'number' },
+                            { k: 'portHandling', l: t('management.vehicles.vehicleDetail.labels.portHandling'), t: 'number' },
+                        ].map(f => (
+                            <div key={f.k} className="space-y-1.5">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-dim">{f.l}</label>
+                                <input type={f.t || 'text'} value={importation[f.k] || ''} onChange={e => setImportation(p => ({ ...p, [f.k]: f.t === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }))} className={inputClass} style={inputStyle} />
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Approval Decision */}
+            <div className="mt-6 pt-6 border-t space-y-4" style={{ borderColor: 'var(--border-main)' }}>
+                {canApprove ? (
+                    <>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold uppercase tracking-wider text-dim">Review Decision Notes</label>
+                            <textarea
+                                placeholder="Enter approval confirmation notes or review comments..."
+                                value={notes}
+                                onChange={e => setNotes(e.target.value)}
+                                rows={2}
+                                className={inputClass}
+                                style={inputStyle}
+                            />
+                        </div>
+                        <button
+                            onClick={() => handleProgress('INSPECTION REQUIRED', { ...(importation.isImported ? { importationDetails: importation } : {}) })}
+                            disabled={actionLoading}
+                            className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-black transition-all cursor-pointer disabled:opacity-50 bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg active:scale-[0.99]"
+                        >
+                            {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> Approve Documents & Proceed to Technical Inspection</>}
+                        </button>
+                    </>
+                ) : (
+                    <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500">
+                        <Clock size={20} className="shrink-0" />
+                        <div className="text-sm">
+                            <p className="font-bold">Awaiting Manager Review</p>
+                            <p className="text-xs opacity-80">Only a designated Branch or Country Manager can approve vehicle documents to proceed to inspection.</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    const renderMilestone3Task = () => {
+        if (vehicle.status === 'INSPECTION FAILED') {
+            return (
+                <div className={cardClass} style={cardStyle}>
+                    <div className="flex items-center gap-3 pb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center border border-red-500/25 shrink-0">
+                            <XCircle size={20} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/30 font-mono">
+                                    Stage 3 • Action Required
+                                </span>
+                                <h3 className="text-sm font-bold text-white">{t('management.vehicles.vehicleDetail.inspectionFailedTitle')}</h3>
+                            </div>
+                            <p className="text-xs text-dim mt-0.5">Critical defects detected during technical check. Route vehicle for workshop maintenance.</p>
+                        </div>
+                    </div>
+                    <div className="space-y-3 pt-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-dim block">Repair Instructions & Workshop Notes</label>
+                        <textarea placeholder={t('management.vehicles.vehicleDetail.repairNotesPlaceholder')} value={notes} onChange={e => setNotes(e.target.value)} rows={3} className={inputClass} style={inputStyle} />
+                        <button onClick={() => handleProgress('REPAIR IN PROGRESS')} disabled={actionLoading} className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-black cursor-pointer disabled:opacity-50 bg-amber-600 hover:bg-amber-500 text-white shadow-lg active:scale-95">
+                            {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Wrench size={16} /> {t('management.vehicles.vehicleDetail.actions.sendToRepair')}</>}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        if (vehicle.status === 'REPAIR IN PROGRESS') {
+            return (
+                <div className={cardClass} style={cardStyle}>
+                    <div className="flex items-center gap-3 pb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/25 shrink-0">
+                            <Wrench size={20} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 font-mono">
+                                    Stage 3 • In Progress
+                                </span>
+                                <h3 className="text-sm font-bold text-white">{t('management.vehicles.vehicleDetail.repairCompleteTitle')}</h3>
+                            </div>
+                            <p className="text-xs text-dim mt-0.5">Vehicle is currently undergoing repairs. Enter technician completion notes to re-inspect.</p>
+                        </div>
+                    </div>
+                    <div className="space-y-3 pt-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-dim block">Technician / Workshop Completion Notes</label>
+                        <textarea placeholder="Enter repair summary and parts replaced..." value={notes} onChange={e => setNotes(e.target.value)} rows={3} className={inputClass} style={inputStyle} />
+                        <button onClick={() => handleProgress('INSPECTION REQUIRED')} disabled={actionLoading} className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-black cursor-pointer disabled:opacity-50 text-black shadow-lg active:scale-95" style={{ background: '#C8E600' }}>
+                            {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><ClipboardCheck size={16} /> {t('management.vehicles.vehicleDetail.actions.reInspect')}</>}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        const odometerCount = (vehicle?.inspection?.odometerPhoto || uploadFiles.odometerPhoto) ? 1 : 0;
+        const totalExterior = (vehicle?.inspection?.exteriorPhotos?.length || 0) + (Array.isArray(uploadFiles.exteriorPhotos) ? uploadFiles.exteriorPhotos.length : 0);
+        const totalInterior = (vehicle?.inspection?.interiorPhotos?.length || 0) + (Array.isArray(uploadFiles.interiorPhotos) ? uploadFiles.interiorPhotos.length : 0);
+        const totalPhotos = totalExterior + totalInterior + odometerCount;
+
+        return (
+            <div className={cardClass} style={cardStyle}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#C8E600]/10 text-[#C8E600] flex items-center justify-center border border-[#C8E600]/25 shrink-0">
+                            <ClipboardCheck size={20} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-[#C8E600]/15 text-[#C8E600] border border-[#C8E600]/30 font-mono">
+                                    Stage 3 of 6
+                                </span>
+                                <h3 className="text-sm font-bold text-white">Technical Inspection (23 Items)</h3>
+                            </div>
+                            <p className="text-xs text-dim mt-0.5">
+                                Verify mechanical and electrical safety systems. Mandatory odometer photo required to proceed.
+                            </p>
+                        </div>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 shrink-0 self-start sm:self-auto">
+                        Role: Inspection Officer / Workshop
+                    </span>
+                </div>
+
+                {/* 23-point checklist */}
+                <div className="space-y-2 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">
+                    {checklist.map((item, i) => (
+                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: item.condition === 'Poor' ? 'rgba(239,68,68,0.06)' : 'var(--bg-sidebar)' }}>
+                            <span className="text-xs font-medium text-white flex-1">{item.name}</span>
+                            <select
+                                value={item.condition}
+                                onChange={e => {
+                                    const c = [...checklist];
+                                    c[i] = { ...c[i], condition: e.target.value as InspectionCondition };
+                                    setChecklist(c);
+                                }}
+                                className="px-3 py-1.5 rounded-lg text-xs outline-none font-bold"
+                                style={{
+                                    ...inputStyle,
+                                    width: '95px',
+                                    color: item.condition === 'Good' ? '#22c55e' : item.condition === 'Fair' ? '#f59e0b' : '#ef4444'
+                                }}
+                            >
+                                {['Good', 'Fair', 'Poor'].map(v => <option key={v} value={v}>{v}</option>)}
+                            </select>
+                            <input
+                                placeholder="Notes..."
+                                value={item.notes || ''}
+                                onChange={e => {
+                                    const c = [...checklist];
+                                    c[i] = { ...c[i], notes: e.target.value };
+                                    setChecklist(c);
+                                }}
+                                className="px-3 py-1.5 rounded-lg text-xs outline-none w-36"
+                                style={inputStyle}
+                            />
+                        </div>
+                    ))}
+                </div>
+
+                <div className="space-y-1.5 mt-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-dim block">Overall Inspection Observations</label>
+                    <textarea placeholder="Inspection summary and general mechanical observations..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
+                </div>
+
+                {/* Technical Photos */}
+                <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <SectionHeader icon={<Upload size={16} />} title={`Technical Photos (${totalPhotos} / Min 6)`} />
+                        <span className="text-[10px] font-bold text-dim">Attach exterior, interior, and odometer evidence</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Exterior Photos */}
+                        <div className="space-y-2 p-3 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                            <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-dim">Exterior Photos</label>
+                                <input type="file" ref={extPhotoRef} className="hidden" multiple accept="image/*" onChange={e => {
+                                    const files = Array.from(e.target.files || []);
+                                    setUploadFiles(p => ({ ...p, exteriorPhotos: [...(Array.isArray(p.exteriorPhotos) ? p.exteriorPhotos : []), ...files] }));
+                                }} />
+                                <button type="button" onClick={() => extPhotoRef.current?.click()} className="text-[10px] text-lime font-bold hover:underline cursor-pointer">+ Add</button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5 min-h-[60px]">
+                                {(vehicle.inspection?.exteriorPhotos || []).map((url, i) => (
+                                    <PhotoPreview key={i} url={url} label={`Exterior ${i}`} />
+                                ))}
+                                {(Array.isArray(uploadFiles.exteriorPhotos) ? uploadFiles.exteriorPhotos : []).map((file, i) => (
+                                    <div key={`new-${i}`} className="aspect-square rounded-lg border border-dashed overflow-hidden relative" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.05)' }}>
+                                        <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-1 text-dim truncate">{file.name}</div>
+                                        <button onClick={() => setUploadFiles(p => ({ ...p, exteriorPhotos: (p.exteriorPhotos as File[]).filter((_, idx) => idx !== i) }))} className="absolute top-1 right-1 bg-red-500 text-white p-0.5 rounded-full"><XCircle size={10} /></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Interior Photos */}
+                        <div className="space-y-2 p-3 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                            <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-dim">Interior Photos</label>
+                                <input type="file" ref={intPhotoRef} className="hidden" multiple accept="image/*" onChange={e => {
+                                    const files = Array.from(e.target.files || []);
+                                    setUploadFiles(p => ({ ...p, interiorPhotos: [...(Array.isArray(p.interiorPhotos) ? p.interiorPhotos : []), ...files] }));
+                                }} />
+                                <button type="button" onClick={() => intPhotoRef.current?.click()} className="text-[10px] text-lime font-bold hover:underline cursor-pointer">+ Add</button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5 min-h-[60px]">
+                                {(vehicle.inspection?.interiorPhotos || []).map((url, i) => (
+                                    <PhotoPreview key={i} url={url} label={`Interior ${i}`} />
+                                ))}
+                                {(Array.isArray(uploadFiles.interiorPhotos) ? uploadFiles.interiorPhotos : []).map((file, i) => (
+                                    <div key={`new-${i}`} className="aspect-square rounded-lg border border-dashed overflow-hidden relative" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.05)' }}>
+                                        <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-1 text-dim truncate">{file.name}</div>
+                                        <button onClick={() => setUploadFiles(p => ({ ...p, interiorPhotos: (p.interiorPhotos as File[]).filter((_, idx) => idx !== i) }))} className="absolute top-1 right-1 bg-red-500 text-white p-0.5 rounded-full"><XCircle size={10} /></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Odometer Photo (Mandatory) */}
+                        <div className="space-y-2 p-3 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                            <div className="flex items-center justify-between">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-dim">
+                                    Odometer Photo <span className="text-red-400">*</span>
+                                </label>
+                                <input type="file" id="odometer-upload" className="hidden" accept="image/*" onChange={e => {
+                                    if (e.target.files?.[0]) setUploadFiles(p => ({ ...p, odometerPhoto: e.target.files![0] }));
+                                }} />
+                                <button type="button" onClick={() => document.getElementById('odometer-upload')?.click()} className="text-[10px] text-lime font-bold hover:underline cursor-pointer">+ Attach</button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5 min-h-[60px]">
+                                {vehicle.inspection?.odometerPhoto && (
+                                    <PhotoPreview url={vehicle.inspection.odometerPhoto} label="Odometer" />
+                                )}
+                                {uploadFiles.odometerPhoto && !(uploadFiles.odometerPhoto instanceof Array) && (
+                                    <div className="aspect-square rounded-lg border border-dashed overflow-hidden relative" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.05)' }}>
+                                        <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-1 text-dim truncate">{(uploadFiles.odometerPhoto as File).name}</div>
+                                        <button onClick={() => setUploadFiles(p => { const n = { ...p }; delete n.odometerPhoto; return n; })} className="absolute top-1 right-1 bg-red-500 text-white p-0.5 rounded-full"><XCircle size={10} /></button>
+                                    </div>
+                                )}
+                            </div>
+                            {!uploadFiles.odometerPhoto && !vehicle.inspection?.odometerPhoto && (
+                                <p className="text-[10px] text-red-400 font-bold flex items-center gap-1 mt-1">
+                                    <AlertTriangle size={11} /> Required before submit
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            let photoData = {};
+                            if (uploadFiles.exteriorPhotos || uploadFiles.interiorPhotos || uploadFiles.odometerPhoto) {
+                                const uploaded = await handleUpload();
+                                if (uploaded) {
+                                    photoData = {
+                                        exteriorPhotos: uploaded.exteriorPhotos,
+                                        interiorPhotos: uploaded.interiorPhotos,
+                                        odometerPhoto: uploaded.odometerPhoto
+                                    };
+                                }
+                            }
+                            const inspectionPayload = { ...vehicle?.inspection, checklistItems: checklist, ...photoData };
+                            await handleProgress('INSPECTION REQUIRED', {
+                                inspection: inspectionPayload,
+                                basicDetails: { ...vehicle?.basicDetails }
+                            });
+                        }}
+                        disabled={actionLoading || uploadLoading}
+                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer border"
+                        style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)', color: 'var(--text-main)' }}
+                    >
+                        {(actionLoading || uploadLoading) ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Save size={15} /> Save Checklist Progress</>}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            if (!uploadFiles.odometerPhoto && !vehicle?.inspection?.odometerPhoto) {
+                                setActionError('Odometer photo is required before proceeding to accounting.');
+                                return;
+                            }
+                            let photoData = {};
+                            if (uploadFiles.exteriorPhotos || uploadFiles.interiorPhotos || uploadFiles.odometerPhoto) {
+                                const uploaded = await handleUpload();
+                                if (uploaded) {
+                                    photoData = {
+                                        exteriorPhotos: uploaded.exteriorPhotos,
+                                        interiorPhotos: uploaded.interiorPhotos,
+                                        odometerPhoto: uploaded.odometerPhoto
+                                    };
+                                }
+                            }
+                            const inspectionPayload = { ...vehicle?.inspection, checklistItems: checklist, ...photoData };
+                            await handleProgress('ACCOUNTING SETUP', {
+                                inspection: inspectionPayload,
+                                basicDetails: { ...vehicle?.basicDetails }
+                            });
+                        }}
+                        disabled={actionLoading || uploadLoading}
+                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-xs font-black transition-all cursor-pointer disabled:opacity-50 text-black shadow-lg active:scale-95"
+                        style={{ background: '#C8E600' }}
+                    >
+                        {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={15} /> Submit & Proceed to Accounting Setup</>}
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    const renderMilestone4Task = () => (
+        <div className={cardClass} style={cardStyle}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/25 shrink-0">
+                        <Calculator size={20} />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30 font-mono">
+                                Stage 4 of 6
+                            </span>
+                            <h3 className="text-sm font-bold text-white">Fixed Asset & Accounting Setup</h3>
+                        </div>
+                        <p className="text-xs text-dim mt-0.5">
+                            Establish depreciation schedules, asset lifetime, and salvage value for financial accounting.
+                        </p>
+                    </div>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 shrink-0 self-start sm:self-auto">
+                    Role: Financial Administrator
+                </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.depreciation')}</label>
+                    <select value={accounting.depreciationMethod} onChange={e => setAccounting(p => ({ ...p, depreciationMethod: e.target.value }))} className={inputClass} style={inputStyle}>
+                        <option value="Straight-Line">Straight-Line</option>
+                        <option value="Reducing Balance">Reducing Balance</option>
+                    </select>
+                </div>
+                <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.usefulLife')} (Years)</label>
+                    <input type="number" min="1" value={accounting.usefulLifeYears} onChange={e => setAccounting(p => ({ ...p, usefulLifeYears: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                </div>
+                <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.residualValue')} ($ USD)</label>
+                    <input type="number" min="0" value={accounting.residualValue} onChange={e => setAccounting(p => ({ ...p, residualValue: parseFloat(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                <button
+                    onClick={() => handleProgress('GPS ACTIVATION', { accountingSetup: accounting })}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-black cursor-pointer disabled:opacity-50 text-black shadow-lg transition-all active:scale-95"
+                    style={{ background: '#C8E600' }}
+                >
+                    {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Calculator size={16} /> Save Accounting Setup & Proceed to GPS Activation</>}
+                </button>
+            </div>
+        </div>
+    );
+
+    const renderMilestone5Task = () => (
+        <div className={cardClass} style={cardStyle}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/25 shrink-0">
+                        <Satellite size={20} />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-mono">
+                                Stage 5 of 6
+                            </span>
+                            <h3 className="text-sm font-bold text-white">GPS Telematics & Tracking Activation</h3>
+                        </div>
+                        <p className="text-xs text-dim mt-0.5">
+                            Set up digital boundary geofences, speed thresholds, and telematics telemetry synchronization.
+                        </p>
+                    </div>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shrink-0 self-start sm:self-auto">
+                    Role: Fleet Telematics Officer
+                </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+                <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.geofenceZone')}</label>
+                    <input type="text" placeholder="e.g. Accra Metropolitan" value={gps.geofenceZone} onChange={e => setGps(p => ({ ...p, geofenceZone: e.target.value }))} className={inputClass} style={inputStyle} />
+                </div>
+                <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.speedLimit')} (km/h)</label>
+                    <input type="number" value={gps.speedLimitThreshold} onChange={e => setGps(p => ({ ...p, speedLimitThreshold: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                </div>
+                <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.idleAlert')} (mins)</label>
+                    <input type="number" value={gps.idleTimeAlertMins} onChange={e => setGps(p => ({ ...p, idleTimeAlertMins: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                </div>
+                <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase text-dim">{t('management.vehicles.vehicleDetail.labels.syncFreq')} (hrs)</label>
+                    <input type="number" value={gps.mileageSyncFrequencyHrs} onChange={e => setGps(p => ({ ...p, mileageSyncFrequencyHrs: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                <button
+                    onClick={() => handleProgress('BRANCH MANAGER APPROVAL', { gpsConfiguration: gps })}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-black cursor-pointer disabled:opacity-50 text-black shadow-lg transition-all active:scale-95"
+                    style={{ background: '#C8E600' }}
+                >
+                    {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Satellite size={16} /> Activate GPS & Proceed to Branch Manager Approval</>}
+                </button>
+            </div>
+        </div>
+    );
+
+    const renderMilestone6Task = () => (
+        <div className={cardClass} style={cardStyle}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/25 shrink-0">
+                        <UserCheck size={20} />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-mono">
+                                Stage 6 of 6
+                            </span>
+                            <h3 className="text-sm font-bold text-white">Branch Manager Commissioning Approval</h3>
+                        </div>
+                        <p className="text-xs text-dim mt-0.5">
+                            Final review: Confirm commercial selling value and commission vehicle into active fleet operations.
+                        </p>
+                    </div>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0 self-start sm:self-auto">
+                    Authority: Branch Manager
+                </span>
+            </div>
+
+            {canApprove ? (
+                <div className="space-y-5 pt-2">
+                    <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wider block text-white">
+                                    Current Selling Value (USD) <span className="text-[10px] text-dim font-normal tracking-normal">(Optional)</span>
+                                </label>
+                                <span className="text-[11px] text-dim block mt-0.5">Optional baseline value used for automated lease payments and driver rent calculations.</span>
+                            </div>
+                            <div className="relative w-full sm:w-56">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="Enter amount"
+                                    value={sellingValue || ''}
+                                    onChange={e => setSellingValue(parseFloat(e.target.value) || 0)}
+                                    className="w-full pl-8 pr-4 py-2.5 rounded-xl border text-sm font-black text-right outline-none focus:ring-2 focus:ring-[#C8E600]"
+                                    style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                />
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-dim">$</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold uppercase tracking-wider text-dim block">Final Commissioning Notes</label>
+                        <textarea placeholder={t('management.vehicles.vehicleDetail.approvalNotesPlaceholder')} value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
+                    </div>
+
+                    <button
+                        onClick={() => {
+                            const basicPayload = { ...vehicle?.basicDetails };
+                            if (sellingValue && sellingValue > 0) {
+                                basicPayload.sellingValue = sellingValue;
+                            }
+                            handleProgress('ACTIVE — AVAILABLE', { basicDetails: basicPayload });
+                        }}
+                        disabled={actionLoading}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-black transition-all cursor-pointer disabled:opacity-50 bg-emerald-600 hover:bg-emerald-500 text-white shadow-xl active:scale-[0.99]"
+                    >
+                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><UserCheck size={18} /> Approve & Commission Vehicle into Active Fleet</>}
+                    </button>
+                </div>
+            ) : (
+                <div className="flex flex-col items-center gap-4 py-8 text-center">
+                    <Clock size={40} className="text-[#f59e0b] opacity-60" />
+                    <div className="space-y-1">
+                        <p className="text-sm font-bold text-white">{t('management.vehicles.vehicleDetail.messages.waitingAuthority')}</p>
+                        <p className="text-xs text-dim max-w-md">{t('management.vehicles.vehicleDetail.messages.waitingAuthorityDesc')}</p>
+                    </div>
+                    <button disabled className="px-6 py-2.5 rounded-xl text-xs font-bold opacity-50 cursor-not-allowed border" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', borderColor: 'rgba(245,158,11,0.3)' }}>
+                        {t('management.vehicles.vehicleDetail.actions.approvalPending')}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+
+    const renderActiveStageTask = () => {
+        switch (vehicle.status) {
+            case 'PENDING ENTRY':
+                return renderMilestone1Task();
+            case 'DOCUMENTS REVIEW':
+                return renderMilestone2Task();
+            case 'INSPECTION REQUIRED':
+            case 'INSPECTION FAILED':
+            case 'REPAIR IN PROGRESS':
+                return renderMilestone3Task();
+            case 'ACCOUNTING SETUP':
+                return renderMilestone4Task();
+            case 'GPS ACTIVATION':
+                return renderMilestone5Task();
+            case 'BRANCH MANAGER APPROVAL':
+                return renderMilestone6Task();
+            default:
+                return null;
+        }
+    };
+
+    const renderVehicleSnapshotCard = () => (
+        <div className={cardClass} style={cardStyle}>
+            <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                <SectionHeader icon={<Car size={16} />} title="Vehicle Snapshot" />
+                <HasPermission permission="VEHICLE_EDIT">
+                    {!isEditingOverview ? (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setEditBasicDetails({ ...vehicle.basicDetails });
+                                setIsEditingOverview(true);
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-white/5 transition-colors text-lime cursor-pointer text-xs flex items-center gap-1 font-bold"
+                            title="Edit Vehicle Details"
+                        >
+                            <Edit2 size={12} /> Edit Specs
+                        </button>
+                    ) : (
+                        <div className="flex items-center gap-1.5">
+                            <button
+                                type="button"
+                                onClick={handleEditOverview}
+                                disabled={actionLoading}
+                                className="p-1.5 rounded-lg bg-lime/10 text-lime hover:bg-lime/20 transition-colors cursor-pointer disabled:opacity-50"
+                                title="Save"
+                            >
+                                <Save size={13} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsEditingOverview(false)}
+                                className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
+                                title="Cancel"
+                            >
+                                <XCircle size={13} />
+                            </button>
+                        </div>
+                    )}
+                </HasPermission>
+            </div>
+
+            {isEditingOverview ? (
+                <div className="space-y-3 pt-1">
+                    <div className="grid grid-cols-2 gap-2.5">
+                        <div className="space-y-1">
+                            <label className="text-[10px] uppercase font-bold text-dim">Make</label>
+                            <input type="text" value={editBasicDetails.make || ''} onChange={e => setEditBasicDetails(p => ({ ...p, make: e.target.value }))} className={inputClass} style={inputStyle} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] uppercase font-bold text-dim">Model</label>
+                            <input type="text" value={editBasicDetails.model || ''} onChange={e => setEditBasicDetails(p => ({ ...p, model: e.target.value }))} className={inputClass} style={inputStyle} />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                        <div className="space-y-1">
+                            <label className="text-[10px] uppercase font-bold text-dim">Year</label>
+                            <input type="number" value={editBasicDetails.year || ''} onChange={e => setEditBasicDetails(p => ({ ...p, year: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] uppercase font-bold text-dim">VIN</label>
+                            <input type="text" value={editBasicDetails.vin || ''} onChange={e => setEditBasicDetails(p => ({ ...p, vin: e.target.value.toUpperCase() }))} className={`${inputClass} font-mono`} style={inputStyle} />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                        <div className="space-y-1">
+                            <label className="text-[10px] uppercase font-bold text-dim">Category</label>
+                            <select value={editBasicDetails.category} onChange={e => setEditBasicDetails(p => ({ ...p, category: e.target.value as VehicleCategory }))} className={inputClass} style={inputStyle}>
+                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] uppercase font-bold text-dim">Fuel</label>
+                            <select value={editBasicDetails.fuelType} onChange={e => setEditBasicDetails(p => ({ ...p, fuelType: e.target.value as FuelType }))} className={inputClass} style={inputStyle}>
+                                {FUEL_TYPES.map(f => <option key={f} value={f}>{f}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-2 divide-y divide-white/5 pt-1">
+                    <div className="flex items-center justify-between text-xs py-1">
+                        <span className="text-dim">Make & Model</span>
+                        <span className="font-bold text-white">{vehicle.basicDetails?.make || '—'} {vehicle.basicDetails?.model || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs py-1">
+                        <span className="text-dim">Year / Category</span>
+                        <span className="font-medium text-white">{vehicle.basicDetails?.year || '—'} • {vehicle.basicDetails?.category || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs py-1">
+                        <span className="text-dim">VIN</span>
+                        <span className="font-mono font-bold text-lime text-[11px] truncate max-w-[170px]">{vehicle.basicDetails?.vin || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs py-1">
+                        <span className="text-dim">Fleet #</span>
+                        <span className="font-mono font-medium text-white">{vehicle.basicDetails?.fleetNumber || 'Pending'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs py-1">
+                        <span className="text-dim">Fuel / Transmission</span>
+                        <span className="font-medium text-white">{vehicle.basicDetails?.fuelType || '—'} • {vehicle.basicDetails?.transmission || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs py-1">
+                        <span className="text-dim">Colour / Body</span>
+                        <span className="font-medium text-white">{vehicle.basicDetails?.colour || '—'} • {vehicle.basicDetails?.bodyType || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs py-1">
+                        <span className="text-dim">Engine #</span>
+                        <span className="font-mono text-white text-[11px]">{vehicle.basicDetails?.engineNumber || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs py-1">
+                        <span className="text-dim">Odometer</span>
+                        <span className="font-bold text-white">{vehicle.basicDetails?.odometer ? `${vehicle.basicDetails.odometer.toLocaleString()} KM` : '0 KM'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs py-1">
+                        <span className="text-dim">Condition</span>
+                        <span className="font-medium text-white">{vehicle.basicDetails?.condition || 'New'}</span>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
+    const renderProcurementCard = () => (
+        <div className={cardClass} style={cardStyle}>
+            <SectionHeader icon={<FileText size={16} />} title="Procurement Details" />
+            <div className="space-y-2 divide-y divide-white/5 pt-1">
+                <div className="flex items-center justify-between text-xs py-1">
+                    <span className="text-dim">Vendor</span>
+                    <span className="font-bold text-white">{vehicle.purchaseDetails?.vendorName || '—'}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs py-1">
+                    <span className="text-dim">Purchase Price</span>
+                    <span className="font-bold text-lime">
+                        {vehicle.purchaseDetails?.currency || '$'} {(vehicle.purchaseDetails?.purchasePrice || 0).toLocaleString()}
+                    </span>
+                </div>
+                <div className="flex items-center justify-between text-xs py-1">
+                    <span className="text-dim">Purchase Date</span>
+                    <span className="font-medium text-white">{formatDateToDMY(vehicle.purchaseDetails?.purchaseDate)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs py-1">
+                    <span className="text-dim">Assigned Branch</span>
+                    <span className="font-medium text-white">
+                        {vehicle.purchaseDetails?.branch && typeof vehicle.purchaseDetails?.branch !== 'string'
+                            ? vehicle.purchaseDetails.branch.name
+                            : '—'}
+                    </span>
+                </div>
+                <div className="flex items-center justify-between text-xs py-1">
+                    <span className="text-dim">Handling Staff</span>
+                    <span className="font-medium text-white">{vehicle.handlingStaff?.fullName || '—'}</span>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="container-responsive space-y-6">
@@ -681,10 +2036,16 @@ const VehicleDetail = () => {
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex flex-wrap items-center gap-2.5">
                             <h1 className="text-lg font-bold" style={{ color: 'var(--text-main)' }}>
                                 {vehicle.basicDetails?.make || 'New'} {vehicle.basicDetails?.model || 'Vehicle'} {vehicle.basicDetails?.year || ''}
                             </h1>
+                            {isOnboarding && (
+                                <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-lg bg-[#C8E600]/10 text-[#C8E600] border border-[#C8E600]/25 flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#C8E600] animate-pulse" />
+                                    Onboarding Pipeline • Step {activeMilestone} of 6
+                                </span>
+                            )}
                             {vehicleAlerts.some(a => a.type === 'MAINTENANCE' && a.metadata?.source === 'WORKSHOP_PULL') && (
                                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/25 animate-pulse flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
@@ -692,9 +2053,13 @@ const VehicleDetail = () => {
                                 </span>
                             )}
                         </div>
-                        <p className="text-sm font-mono mt-0.5" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.vin')}: {vehicle.basicDetails?.vin || '—'}</p>
+                        <p className="text-sm font-mono mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                            {t('management.vehicles.vehicleDetail.labels.vin')}: {vehicle.basicDetails?.vin || '—'}
+                            {vehicle.basicDetails?.fleetNumber ? ` • Fleet #${vehicle.basicDetails.fleetNumber}` : ''}
+                        </p>
                     </div>
-                    {assignedDriver && (
+
+                    {!isOnboarding && assignedDriver && (
                         <div className="flex items-center gap-2 shrink-0">
                             <div
                                 onClick={() => navigate(`../drivers/${assignedDriver._id}`)}
@@ -710,6 +2075,7 @@ const VehicleDetail = () => {
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
+                                                setSelectedDriverForAssign(null);
                                                 setDriverModalMode('CURRENT');
                                                 setIsChangeDriverModalOpen(true);
                                             }}
@@ -729,9 +2095,11 @@ const VehicleDetail = () => {
                             </div>
                         </div>
                     )}
-                    {!assignedDriver && (
+
+                    {!isOnboarding && !assignedDriver && (
                         <button
                             onClick={() => {
+                                setSelectedDriverForAssign(null);
                                 setDriverModalMode('CURRENT');
                                 setIsChangeDriverModalOpen(true);
                             }}
@@ -750,7 +2118,7 @@ const VehicleDetail = () => {
                         </button>
                     )}
 
-                    {vehicle.tempVehicle && (
+                    {!isOnboarding && vehicle.tempVehicle && (
                         <div className="flex items-center gap-2 shrink-0">
                             <div
                                 onClick={() => {
@@ -780,7 +2148,7 @@ const VehicleDetail = () => {
                         </div>
                     )}
 
-                    {vehicle.tempAssignment && vehicle.tempAssignment.tempDriver && (
+                    {!isOnboarding && vehicle.tempAssignment && vehicle.tempAssignment.tempDriver && (
                         <div className="flex items-center gap-2 shrink-0">
                             <div
                                 onClick={() => navigate(`../drivers/${vehicle.tempAssignment!.tempDriver!._id}`)}
@@ -817,7 +2185,37 @@ const VehicleDetail = () => {
                     )}
                 </div>
 
-                <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
+                <div className="flex flex-wrap items-center gap-3 self-end sm:self-auto shrink-0">
+                    {/* Onboarding Mode Switcher */}
+                    {isOnboarding && (
+                        <div className="flex items-center p-1 rounded-xl border" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                            <button
+                                type="button"
+                                onClick={() => setOnboardingViewMode('task')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    onboardingViewMode === 'task'
+                                        ? 'bg-[#C8E600] text-black shadow-sm font-black'
+                                        : 'text-dim hover:text-white'
+                                }`}
+                                title="Show only the active task required for this onboarding stage"
+                            >
+                                <Zap size={13} /> Focused Task
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setOnboardingViewMode('full')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    onboardingViewMode === 'full'
+                                        ? 'bg-[#C8E600] text-black shadow-sm font-black'
+                                        : 'text-dim hover:text-white'
+                                }`}
+                                title="Show all comprehensive specifications, maps, and details"
+                            >
+                                <Layers size={13} /> All Specs & Details
+                            </button>
+                        </div>
+                    )}
+
                     <HasPermission permission="VEHICLE_EDIT">
                         <div className="flex items-center gap-2 px-3 py-2 rounded-xl border bg-white/5" style={{ borderColor: 'var(--border-main)' }}>
                             <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>Status:</span>
@@ -987,34 +2385,47 @@ const VehicleDetail = () => {
                 );
             })()}
 
-            {/* Pipeline Progress - Only show if NOT active/rented or retired */}
-            {!(vehicle.status === 'ACTIVE — RENTED' || vehicle.status === 'RETIRED') && (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Zap size={16} />} title={t('management.vehicles.vehicleDetail.onboardingPipeline')} />
-                    <div className="flex items-center justify-between gap-1 overflow-x-auto pb-2 min-w-max md:min-w-0">
-                        {PIPELINE.map((st, i) => {
-                            const active = vehicle.status === st;
-                            const done = i <= currentIdx;
+            {/* Commissioning & Onboarding Pipeline Stepper */}
+            {isOnboarding && renderOnboardingStepper()}
 
-                            return (
-                                <div key={st} className={`flex items-center gap-1 ${i < PIPELINE.length - 1 ? 'flex-1' : ''}`}>
-                                    <div
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${active ? 'ring-2 ring-[#C8E600]' : ''}`}
-                                        style={{
-                                            background: done ? 'rgba(200,230,0,0.15)' : 'var(--bg-sidebar)',
-                                            color: done ? '#C8E600' : 'var(--text-dim)',
-                                        }}
-                                    >
-                                        {done && i < currentIdx ? <CheckCircle size={12} /> : null}
-                                        {getStatusTranslation(st).replace('Active — ', '').replace('ACTIVE — ', '')}
-                                    </div>
-                                    {i < PIPELINE.length - 1 && <div className="flex-1 h-px min-w-[20px]" style={{ background: done ? '#C8E600' : 'var(--border-main)' }} />}
+            {isOnboarding && onboardingViewMode === 'task' ? (
+                /* ── FOCUSED ONBOARDING TASK MODE (Distraction-Free) ─────────────── */
+                <div className="space-y-6">
+                    {/* Action feedback */}
+                    {actionError && (
+                        <div className="p-4 rounded-xl flex items-center gap-3 text-sm animate-in fade-in" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
+                            <AlertTriangle size={18} /> {actionError}
+                        </div>
+                    )}
+                    {actionSuccess && (
+                        <div className="p-4 rounded-xl flex items-center gap-3 text-sm animate-in fade-in" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e' }}>
+                            <CheckCircle size={18} /> {actionSuccess}
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        {/* Left 8 cols: ONLY the active stage task */}
+                        <div className="lg:col-span-8 space-y-6">
+                            {renderActiveStageTask()}
+                        </div>
+
+                        {/* Right 4 cols: Focused Vehicle Snapshot, Procurement & History */}
+                        <div className="lg:col-span-4 space-y-6">
+                            {renderVehicleSnapshotCard()}
+                            {renderProcurementCard()}
+                            {vehicle.statusHistory && vehicle.statusHistory.length > 0 && (
+                                <div className={cardClass} style={cardStyle}>
+                                    <SectionHeader icon={<Clock size={16} />} title={t('management.vehicles.vehicleDetail.statusHistory')} />
+                                    <VehicleStatusHistory history={vehicle.statusHistory} />
                                 </div>
-                            );
-                        })}
+                            )}
+                        </div>
                     </div>
                 </div>
-            )}
+            ) : (
+                /* ── FULL DETAILS & OPERATIONAL FLEET VIEW ───────────────────────── */
+                <div className="space-y-6">
+
 
             {/* Vehicle Details & Purchase Info */}
             <div className="grid grid-cols-1 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-6">
@@ -1509,689 +2920,36 @@ const VehicleDetail = () => {
                 </div>
             )}
 
-            {/* ── STAGE ACTIONS ─────────────────────────────────────────────── */}
-            {/* PENDING ENTRY Actions */}
-            {vehicle.status === 'PENDING ENTRY' && (
-                <div className="space-y-6">
-                    {/* Step 1: Vehicle Specifications */}
-                    {(!vehicle.basicDetails?.make || !vehicle.basicDetails?.vin) ? (
-                        <div className={cardClass} style={cardStyle}>
-                            <SectionHeader icon={<Car size={16} />} title={t('management.vehicles.vehicleDetail.step1')} />
-                            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.step1Desc')}</p>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.make')} *</label>
-                                    <input type="text" placeholder="e.g. Toyota" value={specData.make} onChange={e => setSpecData(p => ({ ...p, make: e.target.value }))} className={inputClass} style={inputStyle} />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.model')} *</label>
-                                    <input type="text" placeholder="e.g. Corolla" value={specData.model} onChange={e => setSpecData(p => ({ ...p, model: e.target.value }))} className={inputClass} style={inputStyle} />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.year')} *</label>
-                                    <input type="number" min="1900" max="2100" value={specData.year} onChange={e => setSpecData(p => ({ ...p, year: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.vin')} *</label>
-                                    <input type="text" placeholder="JTDKN..." value={specData.vin} onChange={e => setSpecData(p => ({ ...p, vin: e.target.value.toUpperCase() }))} className={`${inputClass} font-mono`} style={inputStyle} />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.category')}</label>
-                                    <select value={specData.category} onChange={e => setSpecData(p => ({ ...p, category: e.target.value as VehicleCategory }))} className={inputClass} style={inputStyle}>
-                                        {CATEGORIES.map(c => <option key={c} value={c}>{t(`management.vehicles.categories.${c}`, c)}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.fuel')}</label>
-                                    <select value={specData.fuelType} onChange={e => setSpecData(p => ({ ...p, fuelType: e.target.value as FuelType }))} className={inputClass} style={inputStyle}>
-                                        {FUEL_TYPES.map(f => <option key={f} value={f}>{t(`management.vehicles.fuelTypes.${f}`, f)}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.transmission')}</label>
-                                    <select value={specData.transmission} onChange={e => setSpecData(p => ({ ...p, transmission: e.target.value as Transmission }))} className={inputClass} style={inputStyle}>
-                                        {TRANSMISSIONS.map(tOption => <option key={tOption} value={tOption}>{t(`management.vehicles.transmissions.${tOption}`, tOption)}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.body')}</label>
-                                    <select value={specData.bodyType} onChange={e => setSpecData(p => ({ ...p, bodyType: e.target.value as BodyType }))} className={inputClass} style={inputStyle}>
-                                        <option value="">{t('common.search')}</option>
-                                        {BODY_TYPES.map(b => <option key={b} value={b}>{t(`management.vehicles.bodyTypes.${b}`, b)}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.engineCapacity')}</label>
-                                    <input type="number" value={specData.engineCapacity} onChange={e => setSpecData(p => ({ ...p, engineCapacity: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.colour')}</label>
-                                    <input type="text" value={specData.colour} onChange={e => setSpecData(p => ({ ...p, colour: e.target.value }))} className={inputClass} style={inputStyle} />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.engineNumber')}</label>
-                                    <input type="text" placeholder="e.g. 1GZ-XXXX" value={specData.engineNumber} onChange={e => setSpecData(p => ({ ...p, engineNumber: e.target.value }))} className={inputClass} style={inputStyle} />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold uppercase" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.odometer')}</label>
-                                    <div className="relative">
-                                        <input type="number" value={specData.odometer} onChange={e => setSpecData(p => ({ ...p, odometer: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold" style={{ color: 'var(--text-dim)' }}>KM</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <HasPermission permission="VEHICLE_EDIT">
-                                <button
-                                    onClick={() => handleProgress('PENDING ENTRY', { basicDetails: specData })}
-                                    disabled={actionLoading}
-                                    className="mt-4 flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50"
-                                    style={{ background: '#C8E600', color: '#0A0A0A' }}
-                                >
-                                    {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : t('management.vehicles.vehicleDetail.actions.saveSpecs')}
-                                </button>
-                            </HasPermission>
+                    {/* Active Stage Task (when viewed in Full Details mode during onboarding) */}
+                    {isOnboarding && (
+                        <div className="space-y-6">
+                            {renderActiveStageTask()}
                         </div>
-                    ) : (
-                        /* Step 2: Document Upload */
+                    )}
+
+                    {/* Action feedback */}
+                    {actionError && (
+                        <div className="p-4 rounded-xl flex items-center gap-3 text-sm animate-in fade-in" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
+                            <AlertTriangle size={18} /> {actionError}
+                        </div>
+                    )}
+                    {actionSuccess && (
+                        <div className="p-4 rounded-xl flex items-center gap-3 text-sm animate-in fade-in" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e' }}>
+                            <CheckCircle size={18} /> {actionSuccess}
+                        </div>
+                    )}
+
+                    {/* Status History */}
+                    {vehicle.statusHistory && vehicle.statusHistory.length > 0 && (
                         <div className={cardClass} style={cardStyle}>
-                            <SectionHeader icon={<Upload size={16} />} title={t('management.vehicles.vehicleDetail.step2')} />
-                            <p className="text-xs" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.step2Desc')}</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4">
-                                {DOC_FIELDS.map(df => (
-                                    <div key={df.key} className="p-3 rounded-xl border flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                        <span className="text-xs font-medium" style={{ color: 'var(--text-main)' }}>{t(`management.vehicles.documents.${df.key}`, df.label)}</span>
-                                        <div className="flex items-center gap-2">
-                                            {(uploadFiles[df.key] as File)?.name && <span className="text-[10px] text-green-500 truncate max-w-[100px]">{(uploadFiles[df.key] as File).name}</span>}
-                                            <input type="file" ref={el => { fileInputRefs.current[df.key] = el; }} className="hidden"
-                                                onChange={e => {
-                                                    if (e.target.files?.[0]) {
-                                                        const file = e.target.files[0];
-                                                        setUploadFiles(prev => {
-                                                            const next = { ...prev, [df.key]: file };
-                                                            // TEST AUTO-FILL: Fill all empty doc fields with this file
-                                                            DOC_FIELDS.forEach(f => { if (!next[f.key]) next[f.key] = file; });
-                                                            return next;
-                                                        });
-                                                    }
-                                                }}
-                                            />
-                                            <button type="button" onClick={() => fileInputRefs.current[df.key]?.click()} className="px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer" style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}>
-                                                {t('common.search').split('...')[0]}
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="flex flex-wrap gap-3">
-                                <button onClick={handleUpload} disabled={uploadLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: 'var(--bg-sidebar)', color: 'var(--text-main)', border: '1px solid var(--border-main)' }}>
-                                    {uploadLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Upload size={16} /> {t('management.vehicles.vehicleDetail.actions.uploadAll')}</>}
-                                </button>
-
-                                {/* TEST BUTTON: Auto-fill all fields with the first selected file */}
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const firstVal = Object.values(uploadFiles).find(v => v && (v instanceof File || (Array.isArray(v) && v.length > 0)));
-                                        if (!firstVal) { alert('Please select at least one file first.'); return; }
-                                        const fileToUse = Array.isArray(firstVal) ? firstVal[0] : firstVal;
-                                        const autoFilled: any = {};
-                                        DOC_FIELDS.forEach(df => autoFilled[df.key] = fileToUse);
-                                        setUploadFiles(autoFilled);
-                                        console.log('TEST: Auto-filled all fields with:', (fileToUse as File).name);
-                                    }}
-                                    className="px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer border border-dashed border-lime/30 text-lime bg-lime/5 hover:bg-lime/10"
-                                >
-                                    {t('management.vehicles.vehicleDetail.actions.fillAll')}
-                                </button>
-
-
-                            </div>
-
-                            <div className="border-t pt-5" style={{ borderColor: 'var(--border-main)' }}>
-                                <SectionHeader icon={<Send size={16} />} title={t('management.vehicles.vehicleDetail.actions.submitForReview')} />
-                                <div className="flex flex-col gap-3 mt-3">
-                                    <textarea placeholder={t('management.purchaseOrders.filters.anyUsage')} value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
-                                    <HasPermission permission="VEHICLE_EDIT">
-                                        <button onClick={() => handleProgress('DOCUMENTS REVIEW')} disabled={actionLoading} className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#3b82f6', color: '#fff' }}>
-                                            {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Send size={16} /> {t('management.vehicles.vehicleDetail.actions.submitForReview')}</>}
-                                        </button>
-                                    </HasPermission>
-                                </div>
-                            </div>
+                            <SectionHeader icon={<Clock size={16} />} title={t('management.vehicles.vehicleDetail.statusHistory')} />
+                            <VehicleStatusHistory history={vehicle.statusHistory} />
                         </div>
                     )}
                 </div>
             )}
 
-            {/* DOCUMENTS REVIEW / VERIFICATION */}
-            {vehicle.status !== 'PENDING ENTRY' && (() => {
-                const isReadOnly = vehicle.status !== 'DOCUMENTS REVIEW';
-                return (
-                    <div className={cardClass} style={cardStyle}>
-                        <div className="flex justify-between items-center mb-2">
-                            <SectionHeader icon={<ClipboardCheck size={16} />} title="Documents Review" />
-                            <HasPermission permission="VEHICLE_EDIT">
-                                {!isEditingDocs ? (
-                                    <button
-                                        onClick={() => setIsEditingDocs(true)}
-                                        className="p-2 rounded-lg hover:bg-white/5 transition-colors text-lime cursor-pointer"
-                                        title="Manage Documents"
-                                    >
-                                        <Edit2 size={16} />
-                                    </button>
-                                ) : (
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={handleUpload}
-                                            disabled={uploadLoading}
-                                            className="p-2 rounded-lg bg-lime/10 text-lime hover:bg-lime/20 transition-colors cursor-pointer disabled:opacity-50"
-                                            title="Save Documents"
-                                        >
-                                            <Save size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => { setIsEditingDocs(false); setUploadFiles({}); }}
-                                            className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors cursor-pointer"
-                                            title="Cancel"
-                                        >
-                                            <XCircle size={16} />
-                                        </button>
-                                    </div>
-                                )}
-                            </HasPermission>
-                        </div>
-                        <p className="text-sm" style={{ color: 'var(--text-dim)' }}>Review and manage the vehicle's legal and procurement documents.</p>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 4xl:grid-cols-5 uw:grid-cols-6 gap-4 mt-4">
-                            {DOC_FIELDS.map(df => {
-                                const rawUrl = df.key === 'purchaseReceipt'
-                                    ? vehicle.purchaseDetails?.purchaseReceipt
-                                    : df.key === 'odometerPhoto'
-                                        ? vehicle.inspection?.odometerPhoto
-                                        : df.key === 'customsClearanceCertificate' || df.key === 'importPermit'
-                                            ? (vehicle.importationDetails as any)?.[df.key]
-                                            : (vehicle.legalDocs as any)?.[df.key];
-                                const docUrl = toFullUrl(rawUrl);
-
-                                return (
-                                    <div key={df.key} className="p-3 rounded-xl border flex flex-col gap-2" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div className="flex flex-col min-w-0">
-                                                <span className="text-xs font-medium truncate" style={{ color: 'var(--text-main)' }}>{df.label}</span>
-                                                {docUrl ? (
-                                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
-                                                        <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-lime font-bold hover:underline flex items-center gap-1">
-                                                            <FileText size={10} /> View
-                                                        </a>
-                                                        <span className="hidden sm:inline text-dim opacity-40">|</span>
-                                                        <button
-                                                            onClick={() => {
-                                                                const regNo = vehicle.legalDocs?.registrationNumber || 'vehicle';
-                                                                downloadFile(
-                                                                    docUrl,
-                                                                    `${df.label.replace(/\s+/g, '_')}_${regNo.replace(/\s+/g, '_')}`
-                                                                );
-                                                            }}
-                                                            className="text-[10px] text-blue-500 font-bold hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0 outline-none"
-                                                        >
-                                                            <Download size={10} /> Download
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
-                                                        <XCircle size={10} /> Not Uploaded
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {docUrl && <CheckCircle size={14} className="text-green-500 flex-shrink-0" />}
-                                        </div>
-
-                                        {isEditingDocs && (
-                                            <div className="mt-2 pt-2 border-t flex items-center justify-between gap-2" style={{ borderColor: 'var(--border-main)' }}>
-                                                <input
-                                                    type="file"
-                                                    ref={el => { fileInputRefs.current[df.key] = el; }}
-                                                    className="hidden"
-                                                    onChange={e => {
-                                                        if (e.target.files?.[0]) {
-                                                            setUploadFiles(prev => ({ ...prev, [df.key]: e.target.files![0] }));
-                                                        }
-                                                    }}
-                                                />
-                                                <span className="text-[9px] text-dim truncate max-w-[80px]">
-                                                    {(uploadFiles[df.key] as File)?.name || 'No file chosen'}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => fileInputRefs.current[df.key]?.click()}
-                                                    className="px-2 py-1 rounded-lg text-[9px] font-bold cursor-pointer"
-                                                    style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
-                                                >
-                                                    {t('common.search').split('...')[0]}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {/* Importation details (moved from Insurance stage) */}
-                        <div className="mt-6 pt-6 border-t space-y-4" style={{ borderColor: 'var(--border-main)' }}>
-                            <div className="flex items-center gap-3">
-                                <input type="checkbox" checked={!!importation.isImported} onChange={e => setImportation(p => ({ ...p, isImported: e.target.checked }))} className="accent-[#C8E600]" />
-                                <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>This vehicle was imported</span>
-                            </div>
-
-                            {importation.isImported && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4 p-4 rounded-xl border" style={{ borderColor: 'rgba(200,230,0,0.15)', background: 'rgba(200,230,0,0.03)' }}>
-                                    {[
-                                        { k: 'countryOfOrigin', l: t('management.vehicles.vehicleDetail.labels.countryOfOrigin') }, { k: 'shippingReference', l: t('management.vehicles.vehicleDetail.labels.shippingReference') },
-                                        { k: 'portOfEntry', l: t('management.vehicles.vehicleDetail.labels.portOfEntry') }, { k: 'customsDeclarationNumber', l: t('management.vehicles.vehicleDetail.labels.customsDeclaration') },
-                                        { k: 'arrivalDate', l: t('management.vehicles.vehicleDetail.labels.arrivalDate'), t: 'date' }, { k: 'shippingCost', l: t('management.vehicles.vehicleDetail.labels.shippingCost'), t: 'number' },
-                                        { k: 'customsDuty', l: t('management.vehicles.vehicleDetail.labels.customsDuty'), t: 'number' }, { k: 'portHandling', l: t('management.vehicles.vehicleDetail.labels.portHandling'), t: 'number' },
-                                    ].map(f => (
-                                        <div key={f.k} className="space-y-1.5">
-                                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{f.l}</label>
-                                            <input type={f.t || 'text'} value={importation[f.k] || ''} onChange={e => setImportation(p => ({ ...p, [f.k]: f.t === 'number' ? parseFloat(e.target.value) || 0 : e.target.value }))} className={inputClass} style={inputStyle} />
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {!isReadOnly && (
-                            <div className="flex flex-col gap-4 mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                                {canApprove ? (
-                                    <>
-                                        <textarea placeholder="Review notes (reason for rejection or approval comments)..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
-                                        <div className="flex gap-3">
-                                            <button onClick={() => handleProgress('INSPECTION REQUIRED', { ...(importation.isImported ? { importationDetails: importation } : {}) })} disabled={actionLoading} className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50" style={{ background: '#22c55e', color: '#fff' }}>
-                                                {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><CheckCircle size={16} /> {t('management.vehicles.vehicleDetail.actions.approveProceedInspection')}</>}
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500">
-                                        <Clock size={20} />
-                                        <div className="text-sm">
-                                            <p className="font-bold">Awaiting Manager Review</p>
-                                            <p className="text-xs opacity-80">Only a Branch or Country Manager can approve documents for this vehicle.</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                );
-            })()}
-
-
-
-
-            {vehicle.status === 'INSPECTION REQUIRED' && (() => {
-                const odometerCount = (vehicle?.inspection?.odometerPhoto || uploadFiles.odometerPhoto) ? 1 : 0;
-                const totalExterior = (vehicle?.inspection?.exteriorPhotos?.length || 0) + (Array.isArray(uploadFiles.exteriorPhotos) ? uploadFiles.exteriorPhotos.length : 0);
-                const totalInterior = (vehicle?.inspection?.interiorPhotos?.length || 0) + (Array.isArray(uploadFiles.interiorPhotos) ? uploadFiles.interiorPhotos.length : 0);
-                const totalPhotos = totalExterior + totalInterior + odometerCount;
-
-                const PhotoPreview = ({ url, label }: { url: string; label: string }) => {
-                    const fullUrl = toFullUrl(url);
-                    const isPdf = url.toLowerCase().endsWith('.pdf');
-                    return (
-                        <div className="aspect-square rounded-lg border overflow-hidden relative group" style={{ borderColor: 'var(--border-main)' }}>
-                            {isPdf ? (
-                                <div className="w-full h-full flex flex-col items-center justify-center p-2 bg-red-500/5 text-red-500">
-                                    <FileText size={20} />
-                                    <span className="text-[8px] font-bold mt-1 uppercase">PDF</span>
-                                </div>
-                            ) : (
-                                <img src={fullUrl} alt={label} className="w-full h-full object-cover" />
-                            )}
-                            <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] text-white font-bold gap-1">
-                                <FileText size={10} /> View
-                            </a>
-                        </div>
-                    );
-                };
-
-                return (
-                    <div className={cardClass} style={cardStyle}>
-                        <div className="flex justify-between items-center mb-4">
-                            <SectionHeader icon={<ClipboardCheck size={16} />} title="Vehicle Inspection (23 Items)" />
-                            {vehicle.inspection?.status === 'Passed' && (
-                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-green-500/10 text-green-500 border border-green-500/20">
-                                    <CheckCircle size={12} /> Passed
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                            {checklist.map((item, i) => (
-                                <div key={i} className="flex items-center gap-3 p-3 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: item.condition === 'Poor' ? 'rgba(239,68,68,0.05)' : 'var(--bg-sidebar)' }}>
-                                    <span className="text-xs font-medium flex-1" style={{ color: 'var(--text-main)' }}>{item.name}</span>
-                                    <select value={item.condition} onChange={e => { const c = [...checklist]; c[i] = { ...c[i], condition: e.target.value as InspectionCondition }; setChecklist(c); }}
-                                        className="px-3 py-1.5 rounded-lg text-xs outline-none" style={{ ...inputStyle, width: '90px' }}>
-                                        {['Good', 'Fair', 'Poor'].map(v => <option key={v} value={v}>{v}</option>)}
-                                    </select>
-                                    <input placeholder="Notes" value={item.notes || ''} onChange={e => { const c = [...checklist]; c[i] = { ...c[i], notes: e.target.value }; setChecklist(c); }}
-                                        className="px-3 py-1.5 rounded-lg text-xs outline-none w-32" style={inputStyle} />
-                                </div>
-                            ))}
-                        </div>
-
-                        <textarea placeholder="Overall inspection notes..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={`${inputClass} mt-2`} style={inputStyle} />
-
-                        {/* Technical Photos Section */}
-                        <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                            <SectionHeader icon={<Upload size={16} />} title={`Technical Photos (${totalPhotos} / Min 6)`} />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                                {/* Exterior Photos */}
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Exterior Photos</label>
-                                        <input type="file" ref={extPhotoRef} className="hidden" multiple accept="image/*" onChange={e => {
-                                            const files = Array.from(e.target.files || []);
-                                            setUploadFiles(p => ({ ...p, exteriorPhotos: [...(Array.isArray(p.exteriorPhotos) ? p.exteriorPhotos : []), ...files] }));
-                                        }} />
-                                        <button onClick={() => extPhotoRef.current?.click()} className="text-[10px] text-lime font-bold hover:underline">+ Add Photos</button>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {(vehicle.inspection?.exteriorPhotos || []).map((url, i) => (
-                                            <PhotoPreview key={i} url={url} label={`Exterior ${i}`} />
-                                        ))}
-                                        {(Array.isArray(uploadFiles.exteriorPhotos) ? uploadFiles.exteriorPhotos : []).map((file, i) => (
-                                            <div key={`new-${i}`} className="aspect-square rounded-lg border border-dashed overflow-hidden relative" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.05)' }}>
-                                                <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-1" style={{ color: 'var(--text-dim)' }}>{file.name}</div>
-                                                <button onClick={() => setUploadFiles(p => ({ ...p, exteriorPhotos: (p.exteriorPhotos as File[]).filter((_, idx) => idx !== i) }))} className="absolute top-1 right-1 bg-red-500 text-white p-0.5 rounded-full"><XCircle size={10} /></button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Interior Photos */}
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Interior Photos</label>
-                                        <input type="file" ref={intPhotoRef} className="hidden" multiple accept="image/*" onChange={e => {
-                                            const files = Array.from(e.target.files || []);
-                                            setUploadFiles(p => ({ ...p, interiorPhotos: [...(Array.isArray(p.interiorPhotos) ? p.interiorPhotos : []), ...files] }));
-                                        }} />
-                                        <button onClick={() => intPhotoRef.current?.click()} className="text-[10px] text-lime font-bold hover:underline">+ Add Photos</button>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {(vehicle.inspection?.interiorPhotos || []).map((url, i) => (
-                                            <PhotoPreview key={i} url={url} label={`Interior ${i}`} />
-                                        ))}
-                                        {(Array.isArray(uploadFiles.interiorPhotos) ? uploadFiles.interiorPhotos : []).map((file, i) => (
-                                            <div key={`new-${i}`} className="aspect-square rounded-lg border border-dashed overflow-hidden relative" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.05)' }}>
-                                                <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-1" style={{ color: 'var(--text-dim)' }}>{file.name}</div>
-                                                <button onClick={() => setUploadFiles(p => ({ ...p, interiorPhotos: (p.interiorPhotos as File[]).filter((_, idx) => idx !== i) }))} className="absolute top-1 right-1 bg-red-500 text-white p-0.5 rounded-full"><XCircle size={10} /></button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Odometer Photo */}
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Odometer Photo *</label>
-                                        <input type="file" ref={el => { if (fileInputRefs.current) fileInputRefs.current['odometerPhoto'] = el; }} className="hidden" accept="image/*" onChange={e => {
-                                            if (e.target.files?.[0]) {
-                                                setUploadFiles(p => ({ ...p, odometerPhoto: e.target.files![0] }));
-                                            }
-                                        }} />
-                                        <button onClick={() => fileInputRefs.current['odometerPhoto']?.click()} className="text-[10px] text-lime font-bold hover:underline">
-                                            {uploadFiles.odometerPhoto || vehicle.inspection?.odometerPhoto ? 'Change Photo' : '+ Add Photo'}
-                                        </button>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {vehicle.inspection?.odometerPhoto && (
-                                            <PhotoPreview url={vehicle.inspection.odometerPhoto} label="Odometer" />
-                                        )}
-                                        {uploadFiles.odometerPhoto && !(uploadFiles.odometerPhoto instanceof Array) && (
-                                            <div className="aspect-square rounded-lg border border-dashed overflow-hidden relative" style={{ borderColor: 'var(--brand-lime)', background: 'rgba(200,230,0,0.05)' }}>
-                                                <div className="w-full h-full flex items-center justify-center text-[8px] text-center p-1" style={{ color: 'var(--text-dim)' }}>{(uploadFiles.odometerPhoto as File).name}</div>
-                                                <button onClick={() => setUploadFiles(p => { const n = { ...p }; delete n.odometerPhoto; return n; })} className="absolute top-1 right-1 bg-red-500 text-white p-0.5 rounded-full"><XCircle size={10} /></button>
-                                            </div>
-                                        )}
-                                    </div>
-                                    {!uploadFiles.odometerPhoto && !vehicle.inspection?.odometerPhoto && (
-                                        <p className="text-[10px] text-red-500 font-bold flex items-center gap-1 mt-1">
-                                            <AlertTriangle size={10} /> Odometer photo is required before proceeding
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row gap-4 mt-6 pt-6 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                            <button
-                                onClick={async () => {
-                                    let photoData = {};
-                                    if (uploadFiles.exteriorPhotos || uploadFiles.interiorPhotos || uploadFiles.odometerPhoto) {
-                                        const uploaded = await handleUpload();
-                                        if (uploaded) {
-                                            photoData = {
-                                                exteriorPhotos: uploaded.exteriorPhotos,
-                                                interiorPhotos: uploaded.interiorPhotos,
-                                                odometerPhoto: uploaded.odometerPhoto
-                                            };
-                                        }
-                                    }
-                                    const inspectionPayload = { ...vehicle?.inspection, checklistItems: checklist, ...photoData };
-                                    await handleProgress('INSPECTION REQUIRED', {
-                                        inspection: inspectionPayload,
-                                        basicDetails: { ...vehicle?.basicDetails }
-                                    });
-                                }}
-                                disabled={actionLoading || uploadLoading}
-                                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer border"
-                                style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)', color: 'var(--text-main)' }}
-                            >
-                                {(actionLoading || uploadLoading) ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><ClipboardCheck size={16} /> {t('management.vehicles.vehicleDetail.actions.saveProgress')}</>}
-                            </button>
-
-                            <div className="flex-1 flex flex-col gap-2">
-                                <button
-                                    onClick={async () => {
-                                        let photoData = {};
-                                        if (!uploadFiles.odometerPhoto && !vehicle?.inspection?.odometerPhoto) {
-                                            setActionError('Odometer photo is required before proceeding to accounting.');
-                                            return;
-                                        }
-
-                                        if (uploadFiles.exteriorPhotos || uploadFiles.interiorPhotos || uploadFiles.odometerPhoto) {
-                                            const uploaded = await handleUpload();
-                                            if (uploaded) {
-                                                photoData = {
-                                                    exteriorPhotos: uploaded.exteriorPhotos,
-                                                    interiorPhotos: uploaded.interiorPhotos,
-                                                    odometerPhoto: uploaded.odometerPhoto
-                                                };
-                                            }
-                                        }
-                                        const inspectionPayload = { ...vehicle?.inspection, checklistItems: checklist, ...photoData };
-                                        await handleProgress('ACCOUNTING SETUP', {
-                                            inspection: inspectionPayload,
-                                            basicDetails: { ...vehicle?.basicDetails }
-                                        });
-                                    }}
-                                    disabled={actionLoading}
-                                    className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50 text-black"
-                                    style={{ background: '#C8E600' }}
-                                >
-                                    {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><ArrowLeft className="rotate-180" size={16} /> Submit & Proceed to Accounting</>}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            })()}
-
-            {/* INSPECTION FAILED */}
-            {vehicle.status === 'INSPECTION FAILED' && (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<XCircle size={16} />} title={t('management.vehicles.vehicleDetail.inspectionFailedTitle')} />
-                    <textarea placeholder={t('management.vehicles.vehicleDetail.repairNotesPlaceholder')} value={notes} onChange={e => setNotes(e.target.value)} rows={3} className={inputClass} style={inputStyle} />
-                    <button onClick={() => handleProgress('REPAIR IN PROGRESS')} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#f97316', color: '#fff' }}>
-                        {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Wrench size={16} /> {t('management.vehicles.vehicleDetail.actions.sendToRepair')}</>}
-                    </button>
-                </div>
-            )}
-
-            {/* REPAIR IN PROGRESS */}
-            {vehicle.status === 'REPAIR IN PROGRESS' && (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Wrench size={16} />} title={t('management.vehicles.vehicleDetail.repairCompleteTitle')} />
-                    <textarea placeholder={t('common.notes')} value={notes} onChange={e => setNotes(e.target.value)} rows={3} className={inputClass} style={inputStyle} />
-                    <button onClick={() => handleProgress('INSPECTION REQUIRED')} disabled={actionLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                        {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><ClipboardCheck size={16} /> {t('management.vehicles.vehicleDetail.actions.reInspect')}</>}
-                    </button>
-                </div>
-            )}
-
-            {/* ACCOUNTING SETUP */}
-            {vehicle.status === 'ACCOUNTING SETUP' && (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Calculator size={16} />} title={t('management.vehicles.vehicleDetail.accountingSetup')} />
-                    <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.depreciation')}</label>
-                            <select value={accounting.depreciationMethod} onChange={e => setAccounting(p => ({ ...p, depreciationMethod: e.target.value }))} className={inputClass} style={inputStyle}>
-                                <option value="Straight-Line">Straight-Line</option><option value="Reducing Balance">Reducing Balance</option>
-                            </select>
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.usefulLife')}</label>
-                            <input type="number" min="1" value={accounting.usefulLifeYears} onChange={e => setAccounting(p => ({ ...p, usefulLifeYears: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.residualValue')}</label>
-                            <input type="number" min="0" value={accounting.residualValue} onChange={e => setAccounting(p => ({ ...p, residualValue: parseFloat(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
-                        </div>
-                    </div>
-                    <div className="flex gap-3">
-                        <button onClick={() => handleProgress('GPS ACTIVATION', { accountingSetup: accounting })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                            {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Calculator size={16} /> {t('management.vehicles.vehicleDetail.actions.saveAccounting')}</>}
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* GPS ACTIVATION */}
-            {vehicle.status === 'GPS ACTIVATION' && (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Satellite size={16} />} title={t('management.vehicles.vehicleDetail.gpsConfiguration')} />
-                    <div className="grid grid-cols-1 md:grid-cols-2 3xl:grid-cols-3 4xl:grid-cols-4 uw:grid-cols-5 gap-4">
-                        <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.geofenceZone')}</label>
-                            <input type="text" placeholder="e.g. Accra Metro" value={gps.geofenceZone} onChange={e => setGps(p => ({ ...p, geofenceZone: e.target.value }))} className={inputClass} style={inputStyle} /></div>
-                        <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.speedLimit')} (km/h)</label>
-                            <input type="number" value={gps.speedLimitThreshold} onChange={e => setGps(p => ({ ...p, speedLimitThreshold: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} /></div>
-                        <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.idleAlert')} (mins)</label>
-                            <input type="number" value={gps.idleTimeAlertMins} onChange={e => setGps(p => ({ ...p, idleTimeAlertMins: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} /></div>
-                        <div className="space-y-1.5"><label className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.syncFreq')}</label>
-                            <input type="number" value={gps.mileageSyncFrequencyHrs} onChange={e => setGps(p => ({ ...p, mileageSyncFrequencyHrs: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} /></div>
-                    </div>
-                    <div className="flex gap-3">
-                        <button onClick={() => handleProgress('BRANCH MANAGER APPROVAL', { gpsConfiguration: gps })} disabled={actionLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50" style={{ background: '#C8E600', color: '#0A0A0A' }}>
-                            {actionLoading ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Satellite size={16} /> {t('management.vehicles.vehicleDetail.actions.activateGps')}</>}
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* BRANCH MANAGER APPROVAL */}
-            {vehicle.status === 'BRANCH MANAGER APPROVAL' && (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<UserCheck size={16} />} title={t('management.vehicles.vehicleDetail.branchManagerApproval')} />
-                    {canApprove ? (
-                        <>
-                            <p className="text-sm" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.messages.waitingAuthorityDesc')}</p>
-
-                            {/* Current Selling Value Input */}
-                            <div className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                    <div>
-                                        <label className="text-xs font-semibold uppercase tracking-wider block" style={{ color: 'var(--text-main)' }}>
-                                            Current Selling Value (USD) *
-                                        </label>
-                                        <span className="text-[10px] text-dim block mt-0.5">Used for lease and rent calculations during driver vehicle assignment.</span>
-                                    </div>
-                                    <div className="relative w-full sm:w-48">
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            placeholder="Enter value"
-                                            value={sellingValue || ''}
-                                            onChange={e => setSellingValue(parseFloat(e.target.value) || 0)}
-                                            className="w-full pl-7 pr-4 py-2 rounded-xl bg-white/5 border border-white/10 outline-none text-xs focus:border-brand-lime transition-all text-right font-bold"
-                                            style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                        />
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-dim">$</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <textarea placeholder={t('management.vehicles.vehicleDetail.approvalNotesPlaceholder')} value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={inputClass} style={inputStyle} />
-
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => {
-                                        if (!sellingValue || sellingValue <= 0) {
-                                            setActionError('Current Selling Value is mandatory and must be greater than 0 before final approval.');
-                                            return;
-                                        }
-                                        handleProgress('ACTIVE — AVAILABLE', { basicDetails: { ...vehicle?.basicDetails, sellingValue } });
-                                    }}
-                                    disabled={actionLoading}
-                                    className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all cursor-pointer disabled:opacity-50"
-                                    style={{ background: '#22c55e', color: '#fff' }}
-                                >
-                                    {actionLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><UserCheck size={16} /> {t('management.vehicles.vehicleDetail.actions.approveProceed')}</>}
-                                </button>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="flex flex-col items-center gap-4 py-4 text-center">
-                            <Clock size={40} className="text-[#f59e0b] opacity-60" />
-                            <div className="space-y-1">
-                                <p className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{t('management.vehicles.vehicleDetail.messages.waitingAuthority')}</p>
-                                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.messages.waitingAuthorityDesc')}</p>
-                            </div>
-                            <button disabled className="px-6 py-3 rounded-xl text-sm font-bold opacity-50 cursor-not-allowed" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
-                                {t('management.vehicles.vehicleDetail.actions.approvalPending')}
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
-
-
-            {/* Action feedback */}
-            {actionError && (
-                <div className="p-4 rounded-xl flex items-center gap-3 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
-                    <AlertTriangle size={18} /> {actionError}
-                </div>
-            )}
-            {actionSuccess && (
-                <div className="p-4 rounded-xl flex items-center gap-3 text-sm" style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e' }}>
-                    <CheckCircle size={18} /> {actionSuccess}
-                </div>
-            )}
-
-
-            {/* Status History */}
-            {vehicle.statusHistory && vehicle.statusHistory.length > 0 && (
-                <div className={cardClass} style={cardStyle}>
-                    <SectionHeader icon={<Clock size={16} />} title={t('management.vehicles.vehicleDetail.statusHistory')} />
-                    <VehicleStatusHistory history={vehicle.statusHistory} />
-                </div>
-            )}
-
-            <StatusChangeModal
+                        <StatusChangeModal
                 isOpen={isStatusModalOpen}
                 onClose={() => setIsStatusModalOpen(false)}
                 targetStatus={targetStatus}
@@ -2212,10 +2970,10 @@ const VehicleDetail = () => {
 
             {/* Change Driver Modal */}
             {isChangeDriverModalOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => { setIsChangeDriverModalOpen(false); setDriverSearchQuery(''); }}>
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => { setIsChangeDriverModalOpen(false); setDriverSearchQuery(''); setSelectedDriverForAssign(null); }}>
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
                     <div
-                        className="relative w-full max-w-lg rounded-3xl border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                        className="relative w-full max-w-xl rounded-3xl border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -2224,132 +2982,300 @@ const VehicleDetail = () => {
                             <div className="flex items-center gap-2">
                                 <Users size={18} className={driverModalMode === 'TEMP' ? 'text-amber-500' : 'text-[#C8E600]'} />
                                 <h2 className="text-sm font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>
-                                    {driverModalMode === 'TEMP' ? 'Change Temporary Driver' : 'Change Driver'}
+                                    {driverModalMode === 'TEMP'
+                                        ? 'Change Temporary Driver'
+                                        : selectedDriverForAssign
+                                            ? 'Repayment Plan & Assignment'
+                                            : 'Assign Vehicle to Driver'}
                                 </h2>
                             </div>
-                            <button onClick={() => { setIsChangeDriverModalOpen(false); setDriverSearchQuery(''); }} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors" style={{ color: 'var(--text-dim)' }}>
+                            <button onClick={() => { setIsChangeDriverModalOpen(false); setDriverSearchQuery(''); setSelectedDriverForAssign(null); }} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors" style={{ color: 'var(--text-dim)' }}>
                                 <X size={16} />
                             </button>
                         </div>
 
-                        {/* Currently Assigned Summary */}
-                        {driverModalMode === 'CURRENT' && assignedDriver && (
-                            <div className="p-4 border-b" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                <div className="flex items-center justify-between">
+                        {/* STEP 2: Repayment Plan Form when Driver is Selected */}
+                        {driverModalMode === 'CURRENT' && selectedDriverForAssign ? (
+                            <div className="p-6 space-y-5">
+                                {/* Selected Driver Card */}
+                                <div className="p-4 rounded-2xl border flex items-center justify-between" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
                                     <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-xl bg-[#C8E600]/10 text-[#C8E600] flex items-center justify-center font-bold text-xs border border-[#C8E600]/20">
-                                            {assignedDriver.personalInfo?.fullName?.charAt(0).toUpperCase()}
+                                        <div className="w-10 h-10 rounded-xl bg-[#C8E600]/10 text-[#C8E600] flex items-center justify-center font-bold text-sm border border-[#C8E600]/20">
+                                            {selectedDriverForAssign.personalInfo?.fullName?.charAt(0).toUpperCase() || 'D'}
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Currently Assigned</p>
-                                            <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{assignedDriver.personalInfo?.fullName}</p>
-                                            <p className="text-[10px] font-mono" style={{ color: 'var(--text-dim)' }}>{assignedDriver.driverId || ''}</p>
+                                            <span className="text-[10px] font-black uppercase tracking-widest block" style={{ color: 'var(--text-dim)' }}>
+                                                Selected Driver
+                                            </span>
+                                            <h4 className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                                                {selectedDriverForAssign.personalInfo?.fullName}
+                                            </h4>
+                                            <p className="text-[10px] font-mono" style={{ color: 'var(--text-dim)' }}>
+                                                {selectedDriverForAssign.driverId || ''} {selectedDriverForAssign.personalInfo?.phone ? `• ${selectedDriverForAssign.personalInfo.phone}` : ''}
+                                            </p>
                                         </div>
                                     </div>
                                     <button
-                                        onClick={handleTriggerUnassignDriver}
-                                        disabled={changingDriver}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20 transition-all hover:bg-red-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                                        type="button"
+                                        onClick={() => setSelectedDriverForAssign(null)}
+                                        className="text-xs font-bold text-[#C8E600] hover:underline cursor-pointer"
                                     >
-                                        <UserMinus size={12} />
-                                        Unassign
+                                        Change Driver
                                     </button>
                                 </div>
-                            </div>
-                        )}
 
-                        {driverModalMode === 'TEMP' && vehicle?.tempAssignment?.tempDriver && (
-                            <div className="p-4 border-b" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs border border-amber-500/20">
-                                            {vehicle.tempAssignment.tempDriver.personalInfo?.fullName?.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Currently Assigned (Temporary)</p>
-                                            <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{vehicle.tempAssignment.tempDriver.personalInfo?.fullName}</p>
-                                            <p className="text-[10px] font-mono" style={{ color: 'var(--text-dim)' }}>{vehicle.tempAssignment.tempDriver.driverId || ''}</p>
+                                {/* Active Contract Replacement Notice */} 
+                                {assignedDriver && assignedDriver._id !== selectedDriverForAssign._id && (
+                                    <div className="p-3.5 rounded-xl border bg-amber-500/10 border-amber-500/20 text-amber-400 text-xs flex items-start gap-2.5">
+                                        <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                                        <div className="text-[11px] leading-relaxed">
+                                            <span className="font-bold">Active Contract Replacement:</span> This vehicle is currently assigned to <strong className="text-white">{assignedDriver.personalInfo?.fullName}</strong>. Assigning this vehicle will cancel their contract as of {assignStartDate} and start this repayment plan.
                                         </div>
                                     </div>
+                                )}
+
+                                {/* Inputs matching user screenshot */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                                    {/* Start Date */}
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>
+                                            START DATE <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={assignStartDate}
+                                            onChange={e => setAssignStartDate(e.target.value)}
+                                            required
+                                            className="w-full px-4 py-3 rounded-xl text-xs font-semibold border outline-none transition-all cursor-pointer focus:ring-2 focus:ring-[#C8E600]/20"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        />
+                                    </div>
+
+                                    {/* Duration Weeks */}
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>
+                                            DURATION (WEEKS) <span className="text-rose-500">*</span>
+                                        </label>
+                                        <div className="relative">
+                                            <Clock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#C8E600]" />
+                                            <select
+                                                value={assignDurationWeeks}
+                                                onChange={e => setAssignDurationWeeks(Number(e.target.value))}
+                                                className="w-full pl-10 pr-8 py-3 rounded-xl text-xs font-semibold border outline-none appearance-none cursor-pointer transition-all focus:ring-2 focus:ring-[#C8E600]/20"
+                                                style={{ 
+                                                    background: 'var(--bg-input)', 
+                                                    borderColor: 'var(--border-main)', 
+                                                    color: 'var(--text-main)' 
+                                                }}
+                                            >
+                                                <option value={4} className="bg-[#1C1C1E]">4 Weeks (~1 Month)</option>
+                                                <option value={8} className="bg-[#1C1C1E]">8 Weeks (~2 Months)</option>
+                                                <option value={12} className="bg-[#1C1C1E]">12 Weeks (~3 Months)</option>
+                                                <option value={16} className="bg-[#1C1C1E]">16 Weeks (~4 Months)</option>
+                                                <option value={20} className="bg-[#1C1C1E]">20 Weeks (~5 Months)</option>
+                                                <option value={24} className="bg-[#1C1C1E]">24 Weeks (~6 Months)</option>
+                                                <option value={36} className="bg-[#1C1C1E]">36 Weeks (~9 Months)</option>
+                                                <option value={48} className="bg-[#1C1C1E]">48 Weeks (~11 Months)</option>
+                                                <option value={52} className="bg-[#1C1C1E]">52 Weeks (1 Year)</option>
+                                                <option value={60} className="bg-[#1C1C1E]">60 Weeks (~14 Months)</option>
+                                                <option value={104} className="bg-[#1C1C1E]">104 Weeks (2 Years)</option>
+                                                <option value={156} className="bg-[#1C1C1E]">156 Weeks (3 Years)</option>
+                                                <option value={160} className="bg-[#1C1C1E]">160 Weeks (5 Years)</option>
+                                                <option value={208} className="bg-[#1C1C1E]">208 Weeks (4 Years)</option>
+                                                <option value={260} className="bg-[#1C1C1E]">260 Weeks (5 Years)</option>
+                                            </select>
+                                            <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400" />
+                                        </div>
+                                    </div>
+
+                                    {/* Weekly Rent */}
+                                    <div>
+                                        <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5" style={{ color: 'var(--text-dim)' }}>
+                                            WEEKLY RENT ($) <span className="text-rose-500">*</span>
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#C8E600] font-bold text-xs">$</span>
+                                            <input
+                                                type="number"
+                                                value={assignWeeklyRent}
+                                                onChange={e => setAssignWeeklyRent(e.target.value)}
+                                                placeholder="0.00"
+                                                min="0"
+                                                step="0.01"
+                                                required
+                                                className="w-full pl-8 pr-4 py-3 rounded-xl text-xs font-semibold border outline-none transition-all focus:ring-2 focus:ring-[#C8E600]/20"
+                                                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Schedule & Total summary card matching user screenshot */}
+                                <div className="p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2" style={{ background: 'var(--bg-input)', borderColor: 'rgba(200,230,0,0.3)' }}>
+                                    <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                        Schedule: <span className="font-mono text-lime-700 dark:text-[#C8E600] font-bold">{assignDurationWeeks} weekly installments</span>
+                                    </span>
+                                    <span className="text-xs font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>
+                                        ESTIMATED TOTAL: <span className="font-mono text-sm text-lime-700 dark:text-[#C8E600] font-black">${((Number(assignWeeklyRent) || 0) * assignDurationWeeks).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</span>
+                                    </span>
+                                </div>
+
+                                <p className="text-[11px] text-neutral-400">
+                                    A connected driver profile will be created and assigned this vehicle for {assignDurationWeeks} weeks starting {assignStartDate}.
+                                </p>
+
+                                {/* Actions */}
+                                <div className="flex items-center justify-end gap-3 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
                                     <button
-                                        onClick={handleUnassignTempDriver}
+                                        type="button"
+                                        onClick={() => setSelectedDriverForAssign(null)}
                                         disabled={changingDriver}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20 transition-all hover:bg-red-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                                        className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-white/10 cursor-pointer disabled:opacity-50"
+                                        style={{ color: 'var(--text-dim)' }}
                                     >
-                                        <UserMinus size={12} />
-                                        Unassign
+                                        Back
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleConfirmAssignmentWithPlan}
+                                        disabled={changingDriver || !assignStartDate || assignWeeklyRent === '' || Number(assignWeeklyRent) < 0}
+                                        className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-black transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                                        style={{ background: '#C8E600' }}
+                                    >
+                                        {changingDriver ? (
+                                            <>
+                                                <RefreshCw size={14} className="animate-spin" />
+                                                <span>Assigning & Creating Plan...</span>
+                                            </>
+                                        ) : (
+                                            <span>Confirm Vehicle Assignment</span>
+                                        )}
                                     </button>
                                 </div>
                             </div>
-                        )}
+                        ) : (
+                            /* STEP 1: Driver Search & List */
+                            <>
+                                {/* Currently Assigned Summary */}
+                                {driverModalMode === 'CURRENT' && assignedDriver && (
+                                    <div className="p-4 border-b" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-xl bg-[#C8E600]/10 text-[#C8E600] flex items-center justify-center font-bold text-xs border border-[#C8E600]/20">
+                                                    {assignedDriver.personalInfo?.fullName?.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Currently Assigned</p>
+                                                    <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{assignedDriver.personalInfo?.fullName}</p>
+                                                    <p className="text-[10px] font-mono" style={{ color: 'var(--text-dim)' }}>{assignedDriver.driverId || ''}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={handleTriggerUnassignDriver}
+                                                disabled={changingDriver}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20 transition-all hover:bg-red-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                                            >
+                                                <UserMinus size={12} />
+                                                Unassign
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
-                        {/* Search */}
-                        <div className="p-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
-                            <div className="relative">
-                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} />
-                                <input
-                                    type="text"
-                                    placeholder="Search drivers by name, email, or ID..."
-                                    value={driverSearchQuery}
-                                    onChange={(e) => setDriverSearchQuery(e.target.value)}
-                                    className="w-full pl-9 pr-4 py-2.5 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#C8E600]/30 transition-all"
-                                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
-                                    autoFocus
-                                />
-                            </div>
-                        </div>
+                                {driverModalMode === 'TEMP' && vehicle?.tempAssignment?.tempDriver && (
+                                    <div className="p-4 border-b" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs border border-amber-500/20">
+                                                    {vehicle.tempAssignment.tempDriver.personalInfo?.fullName?.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Currently Assigned (Temporary)</p>
+                                                    <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>{vehicle.tempAssignment.tempDriver.personalInfo?.fullName}</p>
+                                                    <p className="text-[10px] font-mono" style={{ color: 'var(--text-dim)' }}>{vehicle.tempAssignment.tempDriver.driverId || ''}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={handleUnassignTempDriver}
+                                                disabled={changingDriver}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20 transition-all hover:bg-red-500/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                                            >
+                                                <UserMinus size={12} />
+                                                Unassign
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
-                        {/* Driver List */}
-                        <div className="max-h-[340px] overflow-y-auto custom-scrollbar">
-                            {loadingUnassignedDrivers ? (
-                                <div className="flex items-center justify-center py-12">
-                                    <RefreshCw size={20} className="animate-spin" style={{ color: 'var(--text-dim)' }} />
+                                {/* Search */}
+                                <div className="p-4 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="relative">
+                                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} />
+                                        <input
+                                            type="text"
+                                            placeholder="Search drivers by name, email, or ID..."
+                                            value={driverSearchQuery}
+                                            onChange={(e) => setDriverSearchQuery(e.target.value)}
+                                            className="w-full pl-9 pr-4 py-2.5 rounded-xl text-xs outline-none focus:ring-2 focus:ring-[#C8E600]/30 transition-all"
+                                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-main)', color: 'var(--text-main)' }}
+                                            autoFocus
+                                        />
+                                    </div>
                                 </div>
-                            ) : unassignedDrivers.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-12 text-center px-6">
-                                    <Users size={28} className="opacity-20 mb-2" style={{ color: 'var(--text-dim)' }} />
-                                    <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No Available Drivers</p>
-                                    <p className="text-[10px] mt-1 max-w-xs" style={{ color: 'var(--text-dim)' }}>
-                                        {driverModalMode === 'TEMP'
-                                            ? 'No active drivers were found.'
-                                            : 'No available drivers without an assigned vehicle were found.'}
+
+                                {/* Driver List */}
+                                <div className="max-h-[340px] overflow-y-auto custom-scrollbar">
+                                    {loadingUnassignedDrivers ? (
+                                        <div className="flex items-center justify-center py-12">
+                                            <RefreshCw size={20} className="animate-spin" style={{ color: 'var(--text-dim)' }} />
+                                        </div>
+                                    ) : unassignedDrivers.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-12 text-center px-6">
+                                            <Users size={28} className="opacity-20 mb-2" style={{ color: 'var(--text-dim)' }} />
+                                            <p className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>No Available Drivers</p>
+                                            <p className="text-[10px] mt-1 max-w-xs" style={{ color: 'var(--text-dim)' }}>
+                                                {driverModalMode === 'TEMP'
+                                                    ? 'No active drivers were found.'
+                                                    : 'No available drivers without an assigned vehicle were found.'}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                            {unassignedDrivers.map((driver) => (
+                                                <button
+                                                    key={driver._id}
+                                                    onClick={() => driverModalMode === 'TEMP' ? handleChangeTempDriver(driver._id) : handleSelectNewDriver(driver)}
+                                                    disabled={changingDriver}
+                                                    className="w-full flex items-center gap-3 p-4 text-left transition-all hover:bg-white/5 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+                                                >
+                                                    <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center font-bold text-xs border shrink-0" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
+                                                        {driver.personalInfo?.fullName?.charAt(0)?.toUpperCase() || '?'}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-bold truncate" style={{ color: 'var(--text-main)' }}>
+                                                            {driver.personalInfo?.fullName}
+                                                        </p>
+                                                        <p className="text-[10px] font-mono truncate" style={{ color: 'var(--text-dim)' }}>
+                                                            {driver.driverId || ''} {driver.personalInfo?.phone ? `• ${driver.personalInfo.phone}` : ''}
+                                                        </p>
+                                                    </div>
+                                                    <div className={`shrink-0 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg border ${driverModalMode === 'TEMP' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-[#C8E600]/10 text-[#C8E600] border-[#C8E600]/20'}`}>
+                                                        Select
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Footer */}
+                                <div className="p-4 border-t text-center" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
+                                    <p className="text-[10px] font-medium" style={{ color: 'var(--text-dim)' }}>
+                                        Showing {unassignedDrivers.length} {driverModalMode === 'TEMP' ? 'active driver' : 'available driver'}{unassignedDrivers.length !== 1 ? 's' : ''}
                                     </p>
                                 </div>
-                            ) : (
-                                <div className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
-                                    {unassignedDrivers.map((driver) => (
-                                        <button
-                                            key={driver._id}
-                                            onClick={() => driverModalMode === 'TEMP' ? handleChangeTempDriver(driver._id) : handleSelectNewDriver(driver._id)}
-                                            disabled={changingDriver}
-                                            className="w-full flex items-center gap-3 p-4 text-left transition-all hover:bg-white/5 active:scale-[0.99] disabled:opacity-50"
-                                        >
-                                            <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center font-bold text-xs border shrink-0" style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}>
-                                                {driver.personalInfo?.fullName?.charAt(0)?.toUpperCase() || '?'}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold truncate" style={{ color: 'var(--text-main)' }}>
-                                                    {driver.personalInfo?.fullName}
-                                                </p>
-                                                <p className="text-[10px] font-mono truncate" style={{ color: 'var(--text-dim)' }}>
-                                                    {driver.driverId || ''} {driver.personalInfo?.phone ? `• ${driver.personalInfo.phone}` : ''}
-                                                </p>
-                                            </div>
-                                            <div className={`shrink-0 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg border ${driverModalMode === 'TEMP' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-[#C8E600]/10 text-[#C8E600] border-[#C8E600]/20'}`}>
-                                                Select
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="p-4 border-t text-center" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-sidebar)' }}>
-                            <p className="text-[10px] font-medium" style={{ color: 'var(--text-dim)' }}>
-                                Showing {unassignedDrivers.length} {driverModalMode === 'TEMP' ? 'active driver' : 'available driver'}{unassignedDrivers.length !== 1 ? 's' : ''}
-                            </p>
-                        </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
@@ -2619,6 +3545,9 @@ const StatusChangeModal = ({ isOpen, onClose, targetStatus, vehicle, onSuccess, 
                 await assignVehicleToDriver(vehicle._id, selectedDriver._id || selectedDriver.id || '', {
                     durationMonths,
                     monthlyRent,
+                    durationWeeks: durationMonths * 4,
+                    weeklyRent: Math.round(monthlyRent / 4),
+                    frequency: 'WEEKLY',
                     depositAmount,
                     notes: notes || undefined
                 });

@@ -579,7 +579,22 @@
       "updateButton": "Update Branch",
       "deleteTitle": "Confirm Deletion",
       "deleteConfirm": "Are you absolutely sure you want to delete {{name}}? All associated data will be permanently removed.",
-      "fetchFailed": "Failed to fetch branches"
+      "fetchFailed": "Failed to fetch branches",
+      "shortcutAddCM": "+ New Manager",
+      "createCountryManagerShortcut": "Quick Create Country Manager",
+      "quickAddCountryManagerTitle": "Create New Country Manager",
+      "quickAddCountryManagerSubtitle": "Quickly add a Country Manager to assign to this branch",
+      "createNewCMOption": "+ Create New Country Manager...",
+      "countryManagerCreatedSuccess": "Country Manager created and assigned successfully!",
+      "viewAllCountryManagers": "Manage all Country Managers",
+      "passwordMinLength": "Password must be at least 6 characters.",
+      "attachDocumentsTitle": "Attach Documents",
+      "dropzonePrompt": "Click or drag documents to attach",
+      "dropzoneHint": "Rental agreements, registration certificates, permits, or branch photos (PDF, PNG, JPG up to 10MB)",
+      "filesToAttach": "Files to Attach",
+      "existingDocuments": "Previously Uploaded Documents",
+      "createdSuccess": "Branch created successfully!",
+      "updatedSuccess": "Branch updated successfully!"
     },
     "branchManagers": {
       "title": "Manage Branch Managers",
