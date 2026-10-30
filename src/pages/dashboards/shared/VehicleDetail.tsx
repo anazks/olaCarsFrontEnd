@@ -209,6 +209,7 @@ const VehicleDetail = () => {
     const [isEditingOverview, setIsEditingOverview] = useState(false);
     const [isEditingDocs, setIsEditingDocs] = useState(false);
     const [editBasicDetails, setEditBasicDetails] = useState<Partial<BasicDetails>>({});
+    const [editPlateNumber, setEditPlateNumber] = useState<string>('');
     const [targetStatus, setTargetStatus] = useState<VehicleStatus | null>(null);
     const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
     const [onboardingViewMode, setOnboardingViewMode] = useState<'task' | 'full'>('task');
@@ -259,7 +260,19 @@ const VehicleDetail = () => {
         setActionLoading(true);
         setActionError(null);
         try {
-            const updatedVehicle = await editVehicle(id, { basicDetails: { ...vehicle.basicDetails, ...editBasicDetails } as any });
+            const trimmedPlate = editPlateNumber.trim();
+            const payload: any = {
+                basicDetails: {
+                    ...(vehicle.basicDetails || {}),
+                    ...editBasicDetails,
+                    plateNumber: trimmedPlate,
+                },
+                legalDocs: {
+                    ...(vehicle.legalDocs || {}),
+                    registrationNumber: trimmedPlate,
+                }
+            };
+            const updatedVehicle = await editVehicle(id, payload);
             setVehicle(updatedVehicle);
             setIsEditingOverview(false);
             setActionSuccess('Vehicle overview updated successfully');
@@ -1862,6 +1875,7 @@ const VehicleDetail = () => {
                             type="button"
                             onClick={() => {
                                 setEditBasicDetails({ ...vehicle.basicDetails });
+                                setEditPlateNumber(vehicle.legalDocs?.registrationNumber || vehicle.basicDetails?.plateNumber || '');
                                 setIsEditingOverview(true);
                             }}
                             className="p-1.5 rounded-lg hover:bg-white/5 transition-colors text-lime cursor-pointer text-xs flex items-center gap-1 font-bold"
@@ -1895,6 +1909,17 @@ const VehicleDetail = () => {
 
             {isEditingOverview ? (
                 <div className="space-y-3 pt-1">
+                    <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-dim">Plate No</label>
+                        <input
+                            type="text"
+                            value={editPlateNumber}
+                            onChange={e => setEditPlateNumber(e.target.value.toUpperCase())}
+                            placeholder="e.g. 847291 or ES-8828"
+                            className={`${inputClass} font-mono`}
+                            style={inputStyle}
+                        />
+                    </div>
                     <div className="grid grid-cols-2 gap-2.5">
                         <div className="space-y-1">
                             <label className="text-[10px] uppercase font-bold text-dim">Make</label>
@@ -1932,6 +1957,10 @@ const VehicleDetail = () => {
                 </div>
             ) : (
                 <div className="space-y-2 divide-y divide-white/5 pt-1">
+                    <div className="flex items-center justify-between text-xs py-1">
+                        <span className="text-dim">Plate No</span>
+                        <span className="font-mono font-bold text-white text-[11px]">{vehicle.legalDocs?.registrationNumber || vehicle.basicDetails?.plateNumber || 'Pending'}</span>
+                    </div>
                     <div className="flex items-center justify-between text-xs py-1">
                         <span className="text-dim">Make & Model</span>
                         <span className="font-bold text-white">{vehicle.basicDetails?.make || '—'} {vehicle.basicDetails?.model || '—'}</span>
@@ -2033,9 +2062,14 @@ const VehicleDetail = () => {
                                 </span>
                             )}
                         </div>
-                        <p className="text-sm font-mono mt-0.5" style={{ color: 'var(--text-dim)' }}>
-                            {t('management.vehicles.vehicleDetail.labels.vin')}: {vehicle.basicDetails?.vin || '—'}
-                            {vehicle.basicDetails?.fleetNumber ? ` • Fleet #${vehicle.basicDetails.fleetNumber}` : ''}
+                        <p className="text-sm font-mono mt-0.5 flex flex-wrap items-center gap-2" style={{ color: 'var(--text-dim)' }}>
+                            {(vehicle.legalDocs?.registrationNumber || vehicle.basicDetails?.plateNumber) && (
+                                <span className="font-bold text-white px-2 py-0.5 rounded-md text-xs tracking-wider border" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                    {vehicle.legalDocs?.registrationNumber || vehicle.basicDetails?.plateNumber}
+                                </span>
+                            )}
+                            <span>{t('management.vehicles.vehicleDetail.labels.vin')}: {vehicle.basicDetails?.vin || '—'}</span>
+                            {vehicle.basicDetails?.fleetNumber ? <span>• Fleet #{vehicle.basicDetails.fleetNumber}</span> : null}
                         </p>
                     </div>
 
@@ -2417,6 +2451,7 @@ const VehicleDetail = () => {
                                 <button
                                     onClick={() => {
                                         setEditBasicDetails({ ...vehicle.basicDetails });
+                                        setEditPlateNumber(vehicle.legalDocs?.registrationNumber || vehicle.basicDetails?.plateNumber || '');
                                         setIsEditingOverview(true);
                                     }}
                                     className="p-2 rounded-lg hover:bg-white/5 transition-colors text-lime cursor-pointer"
@@ -2445,6 +2480,19 @@ const VehicleDetail = () => {
 
                     {isEditingOverview ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                    {t('management.vehicles.vehicleDetail.labels.plateNumber', 'Plate No')}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editPlateNumber}
+                                    onChange={e => setEditPlateNumber(e.target.value.toUpperCase())}
+                                    placeholder={t('management.vehicles.vehicleDetail.placeholders.plateNumber', 'e.g. 847291 or ES-8828')}
+                                    className={`${inputClass} font-mono`}
+                                    style={inputStyle}
+                                />
+                            </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.make')}</label>
                                 <input type="text" value={editBasicDetails.make || ''} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, make: e.target.value }))} className={inputClass} style={inputStyle} />
@@ -2513,7 +2561,7 @@ const VehicleDetail = () => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.plateNumber', 'Plate No')} value={vehicle.legalDocs?.registrationNumber || vehicle.basicDetails?.fleetNumber || '—'} />
+                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.plateNumber', 'Plate No')} value={vehicle.legalDocs?.registrationNumber || vehicle.basicDetails?.plateNumber || vehicle.basicDetails?.fleetNumber || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.make')} value={vehicle.basicDetails?.make || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.model')} value={vehicle.basicDetails?.model || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.year')} value={vehicle.basicDetails?.year || '—'} />

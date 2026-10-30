@@ -135,8 +135,11 @@ export const getSupplierById = async (id: string): Promise<Supplier> => {
 };
 
 // POST create supplier
-export const createSupplier = async (payload: CreateSupplierPayload): Promise<Supplier> => {
-    const response = await api.post('/api/supplier', payload);
+export const createSupplier = async (payload: CreateSupplierPayload | FormData): Promise<Supplier> => {
+    const isFormData = typeof FormData !== 'undefined' && payload instanceof FormData;
+    const response = await api.post('/api/supplier', payload, {
+        headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined
+    });
     return response.data;
 };
 

@@ -466,7 +466,7 @@ const CustomerDetail = () => {
     const customerVehicle = customerDriver?.currentVehicle;
     const activeAssignment = customerDriver?.assignmentHistory?.find((a: any) => a.status === 'ACTIVE');
     const hasAssignedVehicle = isCustomerDriver && Boolean(
-        (customerVehicle && (customerVehicle.legalDocs?.registrationNumber || customerVehicle.plateNumber || customerVehicle.basicDetails?.plateNumber) && customerVehicle.status !== 'INACTIVE') ||
+        (customerVehicle && customerVehicle.status !== 'INACTIVE' && (customerVehicle.legalDocs?.registrationNumber || customerVehicle.plateNumber || customerVehicle.basicDetails?.plateNumber || customerVehicle.basicDetails?.vin || customerVehicle._id)) ||
         (activeAssignment && activeAssignment.status === 'ACTIVE') ||
         (customer?.cfVehicleNo && !['nill', 'nil', 'na', 'n/a', 'none', '-', '—', ''].includes(String(customer.cfVehicleNo).trim().toLowerCase()) && customerDriver?.status === 'ACTIVE')
     );
@@ -1118,13 +1118,21 @@ const CustomerDetail = () => {
             </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className={`grid grid-cols-1 ${hasDriverProfile ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4`}>
                 <QuickStatCard 
                     label="Customer Status" 
                     value={customer.status} 
                     icon={<Zap size={16} />} 
                     color={customer.status === 'ACTIVE' ? 'emerald' : 'rose'} 
                 />
+                {hasDriverProfile && (
+                    <QuickStatCard 
+                        label="Driver Status" 
+                        value={customerDriver?.status || 'N/A'} 
+                        icon={<User size={16} />} 
+                        color={customerDriver?.status === 'ACTIVE' ? 'emerald' : customerDriver?.status === 'INACTIVE' ? 'rose' : undefined} 
+                    />
+                )}
                 <QuickStatCard 
                     label="Branch" 
                     value={customer.branch?.name || 'N/A'} 
@@ -1638,14 +1646,14 @@ const OverviewTab = ({
             : null);
 
     const hasAssignedVehicle = Boolean(
-        (vehicle && (vehicle.legalDocs?.registrationNumber || vehicle.plateNumber || vehicle.basicDetails?.plateNumber) && vehicle.status !== 'INACTIVE') ||
+        (vehicle && vehicle.status !== 'INACTIVE' && (vehicle.legalDocs?.registrationNumber || vehicle.plateNumber || vehicle.basicDetails?.plateNumber || vehicle.basicDetails?.vin || vehicle._id)) ||
         (activeAssignment && activeAssignment.status === 'ACTIVE') ||
         (customer.cfVehicleNo && !['nill', 'nil', 'na', 'n/a', 'none', '-', '—', ''].includes(String(customer.cfVehicleNo).trim().toLowerCase()) && driver?.status === 'ACTIVE')
     );
 
     // 1. Vehicle Plate Number
     const plateNumber = hasAssignedVehicle 
-        ? (vehicle?.legalDocs?.registrationNumber || vehicle?.plateNumber || activeAssignment?.plateNumber || customer.cfVehicleNo || '—') 
+        ? (vehicle?.legalDocs?.registrationNumber || vehicle?.plateNumber || vehicle?.basicDetails?.plateNumber || activeAssignment?.plateNumber || customer.cfVehicleNo || (vehicle?.basicDetails?.vin ? `VIN: ${vehicle.basicDetails.vin}` : '—')) 
         : '—';
 
     // 2. Vehicle Model
@@ -2205,7 +2213,7 @@ const OverviewTab = ({
                     rawHistory.unshift({
                         _id: 'current-active-assignment',
                         vehicle: vehicle,
-                        plateNumber: plateNumber !== '—' ? plateNumber : (vehicle?.legalDocs?.registrationNumber || vehicle?.basicDetails?.plateNumber || customer.cfVehicleNo || 'Active Vehicle'),
+                        plateNumber: plateNumber !== '—' ? plateNumber : (vehicle?.legalDocs?.registrationNumber || vehicle?.plateNumber || vehicle?.basicDetails?.plateNumber || customer.cfVehicleNo || (vehicle?.basicDetails?.vin ? `VIN: ${vehicle.basicDetails.vin}` : 'Active Vehicle')),
                         fleetNumber: fleetNo || vehicle?.basicDetails?.fleetNumber || customer.cfFleetNo || '',
                         vehicleModel: vehicleModel !== 'No Vehicle Assigned' ? vehicleModel : (vehicle?.basicDetails ? `${vehicle.basicDetails.make || ''} ${vehicle.basicDetails.model || ''}`.trim() : (customer.cfVehicleModel || 'Active Vehicle')),
                         weeklyRent: rawWeeklyRent ? Number(rawWeeklyRent) : (driver?.weeklyRent || vehicle?.basicDetails?.weeklyRent),
@@ -2215,7 +2223,37 @@ const OverviewTab = ({
                         cancelNotes: 'Current Active Assignment'
                     });
                 }
-                const displayedHistory = rawHistory;
+                // Sort latest at top (timely creation descending; active current pinned at top)
+                const getAssignmentTimeScore = (item: any, idx: number): number => {
+                    const isCurrent = item.status === 'ACTIVE' && (!item.endDate || new Date(item.endDate) > new Date());
+                    if (isCurrent) return 1e16; // Pin active assignment at the top
+
+                    const candidateTimes: number[] = [];
+                    if (item.createdAt) {
+                        const t = new Date(item.createdAt).getTime();
+                        if (!isNaN(t) && t > 0) candidateTimes.push(t);
+                    }
+                    if (item.startDate) {
+                        const t = new Date(item.startDate).getTime();
+                        if (!isNaN(t) && t > 0) candidateTimes.push(t);
+                    }
+                    if (item.endDate) {
+                        const t = new Date(item.endDate).getTime();
+                        if (!isNaN(t) && t > 0) candidateTimes.push(t);
+                    }
+                    if (item._id && typeof item._id === 'string' && item._id.length === 24) {
+                        const oidTime = parseInt(item._id.substring(0, 8), 16) * 1000;
+                        if (!isNaN(oidTime) && oidTime > 0) candidateTimes.push(oidTime);
+                    }
+                    const maxTime = candidateTimes.length > 0 ? Math.max(...candidateTimes) : 0;
+                    return maxTime + (idx * 0.0001);
+                };
+
+                const displayedHistory = [...rawHistory].sort((a: any, b: any) => {
+                    const scoreA = getAssignmentTimeScore(a, rawHistory.indexOf(a));
+                    const scoreB = getAssignmentTimeScore(b, rawHistory.indexOf(b));
+                    return scoreB - scoreA;
+                });
 
                 if (displayedHistory.length === 0) return null;
 
@@ -2260,6 +2298,25 @@ const OverviewTab = ({
                                     const start = item.startDate ? new Date(item.startDate) : null;
                                     const end = item.endDate ? new Date(item.endDate) : null;
                                     
+                                    // Resolve effective contract status
+                                    let effectiveStatus = item.status;
+                                    if (isCurrent) {
+                                        effectiveStatus = 'ACTIVE';
+                                    } else if (item.status === 'COMPLETED') {
+                                        const durWeeks = Number(item.durationWeeks) || 0;
+                                        let isFullTerm = false;
+                                        if (durWeeks > 0 && item.startDate && item.endDate) {
+                                            const diffDays = Math.floor((new Date(item.endDate).getTime() - new Date(item.startDate).getTime()) / (1000 * 60 * 60 * 24));
+                                            const elapsedWeeks = Math.floor(diffDays / 7);
+                                            if (elapsedWeeks >= durWeeks) {
+                                                isFullTerm = true;
+                                            }
+                                        }
+                                        effectiveStatus = isFullTerm ? 'COMPLETED' : 'CANCELLED';
+                                    } else if (!item.status || item.status === 'ACTIVE') {
+                                        effectiveStatus = 'CANCELLED';
+                                    }
+
                                     let durationLabel = 'Ongoing';
                                     if (start) {
                                         const endDateCalc = isCurrent ? new Date() : (end || new Date());
@@ -2279,18 +2336,28 @@ const OverviewTab = ({
                                     const fleet = item.fleetNumber || vObj?.basicDetails?.fleetNumber || vObj?.fleet?.fleetNumber;
                                     const model = item.vehicleModel || (vObj?.basicDetails ? `${vObj.basicDetails.make || ''} ${vObj.basicDetails.model || ''}`.trim() : '') || '—';
 
+                                    const noteDisplay = !isCurrent && item.cancelNotes === 'Current Active Assignment'
+                                        ? 'Replaced by vehicle reassignment'
+                                        : (item.cancelNotes || '—');
+
                                     return (
                                         <tr key={item._id || index} className="hover:bg-white/[0.02] transition-all">
                                             <td className="py-3 px-3">
                                                 <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${
-                                                    isCurrent 
+                                                    effectiveStatus === 'ACTIVE'
                                                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                                                        : item.status === 'CANCELLED' 
-                                                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
-                                                            : 'bg-white/5 text-gray-400 border-white/10'
+                                                        : effectiveStatus === 'COMPLETED'
+                                                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+                                                            : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                                                 }`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${isCurrent ? 'bg-emerald-400 animate-pulse' : item.status === 'CANCELLED' ? 'bg-rose-400' : 'bg-gray-400'}`} />
-                                                    {isCurrent ? 'ACTIVE' : item.status || 'COMPLETED'}
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${
+                                                        effectiveStatus === 'ACTIVE'
+                                                            ? 'bg-emerald-400 animate-pulse'
+                                                            : effectiveStatus === 'COMPLETED'
+                                                                ? 'bg-blue-400'
+                                                                : 'bg-rose-400'
+                                                    }`} />
+                                                    {effectiveStatus}
                                                 </span>
                                             </td>
                                             <td className="py-3 px-3">
@@ -2328,8 +2395,8 @@ const OverviewTab = ({
                                             <td className="py-3 px-3 text-dim font-mono text-[11px]">
                                                 {durationLabel}
                                             </td>
-                                            <td className="py-3 px-3 text-dim text-[11px] max-w-[220px] truncate" title={item.cancelNotes || ''}>
-                                                {item.cancelNotes || '—'}
+                                            <td className="py-3 px-3 text-dim text-[11px] max-w-[220px] truncate" title={noteDisplay}>
+                                                {noteDisplay}
                                             </td>
                                         </tr>
                                     );
@@ -3038,7 +3105,7 @@ function VehicleHistoryTab({ customer }: { customer: Customer }) {
     const vehicle = driver?.currentVehicle as any;
 
     const hasAssignedVehicle = Boolean(
-        (vehicle && (vehicle.legalDocs?.registrationNumber || vehicle.plateNumber || vehicle.basicDetails?.plateNumber) && vehicle.status !== 'INACTIVE') ||
+        (vehicle && vehicle.status !== 'INACTIVE' && (vehicle.legalDocs?.registrationNumber || vehicle.plateNumber || vehicle.basicDetails?.plateNumber || vehicle.basicDetails?.vin || vehicle._id)) ||
         (customer.cfVehicleNo && !['nill', 'nil', 'na', 'n/a', 'none', '-', '—', ''].includes(String(customer.cfVehicleNo).trim().toLowerCase()) && driver?.status === 'ACTIVE')
     );
 
@@ -3046,7 +3113,7 @@ function VehicleHistoryTab({ customer }: { customer: Customer }) {
     const hasActiveInHistory = rawHistory.some((h: any) => h.status === 'ACTIVE' && (!h.endDate || new Date(h.endDate) > new Date()));
 
     if (!hasActiveInHistory && hasAssignedVehicle) {
-        const plateNumber = vehicle?.legalDocs?.registrationNumber || vehicle?.plateNumber || vehicle?.basicDetails?.plateNumber || customer.cfVehicleNo || 'Assigned';
+        const plateNumber = vehicle?.legalDocs?.registrationNumber || vehicle?.plateNumber || vehicle?.basicDetails?.plateNumber || customer.cfVehicleNo || (vehicle?.basicDetails?.vin ? `VIN: ${vehicle.basicDetails.vin}` : 'Assigned');
         const fleetNo = vehicle?.basicDetails?.fleetNumber || customer.cfFleetNo || '';
         const vehicleModel = vehicle?.basicDetails
             ? `${vehicle.basicDetails.make || ''} ${vehicle.basicDetails.model || ''}`.trim()
@@ -3070,7 +3137,37 @@ function VehicleHistoryTab({ customer }: { customer: Customer }) {
         });
     }
 
-    const history = rawHistory;
+    // Sort latest at top (timely creation descending; active current pinned at top)
+    const getAssignmentTimeScore = (item: any, idx: number): number => {
+        const isCurrent = item.status === 'ACTIVE' && (!item.endDate || new Date(item.endDate) > new Date());
+        if (isCurrent) return 1e16; // Pin active assignment at the top
+
+        const candidateTimes: number[] = [];
+        if (item.createdAt) {
+            const t = new Date(item.createdAt).getTime();
+            if (!isNaN(t) && t > 0) candidateTimes.push(t);
+        }
+        if (item.startDate) {
+            const t = new Date(item.startDate).getTime();
+            if (!isNaN(t) && t > 0) candidateTimes.push(t);
+        }
+        if (item.endDate) {
+            const t = new Date(item.endDate).getTime();
+            if (!isNaN(t) && t > 0) candidateTimes.push(t);
+        }
+        if (item._id && typeof item._id === 'string' && item._id.length === 24) {
+            const oidTime = parseInt(item._id.substring(0, 8), 16) * 1000;
+            if (!isNaN(oidTime) && oidTime > 0) candidateTimes.push(oidTime);
+        }
+        const maxTime = candidateTimes.length > 0 ? Math.max(...candidateTimes) : 0;
+        return maxTime + (idx * 0.0001);
+    };
+
+    const history = [...rawHistory].sort((a: any, b: any) => {
+        const scoreA = getAssignmentTimeScore(a, rawHistory.indexOf(a));
+        const scoreB = getAssignmentTimeScore(b, rawHistory.indexOf(b));
+        return scoreB - scoreA;
+    });
     const activeEntry = history.find((h: any) => h.status === 'ACTIVE' && (!h.endDate || new Date(h.endDate) > new Date()));
 
     return (
@@ -3139,14 +3236,37 @@ function VehicleHistoryTab({ customer }: { customer: Customer }) {
                                     const start = item.startDate ? new Date(item.startDate) : null;
                                     const end = item.endDate ? new Date(item.endDate) : null;
                                     
+                                    // Resolve effective contract status
+                                    let effectiveStatus = item.status;
+                                    if (isCurrent) {
+                                        effectiveStatus = 'ACTIVE';
+                                    } else if (item.status === 'COMPLETED') {
+                                        const durWeeks = Number(item.durationWeeks) || 0;
+                                        let isFullTerm = false;
+                                        if (durWeeks > 0 && item.startDate && item.endDate) {
+                                            const diffDays = Math.floor((new Date(item.endDate).getTime() - new Date(item.startDate).getTime()) / (1000 * 60 * 60 * 24));
+                                            const elapsedWeeks = Math.floor(diffDays / 7);
+                                            if (elapsedWeeks >= durWeeks) {
+                                                isFullTerm = true;
+                                            }
+                                        }
+                                        effectiveStatus = isFullTerm ? 'COMPLETED' : 'CANCELLED';
+                                    } else if (!item.status || item.status === 'ACTIVE') {
+                                        effectiveStatus = 'CANCELLED';
+                                    }
+
                                     let durationLabel = 'Ongoing';
                                     if (start) {
-                                        const endDateCalc = end || new Date();
+                                        const endDateCalc = isCurrent ? new Date() : (end || new Date());
                                         const diffMs = endDateCalc.getTime() - start.getTime();
                                         const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
                                         const weeks = Math.floor(diffDays / 7);
                                         const remDays = diffDays % 7;
-                                        durationLabel = weeks > 0 ? `${weeks}w ${remDays}d` : `${diffDays}d`;
+                                        if (isCurrent) {
+                                            durationLabel = weeks > 0 ? `${weeks}w ${remDays}d (Ongoing)` : `${diffDays}d (Ongoing)`;
+                                        } else {
+                                            durationLabel = weeks > 0 ? `${weeks}w ${remDays}d` : `${diffDays}d`;
+                                        }
                                     }
 
                                     const vObj = typeof item.vehicle === 'object' && item.vehicle ? item.vehicle : null;
@@ -3154,18 +3274,28 @@ function VehicleHistoryTab({ customer }: { customer: Customer }) {
                                     const fleet = item.fleetNumber || vObj?.basicDetails?.fleetNumber || vObj?.fleet?.fleetNumber;
                                     const model = item.vehicleModel || (vObj?.basicDetails ? `${vObj.basicDetails.make || ''} ${vObj.basicDetails.model || ''}`.trim() : '') || '—';
 
+                                    const noteDisplay = !isCurrent && item.cancelNotes === 'Current Active Assignment'
+                                        ? 'Replaced by vehicle reassignment'
+                                        : (item.cancelNotes || '—');
+
                                     return (
                                         <tr key={item._id || index} className="hover:bg-white/[0.02] transition-all">
                                             <td className="py-3 px-3">
                                                 <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${
-                                                    isCurrent 
+                                                    effectiveStatus === 'ACTIVE'
                                                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                                                        : item.status === 'CANCELLED' 
-                                                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' 
-                                                            : 'bg-white/5 text-gray-400 border-white/10'
+                                                        : effectiveStatus === 'COMPLETED'
+                                                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+                                                            : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                                                 }`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${isCurrent ? 'bg-emerald-400 animate-pulse' : item.status === 'CANCELLED' ? 'bg-rose-400' : 'bg-gray-400'}`} />
-                                                    {isCurrent ? 'ACTIVE' : item.status || 'COMPLETED'}
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${
+                                                        effectiveStatus === 'ACTIVE'
+                                                            ? 'bg-emerald-400 animate-pulse'
+                                                            : effectiveStatus === 'COMPLETED'
+                                                                ? 'bg-blue-400'
+                                                                : 'bg-rose-400'
+                                                    }`} />
+                                                    {effectiveStatus}
                                                 </span>
                                             </td>
                                             <td className="py-3 px-3">
@@ -3203,8 +3333,8 @@ function VehicleHistoryTab({ customer }: { customer: Customer }) {
                                             <td className="py-3 px-3 text-dim font-mono text-[11px]">
                                                 {durationLabel}
                                             </td>
-                                            <td className="py-3 px-3 text-dim text-[11px] max-w-[220px] truncate" title={item.cancelNotes || ''}>
-                                                {item.cancelNotes || '—'}
+                                            <td className="py-3 px-3 text-dim text-[11px] max-w-[220px] truncate" title={noteDisplay}>
+                                                {noteDisplay}
                                             </td>
                                         </tr>
                                     );
