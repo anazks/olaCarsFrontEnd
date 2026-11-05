@@ -1604,7 +1604,7 @@ const BankAccountLedger = () => {
 
                 const runBal = (entry.runningBalance !== undefined && entry.runningBalance !== null)
                     ? entry.runningBalance
-                    : (runningBalancesMap[entry._id] !== undefined ? runningBalancesMap[entry._id] : undefined);
+                    : undefined;
 
                 return {
                     "Sl No.": idx + 1,
@@ -1618,23 +1618,59 @@ const BankAccountLedger = () => {
                 };
             });
 
-            const ws = XLSX.utils.json_to_sheet(exportData);
+            const periodLabel = (fromDate || toDate)
+                ? `${fromDate ? formatToDDMMYYYY(fromDate) : 'Beginning'} - ${toDate ? formatToDDMMYYYY(toDate) : 'Present'}`
+                : 'Full Statement History';
+
+            const openBal = Number(txRes.openingBalance || 0);
+            const totDep = Number(txRes.totalDeposits || 0);
+            const totWith = Number(txRes.totalWithdrawals || 0);
+            const closeBal = Number(txRes.closingBalance !== undefined && txRes.closingBalance !== null ? txRes.closingBalance : (openBal + totDep - totWith));
+
+            // Metadata header rows matching PDF statement criteria
+            const headerAOA = [
+                ["LEDGER STATEMENT", "", "", "", "", "", "", ""],
+                ["Account Name:", account?.accountName || account?.bankName || 'N/A', "", "Account Number:", account?.accountNumber || 'N/A', "", "Currency:", account?.currency || 'USD'],
+                ["Bank Name:", account?.bankName || 'N/A', "", "Account Code:", account?.accountCode || 'N/A', "", "Status:", account?.status || 'ACTIVE'],
+                ["Statement Period:", periodLabel, "", "Statement Date:", formatToDDMMYYYY(new Date()), "", "", ""],
+                ["Opening Balance ($):", openBal, "", "Total Deposits ($):", totDep, "", "Total Withdrawals ($):", totWith],
+                ["Ending Balance ($):", closeBal, "", "", "", "", "", ""],
+                [] // blank separator row before table headers
+            ];
+
+            const ws = XLSX.utils.aoa_to_sheet(headerAOA);
+
+            // Append transaction data starting at row 8 (A8)
+            XLSX.utils.sheet_add_json(ws, exportData, { origin: "A8" });
+
+            // Summary Totals row at bottom
+            const summaryRow = [
+                ["TOTALS / SUMMARY", "", "", "", "", totDep, totWith, closeBal]
+            ];
+            XLSX.utils.sheet_add_aoa(ws, summaryRow, { origin: -1 });
+
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Account Ledger");
 
             // Auto-fit column widths
-            const keys = Object.keys(exportData[0] || {});
-            ws["!cols"] = keys.map(key => {
-                const maxLen = Math.max(
-                    key.length,
-                    ...exportData.map(row => String((row as any)[key] || "").length)
-                );
-                return { wch: Math.min(Math.max(maxLen + 3, 10), 60) };
-            });
+            ws["!cols"] = [
+                { wch: 10 }, // Sl No.
+                { wch: 14 }, // Date
+                { wch: 45 }, // Description
+                { wch: 22 }, // Reference ID
+                { wch: 16 }, // Audit Trace
+                { wch: 18 }, // Deposits ($)
+                { wch: 18 }, // Withdrawals ($)
+                { wch: 22 }  // Running Balance ($)
+            ];
 
             const dateStr = new Date().toISOString().split('T')[0];
             const safeName = ((account?.accountName || account?.bankName || 'bank') as string).replace(/\s+/g, '_');
-            XLSX.writeFile(wb, `${safeName}_ledger_${dateStr}.xlsx`);
+            const filePeriod = fromDate && toDate
+                ? `${fromDate}_to_${toDate}`
+                : (fromDate ? `from_${fromDate}` : (toDate ? `until_${toDate}` : dateStr));
+
+            XLSX.writeFile(wb, `${safeName}_ledger_${filePeriod}.xlsx`);
             toast.success('Ledger Excel downloaded successfully!', { id: toastId });
         } catch (err: any) {
             console.error('Failed to export Excel:', err);
@@ -2661,7 +2697,9 @@ const BankAccountLedger = () => {
                                     type="button"
                                     onClick={() => {
                                         setIsActionsMenuOpen(false);
-                                        handleExportExcel();
+                                        setDlFrom(startDate);
+                                        setDlTo(endDate);
+                                        setShowDownloadModal(true);
                                     }}
                                     disabled={exportingExcel}
                                     className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-colors hover:bg-black/5 dark:hover:bg-white/5 text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"

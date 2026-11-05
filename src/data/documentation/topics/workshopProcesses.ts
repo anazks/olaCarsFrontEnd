@@ -73,37 +73,37 @@ export const workshopTopics: DocTopic[] = [
         steps: [
           {
             stepNumber: 1,
-            title: 'Pending & Finance Review',
-            description: 'The workshop lead submits an urgent requisition for replacement components or maintenance consumables, which enters the finance review queue.',
-            expectedOutcome: 'Requisition queued for cost review.'
+            title: 'Technician Requisition Submission',
+            description: 'Technicians identify required replacement parts and submit a procurement request specifying needed quantities, vehicle or job details, and urgency.',
+            expectedOutcome: 'Requisition submitted in Pending Workshop Manager Approval status.'
           },
           {
             stepNumber: 2,
-            title: 'Supplier Quotations & Cost Approval',
-            description: 'Procurement obtains price quotations from registered spare parts dealers. Once pricing is validated against market rates, the request advances to Cost Approved.',
-            expectedOutcome: 'Supplier prices verified.'
+            title: 'Workshop Manager Approval',
+            description: 'The Workshop Manager reviews and approves the technician requisition, verifying mechanical necessity and quantities before it enters the purchasing queue.',
+            expectedOutcome: 'Requisition approved and made available on the PO generation listing.'
           },
           {
             stepNumber: 3,
-            title: 'Management Approval',
-            description: 'Click "Approve Request" to authorize the parts purchase. You can enter review notes for the procurement file.',
-            expectedOutcome: 'Requisition approved for purchase order conversion.'
+            title: 'PO Generation with Many-to-Many PR Allocation',
+            description: 'Workshop Managers or Procurement Staff select approved requisitions to create connected Purchase Orders. PR units can be split across multiple POs or consolidated, tracking fulfilled vs remaining units.',
+            expectedOutcome: 'Connected Purchase Order generated with tracked unit allocations.'
           },
           {
             stepNumber: 4,
-            title: 'Purchase Order Conversion & Transit',
-            description: 'The approved requisition is converted into an official Purchase Order dispatched to the supplier. Once shipped, the status updates to In Transit.',
-            expectedOutcome: 'Purchase order generated and parts delivery tracked.'
+            title: 'Merchandiser Review & Quotation Pipeline',
+            description: 'The PO passes to the merchandiser module for unit audit, unit revisions if needed, supplier quotation collection, and quotation revision rounds with Admin/Finance.',
+            expectedOutcome: 'Verified PO with authorized quotation ready for order fulfillment.'
           },
           {
             stepNumber: 5,
             title: 'Goods Received & Stock Replenishment',
-            description: 'When parts arrive at the workshop, staff inspect the delivery and mark the request as Received. The system automatically increments on-hand inventory stock and closes the request.',
+            description: 'When parts arrive at the workshop, staff inspect the delivery and mark the order as Received. The system automatically increments on-hand inventory stock and closes the request.',
             expectedOutcome: 'Inventory stock replenished and ready for mechanic usage.'
           }
         ],
         tips: [
-          'Requisitions marked as "Urgent" trigger high-priority alerts on the Financial Administrator dashboard to minimize vehicle repair downtime.'
+          'Requisitions track remaining unfulfilled quantities in real time. Requisitions transition from Approved to Partially Converted and Converted to PO as orders are placed.'
         ]
       }
     ]

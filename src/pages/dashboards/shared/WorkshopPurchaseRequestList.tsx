@@ -17,6 +17,11 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             text: '#f59e0b',
             border: 'rgba(245, 158, 11, 0.3)',
         },
+        PENDING_WORKSHOP_MANAGER_APPROVAL: {
+            bg: 'rgba(245, 158, 11, 0.1)',
+            text: '#f59e0b',
+            border: 'rgba(245, 158, 11, 0.3)',
+        },
         PENDING_FINANCE_APPROVAL: {
             bg: 'rgba(245, 158, 11, 0.1)',
             text: '#f59e0b',
@@ -26,6 +31,11 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             bg: 'rgba(34, 197, 94, 0.1)',
             text: '#22c55e',
             border: 'rgba(34, 197, 94, 0.3)',
+        },
+        PARTIALLY_CONVERTED: {
+            bg: 'rgba(249, 115, 22, 0.1)',
+            text: '#f97316',
+            border: 'rgba(249, 115, 22, 0.3)',
         },
         COST_APPROVED: {
             bg: 'rgba(34, 197, 94, 0.1)',
@@ -59,10 +69,17 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
         }
     };
     const style = styles[status] || styles.APPROVED;
+    const labelMap: Partial<Record<ProcurementRequest['status'], string>> = {
+        CONVERTED_TO_PO: 'CONVERTED TO PO',
+        PARTIALLY_CONVERTED: 'PARTIALLY ALLOCATED',
+        PENDING_WORKSHOP_MANAGER_APPROVAL: 'PENDING WORKSHOP',
+        PENDING_FINANCE_APPROVAL: 'PENDING FINANCE',
+        WAITING_QUOTATION: 'WAITING QUOTATION'
+    };
     return (
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black border uppercase tracking-tighter w-fit"
             style={{ background: style.bg, color: style.text, borderColor: style.border }}>
-            {status === 'CONVERTED_TO_PO' ? 'CONVERTED' : status === 'PENDING_FINANCE_APPROVAL' ? 'PENDING FINANCE' : status === 'WAITING_QUOTATION' ? 'Waiting Quotation' : status}
+            {labelMap[status] || status}
         </div>
     );
 };
@@ -420,10 +437,12 @@ const WorkshopPurchaseRequestList = () => {
                             >
                                 <option value="ALL">All Statuses</option>
                                 <option value="PENDING">Pending (Manager)</option>
+                                <option value="PENDING_WORKSHOP_MANAGER_APPROVAL">Pending (Workshop Mgr)</option>
                                 <option value="PENDING_FINANCE_APPROVAL">Pending (Finance)</option>
                                 <option value="APPROVED">Approved</option>
+                                <option value="PARTIALLY_CONVERTED">Partially Allocated</option>
+                                <option value="CONVERTED_TO_PO">Converted to PO</option>
                                 <option value="REJECTED">Rejected</option>
-                                <option value="CONVERTED_TO_PO">Converted</option>
                             </select>
                         </div>
 
@@ -548,7 +567,19 @@ const WorkshopPurchaseRequestList = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-6 text-center text-sm font-black" style={{ color: 'var(--text-main)' }}>
-                                                {req.quantity}
+                                                <div className="flex flex-col items-center">
+                                                    <span>{req.quantity} units</span>
+                                                    {req.remainingQuantity !== undefined && (
+                                                        <span className="text-[10px] font-bold text-emerald-400">
+                                                            {req.remainingQuantity} remaining
+                                                        </span>
+                                                    )}
+                                                    {req.fulfilledQuantity !== undefined && req.fulfilledQuantity > 0 && req.remainingQuantity === undefined && (
+                                                        <span className="text-[10px] opacity-70" style={{ color: 'var(--text-dim)' }}>
+                                                            {req.fulfilledQuantity} allocated
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-6 text-sm font-bold" style={{ color: 'var(--text-main)' }}>
                                                 <div className="flex flex-col">

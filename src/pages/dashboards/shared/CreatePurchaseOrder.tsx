@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Save, X, Calculator, Info, Check, AlertCircle, Image as ImageIcon, FileText, Calendar } from 'lucide-react';
-import type { CreatePurchaseOrderPayload, PurchaseOrderItem, POPurpose } from '../../../services/purchaseOrderService';
+import { Plus, Trash2, Save, X, Calculator, Info, Check, AlertCircle, Image as ImageIcon, FileText, Calendar, Link2 } from 'lucide-react';
+import type { CreatePurchaseOrderPayload, PurchaseOrderItem, POPurpose, PRItemAllocation } from '../../../services/purchaseOrderService';
 import { createPurchaseOrder } from '../../../services/purchaseOrderService';
+import { getApprovedProcurementRequests, type ProcurementRequest } from '../../../services/workshopProcurementService';
 import type { Supplier } from '../../../services/supplierService';
 import { getAllSuppliers } from '../../../services/supplierService';
 import type { Branch } from '../../../services/branchService';
@@ -34,6 +35,11 @@ const CreatePurchaseOrder = () => {
     const [isAddSupplierOpen, setIsAddSupplierOpen] = useState(false);
     const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
 
+    // Import from Approved PR Modal State
+    const [isImportPRModalOpen, setIsImportPRModalOpen] = useState(false);
+    const [availablePRs, setAvailablePRs] = useState<ProcurementRequest[]>([]);
+    const [loadingPRs, setLoadingPRs] = useState(false);
+    const [selectedImportPRIds, setSelectedImportPRIds] = useState<Set<string>>(new Set());
 
     // Form state
     const [formData, setFormData] = useState<CreatePurchaseOrderPayload>({
@@ -45,6 +51,81 @@ const CreatePurchaseOrder = () => {
         paymentDate: '',
         branch: ''
     });
+
+    const applyPRsToForm = useCallback((prs: ProcurementRequest[]) => {
+        if (!prs || prs.length === 0) return;
+        setFormData(prev => {
+            const newItems: PurchaseOrderItem[] = prs.map(pr => {
+                const remaining = pr.remainingQuantity ?? (pr.quantity - (pr.fulfilledQuantity || 0));
+                const qty = remaining > 0 ? remaining : pr.quantity;
+                return {
+                    itemName: pr.part?.partName || (pr as any).partName || 'Spare Part',
+                    quantity: qty,
+                    unitPrice: pr.part?.unitCost || 0,
+                    description: `Requisition #${pr.requestNumber}${(pr.part?.partNumber || (pr as any).partNumber) ? ` (Part: ${pr.part?.partNumber || (pr as any).partNumber})` : ''}`,
+                    images: [],
+                    prAllocations: [
+                        {
+                            prId: pr._id,
+                            prNumber: pr.requestNumber,
+                            allocatedQuantity: qty,
+                            originalPRQuantity: pr.quantity
+                        }
+                    ]
+                };
+            });
+
+            const isInitialEmpty = prev.items.length === 1 && !prev.items[0].itemName && (!prev.items[0].unitPrice || prev.items[0].unitPrice === 0);
+            const combinedItems = isInitialEmpty ? newItems : [...prev.items, ...newItems];
+
+            const updated: CreatePurchaseOrderPayload = {
+                ...prev,
+                purpose: 'Spare Parts',
+                items: combinedItems
+            };
+
+            const firstPR = prs[0];
+            if (!prev.supplier && firstPR?.supplier?._id) {
+                updated.supplier = firstPR.supplier._id;
+            }
+            if (!prev.branch && firstPR?.branch?._id) {
+                updated.branch = firstPR.branch._id;
+            }
+
+            return updated;
+        });
+    }, []);
+
+    useEffect(() => {
+        if (location.state?.fromApprovedPRs && Array.isArray(location.state.fromApprovedPRs)) {
+            applyPRsToForm(location.state.fromApprovedPRs);
+        }
+    }, [location.state, applyPRsToForm]);
+
+    const openImportPRModal = async () => {
+        setIsImportPRModalOpen(true);
+        setLoadingPRs(true);
+        try {
+            const res = await getApprovedProcurementRequests();
+            const filtered = (Array.isArray(res) ? res : []).filter(pr => {
+                const rem = pr.remainingQuantity ?? (pr.quantity - (pr.fulfilledQuantity || 0));
+                return rem > 0;
+            });
+            setAvailablePRs(filtered);
+            setSelectedImportPRIds(new Set());
+        } catch (err) {
+            console.error('Failed to load approved PRs:', err);
+        } finally {
+            setLoadingPRs(false);
+        }
+    };
+
+    const handleConfirmImportPRs = () => {
+        const toImport = availablePRs.filter(pr => selectedImportPRIds.has(pr._id));
+        applyPRsToForm(toImport);
+        setIsImportPRModalOpen(false);
+        setSelectedImportPRIds(new Set());
+    };
 
     const fetchData = useCallback(async () => {
         try {
@@ -155,13 +236,36 @@ const CreatePurchaseOrder = () => {
         }
 
         try {
-            const formattedData = {
-                ...formData,
-                items: validItems.map(item => ({
+            const linkedPRs: PRItemAllocation[] = [];
+            const processedItems = validItems.map(item => {
+                const qty = Number(item.quantity) || 0;
+                let updatedAllocations = item.prAllocations;
+                if (item.prAllocations && item.prAllocations.length > 0) {
+                    updatedAllocations = item.prAllocations.map(alloc => ({
+                        ...alloc,
+                        allocatedQuantity: qty
+                    }));
+                    updatedAllocations.forEach(alloc => {
+                        linkedPRs.push({
+                            prId: alloc.prId,
+                            prNumber: alloc.prNumber,
+                            allocatedQuantity: alloc.allocatedQuantity,
+                            originalPRQuantity: alloc.originalPRQuantity
+                        });
+                    });
+                }
+                return {
                     ...item,
-                    quantity: Number(item.quantity) || 0,
-                    unitPrice: Number(item.unitPrice) || 0
-                }))
+                    quantity: qty,
+                    unitPrice: Number(item.unitPrice) || 0,
+                    prAllocations: updatedAllocations
+                };
+            });
+
+            const formattedData: CreatePurchaseOrderPayload = {
+                ...formData,
+                items: processedItems,
+                linkedPRs: linkedPRs.length > 0 ? linkedPRs : undefined
             };
             await createPurchaseOrder(formattedData);
             setSuccess(true);
@@ -321,19 +425,29 @@ const CreatePurchaseOrder = () => {
 
                 {/* Items Card */}
                 <div className="rounded-2xl border p-6 space-y-6" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <div className="flex justify-between items-center mb-2">
+                    <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
                         <div className="flex items-center gap-2 text-[#C8E600]">
                             <Calculator size={18} />
                             <h2 className="font-semibold uppercase tracking-wider text-xs">Line Items</h2>
                         </div>
-                        <button
-                            type="button"
-                            onClick={addItem}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-lime/20"
-                            style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
-                        >
-                            <Plus size={14} /> Add Item
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={openImportPRModal}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-purple-500/20"
+                                style={{ background: 'rgba(168,85,247,0.1)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.2)' }}
+                            >
+                                <Link2 size={14} /> Import from Approved PR
+                            </button>
+                            <button
+                                type="button"
+                                onClick={addItem}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-lime/20"
+                                style={{ background: 'rgba(200,230,0,0.1)', color: '#C8E600', border: '1px solid rgba(200,230,0,0.2)' }}
+                            >
+                                <Plus size={14} /> Add Item
+                            </button>
+                        </div>
                     </div>
 
                     <div className="space-y-4">
@@ -415,6 +529,29 @@ const CreatePurchaseOrder = () => {
                                         ${((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </div>
                                 </div>
+
+                                {item.prAllocations && item.prAllocations.length > 0 && (
+                                    <div className="md:col-span-12 p-3 rounded-xl border flex flex-wrap items-center justify-between gap-3 text-xs"
+                                        style={{ background: 'rgba(168,85,247,0.06)', borderColor: 'rgba(168,85,247,0.2)' }}>
+                                        <div className="flex items-center gap-2">
+                                            <Link2 size={14} className="text-purple-400" />
+                                            <span className="font-bold text-purple-300">Connected Requisition:</span>
+                                            {item.prAllocations.map(alloc => (
+                                                <span key={alloc.prId} className="px-2 py-0.5 rounded-md font-mono font-bold bg-purple-500/20 text-purple-300">
+                                                    #{alloc.prNumber} (Allocating {item.quantity} / Total PR: {alloc.originalPRQuantity ?? alloc.allocatedQuantity})
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <div className="text-[11px] font-medium">
+                                            {Number(item.quantity) > (item.prAllocations[0]?.originalPRQuantity || 999999) ? (
+                                                <span className="text-amber-400 font-bold">⚠️ Notice: PO units exceed PR total units</span>
+                                            ) : (
+                                                <span className="text-emerald-400">✓ Within Requisition limit</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="md:col-span-11 mt-4 space-y-3">
                                     <div className="flex items-center gap-4">
                                         <label className="cursor-pointer group/upload">
@@ -566,6 +703,118 @@ const CreatePurchaseOrder = () => {
                     setActiveItemIndex(null);
                 }}
             />
+
+            {/* Import Approved PRs Modal */}
+            {isImportPRModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-2xl rounded-2xl border p-6 space-y-5 shadow-2xl relative"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-2">
+                                <Link2 size={20} className="text-purple-400" />
+                                <h3 className="text-base font-bold" style={{ color: 'var(--text-main)' }}>Import Approved Requisitions</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsImportPRModalOpen(false)}
+                                className="p-1.5 rounded-lg border hover:bg-white/5"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        {loadingPRs ? (
+                            <div className="flex items-center justify-center py-12">
+                                <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        ) : availablePRs.length === 0 ? (
+                            <div className="text-center py-12" style={{ color: 'var(--text-dim)' }}>
+                                <p className="text-sm font-bold">No approved requisitions available for import.</p>
+                                <p className="text-xs mt-1 opacity-70">Only approved requisitions with unallocated units are shown.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <p className="text-xs" style={{ color: 'var(--text-dim)' }}>
+                                    Select one or more approved requisitions to add as line items to this Purchase Order:
+                                </p>
+                                <div className="max-h-72 overflow-y-auto custom-scrollbar border rounded-xl divide-y"
+                                    style={{ borderColor: 'var(--border-main)' }}>
+                                    {availablePRs.map(pr => {
+                                        const fulfilled = pr.fulfilledQuantity || 0;
+                                        const remaining = pr.remainingQuantity ?? (pr.quantity - fulfilled);
+                                        const isSelected = selectedImportPRIds.has(pr._id);
+                                        return (
+                                            <div
+                                                key={pr._id}
+                                                onClick={() => {
+                                                    setSelectedImportPRIds(prev => {
+                                                        const next = new Set(prev);
+                                                        if (next.has(pr._id)) next.delete(pr._id);
+                                                        else next.add(pr._id);
+                                                        return next;
+                                                    });
+                                                }}
+                                                className={`p-3.5 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                                                    isSelected ? 'bg-purple-500/10' : 'hover:bg-white/[0.02]'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => {}}
+                                                        className="accent-purple-500 w-4 h-4 cursor-pointer"
+                                                    />
+                                                    <div>
+                                                        <div className="text-xs font-bold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
+                                                            <span className="font-mono text-purple-400">#{pr.requestNumber}</span>
+                                                            <span>•</span>
+                                                            <span>{pr.part?.partName}</span>
+                                                        </div>
+                                                        <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                                                            Branch: {pr.branch?.name || 'N/A'} {pr.supplierDetails?.name ? `| Supplier: ${pr.supplierDetails.name}` : ''}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-xs font-black text-amber-400">{remaining} units</span>
+                                                    <span className="text-[10px] block opacity-60" style={{ color: 'var(--text-dim)' }}>of {pr.quantity} total</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="flex items-center justify-between pt-2">
+                                    <span className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                        {selectedImportPRIds.size} requisition{selectedImportPRIds.size > 1 ? 's' : ''} selected
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsImportPRModalOpen(false)}
+                                            className="px-4 py-2 rounded-xl text-xs font-bold border hover:bg-white/5"
+                                            style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={selectedImportPRIds.size === 0}
+                                            onClick={handleConfirmImportPRs}
+                                            className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-40"
+                                            style={{ background: '#a855f7', color: '#fff' }}
+                                        >
+                                            Import Selected ({selectedImportPRIds.size})
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -2,8 +2,37 @@ import api from './api';
 import type { Supplier } from './supplierService';
 import type { Branch } from './branchService';
 
-export type POStatus = 'REQUESTED' | 'MANAGER_APPROVED' | 'WAITING' | 'APPROVED' | 'REJECTED' | 'DISPOSED' | 'PENDING_FINANCE_APPROVAL' | 'RECEIVED';
+export type POStatus = 
+    | 'REQUESTED' 
+    | 'PENDING_MERCHANDISER'
+    | 'UNIT_REVISION_REQUESTED'
+    | 'UNIT_REVISION_APPROVED'
+    | 'UNIT_REVISION_REJECTED'
+    | 'PENDING_ADMIN_APPROVAL'
+    | 'WAITING_QUOTATION'
+    | 'QUOTATION_SUBMITTED'
+    | 'QUOTATION_REVISION_REQUESTED'
+    | 'QUOTATION_APPROVED'
+    | 'MANAGER_APPROVED' 
+    | 'WAITING' 
+    | 'REVISION_REQUESTED'
+    | 'REVISION_APPROVED'
+    | 'PO_ISSUED'
+    | 'APPROVED' 
+    | 'REJECTED' 
+    | 'DISPOSED' 
+    | 'PENDING_FINANCE_APPROVAL' 
+    | 'RECEIVED'
+    | 'IN_TRANSIT';
+
 export type POPurpose = 'Vehicle' | 'Spare Parts' | 'Others';
+
+export interface PRItemAllocation {
+    prId: string;
+    prNumber: string;
+    allocatedQuantity: number;
+    originalPRQuantity?: number;
+}
 
 export interface PurchaseOrderItem {
     itemName: string;
@@ -12,7 +41,53 @@ export interface PurchaseOrderItem {
     unitPrice: number;
     accountId?: string;
     merchandiserPrice?: number;
+    proposedQuantity?: number;
     images?: (File | string)[]; // File for upload, string for view
+    prAllocations?: PRItemAllocation[];
+}
+
+export interface QuotationRevisionEntry {
+    revisedAt: string;
+    revisedBy: string;
+    role?: string;
+    unitPrice: number;
+    totalAmount: number;
+    supplierId: string;
+    supplierName?: string;
+    documents?: string[];
+    notes?: string;
+}
+
+export interface POQuotation {
+    supplierId: string;
+    supplierName: string;
+    quotationNumber?: string;
+    unitPrice: number;
+    totalAmount: number;
+    validUntil?: string;
+    documents?: string[];
+    status: 'SUBMITTED' | 'REVISION_REQUESTED' | 'APPROVED' | 'REJECTED';
+    notes?: string;
+    revisionReason?: string;
+    approvedBy?: string;
+    approvedAt?: string;
+    revisionHistory?: QuotationRevisionEntry[];
+}
+
+export interface POUnitRevisionRequest {
+    requestedBy: string;
+    requestedAt: string;
+    reason: string;
+    status: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+    reviewNote?: string;
+    reviewedBy?: string;
+    reviewedAt?: string;
+    proposedItems: {
+        itemName: string;
+        currentQuantity: number;
+        proposedQuantity: number;
+        reason?: string;
+    }[];
 }
 
 export interface EditHistoryEntry {
@@ -70,6 +145,17 @@ export interface PurchaseOrder {
     createdAt: string;
     updatedAt: string;
     linkedPR?: any;
+    linkedPRs?: PRItemAllocation[];
+    unitRevisionRequest?: POUnitRevisionRequest;
+    quotation?: POQuotation;
+    quotations?: POQuotation[];
+    revisionReason?: string;
+    revisionDecisionNote?: string;
+    isRevisionAllowed?: boolean;
+    deliveryDate?: string;
+    paymentTerms?: string;
+    shippingTerms?: string;
+    officialPONumber?: string;
 }
 
 export interface CreatePurchaseOrderPayload {
@@ -78,6 +164,7 @@ export interface CreatePurchaseOrderPayload {
     supplier: string;
     paymentDate?: string;
     branch?: string; // Optional for Staff, required for CountryManager+
+    linkedPRs?: PRItemAllocation[];
 }
 
 export interface ApproveRejectPurchaseOrderPayload {
@@ -149,6 +236,9 @@ export const createPurchaseOrder = async (payload: CreatePurchaseOrderPayload): 
     formData.append('supplier', payload.supplier);
     if (payload.branch) formData.append('branch', payload.branch);
     if (payload.paymentDate) formData.append('paymentDate', payload.paymentDate);
+    if (payload.linkedPRs && payload.linkedPRs.length > 0) {
+        formData.append('linkedPRs', JSON.stringify(payload.linkedPRs));
+    }
 
     // Append item fields individually
     payload.items.forEach((item, index) => {
@@ -160,6 +250,9 @@ export const createPurchaseOrder = async (payload: CreatePurchaseOrderPayload): 
         }
         if (item.accountId) {
             formData.append(`items[${index}][accountId]`, item.accountId);
+        }
+        if (item.prAllocations && item.prAllocations.length > 0) {
+            formData.append(`items[${index}][prAllocations]`, JSON.stringify(item.prAllocations));
         }
 
         if (item.images && item.images.length > 0) {
@@ -196,4 +289,63 @@ export const updatePurchaseOrder = async (id: string, payload: UpdatePurchaseOrd
 export const bulkUploadPurchaseOrders = async (payload: { rows: any[] }): Promise<any> => {
     const response = await api.post('/api/purchase-order/bulk-upload', payload);
     return response.data;
+};
+
+// PUT Unit Revision APIs
+export const requestPOUnitRevision = async (
+    id: string,
+    payload: { proposedItems: { itemName: string; currentQuantity: number; proposedQuantity: number; reason?: string }[]; reason: string }
+): Promise<PurchaseOrder> => {
+    const response = await api.put(`/api/purchase-order/${id}/unit-revision-request`, payload);
+    return response.data?.data || response.data;
+};
+
+export const approveRejectPOUnitRevision = async (
+    id: string,
+    payload: { status: 'APPROVED' | 'REJECTED'; note?: string }
+): Promise<PurchaseOrder> => {
+    const response = await api.put(`/api/purchase-order/${id}/unit-revision-review`, payload);
+    return response.data?.data || response.data;
+};
+
+export const submitRevisedPOUnits = async (
+    id: string,
+    payload: { items: PurchaseOrderItem[]; note?: string }
+): Promise<PurchaseOrder> => {
+    const response = await api.put(`/api/purchase-order/${id}/submit-revised-units`, payload);
+    return response.data?.data || response.data;
+};
+
+// Quotation APIs
+export const submitPOQuotation = async (
+    id: string,
+    payload: { supplierId: string; supplierName: string; quotationNumber?: string; unitPrice: number; totalAmount: number; validUntil?: string; notes?: string; documents?: string[] }
+): Promise<PurchaseOrder> => {
+    const response = await api.post(`/api/purchase-order/${id}/quotation`, payload);
+    return response.data?.data || response.data;
+};
+
+export const requestPOQuotationRevision = async (
+    id: string,
+    payload: { reason: string; targetPrice?: number }
+): Promise<PurchaseOrder> => {
+    const response = await api.put(`/api/purchase-order/${id}/quotation/revision-request`, payload);
+    return response.data?.data || response.data;
+};
+
+export const approveRejectPOQuotation = async (
+    id: string,
+    payload: { status: 'APPROVED' | 'REJECTED'; note?: string }
+): Promise<PurchaseOrder> => {
+    const response = await api.put(`/api/purchase-order/${id}/quotation/review`, payload);
+    return response.data?.data || response.data;
+};
+
+// Merchandiser Revision Request Review by Finance Admin / Admin
+export const reviewQuotationRevisionRequest = async (
+    id: string,
+    payload: { decision: 'APPROVE' | 'REJECT'; note?: string }
+): Promise<PurchaseOrder> => {
+    const response = await api.put(`/api/purchase-order/${id}/review-revision`, payload);
+    return response.data?.data || response.data;
 };

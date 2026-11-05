@@ -121,6 +121,43 @@ export const procurementTopics: DocTopic[] = [
             expectedOutcome: 'Strict anti-duplicate billing control enforced.'
           }
         ]
+      },
+      {
+        id: 'pr-po-allocation-and-quotation-pipeline',
+        title: 'M:N Requisition Allocation, Merchandiser Verification & Quotation Lifecycle',
+        content: 'Advanced procurement lifecycle connecting technician requisitions to purchase orders, merchandising verification, and iterative quotation reviews:',
+        steps: [
+          {
+            stepNumber: 1,
+            title: 'Many-to-Many (M:N) PR ↔ PO Allocation',
+            description: 'Approved requisitions appear in the PO generation panel. A single requisition can be fulfilled across multiple purchase orders, and multiple requisitions can be consolidated into one purchase order. Total allocated units cannot exceed the requisition approved balance.',
+            expectedOutcome: 'Accurate requisition fulfillment tracking without exceeding unit balances.'
+          },
+          {
+            stepNumber: 2,
+            title: 'Merchandiser Verification & Unit Revision Request',
+            description: 'Newly generated POs are handed over in "Pending Merchandiser" status. Merchandisers can verify units or submit a Unit Revision request with justification to Admin/Finance Admin.',
+            expectedOutcome: 'Controlled unit modifications audited by financial management.'
+          },
+          {
+            stepNumber: 3,
+            title: 'Admin / Finance Review of Revised Units',
+            description: 'Admin or Financial Admin reviews proposed unit quantities. Once approved, the merchandiser applies the final quantities and re-submits for PO approval before quotation.',
+            expectedOutcome: 'Re-approved unit allocations advance to Waiting Quotation.'
+          },
+          {
+            stepNumber: 4,
+            title: 'Quotation Submission & Supplier Sourcing',
+            description: 'Procurement enters official supplier quotation details including quote number, unit pricing, total amounts, validity dates, and attached quotation sheets.',
+            expectedOutcome: 'Quotation submitted for management review.'
+          },
+          {
+            stepNumber: 5,
+            title: 'Quotation Review & Revision Rounds',
+            description: 'Admin or Financial Admin can approve the quotation or request revisions specifying target pricing or terms. Quotation revision history is preserved for audit.',
+            expectedOutcome: 'Iterative price negotiations finalized before order commitment.'
+          }
+        ]
       }
     ]
   }

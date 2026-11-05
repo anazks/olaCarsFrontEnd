@@ -37,12 +37,35 @@ export interface EditHistoryEntry {
     changesSummary: string;
 }
 
+export type PRStatus =
+    | 'PENDING'
+    | 'PENDING_WORKSHOP_MANAGER_APPROVAL'
+    | 'APPROVED'
+    | 'PARTIALLY_CONVERTED'
+    | 'CONVERTED_TO_PO'
+    | 'COST_APPROVED'
+    | 'IN_TRANSIT'
+    | 'RECEIVED'
+    | 'WAITING_QUOTATION'
+    | 'REJECTED'
+    | 'PENDING_FINANCE_APPROVAL';
+
+export interface PRPOAllocationLink {
+    poId: string;
+    poNumber: string;
+    allocatedQuantity: number;
+    allocatedAt?: string;
+    poStatus?: string;
+}
+
 export interface ProcurementRequest {
     _id: string;
     requestNumber: string;
     part: ProcurementRequestPart;
     quantity: number;
-    status: 'PENDING' | 'PENDING_FINANCE_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO' | 'COST_APPROVED' | 'IN_TRANSIT' | 'RECEIVED' | 'WAITING_QUOTATION';
+    fulfilledQuantity?: number;
+    remainingQuantity?: number;
+    status: PRStatus;
     branch: ProcurementRequestBranch;
     requestedBy: ProcurementRequestUser;
     requestedByRole: string;
@@ -63,10 +86,15 @@ export interface ProcurementRequest {
     documents?: string[];
     rejectionNote?: string;
     approvalNote?: string;
+    transportationMode?: 'SEA' | 'AIR' | 'LAND';
+    qualityPreference?: 'GENUINE_OEM' | 'AFTERMARKET_ANY_BRAND';
+    fullSizePhoto?: string;
+    closeUpPhoto?: string;
     createdAt: string;
     updatedAt: string;
     editHistory?: EditHistoryEntry[];
     linkedPO?: any;
+    linkedPOs?: PRPOAllocationLink[];
 }
 
 export interface PaginationMetadata {
@@ -84,7 +112,7 @@ export interface PaginatedResponse<T> {
 export interface ProcurementRequestFilters {
     page?: number;
     limit?: number;
-    status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CONVERTED_TO_PO' | 'PENDING_FINANCE_APPROVAL' | 'WAITING_QUOTATION';
+    status?: PRStatus;
     branch?: string;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
@@ -99,11 +127,32 @@ export const getWorkshopProcurementRequests = async (
     return response.data;
 };
 
+export const getApprovedProcurementRequests = async (
+    params: { branch?: string; search?: string } = {}
+): Promise<ProcurementRequest[]> => {
+    const response = await api.get('/api/workshop-procurement', {
+        params: {
+            ...params,
+            status: 'APPROVED,WAITING_QUOTATION',
+            limit: 1000
+        }
+    });
+    return response.data?.data || response.data || [];
+};
+
 export const getWorkshopProcurementRequestById = async (
     id: string
 ): Promise<ProcurementRequest> => {
     const response = await api.get(`/api/workshop-procurement/${id}`);
     return response.data.data;
+};
+
+export const workshopManagerApproveProcurementRequest = async (
+    id: string,
+    data: { status: 'APPROVED' | 'REJECTED'; note?: string; rejectionReason?: string }
+) => {
+    const response = await api.put(`/api/workshop-procurement/${id}/approve`, data);
+    return response.data.data || response.data;
 };
 
 export const approveProcurementRequest = async (

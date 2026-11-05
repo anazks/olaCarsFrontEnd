@@ -1,10 +1,11 @@
 import { formatDate, formatDateTime } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getWorkshopProcurementRequestById, financeApproveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
+import { getWorkshopProcurementRequestById, financeApproveProcurementRequest, workshopManagerApproveProcurementRequest, type ProcurementRequest } from '../../../services/workshopProcurementService';
 import {
     ArrowLeft, Clock, CheckCircle, XCircle, FileText,
-    User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2, ExternalLink, Share2
+    User, Calendar, Landmark, AlertCircle, Package, Receipt, Check, X, Loader2, ExternalLink, Share2,
+    Image as ImageIcon, ZoomIn, Truck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getUserRole, getDecodedToken } from '../../../utils/auth';
@@ -13,6 +14,12 @@ import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
     const styles: Record<ProcurementRequest['status'], { bg: string; text: string; border: string; icon: any }> = {
         PENDING: {
+            bg: 'rgba(245, 158, 11, 0.1)',
+            text: '#f59e0b',
+            border: 'rgba(245, 158, 11, 0.3)',
+            icon: <Clock size={14} />
+        },
+        PENDING_WORKSHOP_MANAGER_APPROVAL: {
             bg: 'rgba(245, 158, 11, 0.1)',
             text: '#f59e0b',
             border: 'rgba(245, 158, 11, 0.3)',
@@ -29,6 +36,12 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
             text: '#22c55e',
             border: 'rgba(34, 197, 94, 0.3)',
             icon: <CheckCircle size={14} />
+        },
+        PARTIALLY_CONVERTED: {
+            bg: 'rgba(249, 115, 22, 0.1)',
+            text: '#f97316',
+            border: 'rgba(249, 115, 22, 0.3)',
+            icon: <Package size={14} />
         },
         COST_APPROVED: {
             bg: 'rgba(34, 197, 94, 0.1)',
@@ -68,13 +81,30 @@ const StatusBadge = ({ status }: { status: ProcurementRequest['status'] }) => {
         }
     };
     const style = styles[status] || styles.APPROVED;
+    const labelMap: Partial<Record<ProcurementRequest['status'], string>> = {
+        CONVERTED_TO_PO: 'CONVERTED TO PO',
+        PARTIALLY_CONVERTED: 'PARTIALLY ALLOCATED',
+        PENDING_WORKSHOP_MANAGER_APPROVAL: 'PENDING WORKSHOP',
+        PENDING_FINANCE_APPROVAL: 'PENDING FINANCE',
+        WAITING_QUOTATION: 'WAITING QUOTATION'
+    };
     return (
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider w-fit"
             style={{ background: style.bg, color: style.text, borderColor: style.border }}>
             {style.icon}
-            {status === 'CONVERTED_TO_PO' ? 'CONVERTED' : status === 'PENDING_FINANCE_APPROVAL' ? 'PENDING FINANCE' : status === 'WAITING_QUOTATION' ? 'Waiting Quotation' : status}
+            {labelMap[status] || status}
         </div>
     );
+};
+
+const resolveImageUrl = (url?: string | null): string => {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (!trimmed || trimmed.toLowerCase().includes('undefined') || trimmed.toLowerCase().includes('null')) return '';
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+    const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+    return `${baseUrl}${cleanPath}`;
 };
 
 const WorkshopPurchaseRequestDetail = () => {
@@ -91,6 +121,8 @@ const WorkshopPurchaseRequestDetail = () => {
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
     const [actionType, setActionType] = useState<'APPROVE' | 'REJECT'>('APPROVE');
     const [actionNote, setActionNote] = useState('');
+    const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+    const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
     const fetchRequestDetails = useCallback(async () => {
         if (!id) return;
@@ -126,11 +158,21 @@ const WorkshopPurchaseRequestDetail = () => {
         setActionLoading(actionType);
         try {
             const apiStatus = actionType === 'APPROVE' ? 'APPROVED' : 'REJECTED';
-            await financeApproveProcurementRequest(request._id, {
-                status: apiStatus,
-                note: actionNote
-            });
-            toast.success(actionType === 'APPROVE' ? 'Request Approved' : 'Request Rejected');
+            const isWorkshop = request.status === 'PENDING' || request.status === 'PENDING_WORKSHOP_MANAGER_APPROVAL';
+            if (isWorkshop) {
+                await workshopManagerApproveProcurementRequest(request._id, {
+                    status: apiStatus,
+                    note: actionNote,
+                    rejectionReason: actionType === 'REJECT' ? actionNote : undefined
+                });
+                toast.success(actionType === 'APPROVE' ? 'Requisition Approved by Workshop Manager' : 'Requisition Rejected');
+            } else {
+                await financeApproveProcurementRequest(request._id, {
+                    status: apiStatus,
+                    note: actionNote
+                });
+                toast.success(actionType === 'APPROVE' ? 'Request Approved' : 'Request Rejected');
+            }
             setIsActionModalOpen(false);
             fetchRequestDetails();
         } catch (err: any) {
@@ -163,10 +205,16 @@ const WorkshopPurchaseRequestDetail = () => {
         );
     }
 
+    const isWorkshopApproval = request.status === 'PENDING' || request.status === 'PENDING_WORKSHOP_MANAGER_APPROVAL';
     const isFinanceApproval = request.status === 'PENDING_FINANCE_APPROVAL';
-    const canApprove = isFinanceApproval &&
+
+    const canWorkshopApprove = isWorkshopApproval &&
+        (userRole === 'admin' || userRole === 'workshopmanager' || userRole === 'operationadmin');
+
+    const canFinanceApprove = isFinanceApproval &&
         request.requestedBy?._id !== userId &&
         (userRole === 'admin' || userRole === 'financeadmin');
+
     const isPricingAuditAvailable = request.merchandiserPrice !== undefined && request.merchandiserPrice !== null;
 
 
@@ -213,7 +261,26 @@ const WorkshopPurchaseRequestDetail = () => {
                     </div>
                 </div>
 
-                {canApprove && (
+                {canWorkshopApprove && (
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <button
+                            onClick={() => openActionModal('REJECT')}
+                            disabled={!!actionLoading}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-red-500 cursor-pointer bg-transparent"
+                        >
+                            <XCircle size={18} /> Reject Requisition
+                        </button>
+                        <button
+                            onClick={() => openActionModal('APPROVE')}
+                            disabled={!!actionLoading}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 cursor-pointer border-none bg-[#C8E600] text-black"
+                        >
+                            <CheckCircle size={18} /> Approve Requisition (Workshop Mgr)
+                        </button>
+                    </div>
+                )}
+
+                {canFinanceApprove && (
                     <div className="flex gap-3 w-full md:w-auto">
                         <button
                             onClick={() => openActionModal('REJECT')}
@@ -400,6 +467,86 @@ const WorkshopPurchaseRequestDetail = () => {
                                     </p>
                                 </div>
                             </div>
+                            {request.transportationMode && (
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400">
+                                        <Truck size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Transport Mode</p>
+                                        <p className="font-bold text-sm text-sky-400">
+                                            {request.transportationMode === 'SEA' ? '🚢 Sea Cargo' : request.transportationMode === 'AIR' ? '✈️ Air Freight' : '🚚 Land Transport'}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Attached Photographs (Photo Proofs) */}
+                    <div className="rounded-2xl border p-6 space-y-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center gap-2">
+                            <ImageIcon size={18} className="text-[#C8E600]" />
+                            <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>
+                                Photo Proofs (Technician Upload)
+                            </h3>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {/* Full Size Photo */}
+                            <div className="p-4 rounded-xl border bg-black/20 text-center relative group" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                <span className="text-[10px] uppercase font-bold block mb-2" style={{ color: 'var(--text-dim)' }}>
+                                    Full Size Photo
+                                </span>
+                                {resolveImageUrl(request.fullSizePhoto) && !imgErrors['full'] ? (
+                                    <div
+                                        className="relative h-48 w-full rounded-lg overflow-hidden cursor-pointer bg-black/40 border border-white/5 hover:border-[#C8E600]/40 transition-all"
+                                        onClick={() => setSelectedPhoto(resolveImageUrl(request.fullSizePhoto))}
+                                    >
+                                        <img
+                                            src={resolveImageUrl(request.fullSizePhoto)}
+                                            alt="Full Size Photo Proof"
+                                            onError={() => setImgErrors(prev => ({ ...prev, full: true }))}
+                                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                        />
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-xs font-bold text-white backdrop-blur-[2px]">
+                                            <ZoomIn size={16} className="text-[#C8E600]" /> Click to enlarge
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="h-48 flex flex-col items-center justify-center text-xs bg-black/10 rounded-lg border border-dashed border-white/10 gap-2" style={{ color: 'var(--text-dim)' }}>
+                                        <ImageIcon size={24} className="opacity-30" />
+                                        <span>{imgErrors['full'] ? 'Failed to load full size photo' : 'No full size photo uploaded'}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Close-Up Photo */}
+                            <div className="p-4 rounded-xl border bg-black/20 text-center relative group" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                <span className="text-[10px] uppercase font-bold block mb-2" style={{ color: 'var(--text-dim)' }}>
+                                    Close-Up Photo (Part #)
+                                </span>
+                                {resolveImageUrl(request.closeUpPhoto) && !imgErrors['close'] ? (
+                                    <div
+                                        className="relative h-48 w-full rounded-lg overflow-hidden cursor-pointer bg-black/40 border border-white/5 hover:border-[#C8E600]/40 transition-all"
+                                        onClick={() => setSelectedPhoto(resolveImageUrl(request.closeUpPhoto))}
+                                    >
+                                        <img
+                                            src={resolveImageUrl(request.closeUpPhoto)}
+                                            alt="Close Up Photo Proof"
+                                            onError={() => setImgErrors(prev => ({ ...prev, close: true }))}
+                                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                        />
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-xs font-bold text-white backdrop-blur-[2px]">
+                                            <ZoomIn size={16} className="text-[#C8E600]" /> Click to enlarge
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="h-48 flex flex-col items-center justify-center text-xs bg-black/10 rounded-lg border border-dashed border-white/10 gap-2" style={{ color: 'var(--text-dim)' }}>
+                                        <ImageIcon size={24} className="opacity-30" />
+                                        <span>{imgErrors['close'] ? 'Failed to load close-up photo' : 'No close-up photo uploaded'}</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -440,6 +587,131 @@ const WorkshopPurchaseRequestDetail = () => {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* PO Fulfillment & Allocation Card */}
+                    {(request.status === 'APPROVED' || request.status === 'PARTIALLY_CONVERTED' || request.status === 'CONVERTED_TO_PO' || (request.fulfilledQuantity && request.fulfilledQuantity > 0)) && (
+                        <div className="rounded-2xl border p-6 space-y-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-4" style={{ borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center gap-2">
+                                    <Receipt size={18} className="text-[#C8E600]" />
+                                    <h3 className="text-xs font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>
+                                        PO Fulfillment & Allocation Status
+                                    </h3>
+                                </div>
+                                <span className="text-xs font-bold px-3 py-1 rounded-full border"
+                                    style={{
+                                        background: (request.remainingQuantity ?? (request.quantity - (request.fulfilledQuantity || 0))) === 0 ? 'rgba(34,197,94,0.1)' : 'rgba(249,115,22,0.1)',
+                                        borderColor: (request.remainingQuantity ?? (request.quantity - (request.fulfilledQuantity || 0))) === 0 ? 'rgba(34,197,94,0.3)' : 'rgba(249,115,22,0.3)',
+                                        color: (request.remainingQuantity ?? (request.quantity - (request.fulfilledQuantity || 0))) === 0 ? '#22c55e' : '#f97316'
+                                    }}>
+                                    {(request.remainingQuantity ?? (request.quantity - (request.fulfilledQuantity || 0))) === 0 ? 'Fully Converted to PO' : 'Partially Converted'}
+                                </span>
+                            </div>
+
+                            {/* Units Counter Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="p-4 rounded-xl border bg-black/20" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                    <span className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-dim)' }}>Approved Units</span>
+                                    <p className="text-2xl font-black mt-1" style={{ color: 'var(--text-main)' }}>
+                                        {request.quantity}
+                                    </p>
+                                    <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>Total approved by Workshop Mgr</span>
+                                </div>
+                                <div className="p-4 rounded-xl border bg-blue-500/5" style={{ borderColor: 'rgba(59,130,246,0.2)' }}>
+                                    <span className="text-[10px] uppercase font-bold text-blue-400">Allocated to POs</span>
+                                    <p className="text-2xl font-black mt-1 text-blue-400">
+                                        {request.fulfilledQuantity || (request.status === 'CONVERTED_TO_PO' ? request.quantity : 0)}
+                                    </p>
+                                    <span className="text-[10px] text-blue-300/70">Across connected Purchase Orders</span>
+                                </div>
+                                <div className="p-4 rounded-xl border bg-emerald-500/5" style={{ borderColor: 'rgba(34,197,94,0.2)' }}>
+                                    <span className="text-[10px] uppercase font-bold text-emerald-400">Remaining Units</span>
+                                    <p className="text-2xl font-black mt-1 text-emerald-400">
+                                        {request.remainingQuantity !== undefined 
+                                            ? request.remainingQuantity 
+                                            : (request.status === 'CONVERTED_TO_PO' ? 0 : Math.max(0, request.quantity - (request.fulfilledQuantity || 0)))}
+                                    </p>
+                                    <span className="text-[10px] text-emerald-300/70">Available for future PO allocation</span>
+                                </div>
+                            </div>
+
+                            {/* Progress Bar */}
+                            <div className="space-y-1.5">
+                                <div className="flex justify-between text-[11px] font-bold">
+                                    <span style={{ color: 'var(--text-dim)' }}>Fulfillment Progress</span>
+                                    <span style={{ color: '#C8E600' }}>
+                                        {Math.min(100, Math.round(((request.fulfilledQuantity || (request.status === 'CONVERTED_TO_PO' ? request.quantity : 0)) / (request.quantity || 1)) * 100))}%
+                                    </span>
+                                </div>
+                                <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
+                                    <div 
+                                        className="h-full bg-[#C8E600] transition-all duration-500 rounded-full"
+                                        style={{ 
+                                            width: `${Math.min(100, Math.round(((request.fulfilledQuantity || (request.status === 'CONVERTED_TO_PO' ? request.quantity : 0)) / (request.quantity || 1)) * 100))}%` 
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Connected POs List */}
+                            {((request.linkedPOs && request.linkedPOs.length > 0) || request.linkedPO) && (
+                                <div className="pt-2 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                                    <span className="text-[10px] uppercase font-bold block mb-3" style={{ color: 'var(--text-dim)' }}>
+                                        Connected Purchase Orders
+                                    </span>
+                                    <div className="space-y-2">
+                                        {request.linkedPOs && request.linkedPOs.length > 0 ? (
+                                            request.linkedPOs.map((link, idx) => (
+                                                <div key={idx} className="flex items-center justify-between p-3 rounded-xl border bg-white/[0.02]" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-[#C8E600]/10 flex items-center justify-center text-[#C8E600]">
+                                                            <Receipt size={14} />
+                                                        </div>
+                                                        <div>
+                                                            <button 
+                                                                onClick={() => navigate(`/purchase-orders/${link.poId}`)}
+                                                                className="text-xs font-bold text-[#C8E600] hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
+                                                            >
+                                                                {link.poNumber} <ExternalLink size={10} />
+                                                            </button>
+                                                            <span className="text-[10px]" style={{ color: 'var(--text-dim)' }}>
+                                                                {link.allocatedAt ? formatDate(link.allocatedAt) : 'Recently allocated'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-xs font-black text-white">{link.allocatedQuantity} units</span>
+                                                        {link.poStatus && (
+                                                            <span className="block text-[9px] uppercase font-bold text-dim" style={{ color: 'var(--text-dim)' }}>
+                                                                {link.poStatus}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : request.linkedPO ? (
+                                            <div className="flex items-center justify-between p-3 rounded-xl border bg-white/[0.02]" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-[#C8E600]/10 flex items-center justify-center text-[#C8E600]">
+                                                        <Receipt size={14} />
+                                                    </div>
+                                                    <div>
+                                                        <button 
+                                                            onClick={() => navigate(`/purchase-orders/${request.linkedPO._id || request.linkedPO.id}`)}
+                                                            className="text-xs font-bold text-[#C8E600] hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
+                                                        >
+                                                            {request.linkedPO.purchaseOrderNumber} <ExternalLink size={10} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <span className="text-xs font-black text-white">{request.quantity} units</span>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Column: Approval & Notes */}
@@ -665,6 +937,44 @@ const WorkshopPurchaseRequestDetail = () => {
                                 )}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Photo Lightbox Modal */}
+            {selectedPhoto && (
+                <div
+                    className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => setSelectedPhoto(null)}
+                >
+                    <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+                        <img
+                            src={selectedPhoto}
+                            alt="Enlarged Photo Proof"
+                            className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl border border-white/10"
+                        />
+                        <div className="mt-3 flex items-center gap-3">
+                            <a
+                                href={selectedPhoto}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-4 py-2 rounded-xl text-xs font-bold border border-white/10 bg-white/5 hover:bg-white/10 text-white flex items-center gap-1.5 transition-all decoration-none"
+                            >
+                                <ExternalLink size={14} /> Open in New Tab
+                            </a>
+                            <button
+                                onClick={() => setSelectedPhoto(null)}
+                                className="px-4 py-2 rounded-xl text-xs font-bold border border-white/10 bg-white/5 hover:bg-white/10 text-white flex items-center gap-1.5 transition-all cursor-pointer"
+                            >
+                                <X size={14} /> Close
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => setSelectedPhoto(null)}
+                            className="absolute -top-3 -right-3 p-2 bg-neutral-900 border border-white/20 rounded-full text-white hover:bg-neutral-800 transition-colors shadow-lg cursor-pointer"
+                        >
+                            <X size={18} />
+                        </button>
                     </div>
                 </div>
             )}

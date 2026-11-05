@@ -67,6 +67,93 @@ export const overviewTopic: DocTopic = {
         'Vehicles cannot be assigned to drivers without an active, verified driver profile and an approved rental plan.',
         'Invoices generated automatically sync with the General Ledger and Customer Accounts Receivable.'
       ]
+    },
+    {
+      id: 'ola-process-video-recordings',
+      title: 'Ola Process Steps — Video Recordings & Walkthroughs',
+      content: 'Official screen recordings and video walkthroughs have been published to Google Drive to assist staff and administrators with mastering all Ola ERP processes. These recordings demonstrate each user journey step-by-step.',
+      actionLink: {
+        label: 'Open Video Recordings Folder (Google Drive)',
+        url: 'https://drive.google.com/drive/folders/1CzrC0X34JnoxZ4wuWFuMNWCmTHKeO8w4?usp=sharing',
+        external: true
+      },
+      tips: [
+        'Folder contains practical video demonstrations of vehicle onboarding, KYC vetting, contract signing, and invoicing.',
+        'Use these recordings for team onboarding, process refresher training, and standard operating procedure (SOP) compliance.'
+      ]
+    }
+  ]
+};
+
+export const processVideosTopic: DocTopic = {
+  id: 'process-videos',
+  categoryId: 'overview',
+  title: 'Ola Process Steps Video Recordings',
+  shortTitle: 'Process Video Recordings',
+  description: 'Direct video recordings and visual walkthroughs demonstrating Ola platform operational procedures and step-by-step system workflows.',
+  iconName: 'Video',
+  tags: ['video', 'recordings', 'drive', 'tutorials', 'process steps', 'walkthrough', 'sop', 'training'],
+  sections: [
+    {
+      id: 'video-drive-overview',
+      title: 'Google Drive Video Repository',
+      content: 'All video recordings demonstrating the core Ola system processes are centralized in a shared Google Drive folder for easy access by managers, operations staff, and finance personnel.',
+      actionLink: {
+        label: 'Open Video Recordings Folder in Google Drive',
+        url: 'https://drive.google.com/drive/folders/1CzrC0X34JnoxZ4wuWFuMNWCmTHKeO8w4?usp=sharing',
+        external: true
+      },
+      tips: [
+        'Bookmark the Google Drive folder for quick reference during day-to-day operations.',
+        'Videos are organized by functional area to help you quickly find the specific procedure you need.'
+      ]
+    },
+    {
+      id: 'recorded-process-modules',
+      title: 'Recorded Process Modules & Topics',
+      content: 'The video recordings in the Drive folder cover the end-to-end operational lifecycle:',
+      steps: [
+        {
+          stepNumber: 1,
+          title: 'Fleet & Vehicle Onboarding',
+          description: 'Step-by-step guide to registering new vehicles, uploading chassis/engine documents, setting insurance policies, and tracking GPS status.',
+          expectedOutcome: 'Vehicle profile active and available in fleet inventory.'
+        },
+        {
+          stepNumber: 2,
+          title: 'Driver KYC & Digital Agreement Signing',
+          description: 'Document verification, vetting requirements, assigning agreement templates, and driver digital signature capture.',
+          expectedOutcome: 'Fully executed digital rental agreement with audit trail.'
+        },
+        {
+          stepNumber: 3,
+          title: 'Vehicle Handover & Rental Assignment',
+          description: 'Pairing approved drivers with ready vehicles, mileage check, security deposit handling, and handover inspection recording.',
+          expectedOutcome: 'Vehicle status updated to On-Rent with automated billing schedule.'
+        },
+        {
+          stepNumber: 4,
+          title: 'Billing, Invoicing & Payment Processing',
+          description: 'Generating rental invoices, recording bank transfers/cash receipts, issuing credit/debit notes, and ledger reconciliation.',
+          expectedOutcome: 'Accurate General Ledger entries and updated customer balances.'
+        },
+        {
+          stepNumber: 5,
+          title: 'Workshop Maintenance & Part Requisitions',
+          description: 'Creating work orders, requesting spare parts from inventory, assigning mechanics, and closing maintenance logs.',
+          expectedOutcome: 'Resolved maintenance issue with updated inventory levels.'
+        }
+      ]
+    },
+    {
+      id: 'video-viewing-guidelines',
+      title: 'Training & Best Practices',
+      content: 'To maximize the benefit of these process recordings:',
+      tips: [
+        'Follow along in a test or sandbox environment when watching complex multi-step workflows like digital contracting or journal entries.',
+        'Ensure proper branch and role permissions are selected to match what you see in the recording.',
+        'Reach out to operational or financial admins if you encounter discrepancy between current screens and earlier recording versions.'
+      ]
     }
   ]
 };

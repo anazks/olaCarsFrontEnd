@@ -1,5 +1,7 @@
 # Driver Onboarding Integration Guide (Frontend)
 
+> 📹 **Video Walkthroughs & Process Recordings:** [Ola Process Steps Google Drive Folder](https://drive.google.com/drive/folders/1CzrC0X34JnoxZ4wuWFuMNWCmTHKeO8w4?usp=sharing)
+
 This guide outlines the backend workflow for driver onboarding. If you are experiencing bugs or "Gate Validation Failed" errors, check the requirements for each status transition carefully.
 
 ## 1. Onboarding Workflow Overview

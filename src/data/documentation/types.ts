@@ -13,6 +13,7 @@ export interface DocSection {
   tips?: string[];
   warnings?: string[];
   keyFields?: { name: string; required: boolean; description: string }[];
+  actionLink?: { label: string; url: string; external?: boolean };
 }
 
 export interface DocTopic {

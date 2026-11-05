@@ -12,7 +12,9 @@ import {
   ShoppingBag,
   Wrench,
   ShieldCheck,
-  UploadCloud
+  UploadCloud,
+  Video,
+  ExternalLink
 } from 'lucide-react';
 import type { DocCategory } from '../../../data/documentation/types';
 
@@ -34,7 +36,8 @@ const iconMap: Record<string, React.ReactNode> = {
   ShoppingBag: <ShoppingBag className="w-4 h-4" />,
   Wrench: <Wrench className="w-4 h-4" />,
   ShieldCheck: <ShieldCheck className="w-4 h-4" />,
-  UploadCloud: <UploadCloud className="w-4 h-4" />
+  UploadCloud: <UploadCloud className="w-4 h-4" />,
+  Video: <Video className="w-4 h-4" />
 };
 
 export const DocSidebar: React.FC<DocSidebarProps> = ({
@@ -77,6 +80,21 @@ export const DocSidebar: React.FC<DocSidebarProps> = ({
             Ctrl K
           </kbd>
         </button>
+
+        {/* Video Recordings Quick Link */}
+        <a
+          href="https://drive.google.com/drive/folders/1CzrC0X34JnoxZ4wuWFuMNWCmTHKeO8w4?usp=sharing"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 w-full flex items-center justify-between px-3 py-2 rounded-xl border border-[#C8E600]/30 bg-[#C8E600]/10 hover:bg-[#C8E600]/20 text-xs font-semibold text-[#C8E600] transition-colors group"
+          title="Open Video Recordings for Ola Process Steps (Google Drive)"
+        >
+          <div className="flex items-center gap-2 truncate">
+            <Video className="w-4 h-4 shrink-0 text-[#C8E600]" />
+            <span className="truncate">Process Step Videos</span>
+          </div>
+          <ExternalLink className="w-3.5 h-3.5 shrink-0 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+        </a>
       </div>
 
       {/* Categories & Topics Tree */}
@@ -135,6 +153,28 @@ export const DocSidebar: React.FC<DocSidebarProps> = ({
             </div>
           );
         })}
+      </div>
+
+      {/* Footer Drive Banner */}
+      <div className="p-3 border-t border-[var(--border-main)] bg-[var(--bg-main)]/60">
+        <div className="p-2.5 rounded-xl border border-[var(--border-main)] bg-[var(--bg-card)] text-xs">
+          <div className="flex items-center gap-2 font-semibold text-[var(--text-main)] mb-1">
+            <Video className="w-3.5 h-3.5 text-[#C8E600]" />
+            <span>Ola Process Videos</span>
+          </div>
+          <p className="text-[11px] text-[var(--text-dim)] mb-2">
+            Watch recorded walkthroughs of system process steps.
+          </p>
+          <a
+            href="https://drive.google.com/drive/folders/1CzrC0X34JnoxZ4wuWFuMNWCmTHKeO8w4?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1.5 w-full py-1.5 px-2.5 rounded-lg text-xs font-semibold bg-[#C8E600] text-black hover:bg-[#b0cc00] transition-colors"
+          >
+            <span>Open Google Drive</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
       </div>
     </div>
   );

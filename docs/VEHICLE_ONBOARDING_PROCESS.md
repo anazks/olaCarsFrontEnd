@@ -1,5 +1,7 @@
 # Vehicle Onboarding Process
 
+> 📹 **Video Walkthroughs & Process Recordings:** [Ola Process Steps Google Drive Folder](https://drive.google.com/drive/folders/1CzrC0X34JnoxZ4wuWFuMNWCmTHKeO8w4?usp=sharing)
+
 This document outlines the step-by-step vehicle onboarding process within the Ola Cars system, including the specific actions, required documents, and role-based approvals for each stage.
 
 ---

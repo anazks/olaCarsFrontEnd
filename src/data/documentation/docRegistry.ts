@@ -1,5 +1,5 @@
 import type { DocCategory, DocTopic } from './types';
-import { overviewTopic } from './topics/overview';
+import { overviewTopic, processVideosTopic } from './topics/overview';
 import { fleetTopics } from './topics/fleetProcesses';
 import { driverTopics } from './topics/driverProcesses';
 import { salesInvoicingTopics } from './topics/salesInvoicingProcesses';
@@ -15,7 +15,7 @@ export const docCategories: DocCategory[] = [
     title: 'Platform Overview',
     description: 'System architecture, navigation flow, and user role hierarchy.',
     iconName: 'LayoutGrid',
-    topics: [overviewTopic]
+    topics: [overviewTopic, processVideosTopic]
   },
   {
     id: 'fleet',

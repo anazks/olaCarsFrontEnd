@@ -1,8 +1,9 @@
 import { formatDate } from '../../../utils/dateUtils';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, RefreshCw, Search, FileText, AlertTriangle, Eye, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, Filter, ChevronDown, Trash2 } from 'lucide-react';
+import { Plus, RefreshCw, Search, FileText, AlertTriangle, Eye, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, Filter, ChevronDown, Trash2, ChevronUp, Package } from 'lucide-react';
 import { getAllPurchaseOrders, approveRejectPurchaseOrder } from '../../../services/purchaseOrderService';
+import { getApprovedProcurementRequests, type ProcurementRequest } from '../../../services/workshopProcurementService';
 import { getDecodedToken } from '../../../utils/auth';
 import type { PurchaseOrder, POStatus, PaginationMetadata, PurchaseOrderFilters } from '../../../services/purchaseOrderService';
 import { getAllSuppliers, type Supplier } from '../../../services/supplierService';
@@ -26,6 +27,60 @@ const StatusBadge = ({ status }: { status: POStatus }) => {
             border: 'rgba(59, 130, 246, 0.3)',
             icon: <Clock size={12} />
         },
+        PENDING_MERCHANDISER: {
+            bg: 'rgba(168, 85, 247, 0.1)',
+            text: '#a855f7',
+            border: 'rgba(168, 85, 247, 0.3)',
+            icon: <Clock size={12} />
+        },
+        UNIT_REVISION_REQUESTED: {
+            bg: 'rgba(249, 115, 22, 0.1)',
+            text: '#f97316',
+            border: 'rgba(249, 115, 22, 0.3)',
+            icon: <Clock size={12} />
+        },
+        UNIT_REVISION_APPROVED: {
+            bg: 'rgba(34, 197, 94, 0.1)',
+            text: '#22c55e',
+            border: 'rgba(34, 197, 94, 0.3)',
+            icon: <CheckCircle size={12} />
+        },
+        UNIT_REVISION_REJECTED: {
+            bg: 'rgba(239, 68, 68, 0.1)',
+            text: '#ef4444',
+            border: 'rgba(239, 68, 68, 0.3)',
+            icon: <XCircle size={12} />
+        },
+        PENDING_ADMIN_APPROVAL: {
+            bg: 'rgba(236, 72, 153, 0.1)',
+            text: '#ec4899',
+            border: 'rgba(236, 72, 153, 0.3)',
+            icon: <Clock size={12} />
+        },
+        WAITING_QUOTATION: {
+            bg: 'rgba(245, 158, 11, 0.1)',
+            text: '#f59e0b',
+            border: 'rgba(245, 158, 11, 0.3)',
+            icon: <Clock size={12} />
+        },
+        QUOTATION_SUBMITTED: {
+            bg: 'rgba(99, 102, 241, 0.1)',
+            text: '#6366f1',
+            border: 'rgba(99, 102, 241, 0.3)',
+            icon: <Clock size={12} />
+        },
+        QUOTATION_REVISION_REQUESTED: {
+            bg: 'rgba(249, 115, 22, 0.1)',
+            text: '#f97316',
+            border: 'rgba(249, 115, 22, 0.3)',
+            icon: <Clock size={12} />
+        },
+        QUOTATION_APPROVED: {
+            bg: 'rgba(34, 197, 94, 0.1)',
+            text: '#22c55e',
+            border: 'rgba(34, 197, 94, 0.3)',
+            icon: <CheckCircle size={12} />
+        },
         MANAGER_APPROVED: {
             bg: 'rgba(139, 92, 246, 0.1)',
             text: '#8b5cf6',
@@ -42,6 +97,18 @@ const StatusBadge = ({ status }: { status: POStatus }) => {
             bg: 'rgba(34, 197, 94, 0.1)',
             text: '#22c55e',
             border: 'rgba(34, 197, 94, 0.3)',
+            icon: <CheckCircle size={12} />
+        },
+        IN_TRANSIT: {
+            bg: 'rgba(99, 102, 241, 0.1)',
+            text: '#6366f1',
+            border: 'rgba(99, 102, 241, 0.3)',
+            icon: <Clock size={12} />
+        },
+        RECEIVED: {
+            bg: 'rgba(16, 185, 129, 0.1)',
+            text: '#10b981',
+            border: 'rgba(16, 185, 129, 0.3)',
             icon: <CheckCircle size={12} />
         },
         REJECTED: {
@@ -253,12 +320,60 @@ const PurchaseOrderList = () => {
     const [currentUserId, setCurrentUserId] = useState('');
     const navigate = useNavigate();
 
+    // Approved Requisitions Panel State
+    const [approvedPRs, setApprovedPRs] = useState<ProcurementRequest[]>([]);
+    const [approvedPRsLoading, setApprovedPRsLoading] = useState(false);
+    const [showApprovedPRs, setShowApprovedPRs] = useState(false);
+    const [selectedPRIds, setSelectedPRIds] = useState<Set<string>>(new Set());
+
     useEffect(() => {
         const decoded = getDecodedToken();
         if (decoded) {
             setCurrentUserId(decoded.id || '');
         }
     }, []);
+
+    // Fetch approved PRs when panel is expanded
+    const fetchApprovedPRs = useCallback(async () => {
+        setApprovedPRsLoading(true);
+        try {
+            const prs = await getApprovedProcurementRequests();
+            // Only show PRs that still have remaining quantity to allocate
+            const available = (Array.isArray(prs) ? prs : []).filter(pr => {
+                const remaining = pr.remainingQuantity ?? (pr.quantity - (pr.fulfilledQuantity || 0));
+                return remaining > 0;
+            });
+            setApprovedPRs(available);
+        } catch (err) {
+            console.error('Failed to fetch approved PRs:', err);
+        } finally {
+            setApprovedPRsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (showApprovedPRs) {
+            fetchApprovedPRs();
+        }
+    }, [showApprovedPRs, fetchApprovedPRs]);
+
+    const togglePRSelection = (prId: string) => {
+        setSelectedPRIds(prev => {
+            const next = new Set(prev);
+            if (next.has(prId)) {
+                next.delete(prId);
+            } else {
+                next.add(prId);
+            }
+            return next;
+        });
+    };
+
+    const handleGeneratePOFromPRs = () => {
+        const selectedPRs = approvedPRs.filter(pr => selectedPRIds.has(pr._id));
+        if (selectedPRs.length === 0) return;
+        navigate('create', { state: { fromApprovedPRs: selectedPRs } });
+    };
 
     // Fetch initial metadata (suppliers & branches)
     useEffect(() => {
@@ -477,10 +592,21 @@ const PurchaseOrderList = () => {
                             >
                                 <option value="ALL">{t('management.common.allStatuses')}</option>
                                 <option value="REQUESTED">Requested</option>
+                                <option value="PENDING_MERCHANDISER">Pending Merchandiser</option>
+                                <option value="UNIT_REVISION_REQUESTED">Unit Revision Requested</option>
+                                <option value="UNIT_REVISION_APPROVED">Unit Revision Approved</option>
+                                <option value="UNIT_REVISION_REJECTED">Unit Revision Rejected</option>
+                                <option value="PENDING_ADMIN_APPROVAL">Pending Admin Approval</option>
+                                <option value="WAITING_QUOTATION">Waiting Quotation</option>
+                                <option value="QUOTATION_SUBMITTED">Quotation Submitted</option>
+                                <option value="QUOTATION_REVISION_REQUESTED">Quotation Revision Requested</option>
+                                <option value="QUOTATION_APPROVED">Quotation Approved</option>
                                 <option value="MANAGER_APPROVED">Manager Approved</option>
                                 <option value="WAITING">{t('management.common.status.waiting')}</option>
                                 <option value="PENDING_FINANCE_APPROVAL">Pending Finance Approval</option>
                                 <option value="APPROVED">{t('management.common.status.approved')}</option>
+                                <option value="IN_TRANSIT">In Transit</option>
+                                <option value="RECEIVED">Received</option>
                                 <option value="REJECTED">{t('management.common.status.rejected')}</option>
                                 <option value="DISPOSED">Disposed</option>
                             </select>
@@ -590,6 +716,124 @@ const PurchaseOrderList = () => {
                                 <RefreshCw size={12} /> {t('management.common.resetAll')}
                             </button>
                         </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Approved Requisitions Panel */}
+            <div className="rounded-2xl border overflow-hidden" style={{ borderColor: 'var(--border-main)', background: 'var(--bg-card)' }}>
+                <button
+                    onClick={() => setShowApprovedPRs(!showApprovedPRs)}
+                    className="w-full flex items-center justify-between px-6 py-4 text-left transition-all hover:bg-white/[0.02]"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(168,85,247,0.1)' }}>
+                            <Package size={16} style={{ color: '#a855f7' }} />
+                        </div>
+                        <div>
+                            <span className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>Approved Requisitions</span>
+                            <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(168,85,247,0.1)', color: '#a855f7' }}>
+                                {approvedPRs.length} available
+                            </span>
+                        </div>
+                    </div>
+                    {showApprovedPRs ? <ChevronUp size={16} style={{ color: 'var(--text-dim)' }} /> : <ChevronDown size={16} style={{ color: 'var(--text-dim)' }} />}
+                </button>
+
+                {showApprovedPRs && (
+                    <div className="border-t px-6 pb-5 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200" style={{ borderColor: 'var(--border-main)' }}>
+                        <p className="text-xs font-medium" style={{ color: 'var(--text-dim)' }}>
+                            Select approved purchase requisitions to generate a Purchase Order. Multiple PRs can be combined into a single PO.
+                        </p>
+
+                        {approvedPRsLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        ) : approvedPRs.length === 0 ? (
+                            <div className="text-center py-8" style={{ color: 'var(--text-dim)' }}>
+                                <Package size={32} className="mx-auto mb-2 opacity-20" />
+                                <p className="text-xs font-bold">No approved requisitions with remaining units</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="overflow-x-auto custom-scrollbar rounded-xl border" style={{ borderColor: 'var(--border-main)' }}>
+                                    <table className="w-full text-xs">
+                                        <thead>
+                                            <tr className="border-b" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
+                                                <th className="py-3 px-3 text-left w-10">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedPRIds.size === approvedPRs.length && approvedPRs.length > 0}
+                                                        onChange={() => {
+                                                            if (selectedPRIds.size === approvedPRs.length) {
+                                                                setSelectedPRIds(new Set());
+                                                            } else {
+                                                                setSelectedPRIds(new Set(approvedPRs.map(pr => pr._id)));
+                                                            }
+                                                        }}
+                                                        className="accent-purple-500 w-3.5 h-3.5 cursor-pointer"
+                                                    />
+                                                </th>
+                                                <th className="py-3 px-3 text-left font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>PR #</th>
+                                                <th className="py-3 px-3 text-left font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Part</th>
+                                                <th className="py-3 px-3 text-left font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Branch</th>
+                                                <th className="py-3 px-3 text-center font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Qty</th>
+                                                <th className="py-3 px-3 text-center font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Fulfilled</th>
+                                                <th className="py-3 px-3 text-center font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Remaining</th>
+                                                <th className="py-3 px-3 text-left font-bold uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Technician</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y" style={{ borderColor: 'var(--border-main)' }}>
+                                            {approvedPRs.map(pr => {
+                                                const fulfilled = pr.fulfilledQuantity || 0;
+                                                const remaining = pr.remainingQuantity ?? (pr.quantity - fulfilled);
+                                                return (
+                                                    <tr
+                                                        key={pr._id}
+                                                        className={`transition-colors cursor-pointer ${selectedPRIds.has(pr._id) ? '' : 'hover:bg-white/[0.02]'}`}
+                                                        style={selectedPRIds.has(pr._id) ? { background: 'rgba(168,85,247,0.06)' } : undefined}
+                                                        onClick={() => togglePRSelection(pr._id)}
+                                                    >
+                                                        <td className="py-3 px-3">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedPRIds.has(pr._id)}
+                                                                onChange={() => togglePRSelection(pr._id)}
+                                                                className="accent-purple-500 w-3.5 h-3.5 cursor-pointer"
+                                                                onClick={e => e.stopPropagation()}
+                                                            />
+                                                        </td>
+                                                        <td className="py-3 px-3 font-black" style={{ color: '#a855f7' }}>{pr.requestNumber}</td>
+                                                        <td className="py-3 px-3 font-bold" style={{ color: 'var(--text-main)' }}>{pr.part?.partName || (pr as any).partName || 'Spare Part'}</td>
+                                                        <td className="py-3 px-3 font-medium" style={{ color: 'var(--text-dim)' }}>{pr.branch?.name || '—'}</td>
+                                                        <td className="py-3 px-3 text-center font-bold" style={{ color: 'var(--text-main)' }}>{pr.quantity}</td>
+                                                        <td className="py-3 px-3 text-center font-bold" style={{ color: '#22c55e' }}>{fulfilled}</td>
+                                                        <td className="py-3 px-3 text-center font-black" style={{ color: '#f59e0b' }}>{remaining}</td>
+                                                        <td className="py-3 px-3 font-medium" style={{ color: 'var(--text-dim)' }}>{pr.requestedBy?.fullName || '—'}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {selectedPRIds.size > 0 && (
+                                    <div className="flex items-center justify-between pt-2">
+                                        <span className="text-xs font-bold" style={{ color: 'var(--text-dim)' }}>
+                                            {selectedPRIds.size} requisition{selectedPRIds.size > 1 ? 's' : ''} selected
+                                        </span>
+                                        <button
+                                            onClick={handleGeneratePOFromPRs}
+                                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all shadow-lg hover:scale-105 active:scale-95"
+                                            style={{ background: '#a855f7', color: '#fff' }}
+                                        >
+                                            <Plus size={14} strokeWidth={3} /> Generate PO from Selected
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </div>
                 )}
             </div>
