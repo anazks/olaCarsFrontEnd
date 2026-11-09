@@ -52,7 +52,7 @@ const CreatePaymentReceivedModal = ({ isOpen, onClose, onSuccess }: Props) => {
     const fetchData = useCallback(async () => {
         try {
             const [customerRes, branchRes, codesRes] = await Promise.all([
-                getAllCustomers({ status: 'ACTIVE', limit: 300 }),
+                getAllCustomers({ status: 'ACTIVE', limit: 1000 }),
                 getAllBranches({ limit: 100 }),
                 getAllAccountingCodes()
             ]);

@@ -362,6 +362,8 @@ const BankAccountLedger = () => {
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [customerInvoices, setCustomerInvoices] = useState<Invoice[]>([]);
     const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
+    const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
+    const [isSearchingSidebarCustomers, setIsSearchingSidebarCustomers] = useState(false);
 
     // Vendor Selection States
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -370,6 +372,8 @@ const BankAccountLedger = () => {
     const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
     const [supplierBills, setSupplierBills] = useState<Bill[]>([]);
     const [selectedBillId, setSelectedBillId] = useState('');
+    const [isSearchingSuppliers, setIsSearchingSuppliers] = useState(false);
+    const [isSearchingSidebarSuppliers, setIsSearchingSidebarSuppliers] = useState(false);
 
     const selectedFromAccountObj = chartAccounts.find(acc => acc._id === fromAccountId);
 
@@ -385,15 +389,35 @@ const BankAccountLedger = () => {
         });
     }, [chartAccounts, toAccountSearch]);
 
-    const filteredCustomers = customers.filter(c =>
-        c.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-        c.customerId?.toLowerCase().includes(customerSearch.toLowerCase())
-    );
+    const filteredCustomers = React.useMemo(() => {
+        if (!customerSearch.trim()) return customers;
+        const q = customerSearch.toLowerCase().trim();
+        const terms = q.split(/\s+/).filter(Boolean);
+        return customers.filter(c => {
+            const name = (c.name || '').toLowerCase();
+            const custId = (c.customerId || '').toLowerCase();
+            const custNum = ((c as any).customerNumber || '').toLowerCase();
+            const vehNo = ((c as any).cfVehicleNo || '').toLowerCase();
+            const fleetNo = ((c as any).cfFleetNo || '').toLowerCase();
+            const fullStr = `${name} ${custId} ${custNum} ${vehNo} ${fleetNo}`;
+            return terms.every(t => fullStr.includes(t));
+        });
+    }, [customers, customerSearch]);
 
-    const filteredSuppliers = suppliers.filter(s =>
-        (s.name || s.companyName || '').toLowerCase().includes(supplierSearch.toLowerCase()) ||
-        (s.vendorNumber || '').toLowerCase().includes(supplierSearch.toLowerCase())
-    );
+    const filteredSuppliers = React.useMemo(() => {
+        if (!supplierSearch.trim()) return suppliers;
+        const q = supplierSearch.toLowerCase().trim();
+        const terms = q.split(/\s+/).filter(Boolean);
+        return suppliers.filter(s => {
+            const name = (s.name || '').toLowerCase();
+            const compName = (s.companyName || '').toLowerCase();
+            const dispName = ((s as any).displayName || '').toLowerCase();
+            const vendorNum = (s.vendorNumber || '').toLowerCase();
+            const ruc = ((s as any).cfRuc || '').toLowerCase();
+            const fullStr = `${name} ${compName} ${dispName} ${vendorNum} ${ruc}`;
+            return terms.every(t => fullStr.includes(t));
+        });
+    }, [suppliers, supplierSearch]);
 
     const liveVendorSetOffPreview = React.useMemo(() => {
         if (!selectedSupplier || !supplierBills || supplierBills.length === 0) {
@@ -527,8 +551,8 @@ const BankAccountLedger = () => {
                     const [bankRes, codeRes, custRes, supRes] = await Promise.all([
                         getAllBankAccounts({ limit: 100 }),
                         getAllAccountingCodes({ limit: 1000 }),
-                        getAllCustomers({ status: 'ACTIVE', limit: 200 }),
-                        getAllSuppliers({ limit: 500 })
+                        getAllCustomers({ status: 'ACTIVE', limit: 1000 }),
+                        getAllSuppliers({ limit: 1000 })
                     ]);
 
                     const bankList = (bankRes.data || [])
@@ -589,6 +613,130 @@ const BankAccountLedger = () => {
             setSelectedInvoiceId('');
         }
     }, [selectedCustomer]);
+
+    // Remote debounced search for customers in Record Payment modal
+    useEffect(() => {
+        if (!isRecordPaymentModalOpen || !customerSearch.trim() || selectedCustomer) {
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setIsSearchingCustomers(true);
+            try {
+                const res = await getAllCustomers({
+                    search: customerSearch.trim(),
+                    limit: 50
+                });
+                const searchResults: Customer[] = res.data || (res as any).customers || [];
+                if (searchResults.length > 0) {
+                    setCustomers(prev => {
+                        const existingMap = new Map(prev.map(c => [String(c._id), c]));
+                        searchResults.forEach(c => existingMap.set(String(c._id), c));
+                        return Array.from(existingMap.values());
+                    });
+                }
+            } catch (err) {
+                console.error('Remote customer search error:', err);
+            } finally {
+                setIsSearchingCustomers(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [customerSearch, isRecordPaymentModalOpen, selectedCustomer]);
+
+    // Remote debounced search for customers in Link Customer Sidebar
+    useEffect(() => {
+        if (!invoiceSidebarOpen || sidebarMode !== 'CUSTOMER' || !sidebarCustomerSearch.trim() || sidebarSelectedCustomer) {
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setIsSearchingSidebarCustomers(true);
+            try {
+                const res = await getAllCustomers({
+                    search: sidebarCustomerSearch.trim(),
+                    limit: 50
+                });
+                const searchResults: Customer[] = res.data || (res as any).customers || [];
+                if (searchResults.length > 0) {
+                    setSidebarCustomers(prev => {
+                        const existingMap = new Map(prev.map(c => [String(c._id), c]));
+                        searchResults.forEach(c => existingMap.set(String(c._id), c));
+                        return Array.from(existingMap.values());
+                    });
+                }
+            } catch (err) {
+                console.error('Remote sidebar customer search error:', err);
+            } finally {
+                setIsSearchingSidebarCustomers(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [sidebarCustomerSearch, invoiceSidebarOpen, sidebarMode, sidebarSelectedCustomer]);
+
+    // Remote debounced search for suppliers in Record Payment modal
+    useEffect(() => {
+        if (!isRecordPaymentModalOpen || !supplierSearch.trim() || selectedSupplier) {
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setIsSearchingSuppliers(true);
+            try {
+                const res = await getAllSuppliers({
+                    search: supplierSearch.trim(),
+                    limit: 50
+                });
+                const searchResults: Supplier[] = res.data || (res as any).suppliers || [];
+                if (searchResults.length > 0) {
+                    setSuppliers(prev => {
+                        const existingMap = new Map(prev.map(s => [String(s._id), s]));
+                        searchResults.forEach(s => existingMap.set(String(s._id), s));
+                        return Array.from(existingMap.values());
+                    });
+                }
+            } catch (err) {
+                console.error('Remote supplier search error:', err);
+            } finally {
+                setIsSearchingSuppliers(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [supplierSearch, isRecordPaymentModalOpen, selectedSupplier]);
+
+    // Remote debounced search for suppliers in Link Vendor Sidebar
+    useEffect(() => {
+        if (!invoiceSidebarOpen || sidebarMode !== 'VENDOR' || !sidebarSupplierSearch.trim() || sidebarSelectedSupplier) {
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setIsSearchingSidebarSuppliers(true);
+            try {
+                const res = await getAllSuppliers({
+                    search: sidebarSupplierSearch.trim(),
+                    limit: 50
+                });
+                const searchResults: Supplier[] = res.data || (res as any).suppliers || [];
+                if (searchResults.length > 0) {
+                    setSidebarSuppliers(prev => {
+                        const existingMap = new Map(prev.map(s => [String(s._id), s]));
+                        searchResults.forEach(s => existingMap.set(String(s._id), s));
+                        return Array.from(existingMap.values());
+                    });
+                }
+            } catch (err) {
+                console.error('Remote sidebar supplier search error:', err);
+            } finally {
+                setIsSearchingSidebarSuppliers(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [sidebarSupplierSearch, invoiceSidebarOpen, sidebarMode, sidebarSelectedSupplier]);
 
     useEffect(() => {
         if (selectedSupplier) {
@@ -1133,7 +1281,7 @@ const BankAccountLedger = () => {
             setSidebarMode('VENDOR');
             setSidebarLoadingSuppliers(true);
             try {
-                const res = await getAllSuppliers({ limit: 500 });
+                const res = await getAllSuppliers({ limit: 1000 });
                 setSidebarSuppliers(res.data || (res as any).suppliers || []);
             } catch (err) {
                 console.error('Failed to fetch suppliers for sidebar', err);
@@ -1145,7 +1293,7 @@ const BankAccountLedger = () => {
             setSidebarMode('CUSTOMER');
             setSidebarLoadingCustomers(true);
             try {
-                const res = await getAllCustomers({ status: 'ACTIVE', limit: 500 });
+                const res = await getAllCustomers({ status: 'ACTIVE', limit: 1000 });
                 setSidebarCustomers(res.data || (res as any).customers || []);
             } catch (err) {
                 console.error('Failed to fetch customers for sidebar', err);
@@ -2175,10 +2323,15 @@ const BankAccountLedger = () => {
                         }
 
                         if (!sidebarSupplierSearch.trim()) return true;
-                        const q = sidebarSupplierSearch.toLowerCase();
-                        return (sup.name || '').toLowerCase().includes(q) ||
-                            (sup.companyName || '').toLowerCase().includes(q) ||
-                            (sup.vendorNumber || '').toLowerCase().includes(q);
+                        const q = sidebarSupplierSearch.toLowerCase().trim();
+                        const terms = q.split(/\s+/).filter(Boolean);
+                        const name = (sup.name || '').toLowerCase();
+                        const compName = (sup.companyName || '').toLowerCase();
+                        const dispName = ((sup as any).displayName || '').toLowerCase();
+                        const vendorNum = (sup.vendorNumber || '').toLowerCase();
+                        const ruc = ((sup as any).cfRuc || '').toLowerCase();
+                        const fullStr = `${name} ${compName} ${dispName} ${vendorNum} ${ruc}`;
+                        return terms.every(t => fullStr.includes(t));
                     });
 
                     const filteredSidebarCustomers = sidebarCustomers.filter(cust => {
@@ -2190,9 +2343,15 @@ const BankAccountLedger = () => {
                         }
 
                         if (!sidebarCustomerSearch.trim()) return true;
-                        const q = sidebarCustomerSearch.toLowerCase();
-                        return (cust.name || '').toLowerCase().includes(q) ||
-                            (cust.customerId || '').toLowerCase().includes(q);
+                        const q = sidebarCustomerSearch.toLowerCase().trim();
+                        const terms = q.split(/\s+/).filter(Boolean);
+                        const name = (cust.name || '').toLowerCase();
+                        const custId = (cust.customerId || '').toLowerCase();
+                        const custNum = ((cust as any).customerNumber || '').toLowerCase();
+                        const vehNo = ((cust as any).cfVehicleNo || '').toLowerCase();
+                        const fleetNo = ((cust as any).cfFleetNo || '').toLowerCase();
+                        const fullStr = `${name} ${custId} ${custNum} ${vehNo} ${fleetNo}`;
+                        return terms.every(t => fullStr.includes(t));
                     });
 
                     return (
@@ -2388,9 +2547,9 @@ const BankAccountLedger = () => {
                                                 <Search className="absolute left-3.5 top-3 text-muted" size={14} style={{ color: 'var(--text-dim)' }} />
                                             </div>
 
-                                            {sidebarLoadingSuppliers ? (
-                                                <div className="text-xs font-bold py-4 text-center" style={{ color: 'var(--text-dim)' }}>
-                                                    Loading vendors...
+                                            {sidebarLoadingSuppliers || isSearchingSidebarSuppliers ? (
+                                                <div className="text-xs font-bold py-4 text-center flex items-center justify-center gap-2" style={{ color: 'var(--text-dim)' }}>
+                                                    <RefreshCw size={13} className="animate-spin text-[#C8E600]" /> {isSearchingSidebarSuppliers ? 'Searching vendors...' : 'Loading vendors...'}
                                                 </div>
                                             ) : (
                                                 <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
@@ -2555,9 +2714,9 @@ const BankAccountLedger = () => {
                                                 <Search className="absolute left-3.5 top-3 text-muted" size={14} style={{ color: 'var(--text-dim)' }} />
                                             </div>
 
-                                            {sidebarLoadingCustomers ? (
-                                                <div className="text-xs font-bold py-4 text-center" style={{ color: 'var(--text-dim)' }}>
-                                                    Loading customers...
+                                            {sidebarLoadingCustomers || isSearchingSidebarCustomers ? (
+                                                <div className="text-xs font-bold py-4 text-center flex items-center justify-center gap-2" style={{ color: 'var(--text-dim)' }}>
+                                                    <RefreshCw size={13} className="animate-spin text-[#C8E600]" /> {isSearchingSidebarCustomers ? 'Searching customers...' : 'Loading customers...'}
                                                 </div>
                                             ) : (
                                                 <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
@@ -3466,26 +3625,40 @@ const BankAccountLedger = () => {
                                                 className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none"
                                                 style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                                             />
-                                            {showCustomerList && filteredCustomers.length > 0 && !selectedCustomer && (
+                                            {showCustomerList && !selectedCustomer && (
                                                 <div className="absolute z-50 w-full mt-1 border rounded-2xl shadow-2xl max-h-52 overflow-auto custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                                                    {filteredCustomers.slice(0, 15).map(c => (
-                                                        <button
-                                                            type="button"
-                                                            key={c._id}
-                                                            onMouseDown={() => { setSelectedCustomer(c); setCustomerSearch(''); setShowCustomerList(false); }}
-                                                            className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-3 transition-colors cursor-pointer"
-                                                        >
-                                                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 dark:bg-brand-lime/10 dark:border-brand-lime/20 flex items-center justify-center flex-shrink-0">
-                                                                <span className="text-[10px] font-black text-emerald-700 dark:text-lime">
-                                                                    {c.name ? c.name.slice(0, 2).toUpperCase() : 'CU'}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs font-black" style={{ color: 'var(--text-main)' }}>{c.name}</p>
-                                                                <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-dim)' }}>{c.customerId}</p>
-                                                            </div>
-                                                        </button>
-                                                    ))}
+                                                    {isSearchingCustomers && (
+                                                        <div className="p-2.5 text-center text-xs font-semibold text-emerald-600 dark:text-lime flex items-center justify-center gap-2">
+                                                            <RefreshCw size={12} className="animate-spin" /> Searching customer directory...
+                                                        </div>
+                                                    )}
+                                                    {filteredCustomers.length === 0 && !isSearchingCustomers ? (
+                                                        <div className="p-4 text-center text-xs" style={{ color: 'var(--text-dim)' }}>
+                                                            No matching customers found
+                                                        </div>
+                                                    ) : (
+                                                        filteredCustomers.slice(0, 25).map(c => (
+                                                            <button
+                                                                type="button"
+                                                                key={c._id}
+                                                                onMouseDown={() => { setSelectedCustomer(c); setCustomerSearch(''); setShowCustomerList(false); }}
+                                                                className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-3 transition-colors cursor-pointer border-b border-white/5 last:border-none"
+                                                            >
+                                                                <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 dark:bg-brand-lime/10 dark:border-brand-lime/20 flex items-center justify-center flex-shrink-0">
+                                                                    <span className="text-[10px] font-black text-emerald-700 dark:text-lime">
+                                                                        {c.name ? c.name.slice(0, 2).toUpperCase() : 'CU'}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-xs font-black truncate" style={{ color: 'var(--text-main)' }}>{c.name}</p>
+                                                                    <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-dim)' }}>
+                                                                        {c.customerId}
+                                                                        {(c as any).cfVehicleNo ? ` • Plate: ${(c as any).cfVehicleNo}` : ''}
+                                                                    </p>
+                                                                </div>
+                                                            </button>
+                                                        ))
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -3592,24 +3765,38 @@ const BankAccountLedger = () => {
                                                 className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none pr-10"
                                                 style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
                                             />
-                                            {showSupplierList && filteredSuppliers.length > 0 && !selectedSupplier && (
+                                            {showSupplierList && !selectedSupplier && (
                                                 <div className="absolute z-50 w-full mt-1 border rounded-2xl shadow-2xl max-h-52 overflow-auto custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-200" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                                                    {filteredSuppliers.slice(0, 15).map(s => (
-                                                        <button
-                                                            type="button"
-                                                            key={s._id}
-                                                            onMouseDown={() => { setSelectedSupplier(s); setSupplierSearch(''); setShowSupplierList(false); }}
-                                                            className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-3 transition-colors cursor-pointer border-b border-white/5 last:border-none"
-                                                        >
-                                                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 dark:bg-brand-lime/10 dark:border-brand-lime/20 flex items-center justify-center flex-shrink-0">
-                                                                <Building2 size={14} className="text-emerald-700 dark:text-lime" />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-xs font-black" style={{ color: 'var(--text-main)' }}>{s.name || s.companyName}</p>
-                                                                <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-dim)' }}>{s.vendorNumber || 'VENDOR'}</p>
-                                                            </div>
-                                                        </button>
-                                                    ))}
+                                                    {isSearchingSuppliers && (
+                                                        <div className="p-2.5 text-center text-xs font-semibold text-emerald-600 dark:text-lime flex items-center justify-center gap-2">
+                                                            <RefreshCw size={12} className="animate-spin" /> Searching vendor directory...
+                                                        </div>
+                                                    )}
+                                                    {filteredSuppliers.length === 0 && !isSearchingSuppliers ? (
+                                                        <div className="p-4 text-center text-xs" style={{ color: 'var(--text-dim)' }}>
+                                                            No matching vendors found
+                                                        </div>
+                                                    ) : (
+                                                        filteredSuppliers.slice(0, 25).map(s => (
+                                                            <button
+                                                                type="button"
+                                                                key={s._id}
+                                                                onMouseDown={() => { setSelectedSupplier(s); setSupplierSearch(''); setShowSupplierList(false); }}
+                                                                className="w-full text-left px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-3 transition-colors cursor-pointer border-b border-white/5 last:border-none"
+                                                            >
+                                                                <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 dark:bg-brand-lime/10 dark:border-brand-lime/20 flex items-center justify-center flex-shrink-0">
+                                                                    <Building2 size={14} className="text-emerald-700 dark:text-lime" />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-xs font-black truncate" style={{ color: 'var(--text-main)' }}>{s.name || s.companyName}</p>
+                                                                    <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-dim)' }}>
+                                                                        {s.vendorNumber || 'VENDOR'}
+                                                                        {(s as any).cfRuc ? ` • RUC: ${(s as any).cfRuc}` : ''}
+                                                                    </p>
+                                                                </div>
+                                                            </button>
+                                                        ))
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

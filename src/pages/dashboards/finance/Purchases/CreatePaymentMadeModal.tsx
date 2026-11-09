@@ -54,7 +54,7 @@ const CreatePaymentMadeModal = ({ isOpen, onClose, onSuccess }: Props) => {
         setLoadingMasters(true);
         try {
             const [supplierRes, branchRes, codesRes] = await Promise.all([
-                getAllSuppliers({ limit: 300 }),
+                getAllSuppliers({ limit: 1000 }),
                 getAllBranches({ limit: 100 }),
                 getAllAccountingCodes()
             ]);
@@ -95,7 +95,7 @@ const CreatePaymentMadeModal = ({ isOpen, onClose, onSuccess }: Props) => {
             }
             setLoadingBills(true);
             try {
-                const res = await getAllBills({ limit: 500 });
+                const res = await getAllBills({ supplier: selectedSupplier, limit: 200 });
                 if (res && res.data) {
                     const filtered = res.data
                         .filter((b: Bill) => {
