@@ -18,7 +18,7 @@ import { getDecodedToken, ROLE_LEVELS, getUserRole } from '../../../utils/auth';
 import {
     ArrowLeft, Clock, CheckCircle, XCircle, FileText,
     User, Calendar, Landmark, UserCheck, History,
-    AlertCircle, Package, Receipt, Trash2, ExternalLink, Share2,
+    AlertCircle, Package, Trash2, ExternalLink, Share2,
     Edit3, Check, UploadCloud,
     RotateCcw, Link2
 } from 'lucide-react';
@@ -27,7 +27,6 @@ import * as billService from '../../../services/billService';
 
 import ApproveRejectModal from './ApproveRejectModal';
 import PurchaseBillModal from './PurchaseBillModal';
-import ConvertPoToBillModal from './ConvertPoToBillModal';
 import HasPermission from '../../../components/HasPermission';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 
@@ -61,7 +60,6 @@ const PurchaseOrderDetail = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalAction, setModalAction] = useState<'APPROVE' | 'REJECT'>('APPROVE');
     const [isBillModalOpen, setIsBillModalOpen] = useState(false);
-    const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
 
     // Unit Revision States (Phase 3)
     const [isUnitRevisionModalOpen, setIsUnitRevisionModalOpen] = useState(false);
@@ -364,44 +362,6 @@ const PurchaseOrderDetail = () => {
         }
     };
 
-    const handleConvertToBill = () => {
-        setIsConvertModalOpen(true);
-    };
-
-    const onConvertSuccess = (billId: string) => {
-        setIsConvertModalOpen(false);
-        const rolePath = getRolePath();
-        navigate(`/admin/${rolePath}/bills/${billId}`);
-    };
-
-    const handleDispose = async () => {
-        if (!id || !window.confirm('Are you sure you want to dispose of this Purchase Order?')) return;
-        setActionLoading(true);
-        try {
-            await billService.disposePO(id);
-            await fetchPO();
-        } catch (err: any) {
-            alert(err.response?.data?.message || err.message || 'Disposal failed');
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    const handleReceivePO = async () => {
-        if (!id || !window.confirm('Are you sure you want to mark this Purchase Order as RECEIVED? This will generate draft fixed assets for eligible items.')) return;
-        setActionLoading(true);
-        try {
-            await approveRejectPurchaseOrder(id, {
-                status: 'RECEIVED'
-            });
-            await fetchPO();
-        } catch (err: any) {
-            alert(err.response?.data?.message || err.message || 'Action failed');
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -435,8 +395,6 @@ const PurchaseOrderDetail = () => {
             po.createdBy !== userId &&
             userLevel > creatorLevel &&
             (po.totalAmount <= poThreshold || userLevel >= 5))));
-
-    const canPay = (po.status === 'APPROVED' || po.status === 'PO_ISSUED') && !po.isBilled;
 
     const handleCopyLink = () => {
         if (!po) return;
@@ -532,40 +490,6 @@ const PurchaseOrderDetail = () => {
                                 style={{ background: '#C8E600', color: '#111' }}
                             >
                                 <CheckCircle size={18} /> {isFinanceApproval ? 'Approve Proposal' : 'Approve Order'}
-                            </button>
-                        </HasPermission>
-                    </div>
-                )}
-
-                {canPay && (
-                    <div className="flex gap-3 w-full md:w-auto">
-                        <HasPermission permission="PURCHASE_ORDER_EDIT">
-                            <button
-                                onClick={handleDispose}
-                                disabled={actionLoading}
-                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold border border-white/10 hover:bg-white/5 transition-all disabled:opacity-50"
-                                style={{ color: 'var(--text-dim)' }}
-                            >
-                                <Trash2 size={18} /> Dispose PO
-                            </button>
-                        </HasPermission>
-                        <HasPermission permission="PURCHASE_ORDER_EDIT">
-                            <button
-                                onClick={handleReceivePO}
-                                disabled={actionLoading}
-                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-bold border border-[#C8E600]/30 hover:bg-[#C8E600]/10 transition-all disabled:opacity-50 text-[#C8E600]"
-                            >
-                                <Package size={18} /> Receive PO
-                            </button>
-                        </HasPermission>
-                        <HasPermission permission="PURCHASE_ORDER_EDIT">
-                            <button
-                                onClick={handleConvertToBill}
-                                disabled={actionLoading}
-                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-                                style={{ background: '#C8E600', color: '#111' }}
-                            >
-                                {actionLoading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <><Receipt size={18} /> Convert to Bill</>}
                             </button>
                         </HasPermission>
                     </div>
@@ -1224,30 +1148,68 @@ const PurchaseOrderDetail = () => {
                         </div>
                     )}
 
-                    {/* Edit History */}
+                    {/* PO History & Audit Log */}
                     {po.editHistory.length > 0 && (
                         <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                            <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
-                                <History size={14} className="text-[#C8E600]" />
-                                <h3 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Order Edit History</h3>
+                            <div className="px-5 py-3.5 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-main)', background: 'rgba(255,255,255,0.02)' }}>
+                                <div className="flex items-center gap-2">
+                                    <History size={16} className="text-[#C8E600]" />
+                                    <h3 className="text-xs font-black uppercase tracking-wider" style={{ color: 'var(--text-main)' }}>PO History & Audit Log</h3>
+                                </div>
+                                <span className="text-[10px] font-mono font-bold" style={{ color: 'var(--text-dim)' }}>
+                                    {po.editHistory.length} event{po.editHistory.length > 1 ? 's' : ''}
+                                </span>
                             </div>
                             <div className="p-5 space-y-6">
-                                {po.editHistory.map((entry, idx) => (
-                                    <div key={idx} className="relative pl-6 before:absolute before:left-0 before:top-1.5 before:w-2 before:h-2 before:bg-[#C8E600] before:rounded-full before:shadow-[0_0_8px_#C8E600]">
-                                        {idx !== po.editHistory.length - 1 && (
-                                            <div className="absolute left-[3px] top-4 w-[2px] h-[calc(100%+8px)] bg-white/10" />
-                                        )}
-                                        <p className="text-[10px] font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                            {formatDateTime(entry.updatedAt || entry.editedAt)}
-                                        </p>
-                                        <p className="text-sm mt-1 mb-1 font-bold" style={{ color: 'var(--text-main)' }}>
-                                            {typeof entry.editedBy === 'object' 
-                                                ? ((entry.editedBy as any)?.fullName || (entry.editedBy as any)?.name) 
-                                                : (entry.editedBy || entry.updatedBy)} {entry.editorRole ? `(${entry.editorRole})` : ''}
-                                        </p>
-                                        <p className="text-xs italic" style={{ color: 'var(--text-dim)' }}>"{entry.changesSummary || entry.changeSummary}"</p>
-                                    </div>
-                                ))}
+                                {po.editHistory.map((entry, idx) => {
+                                    const isObjectId = (val: any) => typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val);
+                                    const objName = typeof entry.editedBy === 'object' && entry.editedBy !== null
+                                        ? ((entry.editedBy as any).fullName || (entry.editedBy as any).name)
+                                        : null;
+                                    const stringName = typeof entry.editedBy === 'string' && !isObjectId(entry.editedBy)
+                                        ? entry.editedBy
+                                        : null;
+                                    const resolvedName = objName || stringName || (entry as any).editorName || (entry.editorRole ? entry.editorRole.replace(/_/g, ' ') : 'System User');
+                                    const formattedRole = (entry.editorRole || '').replace(/_/g, ' ');
+
+                                    return (
+                                        <div key={idx} className="relative pl-6 before:absolute before:left-0 before:top-2 before:w-2.5 before:h-2.5 before:bg-[#C8E600] before:rounded-full before:shadow-[0_0_8px_#C8E600]">
+                                            {idx !== po.editHistory.length - 1 && (
+                                                <div className="absolute left-[4px] top-4 w-[2px] h-[calc(100%+16px)] bg-white/10" />
+                                            )}
+                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                                <p className="text-[10px] font-bold tracking-wider font-mono" style={{ color: 'var(--text-dim)' }}>
+                                                    {formatDateTime(entry.updatedAt || entry.editedAt)}
+                                                </p>
+                                                {(entry as any).action && (
+                                                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[#C8E600]">
+                                                        {(entry as any).action.replace(/_/g, ' ')}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                                    {resolvedName}
+                                                </span>
+                                                {formattedRole && (
+                                                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                                                        {formattedRole}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {(entry.changesSummary || (entry as any).changeSummary) && (
+                                                <p className="text-xs italic mt-1 leading-relaxed" style={{ color: 'var(--text-dim)' }}>
+                                                    &ldquo;{entry.changesSummary || (entry as any).changeSummary}&rdquo;
+                                                </p>
+                                            )}
+                                            {(entry as any).notes && (entry as any).notes !== (entry.changesSummary || (entry as any).changeSummary) && (
+                                                <p className="text-[11px] text-amber-300 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20 mt-1.5 italic font-mono">
+                                                    &ldquo;{(entry as any).notes}&rdquo;
+                                                </p>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -1263,22 +1225,50 @@ const PurchaseOrderDetail = () => {
                             </div>
                             <div className="p-5 space-y-6">
                                 {po.linkedPR.editHistory && po.linkedPR.editHistory.length > 0 ? (
-                                    po.linkedPR.editHistory.map((entry: any, idx: number) => (
-                                        <div key={idx} className="relative pl-6 before:absolute before:left-0 before:top-1.5 before:w-2 before:h-2 before:bg-[#C8E600] before:rounded-full before:shadow-[0_0_8px_#C8E600]">
-                                            {idx !== (po.linkedPR.editHistory?.length || 0) - 1 && (
-                                                <div className="absolute left-[3px] top-4 w-[2px] h-[calc(100%+8px)] bg-white/10" />
-                                            )}
-                                            <p className="text-[10px] font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
-                                                {formatDateTime(entry.editedAt)}
-                                            </p>
-                                            <p className="text-sm mt-1 mb-1 font-bold" style={{ color: 'var(--text-main)' }}>
-                                                {typeof entry.editedBy === 'object' 
-                                                    ? (entry.editedBy?.fullName || entry.editedBy?.name) 
-                                                    : entry.editedBy} ({entry.editorRole})
-                                            </p>
-                                            <p className="text-xs italic" style={{ color: 'var(--text-dim)' }}>"{entry.changesSummary}"</p>
-                                        </div>
-                                    ))
+                                    po.linkedPR.editHistory.map((entry: any, idx: number) => {
+                                        const isObjectId = (val: any) => typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val);
+                                        const prObjName = typeof entry.editedBy === 'object' && entry.editedBy !== null
+                                            ? (entry.editedBy.fullName || entry.editedBy.name)
+                                            : null;
+                                        const prStringName = typeof entry.editedBy === 'string' && !isObjectId(entry.editedBy)
+                                            ? entry.editedBy
+                                            : null;
+                                        const prResolvedName = prObjName || prStringName || entry.editorName || (entry.editorRole ? entry.editorRole.replace(/_/g, ' ') : 'Workshop User');
+                                        const prFormattedRole = (entry.editorRole || '').replace(/_/g, ' ');
+
+                                        return (
+                                            <div key={idx} className="relative pl-6 before:absolute before:left-0 before:top-2 before:w-2.5 before:h-2.5 before:bg-[#C8E600] before:rounded-full before:shadow-[0_0_8px_#C8E600]">
+                                                {idx !== (po.linkedPR.editHistory?.length || 0) - 1 && (
+                                                    <div className="absolute left-[4px] top-4 w-[2px] h-[calc(100%+16px)] bg-white/10" />
+                                                )}
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-[10px] font-bold tracking-wider font-mono" style={{ color: 'var(--text-dim)' }}>
+                                                        {formatDateTime(entry.editedAt)}
+                                                    </p>
+                                                    {entry.action && (
+                                                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[#C8E600]">
+                                                            {entry.action.replace(/_/g, ' ')}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                                                        {prResolvedName}
+                                                    </span>
+                                                    {prFormattedRole && (
+                                                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                                                            {prFormattedRole}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {entry.changesSummary && (
+                                                    <p className="text-xs italic mt-1 leading-relaxed" style={{ color: 'var(--text-dim)' }}>
+                                                        &ldquo;{entry.changesSummary}&rdquo;
+                                                    </p>
+                                                )}
+                                            </div>
+                                        );
+                                    })
                                 ) : (
                                     <p className="text-xs italic" style={{ color: 'var(--text-dim)' }}>No PR history recorded yet.</p>
                                 )}
@@ -1295,17 +1285,6 @@ const PurchaseOrderDetail = () => {
                 poId={po._id}
                 poNumber={po.purchaseOrderNumber}
                 totalAmount={po.totalAmount}
-            />
-
-            <ConvertPoToBillModal
-                isOpen={isConvertModalOpen}
-                onClose={() => setIsConvertModalOpen(false)}
-                onSuccess={onConvertSuccess}
-                poId={po._id}
-                poNumber={po.purchaseOrderNumber}
-                items={po.items}
-                initialSupplier={po.supplier}
-                initialDueDate={po.paymentDate}
             />
 
             <ApproveRejectModal

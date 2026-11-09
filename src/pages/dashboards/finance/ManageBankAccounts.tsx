@@ -509,7 +509,7 @@ const ManageBankAccounts = () => {
                                             <div className="flex flex-col items-end gap-0.5">
                                                 <div className="flex items-center justify-end">
                                                     <span className="text-[10px] font-black text-lime mr-1">{account.currency}</span>
-                                                    <span className="text-md font-black" style={{ color: 'var(--text-main)' }}>{account.currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    <span className="text-md font-black" style={{ color: 'var(--text-main)' }}>{(account.currentBalance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                 </div>
                                                 <span className="text-[10px] font-bold text-dim opacity-70">
                                                     {account.transactionCount || 0} Transactions
