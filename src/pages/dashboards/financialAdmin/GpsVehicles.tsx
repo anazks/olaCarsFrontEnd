@@ -23,6 +23,7 @@ import { getAllDrivers } from '../../../services/driverService';
 import type { Driver } from '../../../services/driverService';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { createMapTileLayer, reverseGeocodeCoord } from '../../../utils/mapUtils';
 import {
     ResponsiveContainer,
     LineChart,
@@ -362,14 +363,8 @@ const GpsVehicles = () => {
 
                 L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
 
-                const tileUrl = theme === 'light'
-                    ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-                    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-
-                L.tileLayer(tileUrl, {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                    maxZoom: 20
-                }).addTo(mapRef.current);
+                const tileLayer = createMapTileLayer(theme === 'light' ? 'light' : 'dark');
+                tileLayer.addTo(mapRef.current);
             }
 
             setTimeout(() => {
@@ -475,70 +470,20 @@ const GpsVehicles = () => {
     // Initialize/cleanup Single Vehicle tracking map container
     useEffect(() => {
         if (activeView === 'track' && selectedTrackVehicle && trackMapContainerRef.current) {
-            const loc = locations.find(l => l.imei === selectedTrackVehicle.imei);
-            const isValidLoc = loc && loc.lat && loc.lng && (loc.lat !== 0 || loc.lng !== 0);
-            const lat = isValidLoc ? loc.lat : 9.0232;
-            const lng = isValidLoc ? loc.lng : -79.5244;
-
             if (!trackMapRef.current) {
+                const initialLoc = locations.find(l => l.imei === selectedTrackVehicle.imei);
+                const hasValidCoords = initialLoc && initialLoc.lat && initialLoc.lng && (initialLoc.lat !== 0 || initialLoc.lng !== 0);
+                const lat = hasValidCoords ? initialLoc.lat : 9.0232;
+                const lng = hasValidCoords ? initialLoc.lng : -79.5244;
+
                 trackMapRef.current = L.map(trackMapContainerRef.current, {
                     zoomControl: false
                 }).setView([lat, lng], 15);
 
                 L.control.zoom({ position: 'topright' }).addTo(trackMapRef.current);
 
-                const tileUrl = theme === 'light'
-                    ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-                    : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-
-                L.tileLayer(tileUrl, {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                    maxZoom: 20
-                }).addTo(trackMapRef.current);
-            } else {
-                trackMapRef.current.setView([lat, lng], 15);
-            }
-
-            if (loc && isValidLoc) {
-                const isOnline = loc.status === 1;
-                const color = isOnline ? (theme === 'light' ? '#4D7C0F' : '#C8E600') : '#f97316';
-                const pulseClass = isOnline ? 'gps-pulse-active' : '';
-                const statusLabel = isOnline ? 'Online' : 'Offline';
-                const speedLabel = isOnline ? `${loc.speed} km/h` : 'Stopped';
-
-                const borderColor = theme === 'light' ? '#FFFFFF' : '#171717';
-                const htmlMarker = `
-                    <div style="position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                        <span class="${pulseClass}" style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background-color: ${color}; opacity: 0.3;"></span>
-                        <span style="position: absolute; width: 18px; height: 18px; border-radius: 50%; background-color: ${color}; border: 3px solid ${borderColor}; box-shadow: 0 0 12px rgba(0,0,0,0.8);"></span>
-                    </div>
-                `;
-
-                const icon = L.divIcon({
-                    html: htmlMarker,
-                    className: 'custom-gps-leaflet-icon-track',
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 20],
-                    popupAnchor: [0, -12]
-                });
-
-                const popupHtml = `
-                    <div style="background-color: var(--bg-card); color: var(--text-main); font-family: 'Inter', sans-serif; min-width: 160px; padding: 6px; border-radius: 8px; text-align: center; border: 1px solid var(--border-main);">
-                        <div style="font-weight: 800; font-size: 12px; color: ${theme === 'light' ? '#4D7C0F' : '#C8E600'};">${selectedTrackVehicle.deviceName}</div>
-                        <div style="font-size: 11px; margin-top: 4px; font-weight: 700; color: ${color};">${statusLabel} • ${speedLabel}</div>
-                    </div>
-                `;
-
-                if (trackMarkerRef.current) {
-                    trackMarkerRef.current.setLatLng([loc.lat, loc.lng]);
-                    trackMarkerRef.current.setIcon(icon);
-                    trackMarkerRef.current.getPopup()?.setContent(popupHtml);
-                } else {
-                    trackMarkerRef.current = L.marker([loc.lat, loc.lng], { icon })
-                        .bindPopup(popupHtml, { closeButton: false, className: 'dark-leaflet-popup' })
-                        .addTo(trackMapRef.current!)
-                        .openPopup();
-                }
+                const tileLayer = createMapTileLayer(theme === 'light' ? 'light' : 'dark');
+                tileLayer.addTo(trackMapRef.current);
             }
 
             setTimeout(() => {
@@ -553,6 +498,63 @@ const GpsVehicles = () => {
                 trackMarkerRef.current = null;
             }
         };
+    }, [activeView, selectedTrackVehicle?.imei, theme]);
+
+    // Plot/update Single Vehicle tracking marker & pan smoothly
+    useEffect(() => {
+        if (activeView !== 'track' || !selectedTrackVehicle || !trackMapRef.current) return;
+
+        const loc = locations.find(l => l.imei === selectedTrackVehicle.imei);
+        const isValidLoc = loc && loc.lat && loc.lng && (loc.lat !== 0 || loc.lng !== 0);
+        const lat = isValidLoc ? loc.lat : 9.0232;
+        const lng = isValidLoc ? loc.lng : -79.5244;
+
+        const isOnline = loc?.status === 1;
+        const color = isOnline ? (theme === 'light' ? '#4D7C0F' : '#C8E600') : '#f97316';
+        const pulseClass = isOnline ? 'gps-pulse-active' : '';
+        const statusLabel = isOnline ? 'Online' : (loc ? 'Offline' : 'Searching GPS...');
+        const speedLabel = isOnline ? `${loc?.speed || 0} km/h` : 'Stopped';
+
+        const borderColor = theme === 'light' ? '#FFFFFF' : '#171717';
+        const htmlMarker = `
+            <div style="position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                <span class="${pulseClass}" style="position: absolute; width: 40px; height: 40px; border-radius: 50%; background-color: ${color}; opacity: 0.35;"></span>
+                <span style="position: absolute; width: 18px; height: 18px; border-radius: 50%; background-color: ${color}; border: 3px solid ${borderColor}; box-shadow: 0 0 12px rgba(0,0,0,0.8);"></span>
+            </div>
+        `;
+
+        const icon = L.divIcon({
+            html: htmlMarker,
+            className: 'custom-gps-leaflet-icon-track',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+            popupAnchor: [0, -12]
+        });
+
+        const popupHtml = `
+            <div style="background-color: var(--bg-card); color: var(--text-main); font-family: 'Inter', sans-serif; min-width: 170px; padding: 6px; border-radius: 8px; text-align: center; border: 1px solid var(--border-main);">
+                <div style="font-weight: 800; font-size: 12px; color: ${theme === 'light' ? '#4D7C0F' : '#C8E600'};">${selectedTrackVehicle.deviceName || 'Vehicle'}</div>
+                <div style="font-size: 11px; margin-top: 4px; font-weight: 700; color: ${color};">${statusLabel} • ${speedLabel}</div>
+                <div style="font-size: 9px; margin-top: 4px; color: var(--text-dim);">${lat.toFixed(5)}°, ${lng.toFixed(5)}°</div>
+            </div>
+        `;
+
+        const targetPos: L.LatLngExpression = [lat, lng];
+
+        if (trackMarkerRef.current) {
+            trackMarkerRef.current.setLatLng(targetPos);
+            trackMarkerRef.current.setIcon(icon);
+            trackMarkerRef.current.getPopup()?.setContent(popupHtml);
+        } else {
+            trackMarkerRef.current = L.marker(targetPos, { icon })
+                .bindPopup(popupHtml, { closeButton: false, className: 'dark-leaflet-popup' })
+                .addTo(trackMapRef.current)
+                .openPopup();
+        }
+
+        if (isValidLoc) {
+            trackMapRef.current.panTo(targetPos, { animate: true, duration: 0.5 });
+        }
     }, [activeView, selectedTrackVehicle, locations, theme]);
 
     // Telemetry items for current page are filtered and paginated on server
@@ -595,6 +597,30 @@ const GpsVehicles = () => {
         if (!selectedTrackVehicle) return null;
         return locations.find(loc => loc.imei === selectedTrackVehicle.imei) || null;
     }, [selectedTrackVehicle, locations]);
+
+    // Reverse geocode location address dynamically
+    const [resolvedAddress, setResolvedAddress] = useState<string>('');
+    useEffect(() => {
+        if (!trackedLoc) {
+            setResolvedAddress('');
+            return;
+        }
+
+        if (trackedLoc.locDesc && trackedLoc.locDesc.trim()) {
+            setResolvedAddress(trackedLoc.locDesc.trim());
+            return;
+        }
+
+        if (trackedLoc.lat && trackedLoc.lng && (trackedLoc.lat !== 0 || trackedLoc.lng !== 0)) {
+            let active = true;
+            reverseGeocodeCoord(trackedLoc.lat, trackedLoc.lng).then(addr => {
+                if (active) setResolvedAddress(addr);
+            });
+            return () => { active = false; };
+        } else {
+            setResolvedAddress('Awaiting GPS satellite signal...');
+        }
+    }, [trackedLoc?.lat, trackedLoc?.lng, trackedLoc?.locDesc]);
 
     // Format coordinates beautifully
     const formatCoords = (lat?: number, lng?: number) => {
@@ -1715,7 +1741,7 @@ const GpsVehicles = () => {
                                         <div>
                                             <h4 className="font-bold text-xs text-[var(--text-main)] uppercase tracking-wider mb-1">Geographic Address</h4>
                                             <p className="text-xs text-[var(--text-muted)] font-medium leading-relaxed">
-                                                {trackedLoc.locDesc || "Calculating positioning details..."}
+                                                {resolvedAddress || trackedLoc.locDesc || (trackedLoc.lat && trackedLoc.lng ? formatCoords(trackedLoc.lat, trackedLoc.lng) : "Calculating positioning details...")}
                                             </p>
                                             <div className="text-[10px] font-bold text-[var(--text-dim)] mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                                                 <span>Coordinates: {formatCoords(trackedLoc.lat, trackedLoc.lng)}</span>

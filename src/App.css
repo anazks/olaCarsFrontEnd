@@ -574,4 +574,16 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-}
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MAP LEAFLET STYLING (DARK MODE TILES & POPUPS)
+   ══════════════════════════════════════════════════════════════ */
+.dark-map-tiles .leaflet-tile {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7) !important;
+}
+
+.leaflet-container {
+  background: var(--bg-main) !important;
+}
+

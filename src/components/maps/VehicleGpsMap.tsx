@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Map, Eye, Columns, ExternalLink } from 'lucide-react';
+import { createMapTileLayer } from '../../utils/mapUtils';
 
 // Fix default marker icon issue with bundlers
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -132,11 +133,7 @@ const VehicleGpsMap = ({
             scrollWheelZoom: true,
         });
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 19,
-        }).addTo(map);
+        createMapTileLayer('dark').addTo(map);
 
         const marker = L.marker([position.latitude, position.longitude], {
             icon: createCarIcon(isLive),
