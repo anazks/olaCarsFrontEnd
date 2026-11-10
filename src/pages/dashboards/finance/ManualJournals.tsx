@@ -46,17 +46,39 @@ const ManualJournals = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [limit] = useState(10);
     const [pagination, setPagination] = useState<{ total: number, page: number, limit: number, totalPages: number } | null>(null);
+    const [isExporting, setIsExporting] = useState<boolean>(false);
 
     const formatJournalDisplayDate = (val: string | Date | undefined): string => formatDate(val);
 
-    const handleExportExcel = () => {
-        if (journals.length === 0) {
-            toast.error("No journals available to export.");
-            return;
-        }
-        const toastId = toast.loading("Generating Excel file...");
+    // Fetch all records for the selected date range and search filter (bypassing table pagination)
+    const fetchAllJournalsForExport = async (): Promise<ManualJournal[]> => {
+        const filters: Record<string, any> = {
+            all: 'true',
+            limit: 100000,
+            enforceDateRange: 'true'
+        };
+        if (startDate) filters.startDate = startDate;
+        if (endDate) filters.endDate = endDate;
+        if (debouncedSearch) filters.search = debouncedSearch;
+
+        const response = await getManualJournals(filters);
+        const data = Array.isArray(response.data) ? response.data : [];
+        return data;
+    };
+
+    const handleExportExcel = async () => {
+        setIsExporting(true);
+        const toastId = toast.loading("Fetching all journals for the selected date range...");
         try {
-            const exportData = journals.map((j, idx) => ({
+            const records = await fetchAllJournalsForExport();
+            if (records.length === 0) {
+                toast.error("No journals found for the selected date range.", { id: toastId });
+                return;
+            }
+
+            toast.loading(`Generating Excel file for ${records.length} records...`, { id: toastId });
+
+            const exportData = records.map((j, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Journal Number": j.journalNumber || 'N/A',
                 "Reference Number": (j as any).referenceNumber || j.journalNumber || '—',
@@ -80,23 +102,30 @@ const ManualJournals = () => {
                 return { wch: maxLen + 2 };
             });
 
-            const dateStr = new Date().toISOString().split('T')[0];
-            XLSX.writeFile(wb, `manual_journals_export_${dateStr}.xlsx`);
-            toast.success("Excel file downloaded successfully!", { id: toastId });
+            const dateStr = startDate && endDate ? `${startDate}_to_${endDate}` : new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `manual_journals_${dateStr}.xlsx`);
+            toast.success(`Excel file (${records.length} records) downloaded successfully!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export Excel file.", { id: toastId });
+        } finally {
+            setIsExporting(false);
         }
     };
 
-    const handleExportCsv = () => {
-        if (journals.length === 0) {
-            toast.error("No journals available to export.");
-            return;
-        }
-        const toastId = toast.loading("Generating CSV file...");
+    const handleExportCsv = async () => {
+        setIsExporting(true);
+        const toastId = toast.loading("Fetching all journals for the selected date range...");
         try {
-            const exportData = journals.map((j, idx) => ({
+            const records = await fetchAllJournalsForExport();
+            if (records.length === 0) {
+                toast.error("No journals found for the selected date range.", { id: toastId });
+                return;
+            }
+
+            toast.loading(`Generating CSV file for ${records.length} records...`, { id: toastId });
+
+            const exportData = records.map((j, idx) => ({
                 "Sl No.": String(idx + 1).padStart(2, '0'),
                 "Journal Number": j.journalNumber || 'N/A',
                 "Reference Number": (j as any).referenceNumber || j.journalNumber || '—',
@@ -114,37 +143,46 @@ const ManualJournals = () => {
             
             const link = document.createElement("a");
             link.setAttribute("href", url);
-            const dateStr = new Date().toISOString().split('T')[0];
-            link.setAttribute("download", `manual_journals_export_${dateStr}.csv`);
+            const dateStr = startDate && endDate ? `${startDate}_to_${endDate}` : new Date().toISOString().split('T')[0];
+            link.setAttribute("download", `manual_journals_${dateStr}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            toast.success("CSV file downloaded successfully!", { id: toastId });
+            toast.success(`CSV file (${records.length} records) downloaded successfully!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export CSV file.", { id: toastId });
+        } finally {
+            setIsExporting(false);
         }
     };
 
-    const handleExportPdf = () => {
-        if (journals.length === 0) {
-            toast.error("No journals available to export.");
-            return;
-        }
-        const toastId = toast.loading("Generating PDF file...");
+    const handleExportPdf = async () => {
+        setIsExporting(true);
+        const toastId = toast.loading("Fetching all journals for the selected date range...");
         try {
+            const records = await fetchAllJournalsForExport();
+            if (records.length === 0) {
+                toast.error("No journals found for the selected date range.", { id: toastId });
+                return;
+            }
+
+            toast.loading(`Generating PDF file for ${records.length} records...`, { id: toastId });
+
             const doc = new jsPDF();
-            const dateStr = new Date().toISOString().split('T')[0];
+            const dateStr = startDate && endDate ? `${startDate}_to_${endDate}` : new Date().toISOString().split('T')[0];
             const title = "Manual Journals Report";
+            const dateRangeLabel = startDate && endDate ? `Date Range: ${startDate} to ${endDate}` : `Generated on: ${formatDate(new Date())}`;
             
             doc.setFontSize(18);
-            doc.text(title, 14, 22);
-            doc.setFontSize(10);
-            doc.text(`Generated on: ${formatDate(new Date())}`, 14, 29);
+            doc.text(title, 14, 20);
+            doc.setFontSize(9);
+            doc.setTextColor(100);
+            doc.text(`${dateRangeLabel}  |  Total Records: ${records.length}`, 14, 27);
 
             const head = [["Sl No.", "Journal Number", "Reference #", "Journal Date", "Status", "Amount", "Created By"]];
-            const body = journals.map((j, idx) => [
+            const body = records.map((j, idx) => [
                 String(idx + 1).padStart(2, '0'),
                 j.journalNumber || 'N/A',
                 (j as any).referenceNumber || j.journalNumber || '—',
@@ -157,16 +195,19 @@ const ManualJournals = () => {
             autoTable(doc, {
                 head,
                 body,
-                startY: 34,
+                startY: 32,
                 theme: 'striped',
-                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0] }
+                headStyles: { fillColor: [200, 230, 0], textColor: [0, 0, 0], fontStyle: 'bold' },
+                styles: { fontSize: 8 }
             });
 
-            doc.save(`manual_journals_export_${dateStr}.pdf`);
-            toast.success("PDF file downloaded successfully!", { id: toastId });
+            doc.save(`manual_journals_${dateStr}.pdf`);
+            toast.success(`PDF file (${records.length} records) downloaded successfully!`, { id: toastId });
         } catch (err) {
             console.error(err);
             toast.error("Failed to export PDF file.", { id: toastId });
+        } finally {
+            setIsExporting(false);
         }
     };
 
@@ -253,7 +294,8 @@ const ManualJournals = () => {
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <button
                         onClick={handleExportExcel}
-                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        disabled={isExporting}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     >
                         <FileText size={14} className="text-emerald-500" /> Excel
@@ -261,7 +303,8 @@ const ManualJournals = () => {
 
                     <button
                         onClick={handleExportCsv}
-                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        disabled={isExporting}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     >
                         <FileText size={14} className="text-blue-400" /> CSV
@@ -269,7 +312,8 @@ const ManualJournals = () => {
 
                     <button
                         onClick={handleExportPdf}
-                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer"
+                        disabled={isExporting}
+                        className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all border outline-none hover:bg-white/5 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                     >
                         <FileText size={14} className="text-rose-500" /> PDF
