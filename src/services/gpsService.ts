@@ -240,6 +240,8 @@ export const findGpsDeviceByVehicle = (
 export interface FleetSummaryRow {
     imei: string;
     device: string;
+    deviceName?: string;
+    displayName?: string;
     mcType?: string;
     group: string;
     vehicleNumber?: string;
@@ -257,7 +259,7 @@ export interface FleetSummaryRow {
     odometerStart: number;
     odometerEnd: number;
     averageSpeed: number;
-    tripCount: number;
+    tripCount?: number;
 }
 
 export interface FleetSummaryTotals {

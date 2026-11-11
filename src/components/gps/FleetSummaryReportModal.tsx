@@ -88,7 +88,9 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
     // Column Configurations
     // ----------------------------------------------------
     const [columns, setColumns] = useState<ColumnConfig[]>([
-        { key: 'device', label: 'Device', visible: true, align: 'left' },
+        { key: 'vehicleNumber', label: 'Vehicle Number', visible: true, align: 'left' },
+        { key: 'deviceName', label: 'Device Name', visible: true, align: 'left' },
+        { key: 'imei', label: 'IMEI', visible: true, align: 'center', format: (val) => val ? String(val) : '-' },
         { key: 'mcType', label: 'Model', visible: true, align: 'center', format: (val) => val || 'VL802' },
         { key: 'distance', label: 'Distance', unit: 'km', visible: true, align: 'right', format: (val) => `${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` },
         { key: 'startTime', label: 'First GPS Point', visible: true, align: 'center', format: (val, row) => (val && val !== 'N/A' ? val : (row.startDate ? formatDate(row.startDate) : '-')) },
@@ -97,7 +99,6 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
         { key: 'odometerEnd', label: 'Odometer End', unit: 'km', visible: true, align: 'right', format: (val) => `${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` },
         { key: 'engineHoursFormatted', label: 'Engine Hours', unit: 'Hours', visible: true, align: 'center' },
         { key: 'fuelConsumed', label: 'Fuel Consumed', unit: 'L', visible: true, align: 'right', format: (val) => `${Number(val || 0).toFixed(1)} L` },
-        { key: 'vehicleNumber', label: 'Vehicle Number', visible: false, align: 'left', format: (val) => val || 'N/A' },
         { key: 'maxSpeed', label: 'Maximum Speed', unit: 'km/h', visible: false, align: 'center', format: (val) => `${val || 0} km/h` },
         { key: 'averageSpeed', label: 'Average Speed', unit: 'km/h', visible: false, align: 'center', format: (val) => `${Number(val || 0).toFixed(2)} km/h` },
     ]);
@@ -255,27 +256,30 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
     const processedRows = useMemo(() => {
         let result = [...reportRows];
 
-        // Global search filter
+        // Global search filter (supports deviceName, vehicleNumber, displayName, IMEI, mcType, group)
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
             result = result.filter(r =>
+                (r.deviceName && r.deviceName.toLowerCase().includes(q)) ||
+                (r.displayName && r.displayName.toLowerCase().includes(q)) ||
                 r.device.toLowerCase().includes(q) ||
                 r.imei.toLowerCase().includes(q) ||
+                (r.mcType && r.mcType.toLowerCase().includes(q)) ||
                 r.group.toLowerCase().includes(q) ||
-                (r.vehicleNumber && r.vehicleNumber.toLowerCase().includes(q)) ||
-                (r.customerName && r.customerName.toLowerCase().includes(q)) ||
-                (r.driverName && r.driverName.toLowerCase().includes(q)) ||
-                (r.driverStatus && r.driverStatus.toLowerCase().includes(q))
+                (r.vehicleNumber && r.vehicleNumber.toLowerCase().includes(q))
             );
         }
 
         // Sorting
         result.sort((a, b) => {
-            if (sortField === 'driverName') {
-                const isUnassignedA = !a.driverName || a.driverName === 'Unassigned';
-                const isUnassignedB = !b.driverName || b.driverName === 'Unassigned';
-                if (isUnassignedA && !isUnassignedB) return sortDirection === 'asc' ? 1 : -1;
-                if (!isUnassignedA && isUnassignedB) return sortDirection === 'asc' ? -1 : 1;
+            if (sortField === 'distance') {
+                return sortDirection === 'asc' ? a.distance - b.distance : b.distance - a.distance;
+            }
+
+            if (sortField === 'device') {
+                const nameA = (a.displayName || a.deviceName || a.vehicleNumber || a.device || '').toLowerCase();
+                const nameB = (b.displayName || b.deviceName || b.vehicleNumber || b.device || '').toLowerCase();
+                return sortDirection === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
             }
 
             let valA = a[sortField] ?? '';
@@ -338,7 +342,7 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
             if (reportTotals) {
                 const totalsRowObj: Record<string, any> = {};
                 visibleCols.forEach(col => {
-                    if (col.key === 'device') totalsRowObj[col.label] = `TOTALS (${reportTotals.totalDevices} Devices)`;
+                    if (col.key === 'vehicleNumber' || col.key === 'device') totalsRowObj[col.label] = `TOTALS (${reportTotals.totalDevices} Devices)`;
                     else if (col.key === 'distance') totalsRowObj[col.label] = `${reportTotals.totalDistance} km`;
                     else if (col.key === 'fuelConsumed') totalsRowObj[col.label] = `${reportTotals.totalFuel} L`;
                     else if (col.key === 'averageSpeed') totalsRowObj[col.label] = `${reportTotals.averageSpeed} km/h`;
@@ -474,7 +478,7 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
             <tr style="background:#eef2f7; font-weight:bold;">
                 ${visibleCols.map(c => {
             let val = '-';
-            if (c.key === 'device') val = `TOTALS (${reportTotals.totalDevices} Devices)`;
+            if (c.key === 'vehicleNumber' || c.key === 'device') val = `TOTALS (${reportTotals.totalDevices} Devices)`;
             else if (c.key === 'distance') val = `${reportTotals.totalDistance} km`;
             else if (c.key === 'fuelConsumed') val = `${reportTotals.totalFuel} L`;
             else if (c.key === 'averageSpeed') val = `${reportTotals.averageSpeed} km/h`;
@@ -769,7 +773,7 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-dim)]" />
                         <input
                             type="text"
-                            placeholder="Search by device name or IMEI..."
+                            placeholder="Search by device name, vehicle number, model, IMEI..."
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value);
@@ -861,18 +865,25 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
                                     >
                                         {columns.filter(c => c.visible).map(col => (
                                             <td key={col.key as string} className={`px-4 py-3 text-${col.align || 'left'}`}>
-                                                {col.key === 'device' ? (
-                                                    <div>
-                                                        <span className="font-bold text-[var(--text-main)] block">{row.device}</span>
-                                                        <span className="text-[10px] font-mono text-[var(--text-dim)]">{row.imei}</span>
-                                                    </div>
-                                                ) : col.key === 'driverStatus' ? (
-                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${
-                                                        row.driverStatus === 'ACTIVE' || row.driverStatus === 'ON TRIP' || row.driverStatus === 'ONLINE'
-                                                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                                            : 'bg-gray-500/10 text-gray-400 border-gray-500/20'
-                                                    }`}>
-                                                        {row.driverStatus || 'UNASSIGNED'}
+                                                {col.key === 'vehicleNumber' ? (
+                                                    <span className="font-bold text-xs text-lime-400 font-mono tracking-wide">
+                                                        {row.vehicleNumber && row.vehicleNumber !== 'Unassigned' && !row.vehicleNumber.toUpperCase().startsWith('DAÑADO')
+                                                            ? row.vehicleNumber
+                                                            : (row.deviceName && !row.deviceName.toUpperCase().startsWith('DAÑADO') && !row.deviceName.startsWith('VL802-') ? row.deviceName : '-')}
+                                                    </span>
+                                                ) : col.key === 'deviceName' || col.key === 'device' ? (
+                                                    <span className="text-xs text-[var(--text-main)] font-semibold">
+                                                        {(row.deviceName || row.device || '').toUpperCase().includes('DAÑADO') ? (
+                                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                                {row.displayName || row.deviceName || row.device}
+                                                            </span>
+                                                        ) : (
+                                                            row.deviceName || row.device || '-'
+                                                        )}
+                                                    </span>
+                                                ) : col.key === 'imei' ? (
+                                                    <span className="font-mono text-[11px] text-[var(--text-dim)] bg-zinc-900/60 px-2 py-0.5 rounded border border-white/5 select-all">
+                                                        {row.imei}
                                                     </span>
                                                 ) : col.format ? (
                                                     <span className="font-medium">{col.format(row[col.key], row)}</span>
@@ -892,7 +903,7 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
                                 <tr className="bg-lime-500/5">
                                     {columns.filter(c => c.visible).map(col => {
                                         let val = '-';
-                                        if (col.key === 'device') val = `TOTALS (${reportTotals.totalDevices} Devices)`;
+                                        if (col.key === 'vehicleNumber' || col.key === 'device') val = `TOTALS (${reportTotals.totalDevices} Devices)`;
                                         else if (col.key === 'distance') val = `${reportTotals.totalDistance.toLocaleString()} km`;
                                         else if (col.key === 'fuelConsumed') val = `${reportTotals.totalFuel} L`;
                                         else if (col.key === 'averageSpeed') val = `${reportTotals.averageSpeed} km/h`;

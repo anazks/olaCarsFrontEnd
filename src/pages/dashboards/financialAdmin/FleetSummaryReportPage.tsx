@@ -92,7 +92,9 @@ export const FleetSummaryReportPage: React.FC = () => {
     // Column Configurations
     // ----------------------------------------------------
     const [columns, setColumns] = useState<ColumnConfig[]>([
-        { key: 'device', label: 'Device', visible: true, align: 'left' },
+        { key: 'vehicleNumber', label: 'Vehicle Number', visible: true, align: 'left' },
+        { key: 'deviceName', label: 'Device Name', visible: true, align: 'left' },
+        { key: 'imei', label: 'IMEI', visible: true, align: 'center', format: (val) => val ? String(val) : '-' },
         { key: 'mcType', label: 'Model', visible: true, align: 'center', format: (val) => val || 'VL802' },
         { key: 'distance', label: 'Distance', unit: 'km', visible: true, align: 'right', format: (val) => `${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` },
         { key: 'startTime', label: 'First GPS Point', visible: true, align: 'center', format: (val, row) => (val && val !== 'N/A' ? val : (row.startDate ? formatDate(row.startDate) : '-')) },
@@ -101,7 +103,6 @@ export const FleetSummaryReportPage: React.FC = () => {
         { key: 'odometerEnd', label: 'Odometer End', unit: 'km', visible: true, align: 'right', format: (val) => `${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` },
         { key: 'engineHoursFormatted', label: 'Engine Hours', unit: 'Hours', visible: true, align: 'center' },
         { key: 'fuelConsumed', label: 'Fuel Consumed', unit: 'L', visible: true, align: 'right', format: (val) => `${Number(val || 0).toFixed(1)} L` },
-        { key: 'vehicleNumber', label: 'Vehicle Number', visible: false, align: 'left', format: (val) => val || 'N/A' },
         { key: 'maxSpeed', label: 'Maximum Speed', unit: 'km/h', visible: false, align: 'center', format: (val) => `${val || 0} km/h` },
         { key: 'averageSpeed', label: 'Average Speed', unit: 'km/h', visible: false, align: 'center', format: (val) => `${Number(val || 0).toFixed(2)} km/h` },
     ]);
@@ -337,6 +338,18 @@ export const FleetSummaryReportPage: React.FC = () => {
         result.sort((a, b) => {
             if (sortField === 'distance') {
                 return sortDirection === 'asc' ? a.distance - b.distance : b.distance - a.distance;
+            }
+
+            if (sortField === 'vehicleNumber' || sortField === 'device') {
+                const nameA = (a.vehicleNumber || a.displayName || a.deviceName || a.device || '').toLowerCase();
+                const nameB = (b.vehicleNumber || b.displayName || b.deviceName || b.device || '').toLowerCase();
+                return sortDirection === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+            }
+
+            if (sortField === 'deviceName') {
+                const nameA = (a.deviceName || a.device || '').toLowerCase();
+                const nameB = (b.deviceName || b.device || '').toLowerCase();
+                return sortDirection === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
             }
 
             let valA = a[sortField] ?? '';
@@ -587,7 +600,7 @@ export const FleetSummaryReportPage: React.FC = () => {
                 <tr style="background:#eef2f7; font-weight:bold;">
                     ${visibleCols.map(c => {
                 let val = '-';
-                if (c.key === 'device') val = `TOTALS (${exportTotals.totalDevices} Devices)`;
+                if (c.key === 'vehicleNumber' || c.key === 'device') val = `TOTALS (${exportTotals.totalDevices} Devices)`;
                 else if (c.key === 'distance') val = `${exportTotals.totalDistance} km`;
                 else if (c.key === 'fuelConsumed') val = `${exportTotals.totalFuel} L`;
                 else if (c.key === 'averageSpeed') val = `${exportTotals.averageSpeed} km/h`;
@@ -986,7 +999,7 @@ export const FleetSummaryReportPage: React.FC = () => {
                         <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-dim)]" />
                         <input
                             type="text"
-                            placeholder="Search device, model, plate, IMEI..."
+                            placeholder="Search by device name, vehicle number, model, IMEI..."
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value);
@@ -1099,18 +1112,43 @@ export const FleetSummaryReportPage: React.FC = () => {
                                         {columns.filter(c => c.visible).map(col => {
                                             const cellVal = row[col.key];
 
-                                            if (col.key === 'device') {
+                                            if (col.key === 'vehicleNumber') {
+                                                const vehNum = row.vehicleNumber && row.vehicleNumber !== 'Unassigned' && !row.vehicleNumber.toUpperCase().startsWith('DAÑADO')
+                                                    ? row.vehicleNumber
+                                                    : (row.deviceName && !row.deviceName.toUpperCase().startsWith('DAÑADO') && !row.deviceName.startsWith('VL802-') ? row.deviceName : '-');
                                                 return (
                                                     <td key={col.key} className="px-4 py-3 font-semibold">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span>{row.device}</span>
-                                                            {row.mcType && (
-                                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-lime-400 border border-lime-500/20">
-                                                                    {row.mcType}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-[10px] text-[var(--text-dim)] font-mono">{row.imei}</div>
+                                                        <span className={vehNum !== '-' ? "font-bold text-xs text-lime-400 tracking-wide font-mono" : "text-xs text-[var(--text-dim)]"}>
+                                                            {vehNum}
+                                                        </span>
+                                                    </td>
+                                                );
+                                            }
+
+                                            if (col.key === 'deviceName' || col.key === 'device') {
+                                                const isDanado = (row.deviceName || row.device || '').toUpperCase().includes('DAÑADO');
+                                                const name = row.deviceName || row.device || '-';
+                                                return (
+                                                    <td key={col.key} className="px-4 py-3 font-medium">
+                                                        {isDanado ? (
+                                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                                {row.displayName || name}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-xs text-[var(--text-main)] font-semibold">
+                                                                {name}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                );
+                                            }
+
+                                            if (col.key === 'imei') {
+                                                return (
+                                                    <td key={col.key} className="px-4 py-3 text-center">
+                                                        <span className="font-mono text-[11px] text-[var(--text-dim)] bg-zinc-900/60 px-2 py-0.5 rounded border border-white/5 select-all">
+                                                            {row.imei}
+                                                        </span>
                                                     </td>
                                                 );
                                             }
@@ -1153,7 +1191,7 @@ export const FleetSummaryReportPage: React.FC = () => {
                             <tfoot>
                                 <tr className="border-t-2 border-[var(--border-main)] bg-[var(--bg-input)] font-black text-xs text-lime-400">
                                     {columns.filter(c => c.visible).map(col => {
-                                        if (col.key === 'device') {
+                                        if (col.key === 'vehicleNumber' || col.key === 'device') {
                                             return (
                                                 <td key={col.key} className="px-4 py-3.5">
                                                     TOTALS ({reportTotals.totalDevices} Devices)
