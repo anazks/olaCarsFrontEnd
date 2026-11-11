@@ -31,7 +31,7 @@ import {
 } from '../../../services/gpsService';
 
 // Period Preset Types
-type PeriodPreset = 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'custom';
+type PeriodPreset = 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'last_7_days' | 'last_30_days' | 'custom';
 
 // Column definition interface
 interface ColumnConfig {
@@ -59,7 +59,7 @@ export const FleetSummaryReportPage: React.FC = () => {
     const [vehicles, setVehicles] = useState<GpsVehicle[]>([]);
     const [selectedImeis, setSelectedImeis] = useState<string[]>([]); // Empty = All
     const [selectedGroup, setSelectedGroup] = useState<string>('ALL');
-    const [period, setPeriod] = useState<PeriodPreset>('today');
+    const [period, setPeriod] = useState<PeriodPreset>('last_30_days');
     const [startTime, setStartTime] = useState<string>('');
     const [endTime, setEndTime] = useState<string>('');
     const [reportType, setReportType] = useState<'Summary' | 'Detailed'>('Summary');
@@ -79,8 +79,8 @@ export const FleetSummaryReportPage: React.FC = () => {
     // Table search, pagination & sorting
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [debouncedSearch, setDebouncedSearch] = useState<string>('');
-    const [sortField, setSortField] = useState<keyof FleetSummaryRow>('driverName');
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [sortField, setSortField] = useState<keyof FleetSummaryRow>('distance');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [rowsPerPage, setRowsPerPage] = useState<number>(25);
     const [totalRecords, setTotalRecords] = useState<number>(0);
@@ -93,17 +93,17 @@ export const FleetSummaryReportPage: React.FC = () => {
     // ----------------------------------------------------
     const [columns, setColumns] = useState<ColumnConfig[]>([
         { key: 'device', label: 'Device', visible: true, align: 'left' },
-        { key: 'vehicleNumber', label: 'Vehicle Number', visible: true, align: 'left', format: (val) => val || 'N/A' },
-        { key: 'driverName', label: 'Driver Name', visible: true, align: 'left', format: (val) => val || 'Unassigned' },
-        { key: 'driverStatus', label: 'Driver Status', visible: true, align: 'center' },
+        { key: 'mcType', label: 'Model', visible: true, align: 'center', format: (val) => val || 'VL802' },
         { key: 'distance', label: 'Distance', unit: 'km', visible: true, align: 'right', format: (val) => `${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` },
-        { key: 'maxSpeed', label: 'Maximum Speed', unit: 'km/h', visible: true, align: 'center', format: (val) => `${val || 0} km/h` },
-        { key: 'engineHoursFormatted', label: 'Engine Hours', unit: 'Hours', visible: true, align: 'center' },
-        { key: 'fuelConsumed', label: 'Fuel Consumed', unit: 'L', visible: true, align: 'right', format: (val) => `${Number(val || 0).toFixed(1)} L` },
-        { key: 'startDate', label: 'Start Date', visible: true, align: 'center', format: (val) => formatDate(val) },
+        { key: 'startTime', label: 'First GPS Point', visible: true, align: 'center', format: (val, row) => (val && val !== 'N/A' ? val : (row.startDate ? formatDate(row.startDate) : '-')) },
+        { key: 'endTime', label: 'Last GPS Point', visible: true, align: 'center', format: (val) => (val && val !== 'N/A' ? val : '-') },
         { key: 'odometerStart', label: 'Odometer Start', unit: 'km', visible: true, align: 'right', format: (val) => `${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` },
         { key: 'odometerEnd', label: 'Odometer End', unit: 'km', visible: true, align: 'right', format: (val) => `${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` },
-        { key: 'averageSpeed', label: 'Average Speed', unit: 'km/h', visible: true, align: 'center', format: (val) => `${Number(val || 0).toFixed(2)} km/h` },
+        { key: 'engineHoursFormatted', label: 'Engine Hours', unit: 'Hours', visible: true, align: 'center' },
+        { key: 'fuelConsumed', label: 'Fuel Consumed', unit: 'L', visible: true, align: 'right', format: (val) => `${Number(val || 0).toFixed(1)} L` },
+        { key: 'vehicleNumber', label: 'Vehicle Number', visible: false, align: 'left', format: (val) => val || 'N/A' },
+        { key: 'maxSpeed', label: 'Maximum Speed', unit: 'km/h', visible: false, align: 'center', format: (val) => `${val || 0} km/h` },
+        { key: 'averageSpeed', label: 'Average Speed', unit: 'km/h', visible: false, align: 'center', format: (val) => `${Number(val || 0).toFixed(2)} km/h` },
     ]);
 
     // Format date string helpers
@@ -174,6 +174,14 @@ export const FleetSummaryReportPage: React.FC = () => {
                 start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
                 end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
                 break;
+            case 'last_7_days':
+                start = new Date(now.getTime() - 7 * 86400000);
+                end = now;
+                break;
+            case 'last_30_days':
+                start = new Date(now.getTime() - 30 * 86400000);
+                end = now;
+                break;
             case 'custom':
                 return;
         }
@@ -192,7 +200,7 @@ export const FleetSummaryReportPage: React.FC = () => {
                 console.warn("Failed to load vehicle list for fleet report:", err);
             }
         };
-        applyPeriodDates('today');
+        applyPeriodDates('last_30_days');
         loadInitialData();
     }, []);
 
@@ -300,28 +308,35 @@ export const FleetSummaryReportPage: React.FC = () => {
         }
     }, [currentPage, rowsPerPage, debouncedSearch, startTime, endTime, selectedGroup, selectedImeis, reportType]);
 
-    // Reset to page 1 whenever filters change
+    const isFirstRender = useRef(true);
+
+    // Reset to page 1 and fetch report when filters change
     useEffect(() => {
-        setCurrentPage(1);
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+        if (currentPage !== 1) {
+            setCurrentPage(1);
+        } else if (startTime && endTime) {
+            fetchReport(1, rowsPerPage, debouncedSearch, startTime, endTime, selectedGroup, selectedImeis, reportType);
+        }
     }, [selectedImeis, selectedGroup, startTime, endTime, reportType, debouncedSearch, rowsPerPage]);
 
-    // Trigger report fetch when page, limit, or any filter changes
+    // Fetch report on page change or initial load
     useEffect(() => {
         if (startTime && endTime) {
             fetchReport(currentPage, rowsPerPage, debouncedSearch, startTime, endTime, selectedGroup, selectedImeis, reportType);
         }
-    }, [currentPage, rowsPerPage, debouncedSearch, startTime, endTime, selectedGroup, selectedImeis, reportType]);
+    }, [currentPage]);
 
     // Client-side sorting for current page rows
     const processedRows = useMemo(() => {
         let result = [...reportRows];
 
         result.sort((a, b) => {
-            if (sortField === 'driverName') {
-                const isUnassignedA = !a.driverName || a.driverName === 'Unassigned';
-                const isUnassignedB = !b.driverName || b.driverName === 'Unassigned';
-                if (isUnassignedA && !isUnassignedB) return sortDirection === 'asc' ? 1 : -1;
-                if (!isUnassignedA && isUnassignedB) return sortDirection === 'asc' ? -1 : 1;
+            if (sortField === 'distance') {
+                return sortDirection === 'asc' ? a.distance - b.distance : b.distance - a.distance;
             }
 
             let valA = a[sortField] ?? '';
@@ -645,7 +660,7 @@ export const FleetSummaryReportPage: React.FC = () => {
                                 </span>
                             </h1>
                             <p className="text-xs text-[var(--text-dim)] font-medium">
-                                Real-time distance aggregation, trip telemetry & fuel consumption powered by <code className="text-lime-400 font-mono text-[11px]">jimi.open.platform.report.trips</code>
+                                Real-time distance aggregation, trip telemetry & fuel consumption powered by <code className="text-lime-400 font-mono text-[11px]">jimi.open.platform.report.mileage</code>
                             </p>
                         </div>
                     </div>
@@ -729,6 +744,11 @@ export const FleetSummaryReportPage: React.FC = () => {
                         <h3 className="text-lg md:text-xl font-black text-lime-400 truncate">
                             {reportTotals ? `${reportTotals.totalDevices} Units` : `${vehicles.length} Units`}
                         </h3>
+                        {reportTotals?.activeDevices !== undefined && (
+                            <p className="text-[10px] text-emerald-400 font-bold truncate">
+                                {reportTotals.activeDevices} Active with Mileage
+                            </p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -845,6 +865,8 @@ export const FleetSummaryReportPage: React.FC = () => {
                             <option value="last_week">Last Week</option>
                             <option value="this_month">This Month</option>
                             <option value="last_month">Last Month</option>
+                            <option value="last_7_days">Last 7 Days</option>
+                            <option value="last_30_days">Last 30 Days</option>
                             <option value="custom">Custom Range</option>
                         </select>
                     </div>
@@ -964,7 +986,7 @@ export const FleetSummaryReportPage: React.FC = () => {
                         <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-dim)]" />
                         <input
                             type="text"
-                            placeholder="Search vehicle, driver, plate, IMEI..."
+                            placeholder="Search device, model, plate, IMEI..."
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value);
@@ -1080,24 +1102,29 @@ export const FleetSummaryReportPage: React.FC = () => {
                                             if (col.key === 'device') {
                                                 return (
                                                     <td key={col.key} className="px-4 py-3 font-semibold">
-                                                        <div>{row.device}</div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span>{row.device}</span>
+                                                            {row.mcType && (
+                                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-lime-400 border border-lime-500/20">
+                                                                    {row.mcType}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <div className="text-[10px] text-[var(--text-dim)] font-mono">{row.imei}</div>
                                                     </td>
                                                 );
                                             }
 
-                                            if (col.key === 'driverStatus') {
-                                                const isActive = row.driverStatus === 'ACTIVE';
+                                            if (col.key === 'startTime' || col.key === 'endTime') {
+                                                const val = row[col.key];
                                                 return (
-                                                    <td key={col.key} className="px-4 py-3 text-center">
-                                                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${isActive
-                                                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                                            : 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'}`}>
-                                                            {row.driverStatus || 'UNASSIGNED'}
-                                                        </span>
+                                                    <td key={col.key} className="px-4 py-3 text-center font-mono text-[11px]">
+                                                        {val && val !== 'N/A' ? String(val) : '-'}
                                                     </td>
                                                 );
                                             }
+
+
 
                                             if (col.key === 'distance') {
                                                 return (

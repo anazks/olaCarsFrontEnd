@@ -34,7 +34,7 @@ interface FleetSummaryReportModalProps {
 }
 
 // Period Preset Types
-type PeriodPreset = 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'custom';
+type PeriodPreset = 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'last_7_days' | 'last_30_days' | 'custom';
 
 // Column definition interface
 interface ColumnConfig {
@@ -60,7 +60,7 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
     // ----------------------------------------------------
     const [selectedImeis, setSelectedImeis] = useState<string[]>([]); // Empty = All
     const [selectedGroup, setSelectedGroup] = useState<string>('ALL');
-    const [period, setPeriod] = useState<PeriodPreset>('today');
+    const [period, setPeriod] = useState<PeriodPreset>('last_30_days');
     const [startTime, setStartTime] = useState<string>('');
     const [endTime, setEndTime] = useState<string>('');
     const [reportType, setReportType] = useState<'Summary' | 'Detailed'>('Summary');
@@ -79,8 +79,8 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
 
     // Table search, pagination & sorting
     const [searchQuery, setSearchQuery] = useState<string>('');
-    const [sortField, setSortField] = useState<keyof FleetSummaryRow>('driverName');
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [sortField, setSortField] = useState<keyof FleetSummaryRow>('distance');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [rowsPerPage, setRowsPerPage] = useState<number>(25);
 
@@ -89,17 +89,17 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
     // ----------------------------------------------------
     const [columns, setColumns] = useState<ColumnConfig[]>([
         { key: 'device', label: 'Device', visible: true, align: 'left' },
-        { key: 'vehicleNumber', label: 'Vehicle Number', visible: true, align: 'left', format: (val) => val || 'N/A' },
-        { key: 'driverName', label: 'Driver Name', visible: true, align: 'left', format: (val) => val || 'Unassigned' },
-        { key: 'driverStatus', label: 'Driver Status', visible: true, align: 'center' },
+        { key: 'mcType', label: 'Model', visible: true, align: 'center', format: (val) => val || 'VL802' },
         { key: 'distance', label: 'Distance', unit: 'km', visible: true, align: 'right', format: (val) => `${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` },
-        { key: 'maxSpeed', label: 'Maximum Speed', unit: 'km/h', visible: true, align: 'center', format: (val) => `${val || 0} km/h` },
-        { key: 'engineHoursFormatted', label: 'Engine Hours', unit: 'Hours', visible: true, align: 'center' },
-        { key: 'fuelConsumed', label: 'Fuel Consumed', unit: 'L', visible: true, align: 'right', format: (val) => `${Number(val || 0).toFixed(1)} L` },
-        { key: 'startDate', label: 'Start Date', visible: true, align: 'center', format: (val) => formatDate(val) },
+        { key: 'startTime', label: 'First GPS Point', visible: true, align: 'center', format: (val, row) => (val && val !== 'N/A' ? val : (row.startDate ? formatDate(row.startDate) : '-')) },
+        { key: 'endTime', label: 'Last GPS Point', visible: true, align: 'center', format: (val) => (val && val !== 'N/A' ? val : '-') },
         { key: 'odometerStart', label: 'Odometer Start', unit: 'km', visible: true, align: 'right', format: (val) => `${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` },
         { key: 'odometerEnd', label: 'Odometer End', unit: 'km', visible: true, align: 'right', format: (val) => `${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} km` },
-        { key: 'averageSpeed', label: 'Average Speed', unit: 'km/h', visible: true, align: 'center', format: (val) => `${Number(val || 0).toFixed(2)} km/h` },
+        { key: 'engineHoursFormatted', label: 'Engine Hours', unit: 'Hours', visible: true, align: 'center' },
+        { key: 'fuelConsumed', label: 'Fuel Consumed', unit: 'L', visible: true, align: 'right', format: (val) => `${Number(val || 0).toFixed(1)} L` },
+        { key: 'vehicleNumber', label: 'Vehicle Number', visible: false, align: 'left', format: (val) => val || 'N/A' },
+        { key: 'maxSpeed', label: 'Maximum Speed', unit: 'km/h', visible: false, align: 'center', format: (val) => `${val || 0} km/h` },
+        { key: 'averageSpeed', label: 'Average Speed', unit: 'km/h', visible: false, align: 'center', format: (val) => `${Number(val || 0).toFixed(2)} km/h` },
     ]);
 
     // Format date string helpers
@@ -165,6 +165,14 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
                 start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
                 end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
                 break;
+            case 'last_7_days':
+                start = new Date(now.getTime() - 7 * 86400000);
+                end = now;
+                break;
+            case 'last_30_days':
+                start = new Date(now.getTime() - 30 * 86400000);
+                end = now;
+                break;
             case 'custom':
                 return; // don't override manual custom pickers
         }
@@ -176,7 +184,7 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
     // Initialize period dates on component open
     useEffect(() => {
         if (isOpen) {
-            applyPeriodDates('today');
+            applyPeriodDates('last_30_days');
             fetchReport();
         }
     }, [isOpen]);
@@ -236,76 +244,8 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
         } catch (err: any) {
             console.error("Failed to load Fleet Summary Report:", err);
             toast.error(err.message || "Failed to load Fleet Summary Report");
-
-            // Build IMEI-seeded fallback rows dynamically for each vehicle
-            const targetVehicles = vehicles.length > 0 ? vehicles : [
-                { imei: "860121060691774", deviceName: "VL802-01656", vehicleNumber: "VL802-01656", customerName: "Direct Fleet / N/A", driverName: "Carlos Perez", deviceGroup: "Arrendadora Panama" },
-                { imei: "860121060690685", deviceName: "VL802-06874", vehicleNumber: "VL802-06874", customerName: "Direct Fleet / N/A", driverName: "Mateo Rodriguez", deviceGroup: "Arrendadora Panama" },
-                { imei: "860121060491233", deviceName: "VL802-06889", vehicleNumber: "VL802-06889", customerName: "Direct Fleet / N/A", driverName: "Sofia Gomez", deviceGroup: "Corporate Fleet" },
-                { imei: "860121060490144", deviceName: "VL802-06890", vehicleNumber: "VL802-06890", customerName: "Direct Fleet / N/A", driverName: "Juan Delgado", deviceGroup: "Corporate Fleet" }
-            ] as any[];
-
-            const mockRows: FleetSummaryRow[] = targetVehicles.map((v, idx) => {
-                const imeiStr = String(v.imei || `DEV${idx}`);
-                const charSum = imeiStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                const numSeed = (parseInt(imeiStr.replace(/\D/g, '').slice(-4) || `${idx * 1234}`, 10) + charSum) || (idx + 1) * 99;
-
-                const dist = Number((100 + (numSeed * 137) % 2400).toFixed(2));
-                const maxSpd = 70 + (numSeed * 19) % 45;
-                const runtimeSec = 3600 * (1 + (numSeed % 40));
-                const fuel = Number((dist * 0.08).toFixed(1));
-                const odoStart = Number((5000 + (numSeed * 271) % 80000).toFixed(2));
-                const odoEnd = Number((odoStart + dist).toFixed(2));
-                const avgSpd = Number((dist / (runtimeSec / 3600)).toFixed(2)) || 35.5;
-
-                const hrs = Math.floor(runtimeSec / 3600);
-                const days = Math.floor(hrs / 24);
-                const remHrs = hrs % 24;
-                const engineHoursFormatted = days > 0 ? `${days} d ${remHrs} h` : `${hrs} h`;
-
-                const vNum = v.vehicleNumber || v.deviceName || (v.imei ? `VL802-0${String(v.imei).slice(-4)}` : 'N/A');
-                const cName = v.customerName || v.assignedCustomer || v.clientName || v.renterName || 'Direct Fleet / N/A';
-                const dName = v.driverName || (v.driverPhone ? `Driver (${v.driverPhone})` : 'Unassigned');
-                const dStatus = v.driverStatus || (dName !== 'Unassigned' ? 'ACTIVE' : 'UNASSIGNED');
-
-                return {
-                    imei: v.imei,
-                    device: v.deviceName || v.vehicleName || v.imei,
-                    group: v.deviceGroup || 'Default Group',
-                    vehicleNumber: vNum,
-                    customerName: cName,
-                    driverName: dName,
-                    driverStatus: dStatus,
-                    distance: dist,
-                    maxSpeed: maxSpd,
-                    engineHoursSeconds: runtimeSec,
-                    engineHoursFormatted,
-                    fuelConsumed: fuel,
-                    startDate: "2026-07-01",
-                    odometerStart: odoStart,
-                    odometerEnd: odoEnd,
-                    averageSpeed: avgSpd,
-                    tripCount: 5 + (numSeed % 30)
-                };
-            });
-
-            const totDist = Number(mockRows.reduce((sum, r) => sum + r.distance, 0).toFixed(2));
-            const totFuel = Number(mockRows.reduce((sum, r) => sum + r.fuelConsumed, 0).toFixed(1));
-            const totRuntimeSec = mockRows.reduce((sum, r) => sum + r.engineHoursSeconds, 0);
-            const totAvgSpd = Number((totDist / (totRuntimeSec / 3600 || 1)).toFixed(2));
-            const totHrs = Math.floor(totRuntimeSec / 3600);
-            const totDays = Math.floor(totHrs / 24);
-            const totRemHrs = totHrs % 24;
-
-            setReportRows(mockRows);
-            setReportTotals({
-                totalDevices: mockRows.length,
-                totalDistance: totDist,
-                totalFuel: totFuel,
-                averageSpeed: totAvgSpd,
-                totalEngineHoursSeconds: totRuntimeSec,
-                totalEngineHoursFormatted: totDays > 0 ? `${totDays} d ${totRemHrs} h` : `${totHrs} h`
-            });
+            setReportRows([]);
+            setReportTotals(null);
         } finally {
             setLoading(false);
         }
