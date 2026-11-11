@@ -21,6 +21,7 @@ export interface GpsVehicle {
     status: string;
     deviceGroupId: string;
     deviceGroup: string;
+    account?: string;
 }
 
 export interface GpsLocation {
@@ -242,6 +243,7 @@ export interface FleetSummaryRow {
     device: string;
     deviceName?: string;
     displayName?: string;
+    account?: string;
     mcType?: string;
     group: string;
     vehicleNumber?: string;
@@ -289,6 +291,7 @@ export const getFleetSummaryReport = async (
     params: {
         imeis?: string;
         group?: string;
+        subAccount?: string;
         startTime?: string;
         endTime?: string;
         reportType?: string;

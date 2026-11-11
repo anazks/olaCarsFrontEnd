@@ -198,13 +198,14 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
         }
     };
 
-    // Extract unique groups from vehicles list
+    // Extract unique groups and sub-accounts from vehicles list
     const availableGroups = useMemo(() => {
         const set = new Set<string>();
         vehicles.forEach(v => {
-            if (v.deviceGroup) set.add(v.deviceGroup);
+            if (v.account) set.add(v.account);
+            if (v.deviceGroup && v.deviceGroup !== 'Default group') set.add(v.deviceGroup);
         });
-        return Array.from(set);
+        return Array.from(set).sort();
     }, [vehicles]);
 
     // Filter vehicles in multi-select dropdown by search query
@@ -214,9 +215,21 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
         return vehicles.filter(v =>
             (v.deviceName && v.deviceName.toLowerCase().includes(q)) ||
             (v.vehicleName && v.vehicleName.toLowerCase().includes(q)) ||
+            (v.account && v.account.toLowerCase().includes(q)) ||
             v.imei.toLowerCase().includes(q)
         );
     }, [vehicles, deviceSearchQuery]);
+
+    // Group filtered dropdown vehicles by sub-account
+    const groupedDropdownVehicles = useMemo(() => {
+        const map = new Map<string, GpsVehicle[]>();
+        filteredDropdownVehicles.forEach(v => {
+            const acc = v.account || 'ARRENDADORA_OLA_CARS (Main)';
+            if (!map.has(acc)) map.set(acc, []);
+            map.get(acc)!.push(v);
+        });
+        return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    }, [filteredDropdownVehicles]);
 
     // Fetch Report Data from API
     const fetchReport = async () => {
@@ -557,7 +570,7 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
                 <div className="p-4 md:p-5 border-b border-[var(--border-main)] bg-[var(--bg-main)]/50 space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
 
-                        {/* 1. Devices Multi-Select */}
+                        {/* 1. Devices Multi-Select with Sub-Account Groups */}
                         <div className="relative">
                             <label className="block text-[10px] font-black uppercase text-[var(--text-dim)] mb-1">
                                 Devices
@@ -577,52 +590,91 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
 
                             {/* Dropdown Menu */}
                             {isDeviceDropdownOpen && (
-                                <div className="absolute top-full left-0 mt-1 w-64 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl shadow-2xl z-50 p-2 space-y-2">
+                                <div className="absolute top-full left-0 mt-1 w-80 bg-[var(--bg-card)] border border-[var(--border-main)] rounded-xl shadow-2xl z-50 p-2.5 space-y-2">
                                     <div className="relative">
                                         <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-dim)]" />
                                         <input
                                             type="text"
-                                            placeholder="Search device or IMEI..."
+                                            placeholder="Search device, IMEI, or sub-account..."
                                             value={deviceSearchQuery}
                                             onChange={(e) => setDeviceSearchQuery(e.target.value)}
                                             className="w-full pl-8 pr-3 py-1.5 text-xs bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg outline-none focus:border-lime-500"
                                         />
                                     </div>
-                                    <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
-                                        <label className="flex items-center gap-2 px-2 py-1 hover:bg-[var(--sidebar-hover)] rounded cursor-pointer text-xs font-bold text-lime-400">
+                                    <div className="max-h-64 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                                        <label className="flex items-center gap-2 px-2 py-1.5 hover:bg-[var(--sidebar-hover)] rounded-lg cursor-pointer text-xs font-bold text-lime-400">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedImeis.length === 0}
                                                 onChange={() => setSelectedImeis([])}
                                                 className="accent-lime-500 rounded"
                                             />
-                                            Select All Devices
+                                            Select All Fleet Devices ({vehicles.length})
                                         </label>
                                         <div className="border-t border-[var(--border-main)] my-1" />
-                                        {filteredDropdownVehicles.map(v => {
-                                            const isSelected = selectedImeis.includes(v.imei);
+
+                                        {groupedDropdownVehicles.map(([accName, accVehicles]) => {
+                                            const accImeis = accVehicles.map(v => v.imei);
+                                            const isAllAccSelected = accVehicles.length > 0 && accVehicles.every(v => selectedImeis.includes(v.imei));
+
                                             return (
-                                                <label key={v.imei} className="flex items-center gap-2 px-2 py-1 hover:bg-[var(--sidebar-hover)] rounded cursor-pointer text-xs">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isSelected}
-                                                        onChange={() => {
-                                                            if (isSelected) {
-                                                                setSelectedImeis(prev => prev.filter(id => id !== v.imei));
-                                                            } else {
-                                                                setSelectedImeis(prev => [...prev, v.imei]);
-                                                            }
-                                                        }}
-                                                        className="accent-lime-500 rounded"
-                                                    />
-                                                    <span className="truncate">{v.deviceName || v.vehicleName || v.imei}</span>
-                                                </label>
+                                                <div key={accName} className="rounded-lg border border-[var(--border-main)] bg-[var(--bg-input)]/40 p-1.5 space-y-1">
+                                                    <div className="flex items-center justify-between px-1.5 py-0.5">
+                                                        <span className="text-[11px] font-bold text-lime-400 truncate max-w-[180px]" title={accName}>
+                                                            {accName} ({accVehicles.length})
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (isAllAccSelected) {
+                                                                    setSelectedImeis(prev => prev.filter(id => !accImeis.includes(id)));
+                                                                } else {
+                                                                    setSelectedImeis(prev => Array.from(new Set([...prev, ...accImeis])));
+                                                                }
+                                                            }}
+                                                            className="text-[10px] text-lime-400 font-semibold hover:underline flex-shrink-0"
+                                                        >
+                                                            {isAllAccSelected ? 'Deselect' : 'Select All'}
+                                                        </button>
+                                                    </div>
+                                                    <div className="space-y-0.5 pt-0.5">
+                                                        {accVehicles.map(v => {
+                                                            const isSelected = selectedImeis.includes(v.imei);
+                                                            return (
+                                                                <label
+                                                                    key={v.imei}
+                                                                    className="flex items-center justify-between px-1.5 py-1 hover:bg-[var(--sidebar-hover)] rounded cursor-pointer text-xs"
+                                                                >
+                                                                    <div className="flex items-center gap-2 truncate">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={isSelected}
+                                                                            onChange={() => {
+                                                                                if (isSelected) {
+                                                                                    setSelectedImeis(prev => prev.filter(id => id !== v.imei));
+                                                                                } else {
+                                                                                    setSelectedImeis(prev => [...prev, v.imei]);
+                                                                                }
+                                                                            }}
+                                                                            className="accent-lime-500 rounded flex-shrink-0"
+                                                                        />
+                                                                        <span className="truncate">{v.deviceName || v.vehicleName || v.imei}</span>
+                                                                    </div>
+                                                                    <span className="text-[10px] text-[var(--text-dim)] font-mono ml-1 flex-shrink-0">
+                                                                        {v.imei.slice(-5)}
+                                                                    </span>
+                                                                </label>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
                                             );
                                         })}
                                     </div>
                                     <button
                                         onClick={() => setIsDeviceDropdownOpen(false)}
-                                        className="w-full py-1 text-[10px] font-bold uppercase bg-lime-500 text-black rounded hover:opacity-90"
+                                        className="w-full py-1.5 text-xs font-bold uppercase bg-lime-500 text-black rounded-lg hover:opacity-90 transition-opacity"
                                     >
                                         Done
                                     </button>
@@ -633,14 +685,14 @@ export const FleetSummaryReportModal: React.FC<FleetSummaryReportModalProps> = (
                         {/* 2. Groups Filter */}
                         <div>
                             <label className="block text-[10px] font-black uppercase text-[var(--text-dim)] mb-1">
-                                Groups
+                                Sub-Account / Group
                             </label>
                             <select
                                 value={selectedGroup}
                                 onChange={(e) => setSelectedGroup(e.target.value)}
                                 className="w-full px-3 py-2 text-xs rounded-xl border border-[var(--border-main)] bg-[var(--bg-input)] font-semibold outline-none focus:border-lime-500"
                             >
-                                <option value="ALL">All Groups</option>
+                                <option value="ALL">All Sub-Accounts</option>
                                 {availableGroups.map(g => (
                                     <option key={g} value={g}>{g}</option>
                                 ))}
