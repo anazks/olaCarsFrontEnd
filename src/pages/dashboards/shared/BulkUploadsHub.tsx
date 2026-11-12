@@ -19,8 +19,9 @@ import BulkBillUpload from './BulkBillUpload';
 import BulkVendorPaymentUpload from './BulkVendorPaymentUpload';
 import BulkExpenseUpload from './BulkExpenseUpload';
 import BulkRentUpdateUpload from './BulkRentUpdateUpload';
+import BulkDebitNoteUpload from './BulkDebitNoteUpload';
 
-type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'purchase-order' | 'bill' | 'vendor-payment' | 'expense' | 'ledger' | 'vehicle-rent' | null;
+type ModalType = 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'debit-note' | 'purchase-order' | 'bill' | 'vendor-payment' | 'expense' | 'ledger' | 'vehicle-rent' | null;
 
 const BulkUploadsHub = () => {
     const navigate = useNavigate();
@@ -33,7 +34,7 @@ const BulkUploadsHub = () => {
     const hasMigrationAccess = allRoles.includes(userRole);
     const hasJournalAccess = allRoles.includes(userRole);
 
-    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'ledger' | 'purchase-order' | 'bill' | 'vendor-payment' | 'expense' | 'vehicle-rent', format: 'csv' | 'xlsx' = 'xlsx') => {
+    const handleDownloadTemplate = (type: 'driver' | 'migration' | 'journal' | 'invoice' | 'supplier' | 'customer' | 'inventory' | 'payment' | 'credit-note' | 'debit-note' | 'ledger' | 'purchase-order' | 'bill' | 'vendor-payment' | 'expense' | 'vehicle-rent', format: 'csv' | 'xlsx' = 'xlsx') => {
         // Direct download helper or prompt depending on complexity
         let fileName = '';
         let headers: string[] = [];
@@ -215,6 +216,25 @@ const BulkUploadsHub = () => {
                     '150.00', 'INV-000101, INV-000102', 'Panama Branch', '', '', '', 'ITBMS 7%', '7', 'Taxable', '', '',
                     '150.00', '0.00', '', 'Vehicle Downtime Adjustment', '', '', '150.00', '', '', '', '', '', '', '', '', '',
                     '', '', '', 'Alice Vance', 'CUFE-12345-OLA', 'PROT-OLA-99', '2026-06-02'
+                ]
+            ];
+        } else if (type === 'debit-note') {
+            fileName = format === 'xlsx' ? 'debit_notes_bulk_template.xlsx' : 'debit_notes_bulk_template.csv';
+            headers = [
+                'Debit Note Date', 'Debit Note Number', 'Customer Name', 'Customer ID', 'Customer Number',
+                'Vendor Name', 'Vendor Number', 'Total', 'Reason', 'Notes', 'Applied Invoice Number',
+                'Tax ID', 'Item Tax', 'Item Tax %', 'Item Tax Amount', 'Status', 'Is Deposit'
+            ];
+            rows = [
+                [
+                    '2026-07-25', 'DN-000101', 'John Smith', 'CU-10001', '+254700000001',
+                    '', '', '150.00', 'Late Return Charge', 'Additional day rental debit fee', '',
+                    'TAX16', 'VAT 16%', '16', '24.00', 'PENDING', 'FALSE'
+                ],
+                [
+                    '2026-07-25', 'DP-000102', 'Maria Garcia', 'CU-10002', '+254711223344',
+                    '', '', '75.50', 'Damage / Repair Charge', 'Interior detailing and scratch repair surcharge', '',
+                    '', '', '0', '0.00', 'PENDING', 'TRUE'
                 ]
             ];
         } else if (type === 'purchase-order') {
@@ -921,6 +941,62 @@ const BulkUploadsHub = () => {
                     </div>
                 </div>
 
+                {/* CARD 9B: DEBIT NOTES */}
+                <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
+                     style={{ 
+                          background: 'var(--bg-card)', 
+                          borderColor: 'var(--border-main)' 
+                      }}>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:rotate-6" 
+                                 style={{ backgroundColor: 'rgba(200, 230, 0, 0.1)' }}>
+                                <FileText size={20} className="text-lime-500" style={{ color: 'var(--brand-lime)' }} />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">
+                                Authorized
+                            </span>
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-base font-bold text-main">Debit Note Bulk Upload</h3>
+                            <p className="text-xs text-dim leading-relaxed">
+                                Upload bulk Debit Notes and debit adjustments for Customers, Drivers & Vendors. Supports penalty charges, late fees, deposit debits, and invoice linkages.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 text-[9px] font-black uppercase tracking-widest text-dim pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.csv</span>
+                            <span className="px-1.5 py-0.5 rounded bg-input border" style={{ borderColor: 'var(--border-main)' }}>.xlsx</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-2 mt-5 pt-3 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-dim">Templates:</span>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => handleDownloadTemplate('debit-note', 'xlsx')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer"
+                                >
+                                    Excel
+                                </button>
+                                <span className="text-dim/30">|</span>
+                                <button 
+                                    onClick={() => handleDownloadTemplate('debit-note', 'csv')}
+                                    className="text-[11px] font-bold text-dim hover:text-main transition-colors bg-transparent border-none cursor-pointer"
+                                >
+                                    CSV
+                                </button>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setActiveModal('debit-note')}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none hover:scale-[1.02] active:scale-95 shadow-sm cursor-pointer"
+                            style={{ backgroundColor: 'var(--brand-lime)', color: 'var(--brand-black)' }}
+                        >
+                            Launch Importer <ArrowRight size={14} />
+                        </button>
+                    </div>
+                </div>
+
                 {/* CARD 10: PURCHASE ORDERS */}
                 <div className="group relative rounded-2xl p-4 border shadow-md flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-lg"
                      style={{ 
@@ -1235,6 +1311,12 @@ const BulkUploadsHub = () => {
 
             <BulkCreditNoteUpload
                 isOpen={activeModal === 'credit-note'}
+                onClose={() => setActiveModal(null)}
+                onSuccess={() => setActiveModal(null)}
+            />
+
+            <BulkDebitNoteUpload
+                isOpen={activeModal === 'debit-note'}
                 onClose={() => setActiveModal(null)}
                 onSuccess={() => setActiveModal(null)}
             />

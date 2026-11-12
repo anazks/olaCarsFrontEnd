@@ -5,7 +5,8 @@ import {
     AlertCircle, X, ArrowLeft, 
     Edit3, FileCheck, Undo2, 
     RefreshCw, CheckCircle2, User, Link, Download,
-    FileText, ExternalLink, Eye, Image as ImageIcon
+    FileText, ExternalLink, Eye, Image as ImageIcon,
+    Building2, Receipt
 } from 'lucide-react';
 import { 
     getDebitNoteById, 
@@ -13,7 +14,8 @@ import {
     updateDebitNote, 
     applyDebitNote 
 } from '../../../../services/debitNoteService';
-import { getInvoicesByCustomer } from '../../../../services/invoiceService';
+import { getInvoicesByCustomer, getInvoicesByDriver } from '../../../../services/invoiceService';
+import { getAllBills } from '../../../../services/billService';
 import toast from 'react-hot-toast';
 import Breadcrumbs from '../../../../components/dashboard/shared/Breadcrumbs';
 import jsPDF from 'jspdf';
@@ -48,8 +50,10 @@ const DebitNoteDetail = () => {
     // Apply Modal
     const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
     const [applyInvoiceId, setApplyInvoiceId] = useState<string>('');
+    const [applyBillId, setApplyBillId] = useState<string>('');
     const [applyInvoices, setApplyInvoices] = useState<any[]>([]);
-    const [loadingApplyInvoices, setLoadingApplyInvoices] = useState(false);
+    const [applyBills, setApplyBills] = useState<any[]>([]);
+    const [loadingApplyTargets, setLoadingApplyTargets] = useState(false);
     const [submittingApply, setSubmittingApply] = useState(false);
 
     // Edit Modal
@@ -57,6 +61,10 @@ const DebitNoteDetail = () => {
     const [editReason, setEditReason] = useState('');
     const [editNotes, setEditNotes] = useState('');
     const [submittingEdit, setSubmittingEdit] = useState(false);
+
+    const isVendor = Boolean(note?.supplierId && !note?.customerId);
+    const isCustomer = Boolean(note?.customerId);
+    const isDriverOnly = Boolean(note?.driverId && !note?.customerId && !note?.supplierId);
 
     const fetchNote = useCallback(async () => {
         if (!id) return;
@@ -82,36 +90,60 @@ const DebitNoteDetail = () => {
 
     // Open Apply Modal
     const openApplyModal = async () => {
-        if (!note?.customerId) {
-            toast.error("Debit Note has no associated customer.");
+        if (!note?.customerId && !note?.driverId && !note?.supplierId) {
+            toast.error("Debit Note has no associated customer, vendor, or driver.");
             return;
         }
         setIsApplyModalOpen(true);
-        setLoadingApplyInvoices(true);
+        setLoadingApplyTargets(true);
+        setApplyInvoiceId('');
+        setApplyBillId('');
         try {
-            const custId = note.customerId._id || note.customerId;
-            const res = await getInvoicesByCustomer(custId);
-            setApplyInvoices(Array.isArray(res) ? res : ((res as any)?.data || []));
+            if (isVendor) {
+                const supplierId = note.supplierId._id || note.supplierId;
+                const res = await getAllBills({ supplier: supplierId });
+                const bills = Array.isArray(res?.data) ? res.data : [];
+                const openBills = bills.filter((b: any) => b.status !== 'PAID' && b.status !== 'VOID');
+                setApplyBills(openBills);
+            } else if (isCustomer) {
+                const custId = note.customerId._id || note.customerId;
+                const res = await getInvoicesByCustomer(custId);
+                setApplyInvoices(Array.isArray(res) ? res : ((res as any)?.data || []));
+            } else if (isDriverOnly) {
+                const drvId = note.driverId._id || note.driverId;
+                const res = await getInvoicesByDriver(drvId);
+                setApplyInvoices(Array.isArray(res) ? res : ((res as any)?.data || []));
+            }
         } catch (err) {
-            console.error("Failed fetching customer invoices:", err);
-            toast.error("Failed to load customer invoices.");
+            console.error("Failed fetching apply targets:", err);
+            toast.error(isVendor ? "Failed to load supplier bills." : "Failed to load invoices.");
         } finally {
-            setLoadingApplyInvoices(false);
+            setLoadingApplyTargets(false);
         }
     };
 
     const handleApplyDebitNote = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!id || !applyInvoiceId) {
-            toast.error("Please select a target invoice.");
-            return;
+        if (!id) return;
+        if (isVendor) {
+            if (!applyBillId) {
+                toast.error("Please select a target supplier bill.");
+                return;
+            }
+        } else {
+            if (!applyInvoiceId) {
+                toast.error("Please select a target invoice.");
+                return;
+            }
         }
+
         setSubmittingApply(true);
-        const toastId = toast.loading("Applying Debit Note to invoice...");
+        const toastId = toast.loading(isVendor ? "Applying Debit Note to supplier bill..." : "Applying Debit Note to invoice...");
         try {
-            const res = await applyDebitNote(id, applyInvoiceId);
+            const payload = isVendor ? { billId: applyBillId } : { invoiceId: applyInvoiceId };
+            const res = await applyDebitNote(id, payload);
             if (res.success) {
-                toast.success("Debit Note successfully applied to invoice balance!", { id: toastId });
+                toast.success(isVendor ? "Debit Note successfully applied to supplier bill!" : "Debit Note successfully applied to invoice balance!", { id: toastId });
                 setIsApplyModalOpen(false);
                 fetchNote();
             }
@@ -175,12 +207,29 @@ const DebitNoteDetail = () => {
         doc.text(`Date: ${note.debitNoteDate ? formatDate(note.debitNoteDate) : 'N/A'}`, 14, 28);
         doc.text(`Status: ${note.status}`, 14, 34);
 
-        doc.setFontSize(12);
-        doc.text("Customer Information:", 14, 46);
-        doc.setFontSize(10);
-        doc.text(`Name: ${note.customerId?.name || 'N/A'}`, 14, 52);
-        doc.text(`Email: ${note.customerId?.email || 'N/A'}`, 14, 58);
-        doc.text(`Phone: ${note.customerId?.phone || 'N/A'}`, 14, 64);
+        if (note.supplierId) {
+            doc.setFontSize(12);
+            doc.text("Vendor / Supplier Information:", 14, 46);
+            doc.setFontSize(10);
+            doc.text(`Name: ${note.supplierId?.name || note.supplierId?.companyName || 'N/A'}`, 14, 52);
+            doc.text(`Code: ${note.supplierId?.supplierCode || 'N/A'}`, 14, 58);
+            doc.text(`Email: ${note.supplierId?.email || 'N/A'} | Phone: ${note.supplierId?.phone || 'N/A'}`, 14, 64);
+        } else if (note.customerId) {
+            doc.setFontSize(12);
+            doc.text("Customer Information:", 14, 46);
+            doc.setFontSize(10);
+            doc.text(`Name: ${note.customerId?.name || 'N/A'}`, 14, 52);
+            doc.text(`Email: ${note.customerId?.email || 'N/A'}`, 14, 58);
+            doc.text(`Phone: ${note.customerId?.phone || 'N/A'}`, 14, 64);
+        } else if (note.driverId) {
+            const driverName = note.driverId?.personalInfo?.name || note.driverId?.personalInfo?.fullName || 'Driver';
+            doc.setFontSize(12);
+            doc.text("Driver Information:", 14, 46);
+            doc.setFontSize(10);
+            doc.text(`Name: ${driverName}`, 14, 52);
+            doc.text(`ID: ${note.driverId?.driverId || 'N/A'}`, 14, 58);
+            doc.text(`Phone: ${note.driverId?.personalInfo?.phone || 'N/A'}`, 14, 64);
+        }
 
         autoTable(doc, {
             startY: 74,
@@ -259,7 +308,8 @@ const DebitNoteDetail = () => {
                                 <Edit3 size={14} /> Edit
                             </button>
                             <button onClick={openApplyModal} className="flex items-center gap-2 px-5 py-2 bg-brand-lime text-black rounded-xl text-xs font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer" style={{ background: 'var(--brand-lime)' }}>
-                                <FileCheck size={14} /> Apply to Invoice
+                                {isVendor ? <Receipt size={14} /> : <FileCheck size={14} />} 
+                                {isVendor ? 'Apply to Bill' : 'Apply to Invoice'}
                             </button>
                         </>
                     )}
@@ -305,10 +355,29 @@ const DebitNoteDetail = () => {
                         </div>
                     )}
 
-                    {/* Linked Invoice Info */}
+                    {/* Linked Invoice / Bill Info */}
                     <div className="space-y-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
-                        <h4 className="text-xs font-black uppercase tracking-wider text-dim">Linked Invoice Status</h4>
-                        {note.invoiceId ? (
+                        <h4 className="text-xs font-black uppercase tracking-wider text-dim">
+                            {note.billId ? 'Linked Supplier Bill Status' : 'Linked Invoice Status'}
+                        </h4>
+                        {note.billId ? (
+                            <div className="flex items-center justify-between p-4 rounded-2xl border" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
+                                <div className="flex items-center gap-3">
+                                    <Receipt size={18} className="text-amber-400" />
+                                    <div>
+                                        <p className="text-xs font-black text-amber-400">
+                                            {note.billId.billNumber}
+                                        </p>
+                                        <p className="text-[10px] text-dim font-bold">
+                                            Total Amount: ${note.billId.totalAmount} | Balance Due: ${note.billId.balanceDue ?? (note.billId.totalAmount - (note.billId.amountPaid || 0))}
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                    {note.billId.status}
+                                </span>
+                            </div>
+                        ) : note.invoiceId ? (
                             <div className="flex items-center justify-between p-4 rounded-2xl border" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}>
                                 <div className="flex items-center gap-3">
                                     <Link size={18} className="text-blue-400" />
@@ -324,16 +393,37 @@ const DebitNoteDetail = () => {
                                 </span>
                             </div>
                         ) : (
-                            <p className="text-xs text-dim italic">This Debit Note is currently standalone and not applied to any specific invoice.</p>
+                            <p className="text-xs text-dim italic">This Debit Note is currently standalone and not applied to any specific invoice or bill.</p>
                         )}
                     </div>
                 </div>
 
-                {/* Customer Details Side Card */}
+                {/* Target Details Side Card */}
                 <div className="p-6 rounded-3xl border shadow-sm space-y-5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                    <h3 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Customer Account</h3>
+                    <h3 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>
+                        {note.supplierId ? 'Vendor / Supplier' : note.customerId ? 'Customer Account' : 'Driver Account'}
+                    </h3>
 
-                    {note.customerId ? (
+                    {note.supplierId ? (
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-amber-500/10 border border-amber-500/20">
+                                    <Building2 size={20} className="text-amber-400" />
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-black" style={{ color: 'var(--text-main)' }}>{note.supplierId.name || note.supplierId.companyName}</h4>
+                                    <p className="text-[10px] font-bold text-dim">{note.supplierId.supplierCode ? `CODE: ${note.supplierId.supplierCode}` : (note.supplierId.category || 'Vendor')}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 text-xs font-semibold pt-3 border-t" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                {note.supplierId.companyName && <p><span className="text-[10px] font-black uppercase text-dim">Company:</span> {note.supplierId.companyName}</p>}
+                                <p><span className="text-[10px] font-black uppercase text-dim">Email:</span> {note.supplierId.email || 'N/A'}</p>
+                                <p><span className="text-[10px] font-black uppercase text-dim">Phone:</span> {note.supplierId.phone || 'N/A'}</p>
+                                {note.supplierId.category && <p><span className="text-[10px] font-black uppercase text-dim">Category:</span> {note.supplierId.category}</p>}
+                            </div>
+                        </div>
+                    ) : note.customerId ? (
                         <div className="space-y-4">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(212,241,46,0.1)', border: '1px solid rgba(212,241,46,0.2)' }}>
@@ -351,8 +441,27 @@ const DebitNoteDetail = () => {
                                 <p><span className="text-[10px] font-black uppercase text-dim">Branch:</span> {note.customerId.branch || 'N/A'}</p>
                             </div>
                         </div>
+                    ) : note.driverId ? (
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-cyan-500/10 border border-cyan-500/20">
+                                    <User size={20} className="text-cyan-400" />
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-black" style={{ color: 'var(--text-main)' }}>
+                                        {note.driverId.personalInfo?.name || note.driverId.personalInfo?.fullName || 'Driver'}
+                                    </h4>
+                                    <p className="text-[10px] font-bold text-dim">{note.driverId.driverId || 'ID: —'}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 text-xs font-semibold pt-3 border-t" style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}>
+                                <p><span className="text-[10px] font-black uppercase text-dim">Phone:</span> {note.driverId.personalInfo?.phone || 'N/A'}</p>
+                                <p><span className="text-[10px] font-black uppercase text-dim">Branch:</span> {note.driverId.branch?.name || note.driverId.branch || 'N/A'}</p>
+                            </div>
+                        </div>
                     ) : (
-                        <p className="text-xs text-dim italic">No customer linked.</p>
+                        <p className="text-xs text-dim italic">No customer, vendor, or driver linked.</p>
                     )}
                 </div>
             </div>
@@ -487,8 +596,12 @@ const DebitNoteDetail = () => {
                     <div className="relative w-full max-w-lg flex flex-col rounded-[2rem] shadow-2xl border animate-in fade-in duration-300" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
                         <div className="flex items-center justify-between px-8 py-5 border-b" style={{ borderColor: 'var(--border-main)' }}>
                             <div>
-                                <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>Apply Debit Note</h2>
-                                <p className="text-[10px] font-semibold mt-0.5 text-dim">Increase invoice total balance by ${note.amount}</p>
+                                <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: 'var(--text-main)' }}>
+                                    {isVendor ? 'Apply Debit Note to Supplier Bill' : 'Apply Debit Note to Invoice'}
+                                </h2>
+                                <p className="text-[10px] font-semibold mt-0.5 text-dim">
+                                    {isVendor ? `Apply $${note.amount} against supplier bill balance` : `Increase invoice total balance by $${note.amount}`}
+                                </p>
                             </div>
                             <button onClick={() => setIsApplyModalOpen(false)} className="p-2 rounded-xl border hover:bg-white/10 text-dim" style={{ borderColor: 'var(--border-main)' }}>
                                 <X size={16} />
@@ -496,30 +609,66 @@ const DebitNoteDetail = () => {
                         </div>
 
                         <form onSubmit={handleApplyDebitNote} className="p-8 space-y-5">
-                            <div>
-                                <label className="block text-[10px] font-black uppercase tracking-wider mb-1.5 text-dim">Select Target Invoice *</label>
-                                {loadingApplyInvoices ? (
-                                    <p className="text-xs text-brand-lime font-bold">Loading customer invoices...</p>
-                                ) : (
-                                    <select
-                                        required
-                                        value={applyInvoiceId}
-                                        onChange={(e) => setApplyInvoiceId(e.target.value)}
-                                        className="w-full px-3.5 py-2.5 border rounded-xl text-xs font-semibold outline-none cursor-pointer"
-                                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                                    >
-                                        <option value="">-- Choose Invoice --</option>
-                                        {applyInvoices.map(inv => (
-                                            <option key={inv._id} value={inv._id}>
-                                                {inv.invoiceNumber} — Current Balance: ${inv.balance} (Due: ${inv.totalAmountDue})
-                                            </option>
-                                        ))}
-                                    </select>
-                                )}
-                            </div>
+                            {isVendor ? (
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase tracking-wider mb-1.5 text-dim">Select Target Supplier Bill *</label>
+                                    {loadingApplyTargets ? (
+                                        <p className="text-xs text-brand-lime font-bold">Loading supplier bills...</p>
+                                    ) : applyBills.length === 0 ? (
+                                        <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs font-semibold text-amber-300">
+                                            No open or unpaid bills found for this vendor ({note.supplierId?.name || note.supplierId?.companyName || 'Vendor'}).
+                                        </div>
+                                    ) : (
+                                        <select
+                                            required
+                                            value={applyBillId}
+                                            onChange={(e) => setApplyBillId(e.target.value)}
+                                            className="w-full px-3.5 py-2.5 border rounded-xl text-xs font-semibold outline-none cursor-pointer"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        >
+                                            <option value="">-- Choose Supplier Bill --</option>
+                                            {applyBills.map(bill => (
+                                                <option key={bill._id} value={bill._id}>
+                                                    {bill.billNumber} — Balance Due: ${bill.balanceDue ?? (bill.totalAmount - (bill.amountPaid || 0))} (Total: ${bill.totalAmount})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase tracking-wider mb-1.5 text-dim">Select Target Invoice *</label>
+                                    {loadingApplyTargets ? (
+                                        <p className="text-xs text-brand-lime font-bold">Loading target invoices...</p>
+                                    ) : applyInvoices.length === 0 ? (
+                                        <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs font-semibold text-amber-300">
+                                            No active invoices found for this {note.customerId ? 'customer' : 'driver'}.
+                                        </div>
+                                    ) : (
+                                        <select
+                                            required
+                                            value={applyInvoiceId}
+                                            onChange={(e) => setApplyInvoiceId(e.target.value)}
+                                            className="w-full px-3.5 py-2.5 border rounded-xl text-xs font-semibold outline-none cursor-pointer"
+                                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                                        >
+                                            <option value="">-- Choose Invoice --</option>
+                                            {applyInvoices.map(inv => (
+                                                <option key={inv._id} value={inv._id}>
+                                                    {inv.invoiceNumber} — Current Balance: ${inv.balance} (Due: ${inv.totalAmountDue})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="p-4 rounded-2xl border bg-amber-500/10 border-amber-500/20 text-xs font-semibold text-amber-300">
-                                Note: Applying this Debit Note will add <strong>${note.amount}</strong> to the invoice's total amount due and remaining balance.
+                                {isVendor ? (
+                                    <>Note: Applying this Debit Note will deduct <strong>${note.amount}</strong> from the supplier bill's remaining balance due (crediting payment from vendor).</>
+                                ) : (
+                                    <>Note: Applying this Debit Note will add <strong>${note.amount}</strong> to the invoice's total amount due and remaining balance.</>
+                                )}
                             </div>
 
                             <div className="flex items-center justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--border-main)' }}>
@@ -528,12 +677,12 @@ const DebitNoteDetail = () => {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={submittingApply || !applyInvoiceId}
+                                    disabled={submittingApply || (isVendor ? (!applyBillId || applyBills.length === 0) : (!applyInvoiceId || applyInvoices.length === 0))}
                                     className="flex items-center gap-2 px-6 py-2.5 bg-brand-lime text-black rounded-xl text-xs font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-lg cursor-pointer disabled:opacity-50"
                                     style={{ background: 'var(--brand-lime)' }}
                                 >
-                                    {submittingApply ? <RefreshCw size={14} className="animate-spin" /> : <FileCheck size={14} />}
-                                    <span>{submittingApply ? 'Applying...' : 'Apply Debit Note'}</span>
+                                    {submittingApply ? <RefreshCw size={14} className="animate-spin" /> : isVendor ? <Receipt size={14} /> : <FileCheck size={14} />}
+                                    <span>{submittingApply ? 'Applying...' : isVendor ? 'Apply to Bill' : 'Apply Debit Note'}</span>
                                 </button>
                             </div>
                         </form>

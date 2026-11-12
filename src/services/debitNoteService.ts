@@ -101,8 +101,9 @@ export const updateDebitNote = async (id: string, payload: any) => {
     return res.data;
 };
 
-export const applyDebitNote = async (id: string, invoiceId: string) => {
-    const res = await api.put(`/api/debit-notes/${id}/apply`, { invoiceId });
+export const applyDebitNote = async (id: string, payload: string | { invoiceId?: string; billId?: string }) => {
+    const body = typeof payload === 'string' ? { invoiceId: payload } : payload;
+    const res = await api.put(`/api/debit-notes/${id}/apply`, body);
     return res.data;
 };
 
