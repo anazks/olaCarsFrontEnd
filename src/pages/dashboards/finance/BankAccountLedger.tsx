@@ -799,6 +799,10 @@ const BankAccountLedger = () => {
             const res = await getBankAccountById(id);
             const accountData = res.data || res;
             setAccount(accountData);
+            const accountBranch = (accountData as any).branch?._id || (accountData as any).branch || (accountData as any).branchId;
+            if (accountBranch) {
+                setSelectedBranchId(String(accountBranch));
+            }
 
             // 2. Fetch the transactions for this bank account
             const filters = {
@@ -1035,6 +1039,11 @@ const BankAccountLedger = () => {
             return;
         }
 
+        if (!selectedBranchId) {
+            toast.error('Please select a target branch');
+            return;
+        }
+
         setRecording(true);
         try {
             const formData = new FormData();
@@ -1043,6 +1052,9 @@ const BankAccountLedger = () => {
             formData.append('paymentMode', paymentMode);
             formData.append('currency', paymentCurrency);
             formData.append('entryType', paymentType);
+            if (selectedBranchId) {
+                formData.append('branchId', selectedBranchId);
+            }
             if (fromAccountId) {
                 formData.append('toAccountId', fromAccountId);
                 formData.append('fromAccountId', fromAccountId);
@@ -3522,6 +3534,28 @@ const BankAccountLedger = () => {
                                         Payment (Money Out)
                                     </button>
                                 </div>
+                            </div>
+
+                            {/* Target Branch Selector */}
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase tracking-widest flex items-center justify-between" style={{ color: 'var(--text-dim)' }}>
+                                    <span>Target Branch *</span>
+                                    {branches.length === 0 && <span className="text-amber-500 lowercase text-[9px]">(loading branches...)</span>}
+                                </label>
+                                <select
+                                    value={selectedBranchId}
+                                    onChange={e => setSelectedBranchId(e.target.value)}
+                                    className="w-full border rounded-2xl px-4 py-3 text-sm font-bold bg-transparent outline-none cursor-pointer"
+                                    style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                    required
+                                >
+                                    <option value="" disabled style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Select Branch</option>
+                                    {branches.map(b => (
+                                        <option key={b._id} value={b._id} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+                                            {b.name} ({b.country || b.city || 'N/A'})
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
                             {/* Active Bank Account Display */}

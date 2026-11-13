@@ -239,6 +239,11 @@ export const updateTransactionDescription = async (transactionId: string, data: 
     return response.data;
 };
 
+export const updateTransactionBranch = async (transactionId: string, data: { branchId: string }) => {
+    const response = await api.put(`/api/bank-accounts/transactions/${transactionId}/branch`, data);
+    return response.data;
+};
+
 export const downloadBankAccountLedgerPdf = async (id: string, params?: any) => {
     const response = await api.get(`/api/bank-accounts/${id}/ledger/pdf`, {
         params,

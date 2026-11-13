@@ -28,7 +28,8 @@ import {
     Pencil
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getBankTransactionById, updateLinkedAccountingCode } from '../../../services/bankAccountService';
+import { getBankTransactionById, updateLinkedAccountingCode, updateTransactionBranch } from '../../../services/bankAccountService';
+import { getAllBranches } from '../../../services/branchService';
 import { getAllAccountingCodes } from '../../../services/accountingService';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
 import { TransactionEditModal } from './modals/TransactionEditModal';
@@ -738,6 +739,51 @@ const BankTransactionDetailPage = () => {
     const [isLedgerDetailOpen, setIsLedgerDetailOpen] = useState(false);
     const [selectedLedgerEntry, setSelectedLedgerEntry] = useState<any>(null);
 
+    // Branch edit states
+    const [isBranchEditOpen, setIsBranchEditOpen] = useState(false);
+    const [branchesList, setBranchesList] = useState<any[]>([]);
+    const [selectedBranchId, setSelectedBranchId] = useState<string>('');
+    const [savingBranch, setSavingBranch] = useState(false);
+
+    useEffect(() => {
+        const fetchBranches = async () => {
+            try {
+                const res = await getAllBranches({ limit: 100 });
+                const list = (res as any)?.data || res || [];
+                setBranchesList(Array.isArray(list) ? list : []);
+            } catch (err) {
+                console.error('Failed to load branches', err);
+            }
+        };
+        fetchBranches();
+    }, []);
+
+    useEffect(() => {
+        if (transaction?.branch) {
+            const bId = typeof transaction.branch === 'object' ? transaction.branch._id : transaction.branch;
+            setSelectedBranchId(bId || '');
+        }
+    }, [transaction]);
+
+    const handleSaveBranch = async () => {
+        if (!selectedBranchId) {
+            toast.error('Please select a branch');
+            return;
+        }
+        setSavingBranch(true);
+        const toastId = toast.loading('Updating branch location...');
+        try {
+            await updateTransactionBranch(id!, { branchId: selectedBranchId });
+            toast.success('Branch location updated successfully!', { id: toastId });
+            setIsBranchEditOpen(false);
+            fetchTransaction();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || err.message || 'Failed to update branch location', { id: toastId });
+        } finally {
+            setSavingBranch(false);
+        }
+    };
+
     // Change Linked Account Modal state
     const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
     const [targetLegForSwap, setTargetLegForSwap] = useState<any>(null);
@@ -1045,10 +1091,79 @@ const BankTransactionDetailPage = () => {
                                 </p>
                             </div>
                             <div>
-                                <p className="text-xs font-semibold mb-1 flex items-center gap-1" style={{ color: 'var(--text-dim)' }}><MapPin size={12}/> Branch Location</p>
-                                <p className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
-                                    {transaction.branch ? `${transaction.branch.name} (${transaction.branch.code || ''})` : 'Global / Head Office'}
-                                </p>
+                                <div className="flex items-center justify-between mb-1">
+                                    <p className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--text-dim)' }}>
+                                        <MapPin size={12}/> Branch Location
+                                    </p>
+                                    <button
+                                        type="button"
+                                        disabled={isCutoffDisabled}
+                                        onClick={() => !isCutoffDisabled && setIsBranchEditOpen(prev => !prev)}
+                                        title={isCutoffDisabled ? "Transactions till 15/06/2026 cannot be edited" : "Edit Branch Location"}
+                                        className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border rounded-lg transition-all flex items-center gap-1 ${
+                                            isCutoffDisabled 
+                                                ? 'bg-white/5 text-white/40 border-white/10 opacity-40 cursor-not-allowed' 
+                                                : 'bg-[#C8E600]/10 hover:bg-[#C8E600]/20 border-[#C8E600]/30 text-[#C8E600] hover:scale-105 cursor-pointer'
+                                        }`}
+                                    >
+                                        <Pencil size={10} /> Edit Branch
+                                    </button>
+                                </div>
+                                {!isBranchEditOpen ? (
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
+                                            {transaction.branch ? `${transaction.branch.name} (${transaction.branch.code || ''})` : 'Global / Head Office'}
+                                        </p>
+                                        {!isCutoffDisabled && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsBranchEditOpen(true)}
+                                                title="Edit Branch Location"
+                                                className="p-1 rounded-md hover:bg-white/10 text-white/60 hover:text-[#C8E600] transition-colors cursor-pointer"
+                                            >
+                                                <Pencil size={13} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="mt-1 space-y-2 animate-in fade-in duration-200">
+                                        <div className="flex items-center gap-2">
+                                            <select
+                                                value={selectedBranchId}
+                                                onChange={e => setSelectedBranchId(e.target.value)}
+                                                className="flex-1 border rounded-xl px-3 py-1.5 text-xs font-bold bg-transparent outline-none cursor-pointer"
+                                                style={{ color: 'var(--text-main)', background: 'var(--bg-input)', borderColor: 'var(--border-main)' }}
+                                            >
+                                                <option value="" disabled style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>Select Branch</option>
+                                                {branchesList.map((b: any) => (
+                                                    <option key={b._id} value={b._id} style={{ background: 'var(--bg-card)', color: 'var(--text-main)' }}>
+                                                        {b.name} ({b.country || b.city || b.code || 'N/A'})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                disabled={savingBranch}
+                                                onClick={handleSaveBranch}
+                                                className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-[#C8E600] text-black transition-all hover:scale-105 active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+                                            >
+                                                {savingBranch ? 'Saving...' : 'Save'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsBranchEditOpen(false);
+                                                    const origBranchId = typeof transaction.branch === 'object' ? transaction.branch?._id : transaction.branch;
+                                                    setSelectedBranchId(origBranchId || '');
+                                                }}
+                                                className="p-1.5 rounded-xl hover:bg-white/10 text-xs border cursor-pointer"
+                                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-dim)' }}
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             {transaction.accountingCode && (
                                 <div className="col-span-1 sm:col-span-2 border-t pt-4 mt-2" style={{ borderColor: 'var(--border-main)' }}>
