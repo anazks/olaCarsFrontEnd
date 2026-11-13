@@ -2450,7 +2450,12 @@ const VehicleDetail = () => {
                             {!isEditingOverview ? (
                                 <button
                                     onClick={() => {
-                                        setEditBasicDetails({ ...vehicle.basicDetails });
+                                        setEditBasicDetails({
+                                            ...vehicle.basicDetails,
+                                            odometerReadingDate: vehicle.basicDetails?.odometerReadingDate
+                                                ? new Date(vehicle.basicDetails.odometerReadingDate).toISOString().split('T')[0]
+                                                : new Date().toISOString().split('T')[0]
+                                        });
                                         setEditPlateNumber(vehicle.legalDocs?.registrationNumber || vehicle.basicDetails?.plateNumber || '');
                                         setIsEditingOverview(true);
                                     }}
@@ -2551,6 +2556,18 @@ const VehicleDetail = () => {
                                 <input type="number" value={editBasicDetails.odometer || ''} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, odometer: parseInt(e.target.value) || 0 }))} className={inputClass} style={inputStyle} />
                             </div>
                             <div className="space-y-1.5">
+                                <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>
+                                    {t('management.vehicles.vehicleDetail.labels.odometerReadingDate', 'Odometer Reading Date')}
+                                </label>
+                                <input
+                                    type="date"
+                                    value={editBasicDetails.odometerReadingDate ? String(editBasicDetails.odometerReadingDate).split('T')[0] : ''}
+                                    onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, odometerReadingDate: e.target.value }))}
+                                    className={inputClass}
+                                    style={inputStyle}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
                                 <label className="text-[10px] uppercase font-bold tracking-wider" style={{ color: 'var(--text-dim)' }}>{t('management.vehicles.vehicleDetail.labels.condition')}</label>
                                 <select value={editBasicDetails.condition} onChange={e => setEditBasicDetails((p: Partial<BasicDetails>) => ({ ...p, condition: e.target.value as any }))} className={inputClass} style={inputStyle}>
                                     <option value="New">New</option>
@@ -2573,7 +2590,18 @@ const VehicleDetail = () => {
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.seats')} value={vehicle.basicDetails?.seats || '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.body')} value={vehicle.basicDetails?.bodyType ? t(`management.vehicles.bodyTypes.${vehicle.basicDetails.bodyType}`, vehicle.basicDetails.bodyType) : '—'} />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.engineNumber')} value={vehicle.basicDetails?.engineNumber || '—'} />
-                            <InfoRow label={t('management.vehicles.vehicleDetail.labels.odometer')} value={vehicle.basicDetails?.odometer ? `${vehicle.basicDetails.odometer.toLocaleString()} ${t('common.units.km')}` : `0 ${t('common.units.km')}`} />
+                            <InfoRow
+                                label={t('management.vehicles.vehicleDetail.labels.odometer')}
+                                value={
+                                    vehicle.basicDetails?.odometer
+                                        ? `${vehicle.basicDetails.odometer.toLocaleString()} ${t('common.units.km')}${vehicle.basicDetails?.odometerReadingDate ? ` (as of ${new Date(vehicle.basicDetails.odometerReadingDate).toLocaleDateString()})` : ''}`
+                                        : `0 ${t('common.units.km')}`
+                                }
+                            />
+                            <InfoRow
+                                label={t('management.vehicles.vehicleDetail.labels.odometerReadingDate', 'Odometer Reading Date')}
+                                value={vehicle.basicDetails?.odometerReadingDate ? new Date(vehicle.basicDetails.odometerReadingDate).toLocaleDateString() : '—'}
+                            />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.condition')} value={vehicle.basicDetails?.condition || '—'} />
 
                         </div>

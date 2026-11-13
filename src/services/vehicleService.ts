@@ -75,6 +75,7 @@ export interface BasicDetails {
     engineNumber?: string;
     bodyType?: BodyType;
     odometer?: number;
+    odometerReadingDate?: string | Date;
     gpsSerialNumber?: string;
     leaseDurationWeeks?: number;
     leaseDurationMonths?: number;
