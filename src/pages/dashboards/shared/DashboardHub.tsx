@@ -291,8 +291,8 @@ const DashboardHub = () => {
             glowColor: 'group-hover:bg-emerald-500/20'
         },
         {
-            title: t('sidebar.items.collectionsDashboard', 'Collections Dashboard'),
-            description: t('dashboardHub.collectionsDesc', 'Monitor client invoice compliance, pending payments, overdue accounts, and collection forecasting.'),
+            title: t('sidebar.items.collectionsDashboard', 'AR Summary'),
+            description: t('dashboardHub.collectionsDesc', 'Monitor client invoice compliance, pending payments, overdue accounts, AR aging, and collection forecasting.'),
             path: `${basePrefix}/collections/dashboard`,
             icon: <TrendingUp className="text-[#C8E600]" size={20} />,
             iconBg: 'bg-[#C8E600]/10',

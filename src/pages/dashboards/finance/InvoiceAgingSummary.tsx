@@ -67,7 +67,19 @@ interface CustomerAgingSummary {
     debitNotes: (DebitNote & { daysOverdue: number })[];
 }
 
-export const InvoiceAgingSummary: React.FC = () => {
+export interface InvoiceAgingSummaryProps {
+    title?: string;
+    subtitle?: string;
+    breadcrumbs?: { label: string; path?: string; active?: boolean }[];
+    backButton?: { label: string; path: string } | null;
+}
+
+export const InvoiceAgingSummary: React.FC<InvoiceAgingSummaryProps> = ({
+    title,
+    subtitle,
+    breadcrumbs,
+    backButton
+}) => {
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -977,36 +989,53 @@ export const InvoiceAgingSummary: React.FC = () => {
         }
     };
 
+    const isCollectionsRoute = location.pathname.includes('/collections');
+
+    const defaultBreadcrumbs = isCollectionsRoute
+        ? [
+            { label: 'Collections', path: '#' },
+            { label: 'AR Summary', active: true }
+        ]
+        : [
+            { label: 'Sales', path: '#' },
+            { label: 'Invoices', path: `${basePath}/invoices` },
+            { label: 'Aging Summary', active: true }
+        ];
+
+    const currentBreadcrumbs = breadcrumbs || defaultBreadcrumbs;
+    const currentTitle = title || (isCollectionsRoute ? 'Accounts Receivable (AR) Summary' : 'Accounts Receivable (AR) Aging Summary');
+    const currentSubtitle = subtitle || 'Categorize unpaid invoice balances by days past due as of selected cutoff date.';
+
+    const resolvedBackButton = backButton !== undefined
+        ? backButton
+        : (isCollectionsRoute ? null : { label: 'Back to Invoices', path: `${basePath}/invoices` });
+
     return (
         <div className="container-responsive relative space-y-6 pb-12">
-            <Breadcrumbs
-                items={[
-                    { label: 'Sales', path: '#' },
-                    { label: 'Invoices', path: '/admin/financial-admin/invoices' },
-                    { label: 'Aging Summary', active: true }
-                ]}
-            />
+            <Breadcrumbs items={currentBreadcrumbs} />
 
             {/* Header Title Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-4">
                 <div>
                     <h1 className="text-xl font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                         <Clock className="text-amber-500" size={22} />
-                        Accounts Receivable (AR) Aging Summary
+                        {currentTitle}
                     </h1>
                     <p className="text-xs font-medium text-dim mt-0.5">
-                        Categorize unpaid invoice balances by days past due as of selected cutoff date.
+                        {currentSubtitle}
                     </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                    <button
-                        onClick={() => navigate(`${basePath}/invoices`)}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border active:scale-95 cursor-pointer"
-                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
-                    >
-                        <ArrowLeft size={14} /> Back to Invoices
-                    </button>
+                    {resolvedBackButton && (
+                        <button
+                            onClick={() => navigate(resolvedBackButton.path)}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border active:scale-95 cursor-pointer"
+                            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                        >
+                            <ArrowLeft size={14} /> {resolvedBackButton.label}
+                        </button>
+                    )}
 
                     <button
                         onClick={() => {

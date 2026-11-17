@@ -1030,6 +1030,15 @@ interface SetOffPreview {
                 return tokens.every(token => targetStr.includes(token));
             });
             if (found) return found;
+
+            // 5. Reverse Token Match: When Excel has maternal/extra names (e.g. "RIGOBERTO SANTAMARIA DOMINGUEZ" matches "RIGOBERTO SANTAMARIA")
+            found = customersList.find(c => {
+                const cName = (c.name || '').toLowerCase().replace(/[,.-]/g, ' ').replace(/\s+/g, ' ').trim();
+                if (!cName || cName.length < 3) return false;
+                const cTokens = cName.split(' ').filter(t => t.length > 2 && t !== 's.a' && t !== 'sa');
+                return cTokens.length > 0 && cTokens.every(token => strippedClean.includes(token));
+            });
+            if (found) return found;
         }
 
         return undefined;
@@ -1084,6 +1093,15 @@ interface SetOffPreview {
             found = suppliersList.find(s => {
                 const targetStr = `${s.name || ''} ${(s as any).companyName || ''} ${(s as any).displayName || ''}`.toLowerCase();
                 return tokens.every(token => targetStr.includes(token));
+            });
+            if (found) return found;
+
+            // Reverse token match for suppliers
+            found = suppliersList.find(s => {
+                const sName = (s.name || '').toLowerCase().replace(/[,.-]/g, ' ').replace(/\s+/g, ' ').trim();
+                if (!sName || sName.length < 3) return false;
+                const sTokens = sName.split(' ').filter(t => t.length > 2 && t !== 's.a' && t !== 'sa');
+                return sTokens.length > 0 && sTokens.every(token => strippedCleanSup.includes(token));
             });
             if (found) return found;
         }
