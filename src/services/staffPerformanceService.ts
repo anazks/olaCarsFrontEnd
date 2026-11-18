@@ -22,6 +22,63 @@ export interface Metrics {
     stageBreakdown: Record<string, number>;
 }
 
+export interface AuditActivityItem {
+    id?: string;
+    action: string;
+    entityType: string;
+    entityId?: string;
+    entityIdentifier?: string;
+    amount?: number;
+    description?: string;
+    fileUrl?: string | null;
+    fileName?: string | null;
+    timestamp: string;
+    metadata?: any;
+}
+
+export interface StaffWorkMetrics {
+    invoicesCount: number;
+    invoicesTotalAmount: number;
+    billsCount: number;
+    billsTotalAmount: number;
+    debitNotesCount: number;
+    debitNotesTotalAmount: number;
+    creditNotesCount: number;
+    creditNotesTotalAmount: number;
+    bankTransactionsCount: number;
+    bankTransactionsTotalAmount: number;
+    uploadsCount: number;
+    totalDailyWorkDone: number;
+    recentAudit?: AuditActivityItem[];
+}
+
+export interface DailyTrendPoint {
+    date: string;
+    invoices: number;
+    bills: number;
+    debitNotes: number;
+    creditNotes: number;
+    bankTransactions: number;
+    uploads: number;
+    total: number;
+}
+
+export interface PerformanceSummary {
+    totalInvoices: number;
+    totalInvoiceAmount: number;
+    totalBills: number;
+    totalBillAmount: number;
+    totalDebitNotes: number;
+    totalDebitNoteAmount: number;
+    totalCreditNotes: number;
+    totalCreditNoteAmount: number;
+    totalBankTransactions: number;
+    totalBankTransactionAmount: number;
+    totalUploads: number;
+    totalDailyWorkDone: number;
+    activeStaffCount: number;
+}
+
 export interface StaffPerformanceData {
     staffId: string;
     fullName: string;
@@ -33,8 +90,10 @@ export interface StaffPerformanceData {
     lastLoginAt: string;
     createdAt: string;
     metrics: Metrics;
+    workMetrics?: StaffWorkMetrics;
     recentActivity: RecentActivity[];
     targetStats?: TargetStats;
+    _listType?: string;
 }
 
 export interface BranchManagerMetrics {
@@ -63,8 +122,10 @@ export interface BranchManagerPerformanceData {
     lastLoginAt: string;
     createdAt: string;
     metrics: BranchManagerMetrics;
+    workMetrics?: StaffWorkMetrics;
     recentActivity: RecentActivity[];
     targetStats?: TargetStats;
+    _listType?: string;
 }
 
 export interface CountryManagerMetrics {
@@ -85,8 +146,10 @@ export interface CountryManagerPerformanceData {
     lastLoginAt: string;
     createdAt: string;
     metrics: CountryManagerMetrics;
+    workMetrics?: StaffWorkMetrics;
     recentActivity: RecentActivity[];
     targetStats?: TargetStats;
+    _listType?: string;
 }
 
 export interface GlobalAdminMetrics {
@@ -102,12 +165,14 @@ export interface GlobalAdminPerformanceData {
     fullName: string;
     email: string;
     phone: string;
-    role: 'finance-admin' | 'operation-admin';
+    role: 'finance-admin' | 'operation-admin' | 'admin' | string;
     status: string;
     lastLoginAt: string;
     createdAt: string;
     metrics: GlobalAdminMetrics;
+    workMetrics?: StaffWorkMetrics;
     recentActivity: RecentActivity[];
+    _listType?: string;
 }
 
 export interface TargetComparison {
@@ -128,6 +193,8 @@ export interface StaffPerformanceResponse {
         countryManagers?: CountryManagerPerformanceData[];
         globalAdmins?: GlobalAdminPerformanceData[];
         targetComparison?: TargetComparison[];
+        summary?: PerformanceSummary;
+        dailyTrend?: DailyTrendPoint[];
     };
 }
 
@@ -212,4 +279,19 @@ export const getIndividualStaffPerformance = async (
     clientIndividualPerfCache.set(cacheKey, { data, timestamp: Date.now() });
 
     return data;
+};
+
+export const getStaffAuditTrail = async (
+    id: string,
+    params: {
+        startDate?: string;
+        endDate?: string;
+        entityType?: string;
+        action?: string;
+        limit?: number;
+        page?: number;
+    } = {}
+) => {
+    const response = await api.get(`/api/staff-performance/${id}/audit-trail`, { params });
+    return response.data;
 };

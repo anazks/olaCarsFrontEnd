@@ -1,20 +1,37 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-    Clock3, MapPin, TrendingUp, Calendar, BarChart3,
-    ArrowUpRight, Activity, ChevronDown, Users, CheckCircle, Award, Search, Target, RefreshCw
+    MapPin, TrendingUp, Calendar, BarChart3,
+    ArrowUpRight, Activity, ChevronDown, Users, CheckCircle, Search, RefreshCw,
+    FileText, Receipt, ArrowLeftRight, UploadCloud
 } from 'lucide-react';
 import { 
     ResponsiveContainer, 
     XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
-    LineChart, Line, AreaChart, Area
+    AreaChart, Area, BarChart, Bar
 } from 'recharts';
 
-import { getStaffPerformance, type StaffPerformanceData, type BranchManagerPerformanceData, type CountryManagerPerformanceData, type GlobalAdminPerformanceData, type TargetComparison } from '../../../services/staffPerformanceService';
+import { 
+    getStaffPerformance, 
+    type StaffPerformanceData, 
+    type BranchManagerPerformanceData, 
+    type CountryManagerPerformanceData, 
+    type GlobalAdminPerformanceData,
+    type DailyTrendPoint,
+    type PerformanceSummary
+} from '../../../services/staffPerformanceService';
 import { getAllBranches, type Branch } from '../../../services/branchService';
 import { getUserRole } from '../../../utils/auth';
 import { StatCard } from '../../../components/dashboard/widgets/StatusCards';
 import Breadcrumbs from '../../../components/dashboard/shared/Breadcrumbs';
+
+const formatCurrency = (val: number = 0) => {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0,
+    }).format(val);
+};
 
 const StaffPerformanceDashboard = () => {
     const userRole = getUserRole() || '';
@@ -28,17 +45,24 @@ const StaffPerformanceDashboard = () => {
     const [branchManagers, setBranchManagers] = useState<BranchManagerPerformanceData[]>([]);
     const [countryManagers, setCountryManagers] = useState<CountryManagerPerformanceData[]>([]);
     const [globalAdmins, setGlobalAdmins] = useState<GlobalAdminPerformanceData[]>([]);
-    const [targetComparisons, setTargetComparisons] = useState<TargetComparison[]>([]);
-    const [dateRange, setDateRange] = useState({
-        startDate: new Date(new Date().setDate(1)).toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0]
+    const [summaryData, setSummaryData] = useState<PerformanceSummary | null>(null);
+    const [dailyTrendData, setDailyTrendData] = useState<DailyTrendPoint[]>([]);
+
+    const [dateRange, setDateRange] = useState(() => {
+        const start = new Date();
+        start.setDate(start.getDate() - 29); // Past 30 days
+        return {
+            startDate: start.toISOString().split('T')[0],
+            endDate: new Date().toISOString().split('T')[0]
+        };
     });
     
-    const [staffType, setStaffType] = useState<'all' | 'finance' | 'operation' | 'branch-manager' | 'country-manager' | 'finance-admin' | 'operation-admin'>('all');
+    const [staffType, setStaffType] = useState<'all' | 'finance' | 'operation' | 'branch-manager' | 'country-manager' | 'finance-admin' | 'operation-admin' | 'admin'>('all');
     const [searchQuery, setSearchQuery] = useState('');
 
-    const isBranchScoped = ['branchmanager'].includes(userRole?.toLowerCase().replace(' ', '') || '');
-    const isAdmin = ['admin'].includes(userRole?.toLowerCase().replace(' ', '') || '');
+    const normalizedRole = userRole?.toLowerCase().replace(/[ _-]/g, '') || '';
+    const isBranchScoped = ['branchmanager'].includes(normalizedRole);
+    const isAdmin = ['admin', 'financeadmin', 'operationadmin'].includes(normalizedRole);
 
     useEffect(() => {
         fetchData();
@@ -71,7 +95,8 @@ const StaffPerformanceDashboard = () => {
             setBranchManagers(data.data.branchManagers || []);
             setCountryManagers(data.data.countryManagers || []);
             setGlobalAdmins(data.data.globalAdmins || []);
-            setTargetComparisons(data.data.targetComparison || []);
+            setSummaryData(data.data.summary || null);
+            setDailyTrendData(data.data.dailyTrend || []);
         } catch (error) {
             console.error('Error fetching staff performance:', error);
         } finally {
@@ -94,6 +119,9 @@ const StaffPerformanceDashboard = () => {
         if (isAdmin && (staffType === 'all' || staffType === 'country-manager')) {
             combined = [...combined, ...countryManagers.map(s => ({ ...s, _listType: 'country-manager' as const } as any))];
         }
+        if (isAdmin && (staffType === 'all' || staffType === 'admin')) {
+            combined = [...combined, ...globalAdmins.filter(a => a.role === 'admin' || (a as any).role === 'ADMIN').map(s => ({ ...s, _listType: 'admin' as const } as any))];
+        }
         if (isAdmin && (staffType === 'all' || staffType === 'finance-admin')) {
             combined = [...combined, ...globalAdmins.filter(a => a.role === 'finance-admin').map(s => ({ ...s, _listType: 'finance-admin' as const } as any))];
         }
@@ -111,73 +139,84 @@ const StaffPerformanceDashboard = () => {
             );
         }
 
-        return combined.sort((a, b) => b.metrics.totalStageActions - a.metrics.totalStageActions);
+        return combined.sort((a, b) => {
+            const workA = a.workMetrics?.totalDailyWorkDone ?? a.metrics?.totalStageActions ?? 0;
+            const workB = b.workMetrics?.totalDailyWorkDone ?? b.metrics?.totalStageActions ?? 0;
+            return workB - workA;
+        });
     };
 
     const combinedList = displayStaff();
 
-    const totalStaffCount = finStaff.length + opStaff.length;
-    let totalActions = 0;
-    let totalOnboardings = 0;
-    let avgHours = 0;
-    let staffWithTime = 0;
+    // Summary calculations fallback if not returned by backend
+    const computedSummary = useMemo(() => {
+        if (summaryData) return summaryData;
 
-    combinedList.forEach(s => {
-        if (s._listType === 'finance-admin' || s._listType === 'operation-admin') {
-            totalOnboardings += (s.metrics.totalGlobalDrivers || 0) + (s.metrics.totalGlobalVehicles || 0);
-        } else if (s._listType === 'country-manager') {
-            totalOnboardings += (s.metrics.totalCountryDrivers || 0) + (s.metrics.totalCountryVehicles || 0);
-        } else if (s._listType === 'branch-manager') {
-            totalOnboardings += (s.metrics.totalBranchDrivers || 0) + (s.metrics.totalBranchVehicles || 0);
-        } else {
-            totalActions += s.metrics.totalStageActions || 0;
-            totalOnboardings += (s.metrics.totalDriversOnboarded || 0) + (s.metrics.totalVehiclesOnboarded || 0);
-            if (s.metrics.avgTimePerStageHours > 0) {
-                avgHours += s.metrics.avgTimePerStageHours;
-                staffWithTime++;
-            }
-        }
-    });
-
-    const fleetAvgTime = staffWithTime > 0 ? (avgHours / staffWithTime).toFixed(1) : '0';
-
-    const chartData = useMemo(() => {
-        const distribution: Record<string, number> = {};
+        let totalInvoices = 0, totalInvoiceAmount = 0;
+        let totalBills = 0, totalBillAmount = 0;
+        let totalDebitNotes = 0, totalDebitNoteAmount = 0;
+        let totalCreditNotes = 0, totalCreditNoteAmount = 0;
+        let totalBankTransactions = 0, totalBankTransactionAmount = 0;
+        let totalUploads = 0;
 
         combinedList.forEach(s => {
-            const roleName = s._listType.replace('-', ' ').toUpperCase();
-            distribution[roleName] = (distribution[roleName] || 0) + 1;
+            const wm = s.workMetrics;
+            if (wm) {
+                totalInvoices += wm.invoicesCount || 0;
+                totalInvoiceAmount += wm.invoicesTotalAmount || 0;
+                totalBills += wm.billsCount || 0;
+                totalBillAmount += wm.billsTotalAmount || 0;
+                totalDebitNotes += wm.debitNotesCount || 0;
+                totalDebitNoteAmount += wm.debitNotesTotalAmount || 0;
+                totalCreditNotes += wm.creditNotesCount || 0;
+                totalCreditNoteAmount += wm.creditNotesTotalAmount || 0;
+                totalBankTransactions += wm.bankTransactionsCount || 0;
+                totalBankTransactionAmount += wm.bankTransactionsTotalAmount || 0;
+                totalUploads += wm.uploadsCount || 0;
+            }
         });
 
-        const staffMomentum = combinedList
-            .map(s => ({
-                name: s.fullName.split(' ')[0],
-                thisMonth: s.metrics.actionsThisMonth || 0,
-                historical: s.metrics.totalStageActions || 0
-            }))
-            .slice(0, 8);
-
-        const staffDeployment = combinedList
-            .map(s => ({
-                name: s.fullName.split(' ')[0],
-                drivers: s.metrics.totalDriversOnboarded ?? s.metrics.totalBranchDrivers ?? s.metrics.totalCountryDrivers ?? s.metrics.totalGlobalDrivers ?? 0,
-                vehicles: s.metrics.totalVehiclesOnboarded ?? s.metrics.totalBranchVehicles ?? s.metrics.totalCountryVehicles ?? s.metrics.totalGlobalVehicles ?? 0
-            }))
-            .slice(0, 8);
-
-        const targetData = targetComparisons.map(t => ({
-            name: t.category.replace('_', ' '),
-            Target: t.targetValue,
-            Actual: t.actualValue
-        }));
+        const totalDailyWorkDone = totalInvoices + totalBills + totalDebitNotes + totalCreditNotes + totalBankTransactions + totalUploads;
 
         return {
-            distribution: Object.keys(distribution).map((k) => ({ name: k, value: distribution[k] })),
-            momentum: staffMomentum,
-            deployment: staffDeployment,
-            targets: targetData
+            totalInvoices,
+            totalInvoiceAmount,
+            totalBills,
+            totalBillAmount,
+            totalDebitNotes,
+            totalDebitNoteAmount,
+            totalCreditNotes,
+            totalCreditNoteAmount,
+            totalBankTransactions,
+            totalBankTransactionAmount,
+            totalUploads,
+            totalDailyWorkDone,
+            activeStaffCount: combinedList.length
         };
-    }, [combinedList, targetComparisons]);
+    }, [summaryData, combinedList]);
+
+    // Visual Chart Analytics
+    const chartData = useMemo(() => {
+        // Staff Leaderboard (Top 8 contributors)
+        const leaderboard = combinedList
+            .slice(0, 8)
+            .map(s => {
+                const wm = s.workMetrics;
+                return {
+                    name: s.fullName.split(' ')[0],
+                    invoices: wm?.invoicesCount || 0,
+                    bills: wm?.billsCount || 0,
+                    notes: (wm?.debitNotesCount || 0) + (wm?.creditNotesCount || 0),
+                    bankTx: wm?.bankTransactionsCount || 0,
+                    total: (wm?.invoicesCount || 0) + (wm?.billsCount || 0) + (wm?.debitNotesCount || 0) + (wm?.creditNotesCount || 0) + (wm?.bankTransactionsCount || 0)
+                };
+            });
+
+        return {
+            dailyVelocity: dailyTrendData,
+            leaderboard
+        };
+    }, [combinedList, dailyTrendData]);
 
     const getStatusColor = (status: string) => {
         return status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
@@ -187,15 +226,15 @@ const StaffPerformanceDashboard = () => {
 
     return (
         <div className={`flex-1 w-full overflow-y-auto h-screen custom-scrollbar transition-all duration-300 ${loading ? 'opacity-65 pointer-events-none' : ''}`} style={{ backgroundColor: 'var(--bg-main)' }}>
-            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Staff Performance Dashboard', active: true }]} />
+            <Breadcrumbs items={[{ label: 'Dashboard', path: '#' }, { label: 'Resource Intelligence', active: true }]} />
 
-            {/* Compact Header & Controls */}
+            {/* Header & Controls */}
             <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6 pb-0">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-white/5 pb-6">
                     <div>
                         <h1 className="text-lg font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
                             <Activity size={20} className="text-brand-lime" style={{ color: 'var(--brand-lime)' }} />
-                            Resource Intelligence
+                            Resource Intelligence & Daily Work Telemetry
                             <button
                                 onClick={() => fetchData(true)}
                                 disabled={loading}
@@ -205,10 +244,13 @@ const StaffPerformanceDashboard = () => {
                                 <RefreshCw className={`${loading ? 'animate-spin' : ''} text-brand-lime`} size={16} />
                             </button>
                         </h1>
-                        <p className="text-xs font-medium text-dim mt-0.5">Telemetry analytics and workforce performance.</p>
+                        <p className="text-xs font-medium text-dim mt-0.5">
+                            Real-time operational productivity: Invoices, Bills, Debit/Credit Notes, Bank Transactions, and Central Upload Tracking.
+                        </p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4">
+                        {/* Role filter buttons */}
                         <div className="flex items-center gap-1.5 p-1.5 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-main)] overflow-x-auto no-scrollbar max-w-[90vw]">
                             {(
                                 isBranchScoped 
@@ -259,6 +301,7 @@ const StaffPerformanceDashboard = () => {
                             </div>
                         )}
 
+                        {/* Date Range Picker */}
                         <div className="flex items-center gap-2 bg-[var(--bg-card)] p-1.5 rounded-xl border border-[var(--border-main)]">
                             <Calendar size={12} className="ml-2 text-lime opacity-60" />
                             <input 
@@ -275,294 +318,341 @@ const StaffPerformanceDashboard = () => {
                                 className="bg-transparent text-[10px] font-black focus:outline-none p-1 text-[var(--text-main)] uppercase w-24"
                             />
                         </div>
-            </div>
-        </div>
+                    </div>
+                </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 pt-2">
+                {/* 6 High-Impact Operational KPI Stat Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pt-2">
                     <StatCard 
-                        superTitle="Network Assets"
-                        title="Tracked Staff" 
-                        value={totalStaffCount} 
-                        icon={<Users size={16} />} 
-                        color="rgba(59, 130, 246, 0.15)"
-                    />
-                    <StatCard 
-                        superTitle="Successful Cycles"
-                        title="Total Onboarded" 
-                        value={totalOnboardings} 
-                        icon={<CheckCircle size={16} />} 
+                        superTitle="Billing Output"
+                        title="Invoices Created" 
+                        value={computedSummary.totalInvoices} 
+                        subValue={formatCurrency(computedSummary.totalInvoiceAmount)}
+                        icon={<FileText size={16} />} 
                         color="rgba(200, 230, 0, 0.15)"
                     />
                     <StatCard 
-                        superTitle="Operational Volume"
-                        title="Workflow Actions" 
-                        value={totalActions} 
-                        icon={<Activity size={16} />} 
+                        superTitle="Accounts Payable"
+                        title="Bills Processed" 
+                        value={computedSummary.totalBills} 
+                        subValue={formatCurrency(computedSummary.totalBillAmount)}
+                        icon={<Receipt size={16} />} 
+                        color="rgba(59, 130, 246, 0.15)"
+                    />
+                    <StatCard 
+                        superTitle="Adjustments"
+                        title="Debit/Credit Notes" 
+                        value={computedSummary.totalDebitNotes + computedSummary.totalCreditNotes} 
+                        subValue={formatCurrency(computedSummary.totalDebitNoteAmount + computedSummary.totalCreditNoteAmount)}
+                        icon={<ArrowLeftRight size={16} />} 
                         color="rgba(139, 92, 246, 0.15)"
                     />
                     <StatCard 
-                        superTitle="Velocity Metrics"
-                        title="Avg Processing" 
-                        value={`${fleetAvgTime}h`} 
-                        icon={<Clock3 size={16} />} 
+                        superTitle="Treasury Operations"
+                        title="Bank Transactions" 
+                        value={computedSummary.totalBankTransactions} 
+                        subValue={formatCurrency(computedSummary.totalBankTransactionAmount)}
+                        icon={<Activity size={16} />} 
                         color="rgba(245, 158, 11, 0.15)"
+                    />
+                    <StatCard 
+                        superTitle="Document Integrity"
+                        title="Attached Proofs & Docs" 
+                        value={computedSummary.totalUploads} 
+                        subValue="Verified Attachments"
+                        icon={<UploadCloud size={16} />} 
+                        color="rgba(16, 185, 129, 0.15)"
+                    />
+                    <StatCard 
+                        superTitle="Daily Throughput"
+                        title="Total Work Done" 
+                        value={computedSummary.totalDailyWorkDone} 
+                        subValue={`${computedSummary.activeStaffCount} Active Staff`}
+                        icon={<CheckCircle size={16} />} 
+                        color="rgba(200, 230, 0, 0.25)"
                     />
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="p-8 max-w-[1600px] mx-auto space-y-12 pb-24">
+            {/* Main Content & Visual Analytics */}
+            <div className="p-8 max-w-[1600px] mx-auto space-y-10 pb-24">
                 
-                {/* 2 per Row Charts - Strict Grid */}
-                {combinedList.length > 0 && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* 1. Distribution Matrix */}
-                        <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-400">
-                                        <Award size={20} />
-                                    </div>
-                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Distribution Matrix</h2>
+                {/* Visual Charts Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    
+                    {/* 1. Daily Operational Velocity (Area Chart) */}
+                    <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 rounded-2xl bg-lime/10 text-lime">
+                                    <TrendingUp size={20} />
                                 </div>
-                                <div className="flex items-center gap-2 text-[10px] font-black text-[#C8E600] px-3 py-1 rounded-lg bg-[var(--bg-main)] border border-[var(--border-main)]">
-                                    HEADCOUNT BY ROLE
+                                <div>
+                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Operational Velocity</h2>
+                                    <p className="text-[10px] text-dim mt-0.5">Daily volume of financial & system activities</p>
                                 </div>
                             </div>
-                            <div className="h-[240px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={chartData.distribution} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.2} />
-                                        <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
-                                        <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} />
-                                        <RechartsTooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '16px' }} itemStyle={{ color: 'var(--text-main)' }} />
-                                        <Line type="monotone" dataKey="value" name="Headcount" stroke="#C8E600" strokeWidth={3} dot={{ r: 5, stroke: '#C8E600', strokeWidth: 2, fill: 'var(--bg-card)' }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
+                            <div className="flex items-center gap-2 text-[9px] font-black text-brand-lime px-3 py-1 rounded-lg bg-[var(--bg-main)] border border-[var(--border-main)]">
+                                TIME SERIES TELEMETRY
                             </div>
                         </div>
 
-                        {/* 2. Task Momentum */}
-                        <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-400">
-                                        <TrendingUp size={20} />
-                                    </div>
-                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Task Momentum</h2>
-                                </div>
-                                <div className="flex gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-[#C8E600]" />
-                                        <span className="text-[9px] font-black uppercase opacity-40">This Month</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                        <span className="text-[9px] font-black uppercase opacity-40">Historical</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="h-[240px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={chartData.momentum} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="colorMonth" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#C8E600" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#C8E600" stopOpacity={0} />
-                                            </linearGradient>
-                                            <linearGradient id="colorHist" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
-                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.2} />
-                                        <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
-                                        <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} />
-                                        <RechartsTooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '16px' }} itemStyle={{ color: 'var(--text-main)' }} />
-                                        <Area type="monotone" dataKey="thisMonth" name="This Month" stroke="#C8E600" strokeWidth={2} fillOpacity={1} fill="url(#colorMonth)" />
-                                        <Area type="monotone" dataKey="historical" name="Historical" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorHist)" />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-
-                        {/* 3. Asset Deployment */}
-                        <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 rounded-2xl bg-lime/10 text-lime">
-                                        <BarChart3 size={20} />
-                                    </div>
-                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Asset Deployment</h2>
-                                </div>
-                                <div className="flex gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-[#C8E600]" />
-                                        <span className="text-[9px] font-black uppercase opacity-40">Drivers</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                        <span className="text-[9px] font-black uppercase opacity-40">Vehicles</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="h-[240px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={chartData.deployment} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.2} />
-                                        <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
-                                        <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} />
-                                        <RechartsTooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '16px' }} itemStyle={{ color: 'var(--text-main)' }} />
-                                        <Line type="monotone" dataKey="drivers" name="Drivers" stroke="#C8E600" strokeWidth={3} dot={{ r: 4, stroke: '#C8E600', strokeWidth: 2, fill: 'var(--bg-card)' }} />
-                                        <Line type="monotone" dataKey="vehicles" name="Vehicles" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, stroke: '#3b82f6', strokeWidth: 2, fill: 'var(--bg-card)' }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-
-                        {/* 4. Target vs Actual Performance */}
-                        <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 rounded-2xl bg-orange-500/10 text-orange-400">
-                                        <Target size={20} />
-                                    </div>
-                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Target Performance</h2>
-                                </div>
-                                <div className="flex gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                        <span className="text-[9px] font-black uppercase opacity-40">Target</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-[#C8E600]" />
-                                        <span className="text-[9px] font-black uppercase opacity-40">Actual</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="h-[240px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={chartData.targets} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.2} />
-                                        <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
-                                        <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} />
-                                        <RechartsTooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '16px' }} itemStyle={{ color: 'var(--text-main)' }} />
-                                        <Line type="monotone" dataKey="Target" name="Target" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4, stroke: '#3b82f6', strokeWidth: 2, fill: 'var(--bg-card)' }} />
-                                        <Line type="monotone" dataKey="Actual" name="Actual" stroke="#C8E600" strokeWidth={3} dot={{ r: 5, stroke: '#C8E600', strokeWidth: 2, fill: 'var(--bg-card)' }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
+                        <div className="h-[260px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData.dailyVelocity} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="invGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#C8E600" stopOpacity={0.4} />
+                                            <stop offset="95%" stopColor="#C8E600" stopOpacity={0} />
+                                        </linearGradient>
+                                        <linearGradient id="billGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4} />
+                                            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.2} />
+                                    <XAxis dataKey="date" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
+                                    <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} />
+                                    <RechartsTooltip 
+                                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '16px' }} 
+                                        itemStyle={{ color: 'var(--text-main)' }} 
+                                    />
+                                    <Area type="monotone" dataKey="invoices" name="Invoices" stroke="#C8E600" strokeWidth={2} fill="url(#invGrad)" />
+                                    <Area type="monotone" dataKey="bills" name="Bills" stroke="#3B82F6" strokeWidth={2} fill="url(#billGrad)" />
+                                    <Area type="monotone" dataKey="debitNotes" name="Debit Notes" stroke="#8B5CF6" strokeWidth={2} fillOpacity={0} />
+                                    <Area type="monotone" dataKey="creditNotes" name="Credit Notes" stroke="#EC4899" strokeWidth={2} fillOpacity={0} />
+                                    <Area type="monotone" dataKey="bankTransactions" name="Bank Tx" stroke="#F59E0B" strokeWidth={2} fillOpacity={0} />
+                                </AreaChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
-                )}
 
-                {/* Staff Roster Table */}
-                <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden">
-                    <div className="p-8 border-b border-[var(--border-main)] flex flex-col md:flex-row md:items-center justify-between gap-6 bg-[var(--bg-card)]">
-                        <div>
-                            <h2 className="text-lg font-black text-[var(--text-main)]">Staff Telemetry Ledger</h2>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-dim mt-1">Real-time performance audit of network resources</p>
+                    {/* 2. Staff Productivity Leaderboard (Stacked Bar) */}
+                    <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-8 relative overflow-hidden group">
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-400">
+                                    <BarChart3 size={20} />
+                                </div>
+                                <div>
+                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-dim">Top Staff Output Leaderboard</h2>
+                                    <p className="text-[10px] text-dim mt-0.5">Comparative throughput across financial operations</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 text-[9px] font-black uppercase opacity-60">
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#C8E600]" /> Invoices</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#3B82F6]" /> Bills</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#8B5CF6]" /> Notes</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#F59E0B]" /> Bank Tx</span>
+                            </div>
                         </div>
 
-                        <div className="relative group">
-                            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-lime opacity-40 group-focus-within:opacity-100 transition-opacity" />
-                            <input
+                        <div className="h-[260px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData.leaderboard} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-main)" vertical={false} opacity={0.2} />
+                                    <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} dy={5} />
+                                    <YAxis stroke="var(--text-dim)" fontSize={9} tickLine={false} axisLine={false} allowDecimals={false} />
+                                    <RechartsTooltip 
+                                        contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-main)', borderRadius: '16px' }} 
+                                        itemStyle={{ color: 'var(--text-main)' }} 
+                                    />
+                                    <Bar dataKey="invoices" name="Invoices" stackId="a" fill="#C8E600" />
+                                    <Bar dataKey="bills" name="Bills" stackId="a" fill="#3B82F6" />
+                                    <Bar dataKey="notes" name="Notes" stackId="a" fill="#8B5CF6" />
+                                    <Bar dataKey="bankTx" name="Bank Tx" stackId="a" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                </div>
+
+                {/* Staff Daily Work Performance Table */}
+                <div className="rounded-3xl border border-[var(--border-main)] bg-[var(--bg-card)] overflow-hidden shadow-2xl">
+                    <div className="p-8 border-b border-[var(--border-main)] flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                            <h2 className="text-sm font-black uppercase tracking-[0.2em] text-[var(--text-main)] flex items-center gap-3">
+                                <Users size={18} className="text-brand-lime" />
+                                Employee Daily Work & Productivity Matrix
+                            </h2>
+                            <p className="text-xs font-medium text-dim mt-1">
+                                Exact volume of Invoices, Bills, Debit/Credit Notes, Bank Transactions, and Uploads processed by each account.
+                            </p>
+                        </div>
+
+                        <div className="relative min-w-[280px]">
+                            <input 
                                 type="text"
-                                placeholder="Search resources..."
+                                placeholder="Filter by resource name, email, node..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-12 pr-6 py-3.5 rounded-2xl border w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-lime/30 transition-all font-bold text-[10px] uppercase tracking-widest bg-[var(--bg-input)] border-[var(--border-main)] text-[var(--text-main)]"
+                                className="w-full bg-[var(--bg-input)] border border-[var(--border-main)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] pl-10 focus:outline-none focus:border-brand-lime transition-colors"
                             />
+                            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dim" />
                         </div>
                     </div>
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-[var(--bg-input)] opacity-50">
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] pl-8">Resource</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)]">Designation</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)]">Hub Node</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Output</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Velocity</th>
-                                    <th className="p-5 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-right pr-8">Actions</th>
+                                <tr className="bg-[var(--bg-input)] opacity-60">
+                                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] pl-8">Account / Resource</th>
+                                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)]">Designation & Node</th>
+                                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Invoices</th>
+                                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Bills</th>
+                                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Debit / Credit</th>
+                                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Bank Tx</th>
+                                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Attached Docs</th>
+                                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-center">Total Output</th>
+                                    <th className="p-4 text-[10px] font-black uppercase tracking-widest text-dim border-b border-[var(--border-main)] text-right pr-8">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--border-main)]">
                                 {loading ? (
                                     [1, 2, 3, 4, 5].map(i => (
                                         <tr key={i} className="animate-pulse">
-                                            <td colSpan={6} className="p-6"><div className="h-4 bg-[var(--bg-input)] rounded-full w-full" /></td>
+                                            <td colSpan={9} className="p-6"><div className="h-4 bg-[var(--bg-input)] rounded-full w-full" /></td>
                                         </tr>
                                     ))
                                 ) : combinedList.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="p-20 text-center text-dim font-bold uppercase tracking-widest italic opacity-30">No matching resources found</td>
+                                        <td colSpan={9} className="p-20 text-center text-dim font-bold uppercase tracking-widest italic opacity-30">
+                                            No matching employee activity found for the selected period
+                                        </td>
                                     </tr>
                                 ) : (
-                                    combinedList.map(staff => (
-                                        <tr key={staff.staffId} className="hover:bg-[var(--bg-input)] transition-colors group">
-                                            <td className="p-5 pl-8">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-xl bg-lime/10 flex items-center justify-center text-lime font-black text-sm border border-lime/10">
-                                                        {staff.fullName.split(' ')[0].charAt(0).toUpperCase()}
+                                    combinedList.map(staff => {
+                                        const wm = staff.workMetrics || {
+                                            invoicesCount: 0,
+                                            invoicesTotalAmount: 0,
+                                            billsCount: 0,
+                                            billsTotalAmount: 0,
+                                            debitNotesCount: 0,
+                                            creditNotesCount: 0,
+                                            bankTransactionsCount: 0,
+                                            uploadsCount: 0,
+                                            totalDailyWorkDone: 0
+                                        };
+
+                                        return (
+                                            <tr key={staff.staffId} className="hover:bg-[var(--bg-input)] transition-colors group">
+                                                {/* Staff identity */}
+                                                <td className="p-4 pl-8">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-9 h-9 rounded-xl bg-lime/10 flex items-center justify-center text-lime font-black text-sm border border-lime/10">
+                                                            {staff.fullName.split(' ')[0].charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs font-black text-[var(--text-main)] group-hover:text-lime transition-colors">
+                                                                {staff.fullName}
+                                                            </p>
+                                                            <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md mt-0.5 inline-block ${getStatusColor(staff.status)}`}>
+                                                                {staff.status}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-sm font-black text-[var(--text-main)] group-hover:text-lime transition-colors">{staff.fullName}</p>
-                                                        <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md mt-1 inline-block ${getStatusColor(staff.status)}`}>
-                                                            {staff.status}
-                                                        </span>
+                                                </td>
+
+                                                {/* Role & Branch */}
+                                                <td className="p-4">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-main)]">
+                                                        {staff._listType.replace('-', ' ')}
+                                                    </p>
+                                                    <p className="text-[9px] font-bold text-dim mt-0.5 flex items-center gap-1">
+                                                        <MapPin size={8} className="text-lime" />
+                                                        {staff._listType === 'country-manager' ? (staff as any).country : 
+                                                         (staff._listType === 'finance-admin' || staff._listType === 'operation-admin' || staff._listType === 'admin') ? 'Global HQ' : 
+                                                         staff.branchName || 'Main Node'}
+                                                    </p>
+                                                </td>
+
+                                                {/* Invoices */}
+                                                <td className="p-4 text-center">
+                                                    <p className="text-sm font-black text-[var(--text-main)]">
+                                                        {wm.invoicesCount}
+                                                    </p>
+                                                    {wm.invoicesTotalAmount > 0 && (
+                                                        <p className="text-[8px] font-bold text-emerald-400">
+                                                            {formatCurrency(wm.invoicesTotalAmount)}
+                                                        </p>
+                                                    )}
+                                                </td>
+
+                                                {/* Bills */}
+                                                <td className="p-4 text-center">
+                                                    <p className="text-sm font-black text-[var(--text-main)]">
+                                                        {wm.billsCount}
+                                                    </p>
+                                                    {wm.billsTotalAmount > 0 && (
+                                                        <p className="text-[8px] font-bold text-blue-400">
+                                                            {formatCurrency(wm.billsTotalAmount)}
+                                                        </p>
+                                                    )}
+                                                </td>
+
+                                                {/* Debit & Credit Notes */}
+                                                <td className="p-4 text-center">
+                                                    <p className="text-sm font-black text-[var(--text-main)]">
+                                                        {wm.debitNotesCount + wm.creditNotesCount}
+                                                    </p>
+                                                    <p className="text-[8px] font-bold text-dim">
+                                                        {wm.debitNotesCount} DN / {wm.creditNotesCount} CN
+                                                    </p>
+                                                </td>
+
+                                                {/* Bank Transactions */}
+                                                <td className="p-4 text-center">
+                                                    <p className="text-sm font-black text-[var(--text-main)]">
+                                                        {wm.bankTransactionsCount}
+                                                    </p>
+                                                    <p className="text-[8px] font-bold text-amber-400">
+                                                        {wm.bankTransactionsCount > 0 ? 'Reconciled' : '—'}
+                                                    </p>
+                                                </td>
+
+                                                {/* Uploads */}
+                                                <td className="p-4 text-center">
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 font-black text-xs border border-emerald-500/20">
+                                                        <UploadCloud size={10} /> {wm.uploadsCount}
+                                                    </span>
+                                                </td>
+
+                                                {/* Total Daily Output */}
+                                                <td className="p-4 text-center">
+                                                    <span className="inline-block px-3 py-1 rounded-xl bg-lime/10 text-brand-lime font-black text-sm border border-lime/20">
+                                                        {wm.totalDailyWorkDone}
+                                                    </span>
+                                                    <p className="text-[8px] font-black uppercase text-dim tracking-widest mt-0.5">Actions</p>
+                                                </td>
+
+                                                {/* Actions: Profile */}
+                                                <td className="p-4 text-right pr-8">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button 
+                                                            onClick={() => {
+                                                                const currentPath = window.location.pathname;
+                                                                const basePath = currentPath.split('/staff-performance')[0];
+                                                                navigate(`${basePath}/staff-performance/${staff.staffId}`);
+                                                            }}
+                                                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-input)] text-dim hover:text-[var(--text-main)] transition-all border border-[var(--border-main)] font-black text-[9px] uppercase tracking-wider cursor-pointer"
+                                                            title="View full employee profile"
+                                                        >
+                                                            Profile <ArrowUpRight size={12} />
+                                                        </button>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="p-5">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-main)]">
-                                                    {staff._listType.replace('-', ' ')}
-                                                </p>
-                                                <p className="text-[9px] font-bold text-dim mt-0.5">{staff.email}</p>
-                                            </td>
-                                            <td className="p-5">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-main)]">
-                                                    {staff._listType === 'country-manager' ? (staff as any).country : 
-                                                     (staff._listType === 'finance-admin' || staff._listType === 'operation-admin') ? 'Global HQ' : 
-                                                     staff.branchName}
-                                                </p>
-                                                <p className="text-[9px] font-bold text-dim mt-0.5 flex items-center gap-1">
-                                                    <MapPin size={8} className="text-lime" /> Telemetry Active
-                                                </p>
-                                            </td>
-                                            <td className="p-5 text-center">
-                                                <p className="text-lg font-black text-[var(--text-main)] leading-none">
-                                                    {staff.metrics.totalDriversOnboarded ?? staff.metrics.totalVehiclesOnboarded ?? 0}
-                                                </p>
-                                                <p className="text-[8px] font-black uppercase text-dim tracking-widest mt-1">Onboarded</p>
-                                            </td>
-                                            <td className="p-5 text-center">
-                                                <p className="text-lg font-black text-orange-400 leading-none">
-                                                    {staff.metrics.avgTimePerStageHours}h
-                                                </p>
-                                                <p className="text-[8px] font-black uppercase text-dim tracking-widest mt-1">Avg Cycle</p>
-                                            </td>
-                                            <td className="p-5 text-right pr-8">
-                                                <button 
-                                                    onClick={() => {
-                                                        const currentPath = window.location.pathname;
-                                                        const basePath = currentPath.split('/staff-performance')[0];
-                                                        navigate(`${basePath}/staff-performance/${staff.staffId}`);
-                                                    }}
-                                                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[var(--bg-input)] hover:bg-lime text-dim hover:text-black transition-all border border-[var(--border-main)] hover:border-lime font-black text-[10px] uppercase tracking-widest"
-                                                >
-                                                    Profile <ArrowUpRight size={14} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 )}
                             </tbody>
                         </table>
                     </div>
                 </div>
+
             </div>
+
         </div>
     );
 };
