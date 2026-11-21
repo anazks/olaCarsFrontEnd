@@ -157,6 +157,24 @@ const InfoRow = ({ label, value }: { label: string; value?: string | number | nu
 
 const formatDateToDMY = (dateInput?: string | Date) => formatDate(dateInput);
 
+const formatDateToDDMMYYYY = (dateInput?: string | Date | null): string => {
+    if (!dateInput) return '—';
+    if (typeof dateInput === 'string') {
+        const trimmed = dateInput.trim();
+        const ymdMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (ymdMatch) {
+            const [, y, m, d] = ymdMatch;
+            return `${d}/${m}/${y}`;
+        }
+    }
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return '—';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+};
+
 // ── Main Component ────────────────────────────────────────────────────────────
 const VehicleDetail = () => {
     const { t } = useTranslation();
@@ -1991,7 +2009,10 @@ const VehicleDetail = () => {
                     </div>
                     <div className="flex items-center justify-between text-xs py-1">
                         <span className="text-dim">Odometer</span>
-                        <span className="font-bold text-white">{vehicle.basicDetails?.odometer ? `${vehicle.basicDetails.odometer.toLocaleString()} KM` : '0 KM'}</span>
+                        <span className="font-bold text-white">
+                            {vehicle.basicDetails?.odometer ? `${vehicle.basicDetails.odometer.toLocaleString()} KM` : '0 KM'}
+                            {vehicle.basicDetails?.odometerReadingDate ? ` (as of ${formatDateToDDMMYYYY(vehicle.basicDetails.odometerReadingDate)})` : ''}
+                        </span>
                     </div>
                     <div className="flex items-center justify-between text-xs py-1">
                         <span className="text-dim">Condition</span>
@@ -2594,13 +2615,13 @@ const VehicleDetail = () => {
                                 label={t('management.vehicles.vehicleDetail.labels.odometer')}
                                 value={
                                     vehicle.basicDetails?.odometer
-                                        ? `${vehicle.basicDetails.odometer.toLocaleString()} ${t('common.units.km')}${vehicle.basicDetails?.odometerReadingDate ? ` (as of ${new Date(vehicle.basicDetails.odometerReadingDate).toLocaleDateString()})` : ''}`
+                                        ? `${vehicle.basicDetails.odometer.toLocaleString()} ${t('common.units.km')}${vehicle.basicDetails?.odometerReadingDate ? ` (as of ${formatDateToDDMMYYYY(vehicle.basicDetails.odometerReadingDate)})` : ''}`
                                         : `0 ${t('common.units.km')}`
                                 }
                             />
                             <InfoRow
                                 label={t('management.vehicles.vehicleDetail.labels.odometerReadingDate', 'Odometer Reading Date')}
-                                value={vehicle.basicDetails?.odometerReadingDate ? new Date(vehicle.basicDetails.odometerReadingDate).toLocaleDateString() : '—'}
+                                value={formatDateToDDMMYYYY(vehicle.basicDetails?.odometerReadingDate)}
                             />
                             <InfoRow label={t('management.vehicles.vehicleDetail.labels.condition')} value={vehicle.basicDetails?.condition || '—'} />
 

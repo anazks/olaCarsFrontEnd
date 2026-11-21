@@ -22,7 +22,9 @@ interface Props {
 }
 
 const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
+    const [initialCustomers, setInitialCustomers] = useState<Customer[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
+    const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
     const [customerSearch, setCustomerSearch] = useState('');
     const [showCustomerList, setShowCustomerList] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -86,8 +88,10 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
 
     const fetchCustomers = useCallback(async () => {
         try {
-            const res = await getAllCustomers({ status: 'ACTIVE', limit: 200 });
-            setCustomers(res.data || (res as any).customers || []);
+            const res = await getAllCustomers({ limit: 100 });
+            const list = res.data || (res as any).customers || [];
+            setInitialCustomers(list);
+            setCustomers(list);
         } catch { /* silent */ }
     }, []);
 
@@ -109,10 +113,34 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
         fetchTaxes();
     }, [fetchCustomers, fetchTaxes]);
 
-    const filteredCustomers = customers.filter(c =>
-        c.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-        c.customerId?.toLowerCase().includes(customerSearch.toLowerCase())
-    );
+    // Remote debounced search across all customers and drivers
+    useEffect(() => {
+        const query = customerSearch.trim();
+        if (!query) {
+            setCustomers(initialCustomers);
+            setIsSearchingCustomers(false);
+            return;
+        }
+
+        setIsSearchingCustomers(true);
+        const timer = setTimeout(async () => {
+            try {
+                const res = await getAllCustomers({
+                    search: query,
+                    limit: 50,
+                    status: 'ALL'
+                });
+                const list = res.data || (res as any).customers || [];
+                setCustomers(list);
+            } catch (err) {
+                console.error('Remote customer/driver search error:', err);
+            } finally {
+                setIsSearchingCustomers(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [customerSearch, initialCustomers]);
 
     // ── Calculations ──────────────────────────────────────────────────────────
     const subtotal = lineItems.reduce((sum, item) => {
@@ -223,33 +251,64 @@ const CreateInvoiceModal = ({ onClose, onSuccess }: Props) => {
                                 <div className="relative">
                                     <input
                                         type="text"
-                                        placeholder="Search customer by name or ID..."
+                                        placeholder="Search customer or driver by name, ID, phone, vehicle plate..."
                                         value={selectedCustomer ? `${selectedCustomer.name} (${selectedCustomer.customerId})` : customerSearch}
                                         onChange={e => { setCustomerSearch(e.target.value); setSelectedCustomer(null); setShowCustomerList(true); }}
                                         onFocus={() => setShowCustomerList(true)}
+                                        onBlur={() => setTimeout(() => setShowCustomerList(false), 250)}
                                         className="w-full px-4 py-3 border rounded-2xl text-sm font-semibold outline-none transition-all"
                                         style={{ background: 'var(--bg-input)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
                                     />
-                                    {showCustomerList && filteredCustomers.length > 0 && !selectedCustomer && (
-                                        <div className="absolute z-50 w-full mt-1 border rounded-2xl shadow-2xl max-h-52 overflow-auto custom-scrollbar" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
-                                            {filteredCustomers.slice(0, 15).map(c => (
-                                                <button
-                                                    type="button"
-                                                    key={c._id}
-                                                    onMouseDown={() => { setSelectedCustomer(c); setCustomerSearch(''); setShowCustomerList(false); }}
-                                                    className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-3 transition-colors"
-                                                >
-                                                    <div className="w-8 h-8 rounded-full bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center flex-shrink-0">
-                                                        <span className="text-[10px] font-black" style={{ color: 'var(--brand-lime)' }}>
-                                                            {c.name ? c.name.slice(0, 2).toUpperCase() : 'CU'}
-                                                        </span>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs font-black" style={{ color: 'var(--text-main)' }}>{c.name}</p>
-                                                        <p className="text-[10px] font-mono uppercase" style={{ color: 'var(--text-dim)' }}>{c.customerId}</p>
-                                                    </div>
-                                                </button>
-                                            ))}
+                                    {showCustomerList && !selectedCustomer && (
+                                        <div className="absolute z-50 w-full mt-1 border rounded-2xl shadow-2xl max-h-60 overflow-auto custom-scrollbar" style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)' }}>
+                                            {isSearchingCustomers && (
+                                                <div className="px-4 py-3 text-xs flex items-center justify-center gap-2 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)', color: 'var(--brand-lime)' }}>
+                                                    <span className="w-3.5 h-3.5 border-2 border-brand-lime border-t-transparent rounded-full animate-spin"></span>
+                                                    <span className="text-[10px] font-bold">Searching all customers &amp; drivers...</span>
+                                                </div>
+                                            )}
+                                            {customers.length === 0 && !isSearchingCustomers ? (
+                                                <div className="px-4 py-6 text-center text-xs text-dim" style={{ color: 'var(--text-dim)' }}>
+                                                    {customerSearch.trim() ? `No customers or drivers found matching "${customerSearch}"` : 'No customers available'}
+                                                </div>
+                                            ) : (
+                                                customers.map(c => (
+                                                    <button
+                                                        type="button"
+                                                        key={c._id}
+                                                        onMouseDown={() => { setSelectedCustomer(c); setCustomerSearch(''); setShowCustomerList(false); }}
+                                                        className="w-full text-left px-4 py-3 hover:bg-white/5 flex items-center gap-3 transition-colors border-b last:border-b-0 cursor-pointer"
+                                                        style={{ borderColor: 'rgba(255,255,255,0.03)' }}
+                                                    >
+                                                        <div className="w-8 h-8 rounded-full bg-brand-lime/10 border border-brand-lime/20 flex items-center justify-center flex-shrink-0">
+                                                            <span className="text-[10px] font-black" style={{ color: 'var(--brand-lime)' }}>
+                                                                {c.isDriver || c.driver ? 'DR' : (c.name ? c.name.slice(0, 2).toUpperCase() : 'CU')}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-xs font-black truncate" style={{ color: 'var(--text-main)' }}>{c.name}</p>
+                                                                {(c.isDriver || c.driver) && (
+                                                                    <span className="px-1.5 py-0.2 text-[8px] font-bold rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                                        DRIVER
+                                                                    </span>
+                                                                )}
+                                                                {c.status === 'INACTIVE' && (
+                                                                    <span className="px-1.5 py-0.2 text-[8px] font-bold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                                        INACTIVE
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 text-[9px] font-mono text-dim mt-0.5 truncate" style={{ color: 'var(--text-dim)' }}>
+                                                                <span>ID: {c.customerId}</span>
+                                                                {c.driver?.driverId && <span>• Driver: {c.driver.driverId}</span>}
+                                                                {c.phone && <span>• {c.phone}</span>}
+                                                                {c.cfVehicleNo && <span>• Veh: {c.cfVehicleNo}</span>}
+                                                            </div>
+                                                        </div>
+                                                    </button>
+                                                ))
+                                            )}
                                         </div>
                                     )}
                                 </div>

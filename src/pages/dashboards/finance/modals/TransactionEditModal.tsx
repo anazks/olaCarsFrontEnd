@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, User, Truck, Building2, Save, Loader2, Search, Zap, FileText, Receipt } from 'lucide-react';
+import { X, DollarSign, User, Truck, Building2, Save, Loader2, Search, Zap, FileText, Receipt, AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { 
     updateCustomerTransactionAmount,
@@ -10,7 +10,7 @@ import {
 } from '../../../../services/bankAccountService';
 import { getAllDrivers } from '../../../../services/driverService';
 import { getAllCustomers, type Customer } from '../../../../services/customerService';
-import { getInvoicesByCustomer } from '../../../../services/invoiceService';
+import { getInvoicesByCustomer, getInvoicesByDriver } from '../../../../services/invoiceService';
 import { getAllSuppliers, type Supplier } from '../../../../services/supplierService';
 import { getAllBills, type Bill } from '../../../../services/billService';
 
@@ -47,6 +47,7 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [loadingData, setLoadingData] = useState<boolean>(false);
     const [saving, setSaving] = useState<boolean>(false);
+    const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
 
     // Set-off preview simulation state
     const [loadingPreview, setLoadingPreview] = useState<boolean>(false);
@@ -64,6 +65,7 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
             setAmount(String(transaction.amount || ''));
             setSearchTerm('');
             setSetOffPreview(null);
+            setShowConfirmModal(false);
 
             // Pre-select current contact / supplier if present
             let initCustId = '';
@@ -96,27 +98,66 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
         const txAmount = Number(amount || transaction.amount || 0);
 
         if (
-            classification === 'DRIVER' && 
+            (classification === 'DRIVER' || classification === 'NON_DRIVER_CUSTOMER') && 
             selectedCustomerId && 
-            selectedCustomerId !== initialCustomerId
+            String(selectedCustomerId) !== String(initialCustomerId)
         ) {
             fetchCustomerSetOffPreview(selectedCustomerId, txAmount);
         } else if (
             classification === 'VENDOR' && 
             selectedSupplierId && 
-            selectedSupplierId !== initialSupplierId
+            String(selectedSupplierId) !== String(initialSupplierId)
         ) {
             fetchVendorSetOffPreview(selectedSupplierId, txAmount);
         } else {
             setSetOffPreview(null);
         }
-    }, [selectedCustomerId, selectedSupplierId, initialCustomerId, initialSupplierId, amount, classification, isOpen, transaction]);
+    }, [selectedCustomerId, selectedSupplierId, initialCustomerId, initialSupplierId, amount, classification, isOpen, transaction, customers, driversList]);
 
-    const fetchCustomerSetOffPreview = async (custId: string, txAmount: number) => {
+    const fetchCustomerSetOffPreview = async (partyId: string, txAmount: number) => {
+        if (!partyId) {
+            setSetOffPreview(null);
+            return;
+        }
         setLoadingPreview(true);
         try {
-            const invoices = await getInvoicesByCustomer(custId).catch(() => []);
-            const openInvs = invoices.filter(inv => inv.status === 'PENDING' || inv.status === 'PARTIAL' || inv.status === 'OVERDUE');
+            // 1. Resolve partyId to customer ID and driver ID
+            let resolvedCustId = partyId;
+            let resolvedDriverId: string | undefined = undefined;
+
+            const matchedCustomer = customers.find(c => 
+                String(c._id) === String(partyId) || 
+                (typeof c.driver === 'object' ? String(c.driver?._id) === String(partyId) : String(c.driver) === String(partyId))
+            );
+
+            if (matchedCustomer) {
+                resolvedCustId = matchedCustomer._id;
+                resolvedDriverId = typeof matchedCustomer.driver === 'object' ? matchedCustomer.driver?._id : matchedCustomer.driver;
+            }
+
+            const matchedDriver = driversList.find(d => 
+                String(d._id) === String(partyId) || 
+                String(d.driverDocId) === String(partyId) || 
+                String(d.customerDocId) === String(partyId)
+            );
+            if (matchedDriver) {
+                if (matchedDriver.customerDocId) resolvedCustId = matchedDriver.customerDocId;
+                if (matchedDriver.driverDocId) resolvedDriverId = matchedDriver.driverDocId;
+            }
+
+            // 2. Fetch open invoices: Try customer query first, fallback to driver query
+            let invoices: any[] = [];
+            if (resolvedCustId) {
+                invoices = await getInvoicesByCustomer(resolvedCustId).catch(() => []);
+            }
+            if ((!invoices || invoices.length === 0) && resolvedDriverId) {
+                invoices = await getInvoicesByDriver(resolvedDriverId).catch(() => []);
+            }
+
+            const openInvs = (invoices || []).filter(inv => {
+                const st = String(inv.status || '').toUpperCase();
+                return st === 'PENDING' || st === 'PARTIAL' || st === 'OVERDUE';
+            });
 
             const isOverdue = (inv: any) => {
                 const st = String(inv.status || '').toUpperCase();
@@ -145,12 +186,12 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
 
             for (const inv of sortedInvoices) {
                 if (remaining <= 0.01) break;
-                const invBalance = inv.balance !== undefined ? inv.balance : ((inv.totalAmountDue || inv.baseAmount || 0) - (inv.amountPaid || 0));
-                if (invBalance <= 0) continue;
+                const invBalance = inv.balance !== undefined ? Number(inv.balance) : ((inv.totalAmountDue || inv.baseAmount || 0) - (inv.amountPaid || 0));
+                if (invBalance <= 0.01) continue;
 
                 const amountToApply = Math.min(remaining, invBalance);
                 const newBal = Math.max(0, invBalance - amountToApply);
-                const newStatus = newBal <= 0 ? 'PAID' : 'PARTIAL';
+                const newStatus = newBal <= 0.01 ? 'PAID' : 'PARTIAL';
 
                 setOffDetails.push({
                     invoiceNumber: inv.invoiceNumber,
@@ -266,19 +307,47 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
             const rawCustomers = extractArray(custList);
             const rawSuppliers = extractArray(supList);
 
-            // Fetch drivers directly from Driver collection
+            // Fetch drivers and map them to their corresponding customer records
             const driverOptions: any[] = [];
-            const addedDriverIds = new Set<string>();
+            const addedIds = new Set<string>();
 
             rawDrivers.forEach((d: any) => {
-                const targetId = typeof d.customer === 'object' ? d.customer?._id : (d.customer || d._id);
-                const idStr = String(targetId);
-                if (targetId && !addedDriverIds.has(idStr)) {
-                    addedDriverIds.add(idStr);
-                    const dName = d.name || d.personalInfo?.fullName || d.fullName || 'Unnamed Driver';
-                    const dCode = d.driverId || d.code || (typeof d.customer === 'object' ? d.customer?.customerId : '') || '';
+                // Find corresponding customer doc in rawCustomers
+                const matchedCust = rawCustomers.find((c: any) => {
+                    const cDriverId = typeof c.driver === 'object' ? (c.driver?._id || c.driver?.id) : c.driver;
+                    return cDriverId && String(cDriverId) === String(d._id);
+                });
+
+                const customerId = matchedCust ? matchedCust._id : (typeof d.customer === 'object' ? d.customer?._id : (d.customer || undefined));
+                // Primary identifier used for selection should prefer customer ID so invoice lookups & bank transactions link directly to Customer
+                const primaryId = customerId || d._id;
+                const idStr = String(primaryId);
+
+                if (primaryId && !addedIds.has(idStr)) {
+                    addedIds.add(idStr);
+                    const dName = d.personalInfo?.fullName || d.name || d.fullName || (matchedCust ? matchedCust.name : 'Unnamed Driver');
+                    const dCode = d.driverId || d.code || (matchedCust ? matchedCust.customerId : '') || '';
                     driverOptions.push({
-                        _id: targetId,
+                        _id: primaryId,
+                        driverDocId: d._id,
+                        customerDocId: customerId,
+                        name: dName,
+                        code: dCode
+                    });
+                }
+            });
+
+            // Also include any customer marked as driver not yet in driverOptions
+            rawCustomers.forEach((c: any) => {
+                if ((c.isDriver || c.driver) && !addedIds.has(String(c._id))) {
+                    addedIds.add(String(c._id));
+                    const dRef = typeof c.driver === 'object' ? c.driver : null;
+                    const dCode = (dRef && (dRef.driverId || dRef.code)) || c.customerId || '';
+                    const dName = (dRef && (dRef.personalInfo?.fullName || dRef.name)) || c.name || 'Unnamed Driver';
+                    driverOptions.push({
+                        _id: c._id,
+                        driverDocId: typeof c.driver === 'object' ? c.driver?._id : c.driver,
+                        customerDocId: c._id,
                         name: dName,
                         code: dCode
                     });
@@ -325,15 +394,67 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
         return nameStr.includes(term) || idStr.includes(term);
     });
 
-    const handleSave = async (e: React.FormEvent) => {
+    const getCurrentPartyName = (): string => {
+        if (classification === 'VENDOR') {
+            return transaction.supplierName || (transaction.supplier && typeof transaction.supplier === 'object' ? (transaction.supplier.name || transaction.supplier.companyName) : undefined) || 'Current Vendor';
+        }
+        return transaction.customerName || transaction.contactName || (transaction.contact && typeof transaction.contact === 'object' ? (transaction.contact.name || transaction.contact.personalInfo?.fullName) : undefined) || 'Current Driver/Customer';
+    };
+
+    const getNewPartyName = (): string => {
+        if (classification === 'VENDOR') {
+            const found = suppliers.find(s => String(s._id) === String(selectedSupplierId));
+            return found ? `${found.name || found.companyName} ${((found as any).vendorNumber || (found as any).supplierCode) ? `(${ (found as any).vendorNumber || (found as any).supplierCode })` : ''}` : 'Selected Vendor';
+        }
+        if (classification === 'DRIVER') {
+            const found = driversList.find(d => String(d._id) === String(selectedCustomerId) || String(d.customerDocId) === String(selectedCustomerId) || String(d.driverDocId) === String(selectedCustomerId));
+            return found ? `${found.name} ${found.code ? `(${found.code})` : ''}` : 'Selected Driver';
+        }
+        const foundCust = customers.find(c => String(c._id) === String(selectedCustomerId));
+        return foundCust ? `${foundCust.name} ${((foundCust as any).customerId) ? `(${ (foundCust as any).customerId })` : ''}` : 'Selected Customer';
+    };
+
+    const handleInitiateSave = (e: React.FormEvent) => {
         e.preventDefault();
         
         const numAmount = Number(amount);
-        if (mode === 'AMOUNT' && (isNaN(numAmount) || numAmount <= 0)) {
-            toast.error('Please enter a valid transaction amount greater than 0');
-            return;
+        if (mode === 'AMOUNT') {
+            if (isNaN(numAmount) || numAmount <= 0) {
+                toast.error('Please enter a valid transaction amount greater than 0');
+                return;
+            }
+            if (Math.abs(numAmount - Number(transaction.amount || 0)) < 0.001) {
+                toast('Transaction amount is unchanged', { icon: 'ℹ️' });
+                return;
+            }
+        } else if (mode === 'PARTY') {
+            if (classification === 'VENDOR') {
+                if (!selectedSupplierId) {
+                    toast.error('Please select a vendor/supplier to re-assign');
+                    return;
+                }
+                if (String(selectedSupplierId) === String(initialSupplierId)) {
+                    toast('This vendor is already assigned to the transaction', { icon: 'ℹ️' });
+                    return;
+                }
+            } else if (classification === 'DRIVER' || classification === 'NON_DRIVER_CUSTOMER') {
+                if (!selectedCustomerId) {
+                    toast.error('Please select a contact to re-assign');
+                    return;
+                }
+                if (String(selectedCustomerId) === String(initialCustomerId)) {
+                    toast('This contact is already assigned to the transaction', { icon: 'ℹ️' });
+                    return;
+                }
+            }
         }
 
+        // Open acknowledgement modal for confirmation
+        setShowConfirmModal(true);
+    };
+
+    const handleConfirmSave = async () => {
+        const numAmount = Number(amount);
         setSaving(true);
         const toastId = toast.loading('Saving transaction edits and updating balances...');
 
@@ -342,24 +463,12 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
                 await updateInterBankTransactionAmount(transaction._id, { amount: numAmount });
             } else if (classification === 'VENDOR') {
                 if (mode === 'PARTY') {
-                    if (!selectedSupplierId) {
-                        toast.error('Please select a vendor/supplier to re-assign');
-                        setSaving(false);
-                        toast.dismiss(toastId);
-                        return;
-                    }
                     await updateVendorContact(transaction._id, { newSupplierId: selectedSupplierId });
                 } else {
                     await updateVendorTransactionAmount(transaction._id, { amount: numAmount });
                 }
             } else if (classification === 'DRIVER' || classification === 'NON_DRIVER_CUSTOMER') {
                 if (mode === 'PARTY') {
-                    if (!selectedCustomerId) {
-                        toast.error('Please select a contact to re-assign');
-                        setSaving(false);
-                        toast.dismiss(toastId);
-                        return;
-                    }
                     await updateCustomerContact(transaction._id, { newCustomerId: selectedCustomerId });
                 } else {
                     await updateCustomerTransactionAmount(transaction._id, { amount: numAmount });
@@ -367,6 +476,7 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
             }
 
             toast.success('Transaction updated successfully!', { id: toastId });
+            setShowConfirmModal(false);
             onSuccess();
             onClose();
         } catch (err: any) {
@@ -443,7 +553,7 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
                 )}
 
                 {/* Form */}
-                <form onSubmit={handleSave} className="space-y-5">
+                <form onSubmit={handleInitiateSave} className="space-y-5">
                     {/* Amount Field (Only in AMOUNT mode) */}
                     {mode === 'AMOUNT' && (
                         <div className="space-y-1.5 animate-fade-in">
@@ -659,6 +769,151 @@ export const TransactionEditModal: React.FC<TransactionEditModalProps> = ({
                     </div>
                 </form>
             </div>
+
+            {/* Acknowledgement / Confirmation Modal */}
+            {showConfirmModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+                    <div 
+                        className="w-full max-w-md rounded-2xl border p-6 space-y-5 shadow-2xl animate-scale-up"
+                        style={{ background: 'var(--bg-card)', borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                    >
+                        {/* Modal Header */}
+                        <div className="flex items-start justify-between border-b pb-3" style={{ borderColor: 'var(--border-main)' }}>
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                    <AlertTriangle size={20} />
+                                </div>
+                                <div>
+                                    <h4 className="text-base font-black tracking-tight">
+                                        {mode === 'AMOUNT' ? 'Confirm Amount Update' : (
+                                            classification === 'DRIVER' ? 'Confirm Driver Reassignment' : (
+                                                classification === 'VENDOR' ? 'Confirm Vendor Reassignment' : 'Confirm Customer Reassignment'
+                                            )
+                                        )}
+                                    </h4>
+                                    <p className="text-[11px] opacity-60">
+                                        Please review the financial impact before proceeding.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmModal(false)}
+                                disabled={saving}
+                                className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                                style={{ color: 'var(--text-dim)' }}
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        {/* Impact Details Card */}
+                        <div className="space-y-3">
+                            {mode === 'AMOUNT' ? (
+                                <div className="p-3.5 rounded-xl border bg-white/5 space-y-2 text-xs" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-dim opacity-75">Previous Amount:</span>
+                                        <span className="font-mono font-bold line-through opacity-60">${Number(transaction.amount || 0).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-bold text-[#C8E600]">New Amount:</span>
+                                        <span className="font-mono font-black text-[#C8E600] text-sm">${Number(amount).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between pt-1 border-t border-white/10 text-[11px]">
+                                        <span className="text-dim">Net Balance Adjustment:</span>
+                                        <span className={`font-mono font-bold ${Number(amount) >= Number(transaction.amount || 0) ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                            {Number(amount) >= Number(transaction.amount || 0) ? '+' : ''}${(Number(amount) - Number(transaction.amount || 0)).toFixed(2)}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-3.5 rounded-xl border bg-white/5 space-y-2.5 text-xs" style={{ borderColor: 'var(--border-main)' }}>
+                                    <div>
+                                        <div className="text-[10px] font-bold uppercase tracking-wider text-dim opacity-60">Currently Assigned</div>
+                                        <div className="font-bold truncate opacity-70">
+                                            {getCurrentPartyName()}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#C8E600]">
+                                        <ArrowRight size={13} /> Reassigning To:
+                                    </div>
+
+                                    <div className="p-2.5 rounded-lg bg-black/30 border border-white/10">
+                                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#C8E600]">Target Party</div>
+                                        <div className="font-black text-sm text-white truncate">
+                                            {getNewPartyName()}
+                                        </div>
+                                    </div>
+
+                                    {/* Set-off effect in confirmation */}
+                                    {setOffPreview && (
+                                        <div className="pt-2 border-t border-white/10 space-y-1.5">
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-[#C8E600] flex items-center gap-1">
+                                                <Zap size={11} className="fill-[#C8E600]" /> Automated Set-off Allocation:
+                                            </div>
+                                            {setOffPreview.setOffDetails.length > 0 ? (
+                                                <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
+                                                    {setOffPreview.setOffDetails.map((item: any, idx: number) => (
+                                                        <div key={idx} className="flex items-center justify-between text-[11px] bg-emerald-500/10 text-emerald-400 px-2.5 py-1.5 rounded-lg border border-emerald-500/20 font-bold">
+                                                            <span className="flex items-center gap-1">
+                                                                <FileText size={11} /> {item.invoiceNumber || item.billNumber}
+                                                            </span>
+                                                            <span>${item.amountApplied.toFixed(2)} ({item.newStatus})</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-[11px] text-amber-300 bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
+                                                    No open documents found. ${(setOffPreview.amount || 0).toFixed(2)} will be held as Advance.
+                                                </div>
+                                            )}
+                                            {setOffPreview.excessAmount > 0 && setOffPreview.setOffDetails.length > 0 && (
+                                                <div className="text-[11px] text-[#C8E600] bg-[#C8E600]/10 px-2.5 py-1.5 rounded-lg border border-[#C8E600]/20 flex justify-between font-bold">
+                                                    <span>Prepayment / Advance Credit:</span>
+                                                    <span>${setOffPreview.excessAmount.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Warning callout */}
+                            <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 text-amber-300 text-xs flex items-start gap-2.5">
+                                <AlertTriangle size={15} className="shrink-0 mt-0.5 text-amber-400" />
+                                <p className="leading-snug">
+                                    {mode === 'AMOUNT' 
+                                        ? 'Double-entry ledger balances and bank running balances will be automatically adjusted.'
+                                        : 'Any previous invoice/bill set-offs on the old party will be reversed and re-allocated to open invoices of the new party.'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-end gap-2.5 pt-2 border-t" style={{ borderColor: 'var(--border-main)' }}>
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmModal(false)}
+                                disabled={saving}
+                                className="px-4 py-2 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all hover:bg-white/5 disabled:opacity-50"
+                                style={{ borderColor: 'var(--border-main)', color: 'var(--text-main)' }}
+                            >
+                                Back to Edit
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmSave}
+                                disabled={saving}
+                                className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-[#C8E600] text-black transition-all hover:scale-105 active:scale-95 disabled:opacity-50 cursor-pointer shadow-lg"
+                            >
+                                {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                                {saving ? 'Processing...' : 'Confirm & Save'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
